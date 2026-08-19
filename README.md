@@ -1,4 +1,4 @@
-# Lil Leap: INSERT DESCRIPTION OF WHAT WE ARE DOING (1 LINER)
+# Lil Leap: ADD DESCRIPTION
 
 ## Team
 - **Julia Wiecek** — Team Lead (Angular)
