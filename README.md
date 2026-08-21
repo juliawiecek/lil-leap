@@ -1,4 +1,4 @@
-# Lil Leap: ADD DESCRIPTION
+# Lil Leap: Fidelity Leap ProjectN
 
 ## Team
 - **Julia Wiecek** — Team Lead (Angular)
