@@ -1,5 +1,9 @@
 pipeline {
     agent any
+        tools {
+            jdk 'JDK21'      // must match Jenkins Global Tool name
+            maven 'Maven3'   // must match Jenkins Global Tool name
+        }
     stages {
         stage('Checkout') {
             steps {
