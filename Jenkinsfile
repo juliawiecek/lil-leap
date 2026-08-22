@@ -17,7 +17,7 @@ pipeline {
         }
         stage('Smoke Test') {
             steps {
-                sh 'docker run -d sprint1-greeter-app:latest'
+                sh 'docker run sprint1-greeter-app:latest'
             }
         }
     }
