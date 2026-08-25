@@ -40,21 +40,21 @@ pipeline {
     stage('Validate Compose YAML') {
       steps {
         sh '''
-          ${COMPOSE_CMD} -f starter/docker-compose.yml config -q
-          ${COMPOSE_CMD} -f starter/docker-compose.yml config
+          ${COMPOSE_CMD} -f docker-compose.yml config -q
+          ${COMPOSE_CMD} -f docker-compose.yml config
         '''
       }
     }
 
     stage('Build Multi-Stage Image') {
       steps {
-        sh 'docker build -t starter-app:jenkins-multistage starter'
+        sh 'docker build -t sprint1-greeter-app:jenkins-multistage .'
       }
     }
 
     stage('Build Compose Services') {
       steps {
-        sh '${COMPOSE_CMD} -f starter/docker-compose.yml build'
+        sh '${COMPOSE_CMD} -f docker-compose.yml build'
       }
     }
   }
@@ -63,7 +63,7 @@ pipeline {
     always {
       sh '''
         if [ -n "${COMPOSE_CMD}" ]; then
-          ${COMPOSE_CMD} -f starter/docker-compose.yml down -v || true
+          ${COMPOSE_CMD} -f docker-compose.yml down -v || true
         fi
       '''
     }
