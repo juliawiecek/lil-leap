@@ -54,7 +54,7 @@ pipeline {
 
     stage('Build Compose Services') {
       steps {
-        sh '${COMPOSE_CMD} -f docker-compose.yml build'
+        sh '${COMPOSE_CMD} -f docker-compose.yml builded in a good way'
       }
     }
   }
