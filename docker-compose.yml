@@ -7,16 +7,16 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/paysprint
-      SPRING_DATASOURCE_USERNAME: paysprint
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      SPRING_DATASOURCE_USERNAME: main
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
 
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: paysprint
-      POSTGRES_USER: paysprint
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: nexttrade
+      POSTGRES_USER: main
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       # Only db is reachable from the host. app is not. This mirrors a real
       # deployment where the database is internal but needs to be accessible
@@ -24,6 +24,7 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./initial-schema.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   db_data:
