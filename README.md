@@ -21,7 +21,7 @@ NextTrade is an e-trading platform developed as part of the Fidelity LEAP Projec
 Spring Boot is the core Java framework used to run the backend application. It provides the foundation for REST APIs, application logic, database integration, security, and service organization.
 
 ### Database
-
+Link to ER Diagram: https://github.com/juliawiecek/lil-leap/blob/database-app-role/db/schema_er_diagram.pdf 
 #### PostgreSQL
 
 PostgreSQL is the primary relational database used by the application.
