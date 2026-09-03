@@ -48,7 +48,7 @@ pipeline {
 
     stage('Build Multi-Stage Image') {
       steps {
-        sh 'docker build -t sprint1-greeter-app:jenkins-multistage .'
+        sh 'docker build -t sprint1-greeter-app:jenkins-multistage backend/'
       }
     }
 

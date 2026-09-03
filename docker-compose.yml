@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: ./backend
     # No ports: mapping — the app service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `app` unless a ports: entry is added.
@@ -24,7 +24,7 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./initial-schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/initial-schema.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   db_data:
