@@ -8,8 +8,11 @@ services:
       - db
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
-      SPRING_DATASOURCE_USERNAME: main
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_APP_PASSWORD}
 
   db:
     image: postgres:16-alpine
@@ -17,6 +20,8 @@ services:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Read by init-app-role.sh to create the restricted app_user role.
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
     ports:
       # Only db is reachable from the host. app is not. This mirrors a real
       # deployment where the database is internal but needs to be accessible
@@ -24,7 +29,10 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./db/initial-schema.sql:/docker-entrypoint-initdb.d/init.sql
+      # Numeric prefixes control init order: schema first, then the
+      # restricted app role. Both only run once, against an empty volume.
+      - ./db/initial-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
 
 volumes:
   db_data:
