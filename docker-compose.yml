@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: ./backend
     # No ports: mapping — the app service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `app` unless a ports: entry is added.
@@ -9,7 +9,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
       # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-      # init-app-role.sh. It is separate from "main", which owns the schema
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: ${DB_APP_PASSWORD}
@@ -31,8 +31,8 @@ services:
       - db_data:/var/lib/postgresql/data
       # Numeric prefixes control init order: schema first, then the
       # restricted app role. Both only run once, against an empty volume.
-      - ./initial-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
+      - ./db/initial-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
 
 volumes:
   db_data:
