@@ -9,17 +9,48 @@ import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 
+/**
+ * Service responsible for user registration business logic.
+ *
+ * <p>This service validates uniqueness of the user's email address,
+ * normalizes email and country code values, encodes the password,
+ * maps request data to entity objects, and persists the new user.</p>
+ */
 @Service
 public class UserService {
 
+    /**
+     * Repository used to query and persist user entities.
+     */
     private final UserRepository userRepository;
+
+    /**
+     * Encoder used to hash user passwords before storage.
+     */
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Creates a new user service with the required dependencies.
+     *
+     * @param userRepository the repository used for user persistence
+     * @param passwordEncoder the password encoder used to hash raw passwords
+     */
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Registers a new user from the provided request data.
+     *
+     * <p>The email address is trimmed and normalized to lowercase before being checked
+     * for uniqueness. If no existing user is found, a new {@link User} entity is created,
+     * the password is encoded, optional address data is mapped, and the user is saved.</p>
+     *
+     * @param request the registration request containing user details
+     * @return a {@link UserResponse} representing the saved user
+     * @throws UserAlreadyExistsException if a user with the normalized email already exists
+     */
     public UserResponse register(RegisterUserRequest request) {
 
         String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
@@ -49,6 +80,14 @@ public class UserService {
         return UserResponse.from(savedUser);
     }
 
+    /**
+     * Converts an {@link AddressRequest} DTO into an {@link Address} embeddable entity.
+     *
+     * <p>If a country code is provided, it is normalized to uppercase before storage.</p>
+     *
+     * @param request the address request to convert
+     * @return the mapped address entity
+     */
     private Address toAddress(AddressRequest request) {
         Address address = new Address();
 
