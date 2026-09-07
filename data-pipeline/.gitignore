@@ -1,0 +1,17 @@
+# Local Python virtual environment
+.venv/
+
+#Python-generated cache files
+__pycache__/
+*.pyc
+
+# Pytest generated cache
+.pytest_cache/
+
+# Generated pipeline outputs
+output/*.csv
+output/*.json
+output/*.parquet
+
+# Keep the .gitkeep file in the output directory
+!output/.gitkeep
