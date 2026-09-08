@@ -8,7 +8,7 @@ import pandas as pd
 
 
 SYMBOL_CONFIG = {
-    "APPL": {"start_price": 225.00, "drift": 0.08, "volatility": 0.25},
+    "AAPL": {"start_price": 225.00, "drift": 0.08, "volatility": 0.25},
     "MSFT": {"start_price": 510.00, "drift": 0.08, "volatility": 0.22},
     "NVDA": {"start_price": 175.00, "drift": 0.10, "volatility": 0.40},
     "AMZN": {"start_price": 235.00, "drift": 0.08, "volatility": 0.28},
