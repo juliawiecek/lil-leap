@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -244,5 +245,19 @@ class UserServiceTest {
                 InvalidCredentialsException.class, () -> userService.login(wrongPasswordRequest));
 
         assertEquals(unknownEmailException.getMessage(), wrongPasswordException.getMessage());
+    }
+
+    @Test
+    void realBcryptEncoder_shouldHashAndVerifyRoundTrip() {
+
+        PasswordEncoder realEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+
+        String rawPassword = "Password123!";
+        String hash = realEncoder.encode(rawPassword);
+
+        assertNotEquals(rawPassword, hash);
+        assertTrue(hash.startsWith("{bcrypt}"));
+        assertTrue(realEncoder.matches(rawPassword, hash));
+        assertFalse(realEncoder.matches("WrongPassword!", hash));
     }
 }
