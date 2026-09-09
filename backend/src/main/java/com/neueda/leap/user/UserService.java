@@ -1,8 +1,10 @@
 package com.neueda.leap.user;
 
 import com.neueda.leap.user.dto.AddressRequest;
+import com.neueda.leap.user.dto.LoginRequest;
 import com.neueda.leap.user.dto.RegisterUserRequest;
 import com.neueda.leap.user.dto.UserResponse;
+import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -78,6 +80,32 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         return UserResponse.from(savedUser);
+    }
+
+    /**
+     * Authenticates a user using the supplied email address and password.
+     *
+     * <p>The stored password hash is compared against the raw password using the
+     * configured {@link PasswordEncoder}. To avoid revealing whether a given email
+     * is registered, an unknown email and an incorrect password both result in the
+     * same {@link InvalidCredentialsException}.</p>
+     *
+     * @param request the login request containing email and raw password
+     * @return a {@link UserResponse} representing the authenticated user
+     * @throws InvalidCredentialsException if no user matches the email, or the password is incorrect
+     */
+    public UserResponse login(LoginRequest request) {
+
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
+
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException("Invalid email or password.");
+        }
+
+        return UserResponse.from(user);
     }
 
     /**
