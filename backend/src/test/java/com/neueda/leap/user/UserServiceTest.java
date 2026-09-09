@@ -1,8 +1,10 @@
 package com.neueda.leap.user;
 
 import com.neueda.leap.user.dto.AddressRequest;
+import com.neueda.leap.user.dto.LoginRequest;
 import com.neueda.leap.user.dto.RegisterUserRequest;
 import com.neueda.leap.user.dto.UserResponse;
+import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -139,5 +145,119 @@ class UserServiceTest {
         });
 
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_shouldNeverPersistPlaintextPassword() {
+
+        RegisterUserRequest request = new RegisterUserRequest(
+                "Julia",
+                "Wiecek",
+                "julia@example.com",
+                "+18175551234",
+                "Password123!",
+                null
+        );
+
+        when(userRepository.existsByEmailIgnoreCase("julia@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("Password123!")).thenReturn("hashedPassword");
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.register(request);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+
+        String storedHash = userCaptor.getValue().getPasswordHash();
+
+        assertNotEquals("Password123!", storedHash);
+        assertEquals("hashedPassword", storedHash);
+    }
+
+    @Test
+    void login_shouldReturnUserWhenPasswordMatchesHash() {
+
+        User existingUser = new User();
+        existingUser.setId(UUID.randomUUID());
+        existingUser.setFirstName("Julia");
+        existingUser.setLastName("Wiecek");
+        existingUser.setEmail("julia@example.com");
+        existingUser.setPasswordHash("hashedPassword");
+        existingUser.setEmailVerified(true);
+
+        LoginRequest request = new LoginRequest("JULIA@EXAMPLE.COM", "Password123!");
+
+        when(userRepository.findByEmailIgnoreCase("julia@example.com"))
+                .thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.matches("Password123!", "hashedPassword"))
+                .thenReturn(true);
+
+        UserResponse response = userService.login(request);
+
+        assertEquals("julia@example.com", response.email());
+        verify(passwordEncoder).matches("Password123!", "hashedPassword");
+    }
+
+    @Test
+    void login_shouldRejectIncorrectPassword() {
+
+        User existingUser = new User();
+        existingUser.setId(UUID.randomUUID());
+        existingUser.setEmail("julia@example.com");
+        existingUser.setPasswordHash("hashedPassword");
+
+        LoginRequest request = new LoginRequest("julia@example.com", "WrongPassword!");
+
+        when(userRepository.findByEmailIgnoreCase("julia@example.com"))
+                .thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.matches("WrongPassword!", "hashedPassword"))
+                .thenReturn(false);
+
+        assertThrows(InvalidCredentialsException.class, () -> userService.login(request));
+    }
+
+    @Test
+    void login_shouldRejectUnknownEmailWithoutRevealingItsAbsence() {
+
+        LoginRequest request = new LoginRequest("nobody@example.com", "Password123!");
+
+        when(userRepository.findByEmailIgnoreCase("nobody@example.com"))
+                .thenReturn(Optional.empty());
+
+        InvalidCredentialsException unknownEmailException = assertThrows(
+                InvalidCredentialsException.class, () -> userService.login(request));
+
+        verifyNoInteractions(passwordEncoder);
+
+        User existingUser = new User();
+        existingUser.setEmail("julia@example.com");
+        existingUser.setPasswordHash("hashedPassword");
+
+        LoginRequest wrongPasswordRequest = new LoginRequest("julia@example.com", "WrongPassword!");
+
+        when(userRepository.findByEmailIgnoreCase("julia@example.com"))
+                .thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.matches("WrongPassword!", "hashedPassword"))
+                .thenReturn(false);
+
+        InvalidCredentialsException wrongPasswordException = assertThrows(
+                InvalidCredentialsException.class, () -> userService.login(wrongPasswordRequest));
+
+        assertEquals(unknownEmailException.getMessage(), wrongPasswordException.getMessage());
+    }
+
+    @Test
+    void realBcryptEncoder_shouldHashAndVerifyRoundTrip() {
+
+        PasswordEncoder realEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+
+        String rawPassword = "Password123!";
+        String hash = realEncoder.encode(rawPassword);
+
+        assertNotEquals(rawPassword, hash);
+        assertTrue(hash.startsWith("{bcrypt}"));
+        assertTrue(realEncoder.matches(rawPassword, hash));
+        assertFalse(realEncoder.matches("WrongPassword!", hash));
     }
 }
