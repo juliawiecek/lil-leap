@@ -1,0 +1,956 @@
+:root {
+      color-scheme: dark;
+      --grid-fine: rgba(255, 255, 255, 0.024);
+      --grid-major: rgba(255, 255, 255, 0.055);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 78% 26%, rgba(120, 168, 95, 0.07), transparent 29%),
+        radial-gradient(ellipse at 42% 62%, rgba(255, 255, 255, 0.032), transparent 46%),
+        linear-gradient(145deg, #020302 0%, #080a08 48%, #010101 100%);
+    }
+
+    body {
+      position: relative;
+      isolation: isolate;
+      color: #f2f2ee;
+      font-family: var(--font-ui);
+    }
+
+    /* Nearly invisible grain prevents the black surface from feeling flat. */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.07;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.28) 0.45px, transparent 0.6px);
+      background-size: 5px 5px;
+      mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+    }
+
+    /* Fine trading-chart grid with a second, slightly stronger major grid. */
+    .market-grid {
+      position: fixed;
+      inset: -1px;
+      z-index: -2;
+      background-image:
+        linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px),
+        linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+      background-size:
+        24px 24px,
+        24px 24px,
+        120px 120px,
+        120px 120px;
+      mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
+      transition: opacity 900ms ease;
+    }
+
+    .ambient-light {
+      position: fixed;
+      inset: -20%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.72;
+      background:
+        radial-gradient(ellipse at 76% 28%, rgba(120, 168, 95, 0.07), transparent 28%),
+        linear-gradient(112deg, transparent 34%, rgba(255, 255, 255, 0.018) 48%, transparent 62%);
+      animation: ambient-shift 12s ease-in-out infinite alternate;
+    }
+
+    .market-tape {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 4;
+      overflow: hidden;
+      pointer-events: none;
+      padding: 10px 0 9px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(3, 4, 3, 0.82);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity: 0.84;
+      mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+      transition: opacity 700ms ease;
+    }
+
+    .market-tape::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(120, 168, 95, 0.24), rgba(255, 255, 255, 0.14), transparent);
+    }
+
+    .tape-track {
+      display: flex;
+      width: max-content;
+      gap: 52px;
+      white-space: nowrap;
+      color: rgba(238, 238, 238, 0.9);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      animation: tape-scroll 30s linear infinite;
+    }
+
+    .tape-track .up {
+      color: #91b77d;
+    }
+
+    .tape-track .divider {
+      color: rgba(255, 255, 255, 0.42);
+    }
+
+    .volume-field {
+      position: fixed;
+      left: 4%;
+      right: 4%;
+      bottom: 4%;
+      height: 17%;
+      z-index: 0;
+      display: flex;
+      align-items: flex-end;
+      gap: clamp(5px, 0.72vw, 11px);
+      pointer-events: none;
+      opacity: 0.26;
+      mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
+      -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
+      transition: opacity 700ms ease;
+    }
+
+    .volume-bar {
+      flex: 1 1 0;
+      max-width: 7px;
+      min-width: 1px;
+      height: var(--bar-height);
+      background: rgba(238, 238, 238, 0.42);
+      transform-origin: bottom;
+      animation: volume-breathe var(--bar-speed) ease-in-out var(--bar-delay) infinite alternate;
+    }
+
+    .volume-bar.accent {
+      background: rgba(120, 168, 95, 0.72);
+    }
+
+    .market-scan {
+      position: fixed;
+      top: -12%;
+      bottom: -12%;
+      left: -28vw;
+      z-index: 0;
+      width: 24vw;
+      pointer-events: none;
+      opacity: 0.32;
+      transform: skewX(-8deg);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.035), transparent);
+      filter: blur(7px);
+      animation: market-scan 17s linear infinite;
+    }
+
+    @keyframes ambient-shift {
+      from {
+        transform: translate3d(-1.5%, 0, 0) scale(1);
+        opacity: 0.52;
+      }
+      to {
+        transform: translate3d(1.5%, -1%, 0) scale(1.025);
+        opacity: 0.82;
+      }
+    }
+
+    @keyframes tape-scroll {
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes volume-breathe {
+      from {
+        transform: scaleY(0.62);
+        opacity: 0.42;
+      }
+      to {
+        transform: scaleY(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes market-scan {
+      from {
+        transform: translateX(0) skewX(-8deg);
+      }
+      to {
+        transform: translateX(156vw) skewX(-8deg);
+      }
+    }
+
+    .edge-shade {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.58) 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.84) 0%, transparent 7%, transparent 93%, rgba(0, 0, 0, 0.84) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.72) 100%);
+    }
+
+    .signin-stock-background {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0.15;
+      mask-image: linear-gradient(180deg, transparent, #000 18%, #000 85%, transparent);
+
+      svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .signin-stock-line {
+        fill: none;
+        stroke: #87b66c;
+        stroke-width: 2;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        vector-effect: non-scaling-stroke;
+        filter: drop-shadow(0 0 7px rgba(120, 168, 95, 0.45));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .signin-stock-background { opacity: 0.1; }
+    }
+
+    .chart-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      transform: scale(1);
+      opacity: 1;
+      filter: blur(0);
+      transition:
+        opacity 1100ms cubic-bezier(0.4, 0, 0.2, 1),
+        transform 1250ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        filter 1100ms ease;
+    }
+
+    #market-chart {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .transition-beam {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 8;
+      width: 0;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(90deg, transparent, rgba(238, 238, 238, 0.95), rgba(120, 168, 95, 0.9), transparent);
+      box-shadow: 0 0 24px rgba(120, 168, 95, 0.18);
+    }
+
+    .brand-lockup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.88);
+      transform-origin: center;
+      transition:
+        top 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        left 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 680ms ease 160ms,
+        gap 950ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 74px;
+      height: 72px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.32));
+      overflow: visible;
+      transition: width 950ms cubic-bezier(0.22, 1, 0.36, 1), height 950ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .brand-mark::after {
+      content: none;
+    }
+
+    .brand-mark svg {
+      width: 68px;
+      height: 68px;
+      overflow: visible;
+      transition: width 950ms cubic-bezier(0.22, 1, 0.36, 1), height 950ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .brand-mark path {
+      opacity: 0;
+      transform: translateY(10px);
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+
+    .brand-copy {
+      overflow: hidden;
+      padding-right: 8px;
+      white-space: nowrap;
+    }
+
+    .brand-name {
+      display: flex;
+      align-items: baseline;
+      font-family: var(--font-display);
+      font-size: clamp(48px, 6vw, 76px);
+      font-weight: 560;
+      line-height: 0.96;
+      letter-spacing: 0;
+      transition: font-size 950ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .brand-name span {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .brand-name .brand-accent {
+      color: #78a85f;
+      font-weight: 610;
+      margin-left: 1.5px;
+    }
+
+    .brand-name .brand-next {
+      font-weight: 520;
+    }
+
+    .auth-shell {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      padding: 34px 40px 26px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(18px);
+      transition:
+        opacity 700ms ease 260ms,
+        transform 850ms cubic-bezier(0.22, 1, 0.36, 1) 220ms,
+        visibility 0s linear 260ms;
+    }
+
+    .auth-header {
+      min-height: 42px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .secure-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(238, 238, 238, 0.48);
+      font: 500 10px/1 var(--font-mono);
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .secure-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #78a85f;
+      box-shadow: 0 0 12px rgba(120, 168, 95, 0.45);
+    }
+
+    .auth-content {
+      width: min(1180px, 100%);
+      margin: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      align-items: center;
+      gap: clamp(64px, 10vw, 150px);
+    }
+
+    .auth-copy {
+      max-width: 610px;
+    }
+
+    .auth-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+      color: #90aa81;
+      font: 600 11px/1 var(--font-mono);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .auth-eyebrow::before {
+      content: '';
+      width: 30px;
+      height: 1px;
+      background: #78a85f;
+    }
+
+    .auth-copy h1 {
+      max-width: 620px;
+      margin: 0;
+      color: #f2f2ee;
+      font-size: clamp(48px, 6vw, 82px);
+      font-weight: 540;
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .auth-copy h1 em {
+      color: #78a85f;
+      font-style: normal;
+    }
+
+    .auth-copy > p {
+      max-width: 500px;
+      margin: 26px 0 0;
+      color: rgba(238, 238, 238, 0.56);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .auth-panel {
+      position: relative;
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(17, 19, 16, 0.94), rgba(7, 8, 7, 0.91));
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .auth-panel::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 28px;
+      width: 82px;
+      height: 1px;
+      background: #78a85f;
+      box-shadow: 0 0 16px rgba(120, 168, 95, 0.25);
+    }
+
+    .auth-panel h2 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      font-weight: 590;
+      letter-spacing: -0.025em;
+    }
+
+    .auth-subtitle {
+      margin: 0 0 24px;
+      color: rgba(238, 238, 238, 0.46);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 24px;
+      padding: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .auth-tab {
+      min-height: 39px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.43);
+      font: 600 13px/1 var(--font-ui);
+      cursor: pointer;
+      transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .auth-tab.active {
+      background: rgba(255, 255, 255, 0.075);
+      color: #f2f2ee;
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    .field-group {
+      margin-bottom: 16px;
+    }
+
+    .field-group[hidden] {
+      display: none;
+    }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 8px;
+    }
+
+    .field-group label {
+      color: rgba(238, 238, 238, 0.72);
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .field-row a {
+      color: #90aa81;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .field-group input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 8px;
+      outline: none;
+      background: rgba(0, 0, 0, 0.28);
+      color: #f2f2ee;
+      font: 500 14px/1 var(--font-ui);
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .field-group input::placeholder {
+      color: rgba(238, 238, 238, 0.25);
+    }
+
+    .field-group input:focus {
+      border-color: rgba(120, 168, 95, 0.72);
+      background: rgba(0, 0, 0, 0.42);
+      box-shadow: 0 0 0 3px rgba(120, 168, 95, 0.09);
+    }
+
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 13px;
+      padding: 4px;
+      border: 0;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.42);
+      font: 600 10px/1 var(--font-mono);
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+
+    .password-toggle:focus-visible {
+      color: #f2f2ee;
+      outline: 1px solid #78a85f;
+      outline-offset: 3px;
+    }
+
+    .primary-action {
+      width: 100%;
+      min-height: 49px;
+      margin-top: 5px;
+      border: 1px solid #8ab174;
+      border-radius: 8px;
+      background: #78a85f;
+      color: #080a07;
+      font: 700 14px/1 var(--font-ui);
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .primary-action:hover {
+      background: #88b36f;
+      box-shadow: 0 10px 28px rgba(120, 168, 95, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .primary-action:active {
+      transform: translateY(0);
+    }
+
+    .form-status {
+      min-height: 16px;
+      margin: 14px 0 0;
+      color: #90aa81;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .auth-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      color: rgba(238, 238, 238, 0.28);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .auth-footer nav {
+      display: flex;
+      gap: 22px;
+    }
+
+    .auth-footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .auth-footer a:hover,
+    .auth-footer a:focus-visible {
+      color: rgba(238, 238, 238, 0.72);
+      outline: none;
+    }
+
+    body.brand-phase .chart-stage {
+      opacity: 0;
+      filter: blur(11px);
+      transform: scale(0.94);
+    }
+
+    body.brand-phase .market-tape {
+      opacity: 0.48;
+    }
+
+    body.brand-phase .volume-field {
+      opacity: 0.05;
+    }
+
+    body.brand-phase .transition-beam {
+      animation: brand-beam 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    body.brand-phase .brand-lockup {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    body.brand-phase .brand-mark path {
+      animation: draw-mark 680ms cubic-bezier(0.22, 1, 0.36, 1) 190ms forwards;
+    }
+
+    body.brand-phase .brand-mark path:nth-child(2) {
+      animation-delay: 315ms;
+    }
+
+    body.brand-phase .brand-mark::after {
+      animation: mark-sheen 660ms cubic-bezier(0.22, 1, 0.36, 1) 500ms forwards;
+    }
+
+    body.brand-phase .brand-name span {
+      animation: reveal-word 720ms cubic-bezier(0.22, 1, 0.36, 1) 430ms forwards;
+    }
+
+    body.brand-phase .brand-name .brand-accent {
+      animation-delay: 520ms;
+    }
+
+    body.auth-phase .brand-lockup {
+      top: 62px;
+      left: 40px;
+      gap: 3px;
+      transform: scale(0.75);
+      transform-origin: top left;
+    }
+
+    body.auth-phase .auth-shell {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    body.auth-phase .market-grid {
+      opacity: 0.62;
+    }
+
+    body.auth-phase .market-tape {
+      opacity: 0.56;
+    }
+
+    body.auth-phase .volume-field {
+      opacity: 0.11;
+    }
+
+    @keyframes brand-beam {
+      0% { width: 0; opacity: 0; }
+      24% { opacity: 1; }
+      58% { width: min(78vw, 1080px); opacity: 0.86; }
+      100% { width: 0; opacity: 0; }
+    }
+
+    @keyframes draw-mark {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes mark-sheen {
+      to { transform: scaleX(1); }
+    }
+
+    @keyframes reveal-word {
+      to { transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      .auth-shell {
+        padding: 26px 22px 22px;
+        overflow-y: auto;
+      }
+
+      .auth-content {
+        grid-template-columns: 1fr;
+        gap: 36px;
+        margin: 102px auto 36px;
+      }
+
+      .auth-copy {
+        max-width: 680px;
+      }
+
+      .auth-copy h1 {
+        font-size: clamp(42px, 10vw, 68px);
+      }
+
+      .auth-copy > p {
+        margin-top: 18px;
+      }
+
+      .auth-panel {
+        width: min(100%, 520px);
+      }
+
+      .auth-footer {
+        padding-top: 20px;
+      }
+
+      body.auth-phase .brand-lockup {
+        top: 55px;
+        left: 22px;
+        transform: translate(0, 0);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .market-tape {
+        top: 0;
+        padding: 9px 0 8px;
+      }
+
+      .brand-lockup {
+        gap: 14px;
+      }
+
+      .brand-mark {
+        width: 68px;
+        height: 60px;
+      }
+
+      .brand-mark svg {
+        width: 56px;
+        height: 56px;
+      }
+
+      .brand-name {
+        font-size: clamp(38px, 12vw, 54px);
+      }
+
+      .auth-header {
+        min-height: 32px;
+      }
+
+      .secure-status {
+        font-size: 8px;
+      }
+
+      .auth-content {
+        margin-top: 96px;
+      }
+
+      .auth-copy h1 {
+        font-size: 44px;
+      }
+
+      .auth-copy > p {
+        font-size: 15px;
+      }
+
+      .auth-panel {
+        padding: 24px 20px;
+      }
+
+      .auth-footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      body.auth-phase .brand-lockup {
+        top: 52px;
+        gap: 8px;
+        transform: translate(0, 0);
+      }
+
+      body.auth-phase .brand-mark {
+        width: 36px;
+        height: 36px;
+      }
+
+      body.auth-phase .brand-mark svg {
+        width: 34px;
+        height: 34px;
+      }
+
+      body.auth-phase .brand-name {
+        font-size: 27px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .market-grid {
+        background-position: 0 0;
+      }
+
+      .ambient-light {
+        animation: none;
+      }
+
+      .tape-track,
+      .volume-bar,
+      .market-scan {
+        animation: none;
+      }
+
+      .chart-stage,
+      .brand-lockup,
+      .auth-shell {
+        transition-duration: 1ms;
+        transition-delay: 0ms;
+      }
+    }
+
+/* Keep account fields stacked without changing the panel width. */
+.auth-panel { padding: 24px; }
+.auth-panel .auth-subtitle, .auth-panel .auth-tabs { margin-bottom: 18px; }
+.auth-fields { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 80px; }
+.auth-fields .field-group { min-width: 0; margin: 0; }
+.auth-fields .field-group input { height: 44px; }
+.auth-fields .field-row { min-height: 20px; }
+.auth-shell:not(.signup-layout) .auth-fields .field-group { grid-column: 1 / -1; }
+.signup-layout .auth-fields .field-row a { display: none; }
+.signup-layout .auth-panel { padding-block: 18px; }
+.signup-layout .auth-subtitle, .signup-layout .auth-tabs { margin-bottom: 12px; }
+.signup-layout .form-status:empty { margin: 0; min-height: 0; }
+@media (min-width: 901px) {
+  .auth-shell.signup-layout { gap: 8px; padding-top: 20px; padding-bottom: 16px; }
+}
+
+/* NextTrade typography: expressive headings, readable forms, precise market data. */
+.auth-copy h1, .auth-panel h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.auth-copy h1 { line-height: 1.04; letter-spacing: -0.025em; }
+.auth-panel h2 { font-size: 26px; line-height: 1.2; letter-spacing: -0.035em; }
+.auth-copy > p { line-height: 1.65; }
+.auth-subtitle { font-size: 14px; line-height: 1.55; }
+.field-group label { font-size: 14px; font-weight: 500; }
+.field-group input { font-size: 16px; font-weight: 400; }
+.input-wrap input { padding-right: 64px; }
+.auth-tab, .primary-action { font-size: 14px; font-weight: 600; }
+.password-toggle { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0; }
+.form-status { line-height: 1.5; }
+.tape-track { font-weight: 500; letter-spacing: 0.055em; font-variant-numeric: tabular-nums lining-nums; }
+.auth-eyebrow { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.12em; }
+.secure-status { font-family: var(--font-ui); letter-spacing: 0.08em; }
+.auth-footer { font-size: 12px; letter-spacing: 0; }
+
+/* Stronger proportions keep the monogram and wordmark visually connected. */
+.brand-lockup { gap: 12px; }
+.brand-mark { width: 76px; height: 76px; }
+.brand-mark svg { width: 76px; height: 76px; }
+.brand-copy { padding-right: 4px; }
+.brand-name { font-size: clamp(48px, 6vw, 76px); line-height: 1.08; letter-spacing: -0.055em; }
+.brand-name .brand-next, .brand-name .brand-accent { font-weight: 700; letter-spacing: inherit; }
+body.auth-phase .brand-lockup { gap: 9px; }
+body.auth-phase .brand-mark, body.auth-phase .brand-mark svg { width: 48px; height: 48px; }
+body.auth-phase .brand-name { font-size: 34px; line-height: 1.05; }
+
+/* Larger type remains reachable on short windows and at browser zoom. */
+.auth-shell { overflow-y: auto; gap: 24px; }
+.auth-header, .auth-content, .auth-footer { flex-shrink: 0; }
+@media (max-width: 560px) {
+  .brand-lockup { gap: 8px; }
+  .brand-mark, .brand-mark svg { width: 52px; height: 52px; }
+  .brand-name { font-size: clamp(34px, 10.5vw, 54px); }
+  body.auth-phase .brand-mark, body.auth-phase .brand-mark svg { width: 38px; height: 38px; }
+  body.auth-phase .brand-name { font-size: 28px; }
+  .secure-status { font-size: 8px; max-width: 74px; line-height: 1.4; text-align: right; }
+  .auth-panel h2 { font-size: 24px; }
+}
+
+
+
+.password-checklist { margin: 0 0 18px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; background: rgba(120,168,95,.04); font-size: 12px; line-height: 1.6; }
+.password-checklist p { margin: 0 0 8px; color: #cbd3c5; }
+.password-checklist ul { display: grid; gap: 5px; list-style: none; margin: 0; padding: 0; }
+.password-checklist li { display: flex; align-items: center; gap: 8px; color: #929b8b; }
+.password-checklist li.met { color: #a9cc91; }
+.password-checklist li > span:first-child { width: 14px; text-align: center; }
+
+.auth-copy h1 .headline-period { margin-left: 0.06em; }
+
+.auth-copy h1 .headline-trade { margin-right: 0.06em; }
