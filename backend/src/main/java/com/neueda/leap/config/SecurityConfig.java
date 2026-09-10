@@ -4,6 +4,8 @@ import com.neueda.leap.security.JwtAuthenticationFilter;
 import com.neueda.leap.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -45,6 +47,13 @@ public class SecurityConfig {
      * filter so a valid bearer token is recognized before any other authentication
      * mechanism is considered.</p>
      *
+     * <p>The authentication entry point is set explicitly to always return 401:
+     * without it, Spring Security's default for an app with no login form or
+     * HTTP Basic configured is a 403, which is the wrong signal for a missing
+     * or absent bearer token on a token-only API (403 means "authenticated but
+     * not allowed"; 401 means "not authenticated at all", which is what a
+     * missing token actually is).</p>
+     *
      * @param http the {@link HttpSecurity} builder to configure
      * @param jwtService the service used to validate incoming bearer tokens
      * @return the configured {@link SecurityFilterChain}
@@ -58,6 +67,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users", "/auth/login").permitAll()
                         .anyRequest().authenticated())
+                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"UNAUTHENTICATED\",\"message\":\"Authentication is required.\"}");
+                        }))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
