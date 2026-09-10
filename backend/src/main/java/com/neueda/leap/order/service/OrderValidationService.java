@@ -1,5 +1,6 @@
-package com.neueda.leap;
+package com.neueda.leap.order.service;
 
+import com.neueda.leap.order.model.Order;
 import org.springframework.stereotype.Service;
 
 /**

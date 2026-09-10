@@ -1,24 +1,23 @@
 package com.neueda.leap.user.dto;
 
-import com.neueda.leap.user.User;
+import com.neueda.leap.user.entity.User;
 
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Response DTO representing the public user data returned by the API.
+ * Authentication-focused user payload returned by auth and /me endpoints.
  *
- * @param id the unique identifier of the user
- * @param firstName the user's first name
- * @param lastName the user's last name
- * @param email the user's email address
- * @param phone the user's phone number
- * @param emailVerified whether the user's email address has been verified
- * @param createdAt the timestamp when the user was created
- * @param updatedAt the timestamp when the user was last updated
+ * @param id unique user identifier
+ * @param firstName optional first name (not stored on auth user entity)
+ * @param lastName optional last name (not stored on auth user entity)
+ * @param email user email
+ * @param phone optional phone number (not stored on auth user entity)
+ * @param emailVerified email verification flag
+ * @param createdAt creation timestamp
+ * @param updatedAt last update timestamp
  */
-public record UserResponse (
-
+public record UserResponse(
         UUID id,
         String firstName,
         String lastName,
@@ -27,25 +26,29 @@ public record UserResponse (
         boolean emailVerified,
         Instant createdAt,
         Instant updatedAt
-
 ) {
 
     /**
-     * Creates a {@link UserResponse} from a {@link User} entity.
+     * Builds a response from the authentication user entity.
      *
-     * @param user the user entity to convert
-     * @return a response DTO containing the user's public data
+     * <p>Identity/contact details live in onboarding profile tables and are not
+     * available on the auth entity, so those fields are returned as {@code null}.
+     * Email verification is not yet modeled on the auth entity and defaults to false.</p>
+     *
+     * @param user persisted auth user
+     * @return response payload for auth endpoints
      */
     public static UserResponse from(User user) {
         return new UserResponse(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
+                user.getUserId(),
+                null,
+                null,
                 user.getEmail(),
-                user.getPhone(),
-                user.isEmailVerified(),
+                null,
+                false,
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
     }
 }
+

@@ -1,28 +1,26 @@
 package com.neueda.leap.user;
 
-import com.neueda.leap.user.dto.AddressRequest;
 import com.neueda.leap.user.dto.LoginRequest;
-import com.neueda.leap.user.dto.RegisterUserRequest;
 import com.neueda.leap.user.dto.UserResponse;
+import com.neueda.leap.user.entity.User;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
-import com.neueda.leap.user.exception.UserAlreadyExistsException;
+import com.neueda.leap.user.repository.UserRepository;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,153 +36,12 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void register_shouldCreateUser() {
-
-        AddressRequest address = new AddressRequest(
-                "123 Main St",
-                "Apt 4",
-                "Roanoke",
-                "TX",
-                "76262",
-                "us"
-        );
-
-        RegisterUserRequest request = new RegisterUserRequest(
-                "Julia",
-                "Wiecek",
-                "JULIA@EXAMPLE.COM",
-                "+8175551234",
-                "Password123!",
-                address
-        );
-
-        when(userRepository.existsByEmailIgnoreCase(
-                "julia@example.com")).thenReturn(false);
-
-        when(passwordEncoder.encode("Password123!"))
-                .thenReturn("hashedPassword");
-
-        when(userRepository.save(any(User.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-            UserResponse response = userService.register(request);
-
-            ArgumentCaptor<User>userCaptor = ArgumentCaptor.forClass(User.class);
-
-            verify(userRepository).save(userCaptor.capture());
-
-                User savedUser = userCaptor.getValue();
-
-                assertEquals("Julia", savedUser.getFirstName());
-                assertEquals("Wiecek", savedUser.getLastName());
-
-                assertEquals("julia@example.com", savedUser.getEmail());
-
-                assertEquals("+8175551234", savedUser.getPhone());
-
-                assertEquals("hashedPassword", savedUser.getPasswordHash());
-
-            assertFalse(savedUser.isEmailVerified());
-
-            assertNotNull(savedUser.getAddress());
-
-                assertEquals("123 Main St", savedUser.getAddress().getAddressLine1());
-
-                assertEquals("Roanoke", savedUser.getAddress().getCity());
-
-                assertEquals("TX", savedUser.getAddress().getStateProvince());
-
-                assertEquals("US", savedUser.getAddress().getCountryCode());
-
-                assertEquals("julia@example.com", response.email());
-
-            verify(passwordEncoder).encode("Password123!");
-    }
-
-    @Test
-    void register_shouldRejectDuplicateEmail() {
-
-        RegisterUserRequest request = new RegisterUserRequest(
-                "Julia",
-                "Wiecek",
-                "julia@example.com",
-                "+18175551234",
-                "Password123!",
-                null
-        );
-
-        when(userRepository.existsByEmailIgnoreCase(
-                "julia@example.com")).thenReturn(true);
-
-        assertThrows(UserAlreadyExistsException.class, () -> {
-            userService.register(request);
-        });
-
-            verify(userRepository, never()).save(any(User.class));
-
-        verifyNoInteractions(passwordEncoder);
-    }
-
-    @Test
-    void register_shouldNormalizeEmailBeforeCheckingDuplicate() {
-
-        RegisterUserRequest request = new RegisterUserRequest(
-                "Julia",
-                "Wiecek",
-                "JULIA@EXAMPLE.COM",
-                "+18175551234",
-                "Password123!",
-                null
-        );
-
-        when(userRepository.existsByEmailIgnoreCase(
-                "julia@example.com")).thenReturn(true);
-
-        assertThrows(UserAlreadyExistsException.class, () -> {
-            userService.register(request);
-        });
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void register_shouldNeverPersistPlaintextPassword() {
-
-        RegisterUserRequest request = new RegisterUserRequest(
-                "Julia",
-                "Wiecek",
-                "julia@example.com",
-                "+18175551234",
-                "Password123!",
-                null
-        );
-
-        when(userRepository.existsByEmailIgnoreCase("julia@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("Password123!")).thenReturn("hashedPassword");
-        when(userRepository.save(any(User.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        userService.register(request);
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-
-        String storedHash = userCaptor.getValue().getPasswordHash();
-
-        assertNotEquals("Password123!", storedHash);
-        assertEquals("hashedPassword", storedHash);
-    }
-
-    @Test
     void login_shouldReturnUserWhenPasswordMatchesHash() {
 
         User existingUser = new User();
-        existingUser.setId(UUID.randomUUID());
-        existingUser.setFirstName("Julia");
-        existingUser.setLastName("Wiecek");
+        existingUser.setUserId(UUID.randomUUID());
         existingUser.setEmail("julia@example.com");
         existingUser.setPasswordHash("hashedPassword");
-        existingUser.setEmailVerified(true);
 
         LoginRequest request = new LoginRequest("JULIA@EXAMPLE.COM", "Password123!");
 
@@ -203,7 +60,7 @@ class UserServiceTest {
     void login_shouldRejectIncorrectPassword() {
 
         User existingUser = new User();
-        existingUser.setId(UUID.randomUUID());
+        existingUser.setUserId(UUID.randomUUID());
         existingUser.setEmail("julia@example.com");
         existingUser.setPasswordHash("hashedPassword");
 
@@ -245,6 +102,31 @@ class UserServiceTest {
                 InvalidCredentialsException.class, () -> userService.login(wrongPasswordRequest));
 
         assertEquals(unknownEmailException.getMessage(), wrongPasswordException.getMessage());
+    }
+
+    @Test
+    void getById_shouldReturnUserResponseWhenUserExists() {
+        UUID id = UUID.randomUUID();
+        User existingUser = new User();
+        existingUser.setUserId(id);
+        existingUser.setEmail("julia@example.com");
+        existingUser.setPasswordHash("hashedPassword");
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(existingUser));
+
+        UserResponse response = userService.getById(id);
+        assertEquals(id, response.id());
+        assertEquals("julia@example.com", response.email());
+    }
+
+    @Test
+    void getById_shouldThrowUnauthorizedWhenUserMissing() {
+        UUID id = UUID.randomUUID();
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class, () -> userService.getById(id));
+        assertEquals(401, exception.getStatusCode().value());
     }
 
     @Test
