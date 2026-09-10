@@ -6,10 +6,13 @@ import com.neueda.leap.user.dto.RegisterUserRequest;
 import com.neueda.leap.user.dto.UserResponse;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Service responsible for user registration business logic.
@@ -104,6 +107,27 @@ public class UserService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException("Invalid email or password.");
         }
+
+        return UserResponse.from(user);
+    }
+
+    /**
+     * Looks up a user by their unique identifier, for use by authenticated,
+     * token-identified callers (e.g. a "current user" endpoint).
+     *
+     * <p>A missing user is reported as an HTTP 401 rather than a 404: it means
+     * the token's subject no longer corresponds to a real account (for example,
+     * the account was deleted after the token was issued), which is an
+     * authentication failure from the caller's perspective.</p>
+     *
+     * @param id the user's unique identifier, as extracted from a validated JWT
+     * @return a {@link UserResponse} representing the user
+     * @throws ResponseStatusException with status 401 if no user has the given id
+     */
+    public UserResponse getById(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Invalid or expired token."));
 
         return UserResponse.from(user);
     }
