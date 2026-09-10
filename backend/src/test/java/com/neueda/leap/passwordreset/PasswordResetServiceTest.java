@@ -1,7 +1,7 @@
 package com.neueda.leap.passwordreset;
 
-import com.neueda.leap.user.User;
-import com.neueda.leap.user.UserRepository;
+import com.neueda.leap.user.entity.User;
+import com.neueda.leap.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

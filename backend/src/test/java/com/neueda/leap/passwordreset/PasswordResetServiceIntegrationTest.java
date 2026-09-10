@@ -1,7 +1,7 @@
 package com.neueda.leap.passwordreset;
 
-import com.neueda.leap.user.User;
-import com.neueda.leap.user.UserRepository;
+import com.neueda.leap.user.entity.User;
+import com.neueda.leap.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -56,8 +56,6 @@ class PasswordResetServiceIntegrationTest {
     @Test
     void confirmPasswordResetAllowsOnlyOneConcurrentAttempt() throws Exception {
         User user = new User();
-        user.setFirstName("Alice");
-        user.setLastName("Concurrent");
         user.setEmail("concurrent@nexttrade.com");
         user.setPasswordHash(passwordEncoder.encode("OriginalPassword123!"));
         UUID userId = userRepository.saveAndFlush(user).getId();
@@ -125,8 +123,6 @@ class PasswordResetServiceIntegrationTest {
     @Test
     void confirmPasswordResetRejectsReusedTokenAfterCommit() {
         User user = new User();
-        user.setFirstName("Alice");
-        user.setLastName("Test");
         user.setEmail("alice@nexttrade.com");
         user.setPasswordHash(passwordEncoder.encode("OriginalPassword123!"));
         UUID userId = userRepository.saveAndFlush(user).getId();

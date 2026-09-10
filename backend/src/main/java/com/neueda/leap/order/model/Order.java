@@ -1,4 +1,4 @@
-package com.neueda.leap;
+package com.neueda.leap.order.model;
 
 /**
  * Represents an order containing product details, quantity, and price.

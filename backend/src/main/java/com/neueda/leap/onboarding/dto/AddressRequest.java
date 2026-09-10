@@ -1,4 +1,4 @@
-package com.neueda.leap.user.dto;
+package com.neueda.leap.onboarding.dto;
 
 import jakarta.validation.constraints.Size;
 
