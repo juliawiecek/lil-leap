@@ -176,8 +176,31 @@ CREATE TABLE sessions (
     )
 );
 
+
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at DESC);
+-- ==========================================================
+-- PASSWORD_RESET_TOKENS (Temporary password reset authorization)
+-- Stores only hashed reset tokens; raw tokens are never persisted
+-- ==========================================================
+
+CREATE TABLE password_reset_tokens (
+    reset_token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    token_hash VARCHAR(512) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT fk_password_reset_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    CONSTRAINT uk_password_reset_tokens_user UNIQUE (user_id),
+    CONSTRAINT uk_password_reset_tokens_token_hash UNIQUE (token_hash),
+    CONSTRAINT chk_password_reset_token_expiry CHECK (expires_at > created_at)
+);
+
+CREATE INDEX idx_password_reset_tokens_expires_at
+    ON password_reset_tokens(expires_at DESC);
+
 
 -- ==========================================================
 -- INSTRUMENTS (BR-12: Multi-asset class support)
