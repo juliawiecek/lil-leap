@@ -11,13 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
- * Creates a password reset service.
- *
- * @param userRepository the repository used to access user accounts
- * @param tokenRepository the repository used to store password reset tokens
- * @param tokenUtil the utility used to generate and hash reset tokens
- * @param passwordEncoder the encoder used to securely hash passwords
- * @param delivery the component used to deliver password reset information
+ * Handles password reset requests and token confirmation.
  */
 @Service
 public class PasswordResetService {
@@ -30,6 +24,15 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetDelivery delivery;
 
+    /**
+     * Creates a password reset service.
+     *
+     * @param userRepository the repository used to access user accounts
+     * @param tokenRepository the repository used to store password reset tokens
+     * @param tokenUtil the utility used to generate and hash reset tokens
+     * @param passwordEncoder the encoder used to securely hash passwords
+     * @param delivery the component used to deliver password reset information
+     */
     public PasswordResetService(
             UserRepository userRepository,
             PasswordResetTokenRepository tokenRepository,
@@ -51,7 +54,6 @@ public class PasswordResetService {
      */
     @Transactional
     public void requestPasswordReset(String email) {
-
         userRepository.findByEmailIgnoreCase(email)
                 .ifPresent(user -> {
 
@@ -61,23 +63,15 @@ public class PasswordResetService {
                     String rawToken = tokenUtil.generateToken();
                     String tokenHash = tokenUtil.hashToken(rawToken);
 
-                    PasswordResetToken resetToken =
-                            new PasswordResetToken(
-                                    UUID.randomUUID(),
-                                    tokenHash,
-                                    user.getId(),
-                                    Instant.now().plus(
-                                            TOKEN_EXPIRATION_MINUTES,
-                                            ChronoUnit.MINUTES
+                    PasswordResetToken resetToken = new PasswordResetToken(
+                                    UUID.randomUUID(), tokenHash, user.getId(),
+                                    Instant.now().plus(TOKEN_EXPIRATION_MINUTES, ChronoUnit.MINUTES
                                     )
                             );
 
                     tokenRepository.save(resetToken);
 
-                    delivery.sendResetToken(
-                            user.getEmail(),
-                            rawToken
-                    );
+                    delivery.sendResetToken(user.getEmail(),rawToken);
                 });
     }
 
@@ -97,7 +91,7 @@ public class PasswordResetService {
         String tokenHash = tokenUtil.hashToken(rawToken);
 
         PasswordResetToken resetToken =
-                tokenRepository.findByTokenHash(tokenHash)
+                tokenRepository.findForUpdateByTokenHash(tokenHash)
                         .orElseThrow(
                                 InvalidPasswordResetTokenException::new
                         );

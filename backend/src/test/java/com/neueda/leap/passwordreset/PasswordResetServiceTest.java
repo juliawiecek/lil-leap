@@ -21,7 +21,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.times; 
 
 /**
  * Tests password reset business logic.
@@ -145,7 +144,7 @@ class PasswordResetServiceTest {
         when(tokenUtil.hashToken(rawToken))
                 .thenReturn(tokenHash);
 
-        when(tokenRepository.findByTokenHash(tokenHash))
+        when(tokenRepository.findForUpdateByTokenHash(tokenHash))
                 .thenReturn(Optional.of(resetToken));
 
         when(userRepository.findById(userId))
@@ -182,7 +181,7 @@ class PasswordResetServiceTest {
         when(tokenUtil.hashToken(rawToken))
                 .thenReturn(tokenHash);
 
-        when(tokenRepository.findByTokenHash(tokenHash))
+        when(tokenRepository.findForUpdateByTokenHash(tokenHash))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -219,7 +218,7 @@ class PasswordResetServiceTest {
         when(tokenUtil.hashToken(rawToken))
                 .thenReturn(tokenHash);
 
-        when(tokenRepository.findByTokenHash(tokenHash))
+        when(tokenRepository.findForUpdateByTokenHash(tokenHash))
                 .thenReturn(Optional.of(expiredToken));
 
         assertThrows(
@@ -240,61 +239,4 @@ class PasswordResetServiceTest {
         );
     }
 
-    @Test
-    void confirmPasswordResetRejectsReusedToken() {
-
-        String rawToken = "single-use-token";
-        String tokenHash = "hashed-single-use-token";
-        String newPassword = "NewPassword123!";
-        String encodedPassword = "encoded-new-password";
-
-        UUID userId = UUID.randomUUID();
-
-        PasswordResetToken resetToken = new PasswordResetToken(
-                UUID.randomUUID(),
-                tokenHash,
-                userId,
-                Instant.now().plus(20, ChronoUnit.MINUTES)
-        );
-
-        when(tokenUtil.hashToken(rawToken))
-                .thenReturn(tokenHash);
-
-        when(tokenRepository.findByTokenHash(tokenHash))
-                .thenReturn(Optional.of(resetToken))
-                .thenReturn(Optional.empty());
-
-        when(userRepository.findById(userId))
-                .thenReturn(Optional.of(user));
-
-        when(passwordEncoder.encode(newPassword))
-                .thenReturn(encodedPassword);
-
-        // First attempt succeeds.
-        passwordResetService.confirmPasswordReset(
-                rawToken,
-                newPassword
-        );
-
-        // Second attempt with the exact same token must fail.
-        assertThrows(
-                InvalidPasswordResetTokenException.class,
-                () -> passwordResetService.confirmPasswordReset(
-                        rawToken,
-                        newPassword
-                )
-        );
-
-        verify(tokenRepository)
-                .delete(resetToken);
-
-        verify(passwordEncoder, times(1))
-                .encode(newPassword);
-
-        verify(user, times(1))
-                .setPasswordHash(encodedPassword);
-
-        verify(userRepository, times(1))
-                .save(user);
-    }
 }

@@ -26,6 +26,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id")
     private UUID id;
 
     @Column(name = "first_name", nullable = false, length = 100)
@@ -34,7 +35,7 @@ public class User {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(nullable = false, length = 320)
+    @Column(nullable = false, length = 255)
     private String email;
 
     @Column(length = 30)

@@ -2,6 +2,7 @@ package com.neueda.leap.security;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,8 +31,12 @@ class JwtServiceTest {
         JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
         String token = jwtService.issueToken(UUID.randomUUID(), "julia@example.com");
 
-        String tampered = token.substring(0, token.length() - 1)
-                + (token.charAt(token.length() - 1) == 'a' ? 'b' : 'a');
+        int signatureStart = token.lastIndexOf('.') + 1;
+        byte[] signature = Base64.getUrlDecoder().decode(token.substring(signatureStart));
+        // Change an actual signature bit, avoiding unused bits in the final Base64 character.
+        signature[0] ^= 1;
+        String tampered = token.substring(0, signatureStart)
+                + Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
 
         assertTrue(jwtService.validate(tampered).isEmpty());
     }

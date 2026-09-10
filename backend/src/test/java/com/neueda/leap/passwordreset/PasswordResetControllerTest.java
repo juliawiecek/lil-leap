@@ -91,6 +91,23 @@ class PasswordResetControllerTest {
     }
 
     @Test
+    void confirmPasswordReset_shouldReturn400ForEmptyToken() throws Exception {
+        String json = """
+                {
+                    "token": "",
+                    "newPassword": "NewPassword123!"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/password-reset/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(passwordResetService);
+    }
+
+    @Test
     void confirmPasswordReset_shouldReturn400ForShortPassword() throws Exception {
 
         String json = """

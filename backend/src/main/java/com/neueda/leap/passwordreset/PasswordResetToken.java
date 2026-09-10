@@ -19,10 +19,10 @@ public class PasswordResetToken {
     @Column(name = "reset_token_id")
     private UUID id;
 
-    @Column(name = "token_hash", nullable = false, unique = true)
+    @Column(name = "token_hash", nullable = false, unique = true, length = 512)
     private String tokenHash;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
     @Column(name = "expires_at", nullable = false)
