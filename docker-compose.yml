@@ -1,9 +1,9 @@
 services:
   app:
     build: ./backend
-    # No ports: mapping — the app service is intentionally unreachable from the
-    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `app` unless a ports: entry is added.
+    # port 8090 so Swagger UI can be reached at http://<host>:8090/swagger-ui/index.html
+    ports:
+      - "8090:8080"
     depends_on:
       - db
     environment:
