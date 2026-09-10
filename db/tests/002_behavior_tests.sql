@@ -26,7 +26,7 @@ VALUES (
   (CURRENT_DATE - INTERVAL '25 years')::date,
   'CITIZEN',
   pgp_sym_encrypt('111-22-3333', :'key', 'cipher-algo=aes256')
-) RETURNING customer_profile_id \gset c_
+) RETURNING profile_id \gset c_
 
 -- Verify round-trip
 SELECT 
@@ -36,7 +36,7 @@ SELECT
     ELSE 'FAIL: SSN round-trip failed'
   END as result
 FROM customer_profiles 
-WHERE customer_profile_id = :'c_customer_profile_id';
+WHERE profile_id = :'c_profile_id';
 
 -- =================================================================
 -- TEST 2: Verify SSN stored as BYTEA (encrypted, never plaintext)
