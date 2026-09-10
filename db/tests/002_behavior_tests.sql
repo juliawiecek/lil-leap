@@ -1,7 +1,6 @@
 -- Behavior tests for database hardening: encryption, age validation, constraints
 -- Run with: psql -v key="<encryption_key>" ...
-
-\set ON_ERROR_STOP on
+-- Note: Some tests intentionally trigger errors. We disable ON_ERROR_STOP to see all results.
 
 -- =================================================================
 -- TEST 1: Adult customer with encrypted SSN round-trip
@@ -68,22 +67,26 @@ INSERT INTO users(email, password_hash)
 VALUES ('behavior-minor@example.test', 'synthetic-bcrypt-hash') 
 RETURNING user_id \gset m_
 
-BEGIN;
-  INSERT INTO customer_profiles(
-    user_id, first_name, last_name, phone, address, country,
-    date_of_birth, citizenship_status, ssn_encrypted
-  )
-  VALUES (
-    :'m_user_id', 'Minor', 'Fixture', '555-0101', '2 Test Way', 'US',
-    (CURRENT_DATE - INTERVAL '17 years')::date,
-    'CITIZEN',
-    pgp_sym_encrypt('222-33-4444', :'key', 'cipher-algo=aes256')
-  );
-  SELECT 'FAIL: Under-18 customer was not rejected' as result;
-ROLLBACK;
+-- Try to insert a minor (under 18) - should be rejected by trigger
+INSERT INTO customer_profiles(
+  user_id, first_name, last_name, phone, address, country,
+  date_of_birth, citizenship_status, ssn_encrypted
+)
+VALUES (
+  :'m_user_id', 'Minor', 'Fixture', '555-0101', '2 Test Way', 'US',
+  (CURRENT_DATE - INTERVAL '17 years')::date,
+  'CITIZEN',
+  pgp_sym_encrypt('222-33-4444', :'key', 'cipher-algo=aes256')
+);
 
--- If we get here without error, the trigger worked
-SELECT 'PASS: Under-18 customer correctly rejected by age trigger' as result;
+-- Check if the insert succeeded (it shouldn't have)
+SELECT 
+  CASE 
+    WHEN count(*) = 0 THEN 'PASS: Under-18 customer correctly rejected by age trigger'
+    ELSE 'FAIL: Under-18 customer was created (trigger failed)'
+  END as result
+FROM customer_profiles 
+WHERE user_id = :'m_user_id';
 
 -- =================================================================
 -- TEST 4: Quote constraint - bid >= ask rejection
@@ -94,13 +97,18 @@ SELECT 'PASS: Under-18 customer correctly rejected by age trigger' as result;
 
 DELETE FROM quotes WHERE symbol = 'TEST-BIDASK';
 
-BEGIN;
-  INSERT INTO quotes(symbol, bid, ask, source, quote_timestamp, is_synthetic)
-  VALUES ('TEST-BIDASK', 100.00, 99.00, 'TEST', CURRENT_TIMESTAMP, FALSE);
-  SELECT 'FAIL: Invalid bid >= ask was not rejected' as result;
-ROLLBACK;
+-- Try to insert a quote with invalid bid >= ask - should be rejected by CHECK constraint
+INSERT INTO quotes(symbol, bid, ask, source, quote_timestamp, is_synthetic)
+VALUES ('TEST-BIDASK', 100.00, 99.00, 'TEST', CURRENT_TIMESTAMP, FALSE);
 
-SELECT 'PASS: Invalid bid >= ask correctly rejected' as result;
+-- Check if the insert succeeded (it shouldn't have)
+SELECT 
+  CASE 
+    WHEN count(*) = 0 THEN 'PASS: Invalid bid >= ask correctly rejected'
+    ELSE 'FAIL: Invalid quote was created (constraint failed)'
+  END as result
+FROM quotes 
+WHERE symbol = 'TEST-BIDASK';
 
 -- =================================================================
 -- TEST 5: Quote with provenance (source + is_synthetic)
