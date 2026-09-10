@@ -1,5 +1,6 @@
 package com.neueda.leap.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -26,12 +27,12 @@ public class SsnEncryptionService {
     /**
      * Creates a new SSN encryption service.
      *
-     * @param entityManager JPA EntityManager for executing native queries
+     * @param entityManager JPA EntityManager for executing native queries (optional for testing)
      * @param encryptionKey SSN encryption key from NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY env var
      */
     public SsnEncryptionService(
-            EntityManager entityManager,
-            @Value("${nexttrade.security.ssn-encryption-key}") String encryptionKey
+            @Autowired(required = false) EntityManager entityManager,
+            @Value("${nexttrade.security.ssn-encryption-key:}") String encryptionKey
     ) {
         this.entityManager = entityManager;
         this.encryptionKey = encryptionKey;
