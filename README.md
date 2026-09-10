@@ -280,7 +280,7 @@ Key files:
 
 ## ER Diagram
 
-- View the ER diagram: [`db/ER_Diagram.pdf`](db/ER_Diagram.pdf)
+- View the ER diagram screenshot: [`db/er_diagram.png`](db/er_diagram.png)
 
 ## Recent Project Changes Reflected in This README
 
