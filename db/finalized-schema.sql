@@ -106,7 +106,7 @@ CREATE OR REPLACE FUNCTION check_customer_age_18()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.date_of_birth > CURRENT_DATE - INTERVAL '18 years' THEN
-        RAISE EXCEPTION 'Customer must be at least 18 years old' USING SQLSTATE = '23514';
+        RAISE EXCEPTION 'Customer must be at least 18 years old' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END;
