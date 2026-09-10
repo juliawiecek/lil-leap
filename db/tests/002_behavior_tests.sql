@@ -1,6 +1,11 @@
 -- Behavior tests for database hardening: encryption, age validation, constraints
 -- Run with: psql -v key="<encryption_key>" ...
--- Note: Some tests intentionally trigger errors. We disable ON_ERROR_STOP to see all results.
+
+-- Clean up any previous test data
+DELETE FROM customer_profiles WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'behavior-%');
+DELETE FROM users WHERE email LIKE 'behavior-%';
+DELETE FROM quotes WHERE source = 'TEST-BEHAVIOR';
+DELETE FROM instruments WHERE symbol IN ('TEST-BIDASK', 'TEST-PROV');
 
 -- =================================================================
 -- TEST 1: Adult customer with encrypted SSN round-trip
@@ -95,11 +100,14 @@ WHERE user_id = :'m_user_id';
 \echo 'TEST 4: Quote constraint - bid >= ask rejection'
 \echo '=========================================='
 
-DELETE FROM quotes WHERE symbol = 'TEST-BIDASK';
+-- Create test instrument
+INSERT INTO instruments(symbol, instrument_name, asset_class, market_code, currency, sector)
+VALUES ('TEST-BIDASK', 'Test Invalid Bid/Ask', 'TEST', 'TEST', 'USD', 'Technology')
+RETURNING instrument_id \gset bidask_
 
 -- Try to insert a quote with invalid bid >= ask - should be rejected by CHECK constraint
-INSERT INTO quotes(symbol, bid, ask, source, quote_timestamp, is_synthetic)
-VALUES ('TEST-BIDASK', 100.00, 99.00, 'TEST', CURRENT_TIMESTAMP, FALSE);
+INSERT INTO quotes(instrument_id, bid, ask, source, quoted_at, is_synthetic)
+VALUES (:'bidask_instrument_id', 100.00, 99.00, 'TEST-BEHAVIOR', CURRENT_TIMESTAMP, FALSE);
 
 -- Check if the insert succeeded (it shouldn't have)
 SELECT 
@@ -108,7 +116,7 @@ SELECT
     ELSE 'FAIL: Invalid quote was created (constraint failed)'
   END as result
 FROM quotes 
-WHERE symbol = 'TEST-BIDASK';
+WHERE source = 'TEST-BEHAVIOR' AND instrument_id = :'bidask_instrument_id';
 
 -- =================================================================
 -- TEST 5: Quote with provenance (source + is_synthetic)
@@ -117,10 +125,14 @@ WHERE symbol = 'TEST-BIDASK';
 \echo 'TEST 5: Quote provenance fields present'
 \echo '=========================================='
 
-DELETE FROM quotes WHERE symbol = 'TEST-PROV';
+-- Create test instrument
+INSERT INTO instruments(symbol, instrument_name, asset_class, market_code, currency, sector)
+VALUES ('TEST-PROV', 'Test Provenance', 'TEST', 'TEST', 'USD', 'Technology')
+RETURNING instrument_id \gset prov_
 
-INSERT INTO quotes(symbol, bid, ask, source, quote_timestamp, is_synthetic)
-VALUES ('TEST-PROV', 50.00, 51.00, 'REAL_SOURCE', CURRENT_TIMESTAMP, FALSE);
+-- Insert valid quote with provenance fields
+INSERT INTO quotes(instrument_id, bid, ask, source, quoted_at, is_synthetic)
+VALUES (:'prov_instrument_id', 50.00, 51.00, 'REAL_SOURCE', CURRENT_TIMESTAMP, FALSE);
 
 SELECT 'PASS: Quote with source and is_synthetic created successfully' as result;
 
