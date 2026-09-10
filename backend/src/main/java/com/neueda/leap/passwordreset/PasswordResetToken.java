@@ -28,9 +28,20 @@ public class PasswordResetToken {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    /**
+     * Creates an empty password reset token for JPA.
+     */
     protected PasswordResetToken() {
     }
 
+    /**
+     * Creates a password reset token.
+     *
+     * @param id the unique identifier of the reset token
+     * @param tokenHash the hashed password reset token
+     * @param userId the identifier of the user requesting the reset
+     * @param expiresAt the time at which the reset token expires
+     */
     public PasswordResetToken(
             UUID id,
             String tokenHash,
@@ -43,18 +54,38 @@ public class PasswordResetToken {
         this.expiresAt = expiresAt;
     }
 
+    /**
+     * Returns the reset token identifier.
+     *
+     * @return the reset token identifier
+     */
     public UUID getId() {
         return id;
     }
 
+    /**
+     * Returns the hashed reset token.
+     *
+     * @return the hashed reset token
+     */
     public String getTokenHash() {
         return tokenHash;
     }
 
+    /**
+     * Returns the identifier of the associated user.
+     *
+     * @return the user identifier
+     */
     public UUID getUserId() {
         return userId;
     }
 
+    /**
+     * Returns the time at which the reset token expires.
+     *
+     * @return the reset token expiration time
+     */
     public Instant getExpiresAt() {
         return expiresAt;
     }

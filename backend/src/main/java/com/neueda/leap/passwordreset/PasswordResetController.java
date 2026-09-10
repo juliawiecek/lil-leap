@@ -11,7 +11,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Provides API endpoints for requesting and completing password resets.
+ * Creates a password reset controller.
+ *
+ * @param passwordResetService the service that handles password reset operations
+ */
+/**
+ * Completes the password reset process.
+ *
+ * @param request the password reset confirmation request
+ * @return a response indicating that the password was reset
+ * @throws InvalidPasswordResetTokenException if the reset token is invalid or expired
  */
 @RestController
 @RequestMapping("/auth/password-reset")

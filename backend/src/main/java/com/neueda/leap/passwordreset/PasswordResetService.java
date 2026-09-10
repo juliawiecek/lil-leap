@@ -11,7 +11,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 /**
- * Handles the password reset workflow.
+ * Creates a password reset service.
+ *
+ * @param userRepository the repository used to access user accounts
+ * @param tokenRepository the repository used to store password reset tokens
+ * @param tokenUtil the utility used to generate and hash reset tokens
+ * @param passwordEncoder the encoder used to securely hash passwords
+ * @param delivery the component used to deliver password reset information
  */
 @Service
 public class PasswordResetService {

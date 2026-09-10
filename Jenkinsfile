@@ -46,6 +46,19 @@ pipeline {
       }
     }
 
+    // Run all backend JUnit tests before building Docker images.
+    stage('Run Backend Tests') {
+      steps {
+        sh '''
+          docker run --rm \
+            -v "$WORKSPACE/backend:/app" \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B clean test
+        '''
+      }
+    }
+
     stage('Build Multi-Stage Image') {
       steps {
         sh 'docker build -t sprint1-greeter-app:jenkins-multistage backend/'

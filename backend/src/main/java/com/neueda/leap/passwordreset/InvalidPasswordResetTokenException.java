@@ -5,6 +5,10 @@ package com.neueda.leap.passwordreset;
  */
 public class InvalidPasswordResetTokenException extends RuntimeException {
 
+    /**
+     * Creates an exception indicating that the password reset token
+     * is invalid or expired.
+     */
     public InvalidPasswordResetTokenException() {
         super("The password reset token is invalid or has expired.");
     }

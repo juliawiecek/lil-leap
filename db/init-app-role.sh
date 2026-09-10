@@ -16,8 +16,10 @@ psql -v ON_ERROR_STOP=1 --username "main" --dbname "nexttrade" <<-EOSQL
 
     -- Standard DML for the app's runtime tables.
     GRANT SELECT, INSERT, UPDATE, DELETE ON
-        users, instruments, accounts, sessions, orders, fills,
-        order_status_history, holdings, cash_balances, financial_profiles, customer_profiles,holding_movements, cash_transactions TO app_user;
+        users, instruments, accounts, sessions, password_reset_tokens,
+        orders, fills, order_status_history, holdings, cash_balances,
+        financial_profiles, customer_profiles, holding_movements,
+        cash_transactions TO app_user;
 
     -- audit_log is append-only: app_user may read/insert but never update/delete.
     GRANT SELECT, INSERT ON audit_log TO app_user;
