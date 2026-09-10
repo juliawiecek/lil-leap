@@ -1,249 +1,296 @@
-# Lil-Leap NextTrade
+# NextTrade
+## Team: Lil Leap
 
-NextTrade is an e-trading platform developed as part of the Fidelity LEAP Project. The application uses a modern full-stack architecture with Angular on the frontend, Spring Boot on the backend, PostgreSQL for data persistence, and automated testing and CI/CD tooling to support reliable development and deployment.
+NextTrade is an e-trading platform built for the Fidelity LEAP program. This repo contains a Spring Boot backend, Angular frontend, PostgreSQL schema, a synthetic quote data pipeline, and Docker/Jenkins automation.
 
 ## Team
 
-| Team Member    | Role                      |
-| -------------- | ------------------------- |
-| Julia Wiecek   | Team Lead                 |
-| Lalima Karri   | Developer, Angular        |
-| Ilhan Gelle    | Developer, Security       |
-| Tanush Kaushik | Developer / Data Engineer |
-| Kevin Marin    | Developer, Spring Boot    |
+| Team Member | Role                     |
+| --- |--------------------------|
+| Julia Wiecek | Team Lead                |
+| Lalima Karri | Developer, Angular       |
+| Ilhan Gelle | Developer, Security      |
+| Tanush Kaushik | Developer, Data Engineer |
+| Kevin Marin | Developer, Spring Boot   |
+
+## Project Structure
+
+```text
+lil-leap/
+|- backend/                 # Spring Boot 3.3.4, Java 21, Maven
+|- frontend/                # Angular 22 application
+|- db/                      # PostgreSQL schema + role/bootstrap scripts
+|- data-pipeline/           # Python synthetic quote generator + API
+|- docker-compose.yml       # app + db services for local container workflow
+|- Jenkinsfile              # CI pipeline (compose validation + image builds)
+`- README.md
+```
+
+## Architecture
+
+```text
+Frontend (Angular)
+       |
+       | HTTP
+       v
+Backend (Spring Boot + Spring Security + JWT)
+       |
+       | JDBC
+       v
+PostgreSQL 16
+```
+
+### Architecture Overview
+
+```text
++----------------------------+         HTTP          +-------------------------------------+
+| Frontend (Angular 22)      | -------------------> | Backend (Spring Boot 3.3.4)        |
+| - UI + client-side state   |                      | - REST controllers                 |
+| - Login/Register screens   | <------------------- | - Security (JWT filter + authz)    |
++----------------------------+      JSON responses   | - Services + validation            |
+                                                     +-------------------+-----------------+
+                                                                         |
+                                                                         | JDBC
+                                                                         v
+                                                     +-------------------------------------+
+                                                     | PostgreSQL 16                        |
+                                                     | - finalized-schema.sql               |
+                                                     | - app_user restricted privileges      |
+                                                     | - persistent db_data volume           |
+                                                     +-------------------------------------+
+```
+
+### Container Topology (Docker Compose)
+
+```text
+Host Machine
+  |
+  |-- Port 5432 exposed
+  v
++----------------------------+
+| db container               |
+| postgres:16-alpine         |
+| POSTGRES_DB=nexttrade      |
+| POSTGRES_USER=main         |
++----------------------------+
+
+Docker internal network
++----------------------------+        jdbc:postgresql://db:5432/nexttrade
+| app container              | -------------------------------------------> db
+| built from ./backend       |
+| no host ports mapped       |
++----------------------------+
+```
+
+### Authentication Flow
+
+```text
+1) Client -> POST /auth/login (email/password)
+2) AuthController -> UserService validates credentials
+3) JwtService issues signed token
+4) Client stores token and sends: Authorization: Bearer <token>
+5) JwtAuthenticationFilter validates token on protected routes
+6) /api/v1/users/me returns authenticated user data
+```
+
+### CI Build Flow (Jenkins)
+
+```text
+Checkout
+   -> Detect compose command
+   -> Validate compose YAML
+   -> docker build backend/ (multi-stage image)
+   -> docker compose build
+   -> post: docker compose down -v
+```
 
 ## Technology Stack
 
-### Backend
+| Layer | Technology | Notes |
+| --- | --- | --- |
+| Backend | Spring Boot 3.3.4 | REST APIs, validation, service layer |
+| Security | Spring Security + JJWT 0.12.6 | BCrypt password hashing + Bearer JWT auth |
+| Database | PostgreSQL 16 + `pgcrypto` | UUID keys generated in DB |
+| Frontend | Angular 22 + TypeScript | Standalone Angular app |
+| Data | Python + Flask + NumPy + Pandas | Synthetic quote generation pipeline |
+| DevOps | Docker, Docker Compose, Jenkins | Container builds and CI automation |
 
-#### Spring Boot
+## Backend API (Current)
 
-Spring Boot is the core Java framework used to run the backend application. It provides the foundation for REST APIs, application logic, database integration, security, and service organization.
+- `POST /api/v1/users` - Register user (onboarding flow)
+- `POST /auth/login` - Authenticate and return JWT
+- `GET /api/v1/users/me` - Get current user profile (requires `Authorization: Bearer <token>`)
 
-### Database
-Link to ER Diagram: https://github.com/juliawiecek/lil-leap/blob/database-app-role/db/schema_er_diagram.pdf 
-#### PostgreSQL
+Primary backend packages under `backend/src/main/java/com/neueda/leap`:
 
-PostgreSQL is the primary relational database used by the application.
+- `onboarding/` - Registration controller/service/DTO/entity layers
+- `user/` - Authentication and authenticated user endpoints
+- `security/` - JWT service and request filter
+- `config/` - Security filter chain and password encoder
+- `common/` - Cross-cutting exception handling
 
-It was selected for its strong support of database constraints and data integrity, including:
+## Database
 
-* `CHECK`
-* `FOREIGN KEY`
-* `UNIQUE`
-* `NOT NULL`
+- Main schema file: `db/finalized-schema.sql`
+- Role/bootstrap script: `db/init-app-role.sh`
+- ER diagram: `db/ER_Diagram.pdf`
 
-#### pgcrypto
+### Credential and Role Model (Current Dev Setup)
 
-The PostgreSQL `pgcrypto` extension is used to generate UUID primary keys at the database level.
+- `main` user owns schema and performs privileged setup
+- `app_user` is restricted for app runtime DML
 
-## Security and Authentication
+Current hardcoded development credentials:
 
-### Spring Security
+| Principal | Username | Password |
+| --- | --- | --- |
+| DB owner/admin | `main` | `main_password` |
+| App DB user | `app_user` | `my_app_password` |
 
-Spring Security handles authentication and authorization within the backend application.
+`init-app-role.sh` grants `app_user` connect/schema usage plus table-level DML permissions.
 
-It supports:
+## Docker Compose Behavior
 
-* User authentication
-* Role and access control
-* Protected API endpoints
-* Password security
+`docker-compose.yml` defines:
 
-### BCrypt
+- `db` service (`postgres:16-alpine`) exposed on host `5432`
+- `app` service built from `backend/` with no host `ports:` mapping
 
-Passwords are hashed before storage using Spring Security's `BCryptPasswordEncoder`.
+Important runtime behavior:
 
-BCrypt provides secure one-way password hashing and is available directly through Spring Security.
+- The backend can reach Postgres internally at `db:5432`
+- The backend container is intentionally not reachable from host unless you add a port mapping
+- DB initialization scripts run only on first startup of an empty `db_data` volume
 
-### JWT Authentication
+## Jenkins Pipeline Behavior
 
-A JWT library will be used to issue and validate authentication tokens for login sessions.
+`Jenkinsfile` stages:
 
-The specific library has not yet been finalized. `jjwt` is currently being considered.
+1. Checkout
+2. Detect compose command (`docker-compose` vs `docker compose`)
+3. Validate compose YAML
+4. Build backend multi-stage image (`docker build ... backend/`)
+5. Build compose services (`docker compose build`)
+6. Always cleanup (`docker compose down -v`)
 
-**Status:** Decision pending and will be finalized when TS-02.2 begins.
+Notes:
 
-## Frontend
+- `Build Multi-Stage Image` and `Build Compose Services` both build the app image path, so there is intentional overlap.
+- The pipeline does not call `mvn test` directly on the Jenkins agent.
+- In `backend/Dockerfile`, Maven currently runs with `-DskipTests`, so backend tests are not executed during that image build.
 
-### Angular
+## Local Development
 
-Angular is the primary frontend framework for NextTrade.
+## Prerequisites
 
-It is used to build reusable components, manage frontend application logic, connect to backend REST APIs, and organize the user interface.
+| Tool | Recommended Version |
+| --- | --- |
+| Java | 21 |
+| Maven | 3.9+ |
+| Node.js | 20+ |
+| npm | 10+ |
+| Python | 3.11+ |
+| Docker | Latest |
+| Docker Compose | v2+ |
 
-### Spartan UI
+### 1) Start Database with Docker Compose
 
-Spartan UI is the component library used with Angular to build a consistent and reusable user interface.
+```bat
+docker compose up -d db
+```
 
-It provides accessible and customizable UI components that can be integrated into features across the platform.
+### 2) Run Backend Locally
 
-Spartan UI is used to support interface elements such as:
+```bat
+cd backend
+mvn clean test
+mvn spring-boot:run
+```
 
-* Data tables
-* Forms
-* Buttons
-* Dialogs
-* Dropdowns
-* Navigation
-* Dashboard components
-* User interface controls
+### 3) Run Frontend Locally
+
+```bat
+cd frontend
+npm install
+npm start
+```
+
+### 4) Run Full Compose Build
+
+```bat
+docker compose build
+docker compose up -d
+```
+
+Stop and clean (including DB volume):
+
+```bat
+docker compose down -v
+```
 
 ## Testing
 
-### JUnit 5
+### Backend (JUnit + Spring Boot Test + MockMvc)
 
-JUnit 5 is the primary Java testing framework used for backend unit and integration tests.
-
-### Spring Boot Test
-
-Spring Boot Test provides testing utilities for Spring-based applications.
-
-### MockMvc
-
-MockMvc is used to test REST endpoints without requiring a live application server.
-
-It can be used to validate:
-
-* HTTP requests
-* HTTP responses
-* Status codes
-* Request validation
-* Controller behavior
-* API security behavior
-
-## Infrastructure and DevOps
-
-### Docker
-
-Docker is used to containerize application services.
-
-This helps ensure that developers and CI environments run consistent configurations and reduces environment-specific differences.
-
-### Jenkins
-
-Jenkins is used for Continuous Integration and Continuous Deployment.
-
-It automates the build and testing process whenever new code is integrated.
-
-Typical workflow:
-
-```text
-   Code Change
-        |
-        v
-      Build
-        |
-        v
- Automated Tests
-        |
-        v
-    Validation
-        |
-        v
-Deployment Pipeline
+```bat
+cd backend
+mvn clean test
 ```
 
-### Node.js and npm
+### Frontend
 
-Node.js and npm are required to build and run the Angular frontend.
+Frontend build validation:
 
-npm is also used to install and manage frontend dependencies such as Angular, Spartan UI, and other packages used by the application.
-
-## Branching Strategy
-
-### Trunk-Based Development
-
-NextTrade follows a trunk-based development strategy.
-
-Developers work from a shared main branch and integrate small changes frequently rather than maintaining multiple long-lived development branches.
-
-This approach supports:
-
-* Faster feedback
-* Smaller code changes
-* Reduced merge conflicts
-* Frequent integration
-* Improved collaboration
-* Earlier identification of defects
-
-Typical workflow:
-
-```text
-  Developer Change
-          |
-          v
-    Local Testing
-          |
-          v
-    Commit Changes
-          |
-          v
- Integrate with Main
-          |
-          v
-     Jenkins CI
-          |
-          v
-Build and Automated Tests
+```bat
+cd frontend
+npm run build
 ```
 
-The goal is to keep the shared branch stable while continuously integrating small, tested changes.
+### Data Pipeline (Pytest)
 
-## Architecture Overview
-
-```text
-+---------------------------------------------+
-|                  Frontend                   |
-|                                             |
-|             Angular + Spartan UI            |
-+----------------------+----------------------+
-                       |
-                       | REST API
-                       v
-+---------------------------------------------+
-|                  Backend                    |
-|                                             |
-|                Spring Boot                  |
-|             Spring Security                 |
-+----------------------+----------------------+
-                       |
-                       | SQL
-                       v
-+---------------------------------------------+
-|                 Database                    |
-|                                             |
-|                PostgreSQL                   |
-|            Flyway + pgcrypto                |
-+---------------------------------------------+
-
-Development and CI Tooling
-
-Docker | Jenkins | JUnit 5 | MockMvc | Node.js | npm
+```bat
+cd data-pipeline
+python -m pip install -r requirements.txt
+pytest
 ```
 
-## External Libraries and Services
+## JavaDocs
 
-| Category         | Technology       | Purpose                                       |
-| ---------------- | ---------------- | --------------------------------------------- |
-| Backend          | Spring Boot      | Backend framework and REST API                |
-| Database         | PostgreSQL       | Relational database and data integrity        |
-| Database         | Flyway           | Version-controlled database migrations        |
-| Database         | pgcrypto         | Database-level UUID generation                |
-| Security         | Spring Security  | Authentication and authorization              |
-| Security         | BCrypt           | Secure password hashing                       |
-| Security         | JWT Library      | Authentication token management, library TBD  |
-| Frontend         | Angular          | Frontend application framework                |
-| Frontend         | Spartan UI       | Angular UI component library                  |
-| Testing          | JUnit 5          | Java testing framework                        |
-| Testing          | Spring Boot Test | Spring application testing utilities          |
-| Testing          | MockMvc          | REST endpoint testing                         |
-| Infrastructure   | Docker           | Containerized development and CI environments |
-| CI/CD            | Jenkins          | Automated build and testing pipeline          |
-| Frontend Tooling | Node.js / npm    | Angular builds and dependency management      |
+Generated HTML docs are not committed in this repository by default. Generate them locally with Maven:
 
-## Project Information
+```bat
+cd backend
+mvn javadoc:javadoc
+```
 
-**Project:** LilLeap NextTrade <br>
-**Program:** Fidelity LEAP <br>
-**Application Type:** E-Trading Platform <br>
+Open the generated site at:
+
+- `backend/target/site/apidocs/index.html`
+
+## Data Pipeline
+
+The `data-pipeline/` module generates reproducible synthetic US-equity quotes for offline/dev use.
+
+Key files:
+
+- `data-pipeline/src/generate_quotes.py`
+- `data-pipeline/src/quote_provider.py`
+- `data-pipeline/src/app.py`
+- `data-pipeline/tests/`
+
+## ER Diagram
+
+- View the ER diagram screenshot: [`db/er_diagram.png`](db/er_diagram.png)
+
+## Recent Project Changes Reflected in This README
+
+- Docker compose and DB bootstrap now use hardcoded dev credentials instead of `${...}` env substitution for app-user password setup.
+- Schema bootstrap file path in compose is `db/finalized-schema.sql`.
+- Role grant SQL in `db/init-app-role.sh` was corrected to valid identifier syntax.
+- JWT library decision is finalized and implemented with JJWT (`io.jsonwebtoken`).
+
+## Notes for Production Hardening
+
+- Replace hardcoded development DB credentials with secrets/environment variables.
+- Set a strong JWT secret via `APP_JWT_SECRET` (default in code is dev-only).
+- Consider running tests in CI before image packaging (or remove `-DskipTests` in Docker build stage).
