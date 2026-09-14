@@ -7,30 +7,45 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
-      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-      # db/init-app-role.sh. It is separate from "main", which owns the schema
-      # and runs migrations.
-      SPRING_DATASOURCE_USERNAME: app_user
-      SPRING_DATASOURCE_PASSWORD: my_app_password
+      # Spring Boot datasource configuration using environment variables
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_APP_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_APP_PASSWORD}
+      # Application-specific configuration
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
+      NEXTTRADE_SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES}
+    # Note: app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+    # db/init-app-role.sh. It is separate from the admin role, which owns the
+    # schema and runs migrations.
 
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: nexttrade
-      POSTGRES_USER: main
-      POSTGRES_PASSWORD: main_password
+      # PostgreSQL server configuration using environment variables
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_ADMIN_USERNAME}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      # Application role configuration for init-app-role.sh
+      DB_APP_USERNAME: ${DB_APP_USERNAME}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
     ports:
-      # Only db is reachable from the host. app is not. This mirrors a real
-      # deployment where the database is internal but needs to be accessible
-      # to DBA tooling running on the developer's machine during development.
-      - "5432:5432"
+      # Publish PostgreSQL using configurable port
+      # Only db is reachable from the host. This mirrors a real deployment
+      # where the database is internal but needs to be accessible to DBA
+      # tooling running on the developer's machine.
+      - "${DB_PUBLISHED_PORT}:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_ADMIN_USERNAME} -d ${DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
       # Numeric prefixes control init order: schema first, then the
       # restricted app role. Both only run once, against an empty volume.
-      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
+      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
 
 volumes:
   db_data:

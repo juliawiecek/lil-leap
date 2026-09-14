@@ -36,7 +36,6 @@ CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    ssn TEXT,  -- PII: encrypt in production
     
     -- User role for access control (MVP: TRADER only)
     user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role = 'TRADER'),
@@ -61,6 +60,9 @@ CREATE INDEX idx_users_created_at ON users(created_at DESC);
 -- CUSTOMER_PROFILES (Personal Identity - BR-01)
 -- Separated from users for normalization and audit trail
 -- Enables profile updates independent of auth changes
+-- SECURITY: Full SSN is reversibly encrypted using pgcrypto PGP symmetric encryption.
+-- Only encrypted BYTEA ciphertext is stored; plaintext SSN and encryption key
+-- must never appear in logs or audit payloads.
 -- ==========================================================
 
 CREATE TABLE customer_profiles (
@@ -72,6 +74,10 @@ CREATE TABLE customer_profiles (
     address TEXT NOT NULL,
     country VARCHAR(100),
     date_of_birth DATE NOT NULL,
+    
+    -- SECURITY: Full synthetic or real SSN encrypted with pgcrypto symmetric encryption.
+    -- Application supplies encryption key at runtime (nexttrade.security.ssn-encryption-key).
+    ssn_encrypted BYTEA NOT NULL,
     
     -- FIDELITY COMPLIANCE: Citizenship & residency (BR-01, Fidelity)
     citizenship_status VARCHAR(50),  -- 'CITIZEN', 'PERMANENT_RESIDENT', 'OTHER'
@@ -92,6 +98,27 @@ CREATE TABLE customer_profiles (
 
 CREATE INDEX idx_profile_user ON customer_profiles(user_id);
 CREATE INDEX idx_profile_updated_at ON customer_profiles(updated_at DESC);
+
+-- TRIGGER: Minimum age validation (18+)
+-- Rejects inserts/updates where date_of_birth indicates customer is younger than 18.
+-- Uses SQLSTATE 23514 (check_violation) for controlled rejection.
+CREATE OR REPLACE FUNCTION check_customer_age_18()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.date_of_birth > CURRENT_DATE - INTERVAL '18 years' THEN
+        RAISE EXCEPTION 'Customer must be at least 18 years old' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_customer_profiles_age_validation
+BEFORE INSERT OR UPDATE OF date_of_birth ON customer_profiles
+FOR EACH ROW
+EXECUTE FUNCTION check_customer_age_18();
+
+-- CONSTRAINT: Prevent future dates of birth
+-- (Additional database-level constraint alongside trigger)
 
 -- ==========================================================
 -- FINANCIAL_PROFILES (KYC + Risk Profile + Trader Tier - BR-01, BR-11)
@@ -153,7 +180,9 @@ CREATE INDEX idx_financial_profile_kyc_status ON financial_profiles(kyc_status);
 
 -- ==========================================================
 -- SESSIONS (BR-03: Time-limited, revocable sessions)
--- 1-minute timeout on inactivity per BR-03 requirement
+-- Session inactivity timeout defaults to approximately 10 minutes and is
+-- configurable in application code (nexttrade.session.inactivity-minutes).
+-- This table stores issued, last-active, expiration, and revocation timestamps.
 -- ==========================================================
 
 CREATE TABLE sessions (
@@ -192,6 +221,7 @@ CREATE TABLE instruments (
     asset_class VARCHAR(30) NOT NULL,  -- 'COMMON_STOCK', 'FX', 'CRYPTO'
     market_code VARCHAR(20) NOT NULL,
     currency CHAR(3) NOT NULL DEFAULT 'USD',
+    sector VARCHAR(100),  -- Industry/sector classification, nullable
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     tradable BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -211,6 +241,8 @@ CREATE INDEX idx_instruments_tradable ON instruments(tradable);
 -- QUOTES (BR-08: Non-stale quotes, BR-13: Indicative pricing)
 -- Current bid/ask prices with timestamp for staleness detection
 -- Multiple quotes per instrument for market depth + historical tracking
+-- source: Identifies the data provider or 'SYNTHETIC_GBM' for generated quotes
+-- is_synthetic: Mark quotes as synthetic for demonstration/testing
 -- ==========================================================
 
 CREATE TABLE quotes (
@@ -221,6 +253,8 @@ CREATE TABLE quotes (
     bid_size BIGINT,  -- number of shares/units at bid
     ask_size BIGINT,  -- number of shares/units at ask
     quoted_at TIMESTAMPTZ NOT NULL,  -- when this quote was generated (staleness check)
+    source VARCHAR(50) NOT NULL,  -- quote provider or 'SYNTHETIC_GBM'
+    is_synthetic BOOLEAN NOT NULL DEFAULT FALSE,  -- TRUE for test/demo quotes
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_quotes_instrument
@@ -229,7 +263,9 @@ CREATE TABLE quotes (
     CONSTRAINT chk_quote_ask CHECK (ask > 0),
     CONSTRAINT chk_quote_bid_less_than_ask CHECK (bid < ask),
     CONSTRAINT chk_bid_size CHECK (bid_size IS NULL OR bid_size > 0),
-    CONSTRAINT chk_ask_size CHECK (ask_size IS NULL OR ask_size > 0)
+    CONSTRAINT chk_ask_size CHECK (ask_size IS NULL OR ask_size > 0),
+    CONSTRAINT chk_quote_source CHECK (length(trim(source)) > 0),
+    CONSTRAINT uk_quotes_instrument_quoted_at_source UNIQUE (instrument_id, quoted_at, source)
 );
 
 CREATE INDEX idx_quotes_instrument ON quotes(instrument_id);
@@ -550,14 +586,18 @@ CREATE OR REPLACE VIEW v_account_holdings AS
     HAVING SUM(quantity_change) > 0;
 
 -- BR-08, BR-13: Latest quote per instrument (for price displays)
+-- Includes bid/ask midpoint price calculated as ROUND((bid + ask) / 2, 8)
 CREATE OR REPLACE VIEW v_latest_quotes AS
     SELECT DISTINCT ON (instrument_id)
         instrument_id,
         bid,
         ask,
+        ROUND((bid + ask) / 2::NUMERIC, 8) as midpoint,
         bid_size,
         ask_size,
-        quoted_at
+        quoted_at,
+        source,
+        is_synthetic
     FROM quotes
     ORDER BY instrument_id, quoted_at DESC;
 

@@ -18,6 +18,7 @@ import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
 import com.neueda.leap.user.repository.UserRepository;
 import com.neueda.leap.onboarding.service.RegistrationService;
+import com.neueda.leap.security.SsnEncryptionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,6 +42,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for {@link RegistrationService} registration behavior.
@@ -62,8 +65,41 @@ class RegistrationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
     private RegistrationService registrationService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        // Use a test double for SsnEncryptionService that doesn't require EntityManager
+        SsnEncryptionService ssnEncryptionService = new TestSsnEncryptionService();
+        registrationService = new RegistrationService(
+                userRepository,
+                customerProfileRepository,
+                financialProfileRepository,
+                accountRepository,
+                passwordEncoder,
+                ssnEncryptionService
+        );
+    }
+
+    /**
+     * Simple test double for SSN encryption - encrypts by prefixing with "ENCRYPTED_"
+     */
+    private static class TestSsnEncryptionService extends SsnEncryptionService {
+        TestSsnEncryptionService() {
+            super(null, "test-key");
+        }
+
+        @Override
+        public byte[] encrypt(String plainTextSsn) {
+            return ("ENCRYPTED_" + plainTextSsn).getBytes();
+        }
+
+        @Override
+        public String decrypt(byte[] encryptedSsn) {
+            String encrypted = new String(encryptedSsn);
+            return encrypted.startsWith("ENCRYPTED_") ? encrypted.substring(10) : encrypted;
+        }
+    }
 
     @Test
     void register_shouldCreateNormalizedRecords() {
@@ -102,7 +138,6 @@ class RegistrationServiceTest {
 
         assertEquals("julia@example.com", savedUser.getEmail());
         assertEquals("hashedPassword", savedUser.getPasswordHash());
-        assertEquals("123456789", savedUser.getSsn());
 
         assertEquals("Julia", savedProfile.getFirstName());
         assertEquals("Wiecek", savedProfile.getLastName());
@@ -111,6 +146,12 @@ class RegistrationServiceTest {
         assertEquals("123 Main St, Apt 4, Roanoke, TX, 76262", savedProfile.getAddress());
         assertEquals("United States", savedProfile.getCountry());
         assertEquals(CitizenshipStatus.CITIZEN, savedProfile.getCitizenshipStatus());
+        // SSN encrypted and stored in customer profile, not plaintext
+        assertNotNull(savedProfile.getSsnEncrypted());
+        // Test double encrypts by prefixing with "ENCRYPTED_"
+        String decryptedSsn = new String(savedProfile.getSsnEncrypted());
+        assertTrue(decryptedSsn.startsWith("ENCRYPTED_"),
+                "CustomerProfile should have encrypted SSN with test prefix");
 
         assertTrue(savedFinancial.isAccreditedInvestor());
         assertEquals(NetWorthBracket.HUNDRED_TO_500K, savedFinancial.getNetWorthBracket());
