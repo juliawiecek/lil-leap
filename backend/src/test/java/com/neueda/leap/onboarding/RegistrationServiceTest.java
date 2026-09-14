@@ -17,7 +17,7 @@ import com.neueda.leap.onboarding.repository.AccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
 import com.neueda.leap.user.repository.UserRepository;
-import com.neueda.leap.onboarding.service.RegistrationService;
+import com.neueda.leap.onboarding.service.RegistrationServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -42,7 +42,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link RegistrationService} registration behavior.
+ * Unit tests for {@link RegistrationServiceImpl} registration behavior.
  */
 @ExtendWith(MockitoExtension.class)
 class RegistrationServiceTest {
@@ -63,7 +63,7 @@ class RegistrationServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
-    private RegistrationService registrationService;
+    private RegistrationServiceImpl registrationService;
 
     @Test
     void register_shouldCreateNormalizedRecords() {

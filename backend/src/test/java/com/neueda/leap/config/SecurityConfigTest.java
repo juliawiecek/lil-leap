@@ -1,6 +1,6 @@
 package com.neueda.leap.config;
 
-import com.neueda.leap.security.JwtService;
+import com.neueda.leap.security.JwtServiceImpl;
 import com.neueda.leap.user.UserController;
 import com.neueda.leap.user.UserService;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * filters to test the controller in isolation).
  */
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, JwtService.class})
+@Import({SecurityConfig.class, JwtServiceImpl.class})
 class SecurityConfigTest {
 
     @Autowired

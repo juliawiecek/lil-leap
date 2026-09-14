@@ -2,7 +2,7 @@ package com.neueda.leap.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.config.SecurityConfig;
-import com.neueda.leap.security.JwtService;
+import com.neueda.leap.security.JwtServiceImpl;
 import com.neueda.leap.user.dto.UserResponse;
 import org.junit.jupiter.api.Test;
 
@@ -30,11 +30,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>Unlike {@link AuthControllerTest} and the {@code /me} test in
  * {@link UserControllerTest}, this test does not mint or inject a token
  * directly: it enables the real security filter chain ({@link SecurityConfig})
- * and a real {@link JwtService}, so the token used to call {@code /me} is
+ * and a real {@link JwtServiceImpl}, so the token used to call {@code /me} is
  * exactly the one {@code /auth/login} actually returned.</p>
  */
 @WebMvcTest(controllers = {AuthController.class, UserController.class})
-@Import({SecurityConfig.class, JwtService.class})
+@Import({SecurityConfig.class, JwtServiceImpl.class})
 class AuthenticationFlowTest {
 
     @Autowired
