@@ -40,6 +40,7 @@ psql -v ON_ERROR_STOP=1 \
         users,
         customer_profiles,
         financial_profiles,
+        analyst_profiles,
         sessions,
         instruments,
         quotes,

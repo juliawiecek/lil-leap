@@ -5,7 +5,8 @@
 -- NORMALIZED: Separated auth, identity, verification, financial concerns
 -- 
 -- BUSINESS REQUIREMENT MAPPING:
--- BR-01: Registration → users + customer_profiles + financial_profiles (format validation in app)
+-- BR-01: Registration → users + customer_profiles + financial_profiles (TRADER),
+--        or users + analyst_profiles (ANALYST) — role decides which extension table(s) get written
 -- BR-02: Secure login → users (password_hash, auth isolation)
 -- BR-03: Session timeout & lockout → users + sessions
 -- BR-04: Order submission → orders (with idempotency)
@@ -37,8 +38,8 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     
-    -- User role for access control (MVP: TRADER only)
-    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role = 'TRADER'),
+    -- User role for access control (TRADER: client self-service; ANALYST: internal staff)
+    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST')),
     
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
@@ -177,6 +178,29 @@ CREATE TABLE financial_profiles (
 
 CREATE INDEX idx_financial_profile_user ON financial_profiles(user_id);
 CREATE INDEX idx_financial_profile_kyc_status ON financial_profiles(kyc_status);
+
+-- ==========================================================
+-- ANALYST_PROFILES (Internal Staff Identity)
+-- Extends users the same way customer_profiles/financial_profiles do for TRADER,
+-- but scoped to what an internal analyst actually needs.
+-- ==========================================================
+
+CREATE TABLE analyst_profiles (
+    analyst_profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    employee_id VARCHAR(30) NOT NULL,
+    department VARCHAR(100),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_analyst_profile_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    CONSTRAINT uk_analyst_profile_user UNIQUE (user_id),  -- one profile per user
+    CONSTRAINT chk_analyst_employee_id CHECK (length(trim(employee_id)) > 0)
+);
+
+CREATE INDEX idx_analyst_profile_user ON analyst_profiles(user_id);
 
 -- ==========================================================
 -- SESSIONS (BR-03: Time-limited, revocable sessions)
@@ -649,3 +673,5 @@ CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
 -- 9. Verify audit_log event capture for compliance (BR-16, BR-17)
 -- 10. Test v_account_cash, v_account_holdings, v_latest_quotes views
 -- 11. Test v_trader_tier_eligibility for tier enforcement
+-- 12. Create user with user_role='ANALYST' → analyst_profiles (not customer/financial_profiles)
+-- 13. Confirm user_role CHECK rejects any value other than 'TRADER' or 'ANALYST'
