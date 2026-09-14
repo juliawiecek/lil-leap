@@ -11,6 +11,7 @@ import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import com.neueda.leap.onboarding.repository.AccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
+import com.neueda.leap.security.SsnEncryptionService;
 import com.neueda.leap.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final FinancialProfileRepository financialProfileRepository;
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SsnEncryptionService ssnEncryptionService;
 
     /**
      * Creates a new registration service with required dependencies.
@@ -46,19 +48,22 @@ public class RegistrationServiceImpl implements RegistrationService {
      * @param financialProfileRepository financial profile repository
      * @param accountRepository account repository
      * @param passwordEncoder password encoder
+     * @param ssnEncryptionService SSN encryption service
      */
     public RegistrationServiceImpl(
             UserRepository userRepository,
             CustomerProfileRepository customerProfileRepository,
             FinancialProfileRepository financialProfileRepository,
             AccountRepository accountRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SsnEncryptionService ssnEncryptionService
     ) {
         this.userRepository = userRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.financialProfileRepository = financialProfileRepository;
         this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
+        this.ssnEncryptionService = ssnEncryptionService;
     }
 
     /**
@@ -82,8 +87,11 @@ public class RegistrationServiceImpl implements RegistrationService {
         User user = new User();
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setSsn(normalizeSsn(request.ssn()));
         User savedUser = userRepository.save(user);
+
+        // Store SSN encrypted in customer profile; user auth table does not carry SSN.
+        String normalizedSsn = normalizeSsn(request.ssn());
+        byte[] encryptedSsn = ssnEncryptionService.encrypt(normalizedSsn);
 
         CustomerProfile profile = new CustomerProfile();
         profile.setUser(savedUser);
@@ -94,6 +102,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         profile.setAddress(buildAddressLine(request));
         profile.setCountry(request.country().trim());
         profile.setCitizenshipStatus(request.citizenshipStatus());
+        profile.setSsnEncrypted(encryptedSsn);
         CustomerProfile savedProfile = customerProfileRepository.save(profile);
 
         FinancialProfile financialProfile = new FinancialProfile();

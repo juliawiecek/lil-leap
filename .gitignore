@@ -1,5 +1,7 @@
 # Environment variables
-.env
+# .env is committed for demo/education purposes (contains demo credentials only)
+# Use .env.local or .env.production.local for sensitive overrides
+# .env
 .env.local
 .env.*.local
 
@@ -79,3 +81,6 @@ node_modules/
 dist/
 build/
 *.pid
+
+
+! .env.example
