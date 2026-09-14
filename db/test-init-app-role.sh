@@ -44,7 +44,7 @@ echo ""
 echo "=========================================="
 echo "Test 3: SELECT, INSERT, UPDATE, DELETE on runtime tables"
 echo "=========================================="
-TABLES=(users customer_profiles financial_profiles sessions instruments quotes accounts orders fills order_status_history holdings holding_movements cash_balances cash_transactions)
+TABLES=(users customer_profiles financial_profiles analyst_profiles sessions instruments quotes accounts orders fills order_status_history holdings holding_movements cash_balances cash_transactions)
 for TABLE in "${TABLES[@]}"; do
     for PRIV in SELECT INSERT UPDATE DELETE; do
         RESULT=$(psql_admin -tAc "SELECT has_table_privilege('$DB_APP_USERNAME', '$TABLE', '$PRIV');")

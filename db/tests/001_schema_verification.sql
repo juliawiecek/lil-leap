@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
--- Verify all 15 required tables exist
+-- Verify all 16 required tables exist
 DO $$
 DECLARE
   missing text;
@@ -8,7 +8,7 @@ BEGIN
   SELECT string_agg(expected.name, ', ')
   INTO missing
   FROM (VALUES
-    ('users'),('customer_profiles'),('financial_profiles'),('sessions'),
+    ('users'),('customer_profiles'),('financial_profiles'),('analyst_profiles'),('sessions'),
     ('instruments'),('quotes'),('accounts'),('orders'),('fills'),
     ('order_status_history'),('holdings'),('holding_movements'),
     ('cash_balances'),('cash_transactions'),('audit_log')
@@ -70,6 +70,14 @@ BEGIN
     WHERE trigger_name='tg_customer_profiles_age_validation' AND event_object_table='customer_profiles'
   ) THEN RAISE EXCEPTION 'Age validation trigger tg_customer_profiles_age_validation is missing'; END IF;
 
+  -- users.user_role CHECK constraint must accept 'ANALYST' (not just 'TRADER')
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.users'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) ILIKE '%user_role%ANALYST%'
+  ) THEN RAISE EXCEPTION 'users.user_role CHECK constraint does not permit ANALYST'; END IF;
+
 END $$;
 
-SELECT 'PASS: Schema verification successful - all 15 tables, 5 views, encrypted SSN, no plaintext SSN, trigger, and quote provenance fields present' AS result;
+SELECT 'PASS: Schema verification successful - all 16 tables, 5 views, encrypted SSN, no plaintext SSN, trigger, quote provenance fields, and ANALYST role present' AS result;
