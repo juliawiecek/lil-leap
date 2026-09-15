@@ -78,6 +78,10 @@ pipeline {
     }
 
     stage('Build Compose Services') {
+      environment {
+        TLS_KEYSTORE_PASSWORD = 'ci-build-only-not-for-runtime'
+        TLS_KEYSTORE_PATH = '/dev/null'
+      }
       steps {
         sh '${COMPOSE_CMD} -f docker-compose.yml build'
       }
@@ -87,6 +91,8 @@ pipeline {
   post {
     always {
       sh '''
+        export TLS_KEYSTORE_PASSWORD="ci-cleanup-only-not-for-runtime"
+        export TLS_KEYSTORE_PATH="/dev/null"
         if [ -n "${COMPOSE_CMD}" ]; then
           ${COMPOSE_CMD} -f docker-compose.yml down -v || true
         fi
