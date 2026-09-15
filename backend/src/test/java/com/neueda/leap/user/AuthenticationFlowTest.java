@@ -72,7 +72,7 @@ class AuthenticationFlowTest {
         String token = objectMapper.readTree(loginResult.getResponse().getContentAsString())
                 .get("token").asText();
 
-        mockMvc.perform(get("/api/v1/users/me")
+        mockMvc.perform(get("/users/me")
                 .secure(true)
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())

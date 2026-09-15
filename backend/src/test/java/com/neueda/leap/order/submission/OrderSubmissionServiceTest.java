@@ -48,7 +48,7 @@ class OrderSubmissionServiceTest {
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
         when(repository.findTradableInstrumentIdBySymbol("AAPL")).thenReturn(Optional.of(instrumentId));
         when(repository.insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null))
-                .thenReturn(saved);
+                .thenReturn(Optional.of(saved));
 
         var result = service.submit(userId, request);
 

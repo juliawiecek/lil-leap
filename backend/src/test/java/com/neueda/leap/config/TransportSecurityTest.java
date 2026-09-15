@@ -36,7 +36,7 @@ class TransportSecurityTest {
     @MockBean RegistrationService registration;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/auth/login", "/api/v1/users", "/api/v1/users/me"})
+    @ValueSource(strings = {"/auth/login", "/users", "/users/me"})
     void plaintextIsRejectedBeforeCredentialsAreUsedEvenWithSpoofedHeaders(String path) throws Exception {
         mvc.perform(post(path).header("X-Forwarded-Proto", "https")
                         .header("Forwarded", "for=127.0.0.1;proto=https")
@@ -75,7 +75,7 @@ class TransportSecurityTest {
     void validationAndParsingErrorsDoNotExposeRejectedPasswordsOrSsn(CapturedOutput output) throws Exception {
         String password = "secret!"; // Fails the registration minimum length.
         String ssn = "private-ssn-marker";
-        mvc.perform(post("/api/v1/users").secure(true).contentType("application/json")
+        mvc.perform(post("/users").secure(true).contentType("application/json")
                         .content("{\"password\":\"" + password + "\",\"ssn\":\"" + ssn + "\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_REQUEST"))

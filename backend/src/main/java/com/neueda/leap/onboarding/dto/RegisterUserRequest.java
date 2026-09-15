@@ -32,7 +32,7 @@ import java.time.LocalDate;
  * @param postalCode the user's postal/ZIP code
  * @param country the user's country of residence
  * @param citizenshipStatus the user's citizenship or residency status
- * @param ssn the user's social security number in 9-digit or 123-45-6789 format (optional)
+ * @param ssn the user's social security number in 9-digit or 123-45-6789 format
  * @param employmentStatus the user's employment status
  * @param employerName the employer or business name when employed/self-employed
  * @param occupation the occupation when employed/self-employed
@@ -74,11 +74,12 @@ public record RegisterUserRequest (
         @JsonProperty("email")
         @NotBlank
         @Email
-        @Size(max = 320)
+        @Size(max = 255)
         String email,
 
         @JsonProperty("phone")
-        @Size(max = 30)
+        @NotBlank
+        @Size(max = 20)
         String phone,
 
         @JsonProperty("password")
@@ -120,8 +121,9 @@ public record RegisterUserRequest (
         CitizenshipStatus citizenshipStatus,
 
         @JsonProperty("ssn")
+        @NotBlank
         @Pattern(
-                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})?$",
+                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})$",
                 message = "SSN must be 9 digits or 123-45-6789"
         )
         String ssn,

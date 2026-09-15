@@ -10,7 +10,7 @@ com.neueda.leap
 |- common.exception      # Cross-cutting exception handlers
 |- config                # Application configuration
 |- onboarding            # Registration API, DTOs, onboarding entities and service
-|- order                 # Example order model and validation service
+|- order                 # Order submission and validation
 `- user                  # Authentication entity, repository, and auth exceptions
 ```
 
@@ -18,7 +18,7 @@ com.neueda.leap
 
 - `onboarding`: Handles registration requests and persists profile/financial/account data.
 - `user`: Stores authentication-focused user data (email, password hash, lock metadata).
-- `order`: Contains a simple order model and validation logic.
+- `order`: Handles authenticated, account-scoped order submission and idempotent retries.
 
 ## Local Development
 
@@ -90,8 +90,8 @@ passthrough, or connect to the backend using HTTPS with certificate verification
 Do not enable forwarded-header trust or turn off backend TLS to accommodate a proxy.
 
 With the existing context path and controller mappings, login is
-`https://localhost:8080/api/v1/auth/login`; registration and `/me` currently resolve
-to `/api/v1/api/v1/users` and `/api/v1/api/v1/users/me`. This task preserves those mappings.
+`https://localhost:8080/api/v1/auth/login`; registration and `/me` resolve
+to `/api/v1/users` and `/api/v1/users/me`. Controllers omit the shared context prefix.
 
 ### Headers and logging
 
@@ -135,3 +135,67 @@ Implementation references: [Spring Boot TLS and forwarding](https://docs.spring.
 [Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
 [Logback masking converters](https://logback.qos.ch/manual/layouts.html).
 
+## TS-03.3: Automated cross-client isolation tests (BR-02)
+
+Run the suite with Java 21:
+
+```bash
+mvn -B test -Dtest=CrossClientAccessIntegrationTest
+# All backend regression tests (also run by Jenkins):
+mvn -B clean verify
+```
+
+`CrossClientAccessIntegrationTest` uses the production security configuration, real
+signed JWTs, financial controller, query service and JDBC queries against an isolated
+H2 database. It does not mock authorization or financial data. Each case creates Alice,
+Bob and an accountless client; Alice and Bob each have two accounts with different
+balances, quantities and orders but the same instrument. Transactions roll fixtures
+back between cases. Tokens are issued by the real JWT service for these fixture users;
+login/password verification has its own tests.
+
+| Coverage | Expected result |
+| --- | --- |
+| Each client's holdings, cash and orders | 200; all and only that client's accounts/data |
+| Accountless client | 200; empty collections |
+| User/client/account/order query selectors, including duplicate values | 403 `ACCESS_DENIED` |
+| Guessed object paths, including nonexistent IDs | Same generic 403 |
+| Unsupported financial writes and object-ID paths | 403; financial data unchanged |
+| Another client's order cancellation attempt | 403; stored data unchanged |
+| Spoofed identity headers | Cannot override the signed JWT identity |
+| Missing/invalid token or an edited JWT subject | 401; never treated as an authorized client |
+
+### Current API boundary
+
+`GET /holdings`, `GET /cash`, and `GET /orders` return only the signed-in client's data.
+`POST /orders` submits an order for an account owned by that client; unknown and other
+clients' accounts both return 404. Query selectors remain forbidden. Other financial
+writes, object-ID routes and cancellation are denied by security configuration.
+All routes use the `/api/v1` context prefix.
+
+An initial submission returns 201 with `SUBMITTED` status. Retrying the same account
+and `clientReference` returns the existing order with 200, including concurrent retries.
+Submission creates no fill. PostgreSQL `ON CONFLICT DO NOTHING` handles the race without
+aborting the transaction; a subsequent read retrieves the winning order.
+
+### PostgreSQL contract tests
+
+The ordinary test suite uses H2 and does not validate PostgreSQL-specific persistence.
+`PostgresContractTest` additionally covers all net-worth bracket values, JSONB objects,
+registration through the real security chain, owned/foreign order submissions, and
+concurrent idempotent retries using real PostgreSQL transactions.
+
+Initialize a **disposable test database** with `db/finalized-schema.sql` and
+`db/init-app-role.sh`, then run from `backend` with the restricted application role:
+
+```powershell
+$env:TEST_POSTGRES_URL = 'jdbc:postgresql://localhost:5432/nexttrade_test'
+$env:TEST_POSTGRES_USER = 'app_user'
+# Set TEST_POSTGRES_PASSWORD to the test application role's password.
+mvn -B test
+```
+
+These tests are skipped when `TEST_POSTGRES_URL` is absent. Most fixtures roll back;
+the concurrency case commits its fixtures and deletes them afterward. Use a disposable
+database so an interrupted run cannot leave fixtures in application data.
+
+The separate SQL checks in `db/tests` cover schema, ledger atomicity and client scoping.

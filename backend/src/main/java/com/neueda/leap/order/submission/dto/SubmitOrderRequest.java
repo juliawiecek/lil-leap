@@ -1,6 +1,7 @@
 package com.neueda.leap.order.submission.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.Locale;
 
 public record SubmitOrderRequest(
         @NotNull UUID accountId,
@@ -16,17 +18,17 @@ public record SubmitOrderRequest(
         @NotBlank @Pattern(regexp = "(?i)BUY|SELL") String side,
         @Positive long quantity,
         @Pattern(regexp = "(?i)MARKET") String orderType,
-        @DecimalMin(value = "0.0", inclusive = true) BigDecimal bufferPercent
+        @DecimalMin(value = "0.0", inclusive = true) @Digits(integer = 3, fraction = 2) BigDecimal bufferPercent
 ) {
     public String normalizedSymbol() {
-        return symbol.trim().toUpperCase();
+        return symbol.trim().toUpperCase(Locale.ROOT);
     }
 
     public String normalizedSide() {
-        return side.trim().toUpperCase();
+        return side.trim().toUpperCase(Locale.ROOT);
     }
 
     public String normalizedOrderType() {
-        return orderType == null || orderType.isBlank() ? "MARKET" : orderType.trim().toUpperCase();
+        return orderType == null || orderType.isBlank() ? "MARKET" : orderType.trim().toUpperCase(Locale.ROOT);
     }
 }

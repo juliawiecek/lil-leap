@@ -10,7 +10,7 @@ public interface OrderSubmissionRepository {
     boolean accountBelongsToUser(UUID accountId, UUID userId);
     Optional<UUID> findTradableInstrumentIdBySymbol(String symbol);
     Optional<OrderSubmissionResponse> findByAccountAndClientReference(UUID accountId, UUID clientReference);
-    OrderSubmissionResponse insert(UUID accountId, UUID instrumentId, String symbol,
+    Optional<OrderSubmissionResponse> insert(UUID accountId, UUID instrumentId, String symbol,
                                    UUID clientReference, String side, long quantity,
                                    String orderType, BigDecimal bufferPercent);
 }
