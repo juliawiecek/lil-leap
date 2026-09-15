@@ -82,6 +82,7 @@ yarn-error.log*
 .settings
 .vscode
 node_modules/
+frontend/test-results/
 dist/
 build/
 *.pid
