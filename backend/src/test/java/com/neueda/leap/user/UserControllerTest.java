@@ -51,7 +51,7 @@ class UserControllerTest {
 
         when(userService.getById(userId)).thenReturn(response);
 
-        mockMvc.perform(get("/api/v1/users/me")
+        mockMvc.perform(get("/users/me")
                 .principal(new UsernamePasswordAuthenticationToken(
                         new JwtPrincipal(userId, "julia@example.com"), null, List.of())))
                 .andExpect(status().isOk())

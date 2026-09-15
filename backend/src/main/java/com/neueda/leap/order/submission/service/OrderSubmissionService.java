@@ -1,9 +1,7 @@
 package com.neueda.leap.order.submission.service;
 
-import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,17 +39,16 @@ public class OrderSubmissionService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Unsupported or non-tradable symbol"));
 
-        try {
-            OrderSubmissionResponse saved = repository.insert(
-                    request.accountId(), instrumentId, symbol, request.clientReference(),
-                    request.normalizedSide(), request.quantity(),
-                    request.normalizedOrderType(), request.bufferPercent());
-            return new OrderSubmissionResult(saved, true);
-        } catch (DataIntegrityViolationException race) {
-            return repository.findByAccountAndClientReference(
-                            request.accountId(), request.clientReference())
-                    .map(order -> new OrderSubmissionResult(order, false))
-                    .orElseThrow(() -> race);
-        }
+        var saved = repository.insert(
+                request.accountId(), instrumentId, symbol, request.clientReference(),
+                request.normalizedSide(), request.quantity(),
+                request.normalizedOrderType(), request.bufferPercent());
+        // ON CONFLICT waits for the competing insert without aborting our transaction.
+        // A separate SELECT sees that committed row under PostgreSQL READ COMMITTED.
+        return saved.map(order -> new OrderSubmissionResult(order, true))
+                .orElseGet(() -> repository.findByAccountAndClientReference(
+                                request.accountId(), request.clientReference())
+                        .map(order -> new OrderSubmissionResult(order, false))
+                        .orElseThrow(() -> new IllegalStateException("Conflicting order is unavailable")));
     }
 }

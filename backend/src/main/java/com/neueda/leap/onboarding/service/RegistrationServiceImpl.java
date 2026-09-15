@@ -246,7 +246,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return new String(com.fasterxml.jackson.core.io.JsonStringEncoder.getInstance().quoteAsString(value));
     }
 
     /**

@@ -59,14 +59,15 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
     }
 
     @Override
-    public OrderSubmissionResponse insert(
+    public Optional<OrderSubmissionResponse> insert(
             UUID accountId, UUID instrumentId, String symbol, UUID clientReference,
             String side, long quantity, String orderType, BigDecimal bufferPercent) {
-        return jdbcTemplate.queryForObject(
+        return jdbcTemplate.query(
                 """
                 INSERT INTO orders(account_id, instrument_id, client_reference, side,
                                    quantity, order_type, status, buffer_percent)
                 VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?)
+                ON CONFLICT (account_id, client_reference) DO NOTHING
                 RETURNING order_id, account_id, instrument_id, client_reference, side,
                           quantity, order_type, status, submitted_at, buffer_percent
                 """,
@@ -82,7 +83,8 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
                         rs.getString("status"),
                         rs.getTimestamp("submitted_at").toInstant(),
                         rs.getBigDecimal("buffer_percent")),
-                accountId, instrumentId, clientReference, side, quantity, orderType, bufferPercent);
+                accountId, instrumentId, clientReference, side, quantity, orderType, bufferPercent)
+                .stream().findFirst();
     }
 
     private OrderSubmissionResponse mapOrder(ResultSet rs, int rowNum) throws SQLException {

@@ -83,7 +83,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                    "/api/v1/users",
+                                "/users",
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
@@ -93,8 +93,13 @@ public class SecurityConfig {
                                 AuthenticatedAuthorizationManager.authenticated(),
                                 (authentication, context) -> new AuthorizationDecision(
                                         context.getRequest().getParameterMap().isEmpty())))
-                        // Financial writes and object-ID routes are not implemented yet.
-                        // Require explicit ownership authorization before opening any such route.
+                        // Submission verifies account ownership in OrderSubmissionService.
+                        .requestMatchers(HttpMethod.POST, "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
+                        // Other financial writes and object-ID routes are not implemented yet.
                         .requestMatchers("/holdings", "/holdings/**", "/cash", "/cash/**", "/orders", "/orders/**")
                         .denyAll()
                         .anyRequest().authenticated())

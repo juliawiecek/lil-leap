@@ -130,7 +130,7 @@ class TlsSecurityTest {
             assertThat(login.headers().firstValue("Strict-Transport-Security")).isPresent();
             assertThat(login.headers().firstValue("Cache-Control").orElseThrow()).contains("no-store");
             String token = new ObjectMapper().readTree(login.body()).get("token").asText();
-            HttpResponse<String> me = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/api/v1/users/me"))
+            HttpResponse<String> me = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/users/me"))
                     .header("Authorization", "Bearer " + token).build(), HttpResponse.BodyHandlers.ofString());
             assertThat(me.statusCode()).isEqualTo(200);
             assertThat(me.body()).contains(id.toString());

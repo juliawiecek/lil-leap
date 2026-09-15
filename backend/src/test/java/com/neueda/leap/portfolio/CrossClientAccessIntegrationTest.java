@@ -113,6 +113,7 @@ class CrossClientAccessIntegrationTest {
     static Stream<Object[]> writeAttempts() {
         return crossClientCollections().flatMap(pair -> Stream.of("POST", "PUT", "PATCH", "DELETE")
                 .flatMap(method -> Stream.of(false, true)
+                        .filter(objectPath -> !(pair[1].equals("/orders") && method.equals("POST") && !objectPath))
                         .map(objectPath -> new Object[]{pair[0], pair[1], method, objectPath})));
     }
 

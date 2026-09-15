@@ -2,9 +2,11 @@ package com.neueda.leap.onboarding.entity;
 
 import com.neueda.leap.onboarding.enums.EmploymentStatus;
 import com.neueda.leap.onboarding.enums.NetWorthBracket;
+import com.neueda.leap.onboarding.enums.NetWorthBracketConverter;
 import com.neueda.leap.onboarding.enums.RiskProfile;
 import com.neueda.leap.user.entity.User;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,6 +18,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -43,7 +47,7 @@ public class FinancialProfile {
     @Column(name = "accredited_investor", nullable = false)
     private boolean accreditedInvestor;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = NetWorthBracketConverter.class)
     @Column(name = "net_worth_bracket", length = 30)
     private NetWorthBracket netWorthBracket;
 
@@ -70,9 +74,11 @@ public class FinancialProfile {
     @Column(name = "is_politically_exposed_person", nullable = false)
     private boolean politicallyExposedPerson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "regulatory_disclosures", columnDefinition = "jsonb")
     private String regulatoryDisclosures;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "beneficial_owner_info", columnDefinition = "jsonb")
     private String beneficialOwnerInfo;
 
