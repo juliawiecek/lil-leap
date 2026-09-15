@@ -14,7 +14,7 @@ services:
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
     ports:
-      - "8080:8080"
+      - "8082:8080"
 
   insights:
     build: ./insights
