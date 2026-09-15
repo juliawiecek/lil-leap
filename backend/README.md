@@ -135,3 +135,55 @@ Implementation references: [Spring Boot TLS and forwarding](https://docs.spring.
 [Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
 [Logback masking converters](https://logback.qos.ch/manual/layouts.html).
 
+## TS-03.3: Automated cross-client isolation tests (BR-02)
+
+Run the suite with Java 21:
+
+```bash
+mvn -B test -Dtest=CrossClientAccessIntegrationTest
+# All backend regression tests (also run by Jenkins):
+mvn -B clean verify
+```
+
+`CrossClientAccessIntegrationTest` uses the production security configuration, real
+signed JWTs, financial controller, query service and JDBC queries against an isolated
+H2 database. It does not mock authorization or financial data. Each case creates Alice,
+Bob and an accountless client; Alice and Bob each have two accounts with different
+balances, quantities and orders but the same instrument. Transactions roll fixtures
+back between cases. Tokens are issued by the real JWT service for these fixture users;
+login/password verification has its own tests.
+
+| Coverage | Expected result |
+| --- | --- |
+| Each client's holdings, cash and orders | 200; all and only that client's accounts/data |
+| Accountless client | 200; empty collections |
+| User/client/account/order query selectors, including duplicate values | 403 `ACCESS_DENIED` |
+| Guessed object paths, including nonexistent IDs | Same generic 403 |
+| POST/PUT/PATCH/DELETE with another client's IDs in the path/body | 403; snapshots of both clients' accounts, holdings, cash and orders unchanged |
+| Another client's order cancellation attempt | 403; stored data unchanged |
+| Spoofed identity headers | Cannot override the signed JWT identity |
+| Missing/invalid token or an edited JWT subject | 401; never treated as an authorized client |
+
+### Current API boundary and TS-03.2 dependency
+
+This checkout implements only the client-scoped collection reads `GET /holdings`,
+`GET /cash` and `GET /orders` (under the `/api/v1` context path). These endpoints have
+no supported query parameters. Requests supplying selectors now receive an explicit
+403 instead of silently ignoring the selector and returning the caller's collection.
+Object-ID paths and all financial write methods are explicitly denied by security
+configuration. No trade placement, cash update, holding update or cancellation service
+is introduced by this verification task.
+
+The write tests verify denial at this **read-only API boundary**. They do not prove
+ownership enforcement within a successful write operation, because those operations
+are not implemented here. When TS-03.2 or a trading story adds them, extend this suite
+with a successful owner write and a denied non-owner write against that same endpoint
+and real mutation service before relaxing the route denial.
+
+The test schema is a minimal relational projection of `db/finalized-schema.sql`, not
+a substitute for PostgreSQL trigger/migration tests. The existing
+`db/tests/004_client_data_isolation.sql` exercises PostgreSQL read scoping separately.
+The frontend currently models trades locally, and the data pipeline serves market
+quotes rather than client financial records; access control for these financial APIs
+is verified at the backend boundary.
+

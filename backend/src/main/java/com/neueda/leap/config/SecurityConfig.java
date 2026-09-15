@@ -6,6 +6,10 @@ import com.neueda.leap.security.SecureTransportFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -83,8 +87,25 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
+                        // These collections accept no caller-selected scope. Identity comes from JWT.
+                        .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
+                        // Financial writes and object-ID routes are not implemented yet.
+                        // Require explicit ownership authorization before opening any such route.
+                        .requestMatchers("/holdings", "/holdings/**", "/cash", "/cash/**", "/orders", "/orders/**")
+                        .denyAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"ACCESS_DENIED\",\"message\":\"Access is denied.\"}");
+                        })
+                        .authenticationEntryPoint(
                         (request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
