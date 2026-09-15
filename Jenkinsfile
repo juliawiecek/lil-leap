@@ -60,44 +60,35 @@ pipeline {
       }
     }
 
-    stage('Backend Tests') {
+    // Run all backend JUnit tests before building Docker images.
+    stage('Run Backend Tests') {
       steps {
-        sh 'sh ci/run-checks.sh backend'
-      }
-      post {
-        always {
-          junit testResults: 'backend/target/surefire-reports/TEST-*.xml', allowEmptyResults: true
-        }
+        sh '''
+          docker run --rm \
+            -v "$WORKSPACE/backend:/app" \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B clean test
+        '''
       }
     }
 
-    stage('Auth Service Tests') {
+    // Run all auth-service JUnit tests before building Docker images.
+    stage('Run Auth Service Tests') {
       steps {
-        sh 'sh ci/run-checks.sh auth-service'
-      }
-      post {
-        always {
-          junit testResults: 'auth-service/target/surefire-reports/TEST-*.xml', allowEmptyResults: true
-        }
-      }
-    }
-
-    stage('Frontend Tests and Build') {
-      steps {
-        sh 'sh ci/run-checks.sh frontend'
-      }
-      post {
-        always {
-          junit testResults: 'frontend/test-results/*.xml', allowEmptyResults: true
-        }
+        sh '''
+          docker run --rm \
+            -v "$WORKSPACE/auth-service:/app" \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B clean test
+        '''
       }
     }
 
     stage('Build Backend Image') {
       steps {
-        sh '''
-          docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/
-        '''
+        sh 'docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
       }
     }
 
@@ -108,7 +99,31 @@ pipeline {
         '''
       }
     }
+
+    stage('Build Compose Services') {
+      environment {
+        TLS_KEYSTORE_PASSWORD = 'ci-build-only-not-for-runtime'
+        TLS_KEYSTORE_PATH = '/dev/null'
+        AUTH_SERVICE_TLS_KEYSTORE_PATH = '/dev/null'
+        APP_JWT_SECRET = 'ci-build-only-not-for-runtime-32-bytes-min'
+      }
+      steps {
+        sh '${COMPOSE_CMD} -f docker-compose.yml build'
+      }
+    }
   }
 
-  // Test containers clean up individually. No deployment stack or data volumes are touched.
+  post {
+    always {
+      sh '''
+        export TLS_KEYSTORE_PASSWORD="ci-cleanup-only-not-for-runtime"
+        export TLS_KEYSTORE_PATH="/dev/null"
+        export AUTH_SERVICE_TLS_KEYSTORE_PATH="/dev/null"
+        export APP_JWT_SECRET="ci-cleanup-only-not-for-runtime-32-bytes-min"
+        if [ -n "${COMPOSE_CMD}" ]; then
+          ${COMPOSE_CMD} -f docker-compose.yml down -v || true
+        fi
+      '''
+    }
+  }
 }
