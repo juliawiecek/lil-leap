@@ -2,6 +2,7 @@ package com.neueda.leap;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 
 /**
  * Entry point for the Lil Leap backend application.
@@ -9,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>This class bootstraps the Spring Boot application context and starts
  * the backend services.</p>
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class Main {
 
     /**
