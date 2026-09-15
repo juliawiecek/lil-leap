@@ -1,0 +1,7 @@
+target/
+certs/
+logs/
+.env*
+*.p12
+*.pfx
+*.key

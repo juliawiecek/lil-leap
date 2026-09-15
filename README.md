@@ -99,9 +99,9 @@ Docker internal network
 Checkout
    -> Detect compose command
    -> Validate compose YAML
-   -> docker build backend/ (multi-stage image)
-   -> docker compose build
-   -> post: docker compose down -v
+   -> Backend tests (Java 21 / Maven container)
+   -> Frontend tests and production build (Node 24 container)
+   -> docker build backend/ (one multi-stage image, tagged by build and commit)
 ```
 
 ## Technology Stack
@@ -169,15 +169,19 @@ Important runtime behavior:
 1. Checkout
 2. Detect compose command (`docker-compose` vs `docker compose`)
 3. Validate compose YAML
-4. Build backend multi-stage image (`docker build ... backend/`)
-5. Build compose services (`docker compose build`)
-6. Always cleanup (`docker compose down -v`)
+4. Run backend `mvn clean verify` in a Java 21 / Maven container; publish JUnit results
+5. Run frontend `npm ci`, `npm run test:ci`, and `npm run build` in a Node 24 container; publish JUnit results
+6. Build the backend multi-stage image once, tagged `sprint1-greeter-app:ci-<build-number>-<git-commit>`
 
 Notes:
 
-- `Build Multi-Stage Image` and `Build Compose Services` both build the app image path, so there is intentional overlap.
-- The pipeline does not call `mvn test` directly on the Jenkins agent.
-- In `backend/Dockerfile`, Maven currently runs with `-DskipTests`, so backend tests are not executed during that image build.
+- The Jenkins agent must be Linux with a local Docker daemon, Docker Compose, and permission to run Docker. The standard Jenkins JUnit plugin is required for test reporting; the Docker Pipeline plugin, host Java, Maven and Node installations are not required. The daemon must be able to mount the agent's workspace path.
+- This is a test/build pipeline, with no deployment stage. `ci/run-checks.sh` removes its own temporary test containers on completion/failure or a handled interruption. It never calls `compose down -v` or removes runtime volumes. Test files are owned by the Jenkins UID. Agent/daemon crashes may still require orphan-container cleanup.
+- Compose validation alone receives a synthetic `TLS_KEYSTORE_PASSWORD` and `/dev/null` as `TLS_KEYSTORE_PATH`. These variables are scoped to that stage; tests and image builds receive no deployment credentials. Validation checks the resolved model, not certificate validity. The backend tests generate temporary certificates to test actual TLS handshakes.
+- Validation uses `config -q` only. Do not print expanded Compose configuration: it includes database, encryption and TLS passwords.
+- A future deployment stage must bind a real keystore file and password from Jenkins credentials only for its deployment commands. Runtime TLS requirements in `docker-compose.yml` remain mandatory. See [backend TLS setup](backend/README.md#tls-setup).
+- Failed test/build commands stop the pipeline before image creation. Reports are collected even on failure; missing reports do not hide the original command failure. Concurrent runs of this job are disabled, and there is a 45-minute overall timeout.
+- The packaging Dockerfile still uses `-DskipTests`; the preceding mandatory backend verification stage runs the tests. `backend/.dockerignore` excludes local output and TLS secrets from the image build context. No image is pushed or deployed by this pipeline.
 
 ## Local Development
 
