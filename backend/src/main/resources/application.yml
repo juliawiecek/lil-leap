@@ -1,0 +1,64 @@
+# NextTrade Spring Boot Application Configuration
+# Database and security settings are externalized via environment variables
+
+spring:
+  application:
+    name: nexttrade-backend
+
+  datasource:
+    # PostgreSQL JDBC connection
+    # URL format: jdbc:postgresql://[host]:[port]/[database]
+    # Defaults allow docker-compose up without .env file
+    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+    
+    # Connection pool configuration
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      # ddl-auto: validate - do not create/update schema; admin role handles migrations
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+
+  # Suppress sensitive datasource information in logs
+  jpa.show-sql: false
+
+logging:
+  level:
+    root: INFO
+    # Debug Spring Security for authentication/authorization issues
+    org.springframework.security: INFO
+    # Debug Hibernate for SQL/ORM issues (requires spring.jpa.show-sql: true)
+    org.hibernate: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+
+# NextTrade custom application configuration
+# Externalized security and session settings
+nexttrade:
+  security:
+    # SSN encryption key (pgcrypto symmetric encryption)
+    # IMPORTANT: Never log or print this value
+    # Must be configured in environment: NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY
+    ssn-encryption-key: ${SSN_ENCRYPTION_KEY:replace_me}
+  
+  session:
+    # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
+    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
