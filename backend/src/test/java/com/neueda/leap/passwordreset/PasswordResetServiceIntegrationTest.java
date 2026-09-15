@@ -10,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.transaction.TestTransaction;
 
 import java.time.Instant;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @DataJpaTest
+@ActiveProfiles("test")
 @Import({PasswordResetService.class, PasswordResetTokenUtil.class, BCryptPasswordEncoder.class})
 class PasswordResetServiceIntegrationTest {
 
