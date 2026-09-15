@@ -16,20 +16,20 @@ import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import com.neueda.leap.onboarding.repository.AccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
-import com.neueda.leap.user.repository.UserRepository;
 import com.neueda.leap.onboarding.service.RegistrationService;
+import com.neueda.leap.onboarding.service.RegistrationServiceImpl;
 import com.neueda.leap.security.SsnEncryptionService;
+import com.neueda.leap.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,10 +42,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
 
 /**
- * Unit tests for {@link RegistrationService} registration behavior.
+ * Unit tests for {@link RegistrationServiceImpl} registration behavior.
  */
 @ExtendWith(MockitoExtension.class)
 class RegistrationServiceTest {
@@ -67,11 +66,11 @@ class RegistrationServiceTest {
 
     private RegistrationService registrationService;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         // Use a test double for SsnEncryptionService that doesn't require EntityManager
         SsnEncryptionService ssnEncryptionService = new TestSsnEncryptionService();
-        registrationService = new RegistrationService(
+        registrationService = new RegistrationServiceImpl(
                 userRepository,
                 customerProfileRepository,
                 financialProfileRepository,

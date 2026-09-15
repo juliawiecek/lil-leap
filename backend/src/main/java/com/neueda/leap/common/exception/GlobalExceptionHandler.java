@@ -7,6 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -18,6 +24,34 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
+        return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
+                "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleUnexpectedException(Exception exception) {
+        // Preserve framework statuses such as 404/405/415 without their request-derived messages.
+        if (exception instanceof ErrorResponse error) {
+            return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(
+                    "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+        }
+        // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
+        log.error("Request failed exceptionType={}", exception.getClass().getSimpleName());
+        return ResponseEntity.internalServerError().body(Map.of(
+                "error", "INTERNAL_ERROR", "message", "The request could not be completed."));
+    }
+
+    // Spring's default validation warning includes rejected values. Never render or log
+    // these exceptions: they may contain passwords, SSNs, or whole request fragments.
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
+    }
 
     /**
      * Handles attempts to register a user with an email address

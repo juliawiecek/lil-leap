@@ -215,6 +215,11 @@ public record RegisterUserRequest (
 
 ) {
 
+    @Override
+    public String toString() {
+        return "RegisterUserRequest[personalData=[REDACTED], password=[REDACTED], ssn=[REDACTED]]";
+    }
+
     /**
      * Ensures conditional broker fields are provided when broker affiliation is true.
      *

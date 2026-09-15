@@ -15,7 +15,7 @@ class JwtServiceTest {
 
     @Test
     void issueToken_thenValidate_shouldReturnOriginalIdentity() {
-        JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
+        JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
         UUID userId = UUID.randomUUID();
 
         String token = jwtService.issueToken(userId, "julia@example.com");
@@ -28,7 +28,7 @@ class JwtServiceTest {
 
     @Test
     void validate_shouldRejectTamperedSignature() {
-        JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
+        JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
         String token = jwtService.issueToken(UUID.randomUUID(), "julia@example.com");
 
         int signatureStart = token.lastIndexOf('.') + 1;
@@ -43,17 +43,17 @@ class JwtServiceTest {
 
     @Test
     void validate_shouldRejectExpiredToken() {
-        JwtService expiredIssuer = new JwtService(SECRET, -1, "nexttrade-web");
+        JwtService expiredIssuer = new JwtServiceImpl(SECRET, -1, "nexttrade-web");
         String token = expiredIssuer.issueToken(UUID.randomUUID(), "julia@example.com");
 
-        JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
+        JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
 
         assertTrue(jwtService.validate(token).isEmpty());
     }
 
     @Test
     void validate_shouldRejectMalformedToken() {
-        JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
+        JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
 
         assertTrue(jwtService.validate("not-a-real-token").isEmpty());
     }
