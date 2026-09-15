@@ -30,8 +30,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         UserController.class,
         PasswordResetController.class
 })
-@Import({SecurityConfig.class, JwtService.class})
-@WebMvcTest(UserController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class})
 class SecurityConfigTest {
 
