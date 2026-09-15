@@ -15,12 +15,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.neueda.leap.passwordreset.PasswordResetController;
+import com.neueda.leap.passwordreset.PasswordResetService;
+import org.springframework.http.MediaType;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
 /**
  * Verifies the security filter chain's behavior on a protected route with the
  * real filter chain active (unlike {@code UserControllerTest}, which disables
  * filters to test the controller in isolation).
  */
-@WebMvcTest(UserController.class)
+@WebMvcTest({
+        UserController.class,
+        PasswordResetController.class
+})
 @Import({SecurityConfig.class, JwtServiceImpl.class})
 class SecurityConfigTest {
 
@@ -29,6 +38,9 @@ class SecurityConfigTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private PasswordResetService passwordResetService;
 
     @Test
     void protectedRoute_withNoToken_shouldReturn401NotDefault403() throws Exception {
@@ -44,5 +56,38 @@ class SecurityConfigTest {
                 .header("Authorization", "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void passwordResetRequest_withNoToken_shouldBePermitted() throws Exception {
+
+        String json = """
+                {
+                    "email": "alice@nexttrade.com"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/password-reset/request")
+                        .secure(true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void passwordResetConfirm_withNoToken_shouldBePermitted() throws Exception {
+
+        String json = """
+                {
+                    "token": "valid-reset-token",
+                    "newPassword": "NewPassword123!"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/password-reset/confirm")
+                        .secure(true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk());
     }
 }

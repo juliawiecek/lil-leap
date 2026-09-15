@@ -1,5 +1,6 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.passwordreset.InvalidPasswordResetTokenException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
@@ -63,8 +64,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Map<String, String>>
     handleUserAlreadyExistsException(UserAlreadyExistsException exception) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of
-                ("error", "USER_ALREADY_EXISTS", "message", exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "USER_ALREADY_EXISTS",
+                "message", exception.getMessage()
+        ));
     }
 
     /**
@@ -81,7 +84,27 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>>
     handleInvalidCredentialsException(InvalidCredentialsException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of
-                ("error", "INVALID_CREDENTIALS", "message", exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "INVALID_CREDENTIALS",
+                "message", exception.getMessage()
+        ));
+    }
+
+    /**
+     * Handles invalid or expired password reset tokens.
+     *
+     * @param exception the exception describing the invalid reset token
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    public ResponseEntity<Map<String, String>>
+    handleInvalidPasswordResetTokenException(
+            InvalidPasswordResetTokenException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "INVALID_PASSWORD_RESET_TOKEN",
+                "message", exception.getMessage()
+        ));
     }
 }
