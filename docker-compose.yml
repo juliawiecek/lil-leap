@@ -1,6 +1,6 @@
 services:
   app:
-    build: ./backend
+    build: ./nextTrade
     # No ports: mapping — the app service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `app` unless a ports: entry is added.
@@ -13,6 +13,48 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+    ports:
+      - "8080:8080"
+
+  insights:
+    build: ./insights
+    # No ports: mapping — the insights service is intentionally unreachable from the
+    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
+    # but nothing outside Docker can reach `insights` unless a ports: entry is added.
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: my_app_password
+    ports:
+      - "8081:8080"
+
+  auth:
+    build: ./auth
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - app
+    ports:
+      - "4200:80"
+    environment:
+      API_BASE_URL: http://app:8080
+
+  insights-frontend:
+    build: ./insights-frontend
+    depends_on:
+      - insights
+    ports:
+      - "4201:80"
+    environment:
+      API_BASE_URL: http://insights:8080
 
   db:
     image: postgres:16-alpine

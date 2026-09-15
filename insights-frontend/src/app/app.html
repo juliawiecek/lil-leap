@@ -1,0 +1,166 @@
+<div [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
+<div class="market-grid" aria-hidden="true"></div>
+  <div class="ambient-light" aria-hidden="true"></div>
+  <div class="market-tape" aria-hidden="true">
+    <div class="tape-track">
+      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
+      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
+      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
+      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
+      <span>EUR/USD 1.1062</span><span class="divider">/</span>
+      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
+      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
+      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
+      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
+      <span>EUR/USD 1.1062</span><span class="divider">/</span>
+    </div>
+  </div>
+  <div class="volume-field" aria-hidden="true">
+    @for (bar of volumeBars(); track $index) {
+      <span
+        class="volume-bar"
+        [class.accent]="bar.accent"
+        [style.--bar-height]="bar.height"
+        [style.--bar-speed]="bar.speed"
+        [style.--bar-delay]="bar.delay"
+      ></span>
+    }
+  </div>
+  <div class="market-scan" aria-hidden="true"></div>
+  <main class="chart-stage" aria-label="Animated stock market chart">
+    <canvas #marketChart id="market-chart" aria-hidden="true"></canvas>
+  </main>
+  <div class="edge-shade" aria-hidden="true"></div>
+
+  @if (pageReady() && !profileOpen()) {
+    <div class="signin-stock-background" aria-hidden="true">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+        <defs>
+          <linearGradient id="signin-chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#78a85f" stop-opacity="0.18" />
+            <stop offset="100%" stop-color="#78a85f" stop-opacity="0" />
+          </linearGradient>
+          <pattern id="signin-chart-grid" width="80" height="80" patternUnits="userSpaceOnUse">
+            <path d="M80 0H0V80" fill="none" stroke="#a6bd98" stroke-opacity="0.09" />
+          </pattern>
+        </defs>
+        <rect width="1440" height="900" fill="url(#signin-chart-grid)" />
+        <path d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51 V900 H-40Z" fill="url(#signin-chart-fill)" />
+        <path class="signin-stock-line" d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51" />
+      </svg>
+    </div>
+  }
+
+  <div class="transition-beam" aria-hidden="true"></div>
+
+  <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
+        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
+      </svg>
+    </div>
+    <div class="brand-copy">
+      <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
+    </div>
+  </div>
+  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+    <header class="auth-header">
+      <div class="secure-status">Secure connection</div>
+    </header>
+
+    <div class="auth-content">
+      <section class="auth-copy" aria-labelledby="landing-title">
+        <div class="auth-eyebrow">Built for your next move</div>
+        <h1 id="landing-title"><span class="headline-trade">Trade</span> what’s <em>next<span class="headline-period">.</span></em></h1>
+        <p>One focused platform for real-time markets, clear decisions, and every stage of your investing journey.</p>
+
+      </section>
+
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <h2 id="auth-title">{{ authMode() === 'signup' ? 'Create your account' : 'Welcome back' }}</h2>
+        <p class="auth-subtitle" id="auth-subtitle">
+          Your next move starts here.
+        </p>
+
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+          <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
+          <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
+        </div>
+
+        <form #authForm novalidate (submit)="onSubmit($event, authForm)">
+          
+<div class="auth-fields">
+          <div class="field-group" [hidden]="authMode() !== 'signup'">
+            <div class="field-row"><label for="full-name">Full name</label></div>
+            <input #fullName id="full-name" name="name" type="text" autocomplete="name" placeholder="Your full name" [required]="authMode() === 'signup'" />
+          </div>
+
+          <div class="field-group">
+            <div class="field-row"><label for="email">Email address</label></div>
+            <input #email id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          </div>
+
+          <div class="field-group">
+            <div class="field-row">
+              <label for="password">Password</label>
+              <a href="#" [style.visibility]="authMode() === 'signup' ? 'hidden' : 'visible'" (click)="showPasswordRecovery($event)">Forgot password?</a>
+            </div>
+            <div class="input-wrap">
+              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="authMode() === 'signup' ? 'new-password' : 'current-password'" [attr.minlength]="authMode() === 'signup' ? 12 : null" [attr.aria-describedby]="authMode() === 'signup' && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" required (input)="updatePassword($any($event.target).value)" />
+              <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
+            </div>
+          </div>
+
+          @if (authMode() === 'signup') {
+            <div class="field-group">
+              <div class="field-row"><label for="verify-password">Verify password</label></div>
+              <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" />
+            </div>
+          }
+
+          </div>
+          @if (authMode() === 'signup' && passwordStarted()) {
+            <div class="password-checklist" id="password-requirements" aria-live="polite" aria-atomic="true">
+              <p>Your password needs:</p>
+              <ul>
+                @for (rule of passwordRules; track rule.label) {
+                  <li [class.met]="rule.test(passwordDraft())"><span aria-hidden="true">{{ rule.test(passwordDraft()) ? '✓' : '○' }}</span><span class="sr-only">{{ rule.test(passwordDraft()) ? 'Met: ' : 'Still needed: ' }}</span>{{ rule.label }}</li>
+                }
+                <li [class.met]="!!confirmationDraft() && confirmationDraft() === passwordDraft()"><span aria-hidden="true">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? '✓' : '○' }}</span><span class="sr-only">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? 'Met: ' : 'Still needed: ' }}</span>Passwords match</li>
+              </ul>
+            </div>
+          }
+          <button class="primary-action" type="submit">{{ authMode() === 'signup' ? 'Create account' : 'Continue securely' }}</button>
+          
+          
+          <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
+        </form>
+      </section>
+    </div>
+
+    <footer class="auth-footer">
+      <span>© 2026 NextTrade. All rights reserved.</span>
+      <nav aria-label="Legal">
+        <a href="#">Privacy</a>
+        <a href="#">Security</a>
+        <a href="#">Support</a>
+      </nav>
+    </footer>
+  </section>
+
+@if (profileOpen()) {
+  <app-investor-profile
+    [fullName]="applicantName()"
+    [email]="applicantEmail()"
+    (back)="returnToSignup()"
+    (completed)="openDashboard($event)"
+  />
+}
+
+</div>
+@if (dashboardOpen()) {
+  <app-stock-dashboard [name]="applicantName()" [level]="traderLevel()" [newAccount]="newAccount()" (signOut)="signOut()" />
+}
