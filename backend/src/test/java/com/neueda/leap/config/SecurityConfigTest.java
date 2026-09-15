@@ -68,6 +68,7 @@ class SecurityConfigTest {
                 """;
 
         mockMvc.perform(post("/auth/password-reset/request")
+                        .secure(true)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
@@ -84,6 +85,7 @@ class SecurityConfigTest {
                 """;
 
         mockMvc.perform(post("/auth/password-reset/confirm")
+                        .secure(true)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
