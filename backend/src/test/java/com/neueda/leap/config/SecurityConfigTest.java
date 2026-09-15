@@ -1,6 +1,6 @@
 package com.neueda.leap.config;
 
-import com.neueda.leap.security.JwtService;
+import com.neueda.leap.security.JwtServiceImpl;
 import com.neueda.leap.user.UserController;
 import com.neueda.leap.user.UserService;
 import org.junit.jupiter.api.Test;
@@ -31,6 +31,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         PasswordResetController.class
 })
 @Import({SecurityConfig.class, JwtService.class})
+@WebMvcTest(UserController.class)
+@Import({SecurityConfig.class, JwtServiceImpl.class})
 class SecurityConfigTest {
 
     @Autowired
@@ -44,7 +46,7 @@ class SecurityConfigTest {
 
     @Test
     void protectedRoute_withNoToken_shouldReturn401NotDefault403() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me"))
+        mockMvc.perform(get("/api/v1/users/me").secure(true))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHENTICATED"));
     }
@@ -52,6 +54,7 @@ class SecurityConfigTest {
     @Test
     void protectedRoute_withInvalidToken_shouldReturn401FromFilter() throws Exception {
         mockMvc.perform(get("/api/v1/users/me")
+                .secure(true)
                 .header("Authorization", "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));

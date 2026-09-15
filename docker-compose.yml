@@ -15,9 +15,14 @@ services:
       # Application-specific configuration
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
       NEXTTRADE_SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES}
+      # TLS keystore configuration for backend security
+      TLS_KEYSTORE: file:/run/secrets/backend_tls_keystore
+      TLS_KEYSTORE_PASSWORD: ${TLS_KEYSTORE_PASSWORD:?Set TLS_KEYSTORE_PASSWORD for the backend TLS certificate}
       # Mailpit SMTP configuration for local development.
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025
+    secrets:
+      - backend_tls_keystore
     # Note: app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
     # db/init-app-role.sh. It is separate from the admin role, which owns the
     # schema and runs migrations.
@@ -59,6 +64,9 @@ services:
       - "1025:1025"
       # Mailpit's browser inbox is available on port 8025.
       - "8025:8025"
+secrets:
+  backend_tls_keystore:
+    file: ${TLS_KEYSTORE_PATH:-./certs/backend.p12}
 
 volumes:
   db_data:
