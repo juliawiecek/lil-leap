@@ -50,6 +50,8 @@ pipeline {
       environment {
         TLS_KEYSTORE_PASSWORD = 'ci-validation-only-not-for-runtime'
         TLS_KEYSTORE_PATH = '/dev/null'
+        AUTH_SERVICE_TLS_KEYSTORE_PATH = '/dev/null'
+        APP_JWT_SECRET = 'ci-validation-only-not-for-runtime-32-bytes-min'
       }
       steps {
         sh '''
@@ -69,6 +71,17 @@ pipeline {
       }
     }
 
+    stage('Auth Service Tests') {
+      steps {
+        sh 'sh ci/run-checks.sh auth-service'
+      }
+      post {
+        always {
+          junit testResults: 'auth-service/target/surefire-reports/TEST-*.xml', allowEmptyResults: true
+        }
+      }
+    }
+
     stage('Frontend Tests and Build') {
       steps {
         sh 'sh ci/run-checks.sh frontend'
@@ -84,6 +97,14 @@ pipeline {
       steps {
         sh '''
           docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/
+        '''
+      }
+    }
+
+    stage('Build Auth Service Image') {
+      steps {
+        sh '''
+          docker build --tag "auth-service:ci-${BUILD_NUMBER}-${GIT_COMMIT}" auth-service/
         '''
       }
     }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <conversionRule conversionWord="safe" class="com.neueda.leap.identity.security.SensitiveLogConverter"/>
+    <!-- Include exceptions INSIDE masking; nopex prevents a second, unmasked stack trace. -->
+    <property name="SAFE_PATTERN" value="%d{ISO8601} %-5level %logger{36} - %nopex%safe(%msg%n%ex)"/>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder><pattern>${SAFE_PATTERN}</pattern></encoder>
+    </appender>
+    <springProperty name="LOG_FILE" source="logging.file.name" defaultValue="logs/application.log"/>
+    <springProfile name="file-logging">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_FILE:-logs/application.log}</file>
+            <encoder><pattern>${SAFE_PATTERN}</pattern></encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_FILE:-logs/application.log}.%d{yyyy-MM-dd}.gz</fileNamePattern>
+                <maxHistory>14</maxHistory>
+            </rollingPolicy>
+        </appender>
+        <root level="INFO"><appender-ref ref="FILE"/></root>
+    </springProfile>
+    <root level="INFO"><appender-ref ref="CONSOLE"/></root>
+</configuration>

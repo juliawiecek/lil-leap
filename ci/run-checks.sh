@@ -10,6 +10,12 @@ case "${1:-}" in
     rm -f "$ci_workspace/backend/target/surefire-reports"/TEST-*.xml
     set -- mvn -B -ntp -Duser.home=/tmp -Dmaven.repo.local=/tmp/maven-repository clean verify
     ;;
+  auth-service)
+    ci_image=maven:3.9-eclipse-temurin-21
+    ci_component=auth-service
+    rm -f "$ci_workspace/auth-service/target/surefire-reports"/TEST-*.xml
+    set -- mvn -B -ntp -Duser.home=/tmp -Dmaven.repo.local=/tmp/maven-repository clean verify
+    ;;
   frontend)
     ci_image=node:24-bookworm-slim
     ci_component=frontend
@@ -17,7 +23,7 @@ case "${1:-}" in
     set -- sh -ec 'npm ci; npm run test:ci; npm run build'
     ;;
   *)
-    echo 'Usage: sh ci/run-checks.sh backend|frontend' >&2
+    echo 'Usage: sh ci/run-checks.sh backend|auth-service|frontend' >&2
     exit 2
     ;;
 esac
