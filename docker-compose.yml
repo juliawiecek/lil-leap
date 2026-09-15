@@ -15,13 +15,12 @@ services:
       # Application-specific configuration
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
       NEXTTRADE_SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES}
-    # Note: app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-    # db/init-app-role.sh. It is separate from the admin role, which owns the
-    # schema and runs migrations.
-
       # Mailpit SMTP configuration for local development.
       SPRING_MAIL_HOST: mailpit
       SPRING_MAIL_PORT: 1025
+    # Note: app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+    # db/init-app-role.sh. It is separate from the admin role, which owns the
+    # schema and runs migrations.
 
   db:
     image: postgres:16-alpine
