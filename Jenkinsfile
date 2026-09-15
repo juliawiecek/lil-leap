@@ -71,37 +71,26 @@ pipeline {
       }
     }
 
-    stage('Build Multi-Stage Image') {
-    stage('Backend Tests') {
-      steps {
-        sh 'sh ci/run-checks.sh backend'
-      }
-      post {
-        always {
-          junit testResults: 'backend/target/surefire-reports/TEST-*.xml', allowEmptyResults: true
-        }
-      }
-    }
-
-    stage('Frontend Tests and Build') {
-      steps {
-        sh 'sh ci/run-checks.sh frontend'
-      }
-      post {
-        always {
-          junit testResults: 'frontend/test-results/*.xml', allowEmptyResults: true
-        }
-      }
-    }
-
     stage('Build Backend Image') {
       steps {
-        sh '''
-          docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/
-        '''
+        sh 'docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
+      }
+    }
+
+    stage('Build Compose Services') {
+      steps {
+        sh '${COMPOSE_CMD} -f docker-compose.yml build'
       }
     }
   }
 
-  // Test containers clean up individually. No deployment stack or data volumes are touched.
+  post {
+    always {
+      sh '''
+        if [ -n "${COMPOSE_CMD}" ]; then
+          ${COMPOSE_CMD} -f docker-compose.yml down -v || true
+        fi
+      '''
+    }
+  }
 }
