@@ -1,150 +1,71 @@
--- Behavior tests for database hardening: encryption, age validation, constraints
--- Run with: psql -v key="<encryption_key>" ...
-
--- Clean up any previous test data
-DELETE FROM customer_profiles WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'behavior-%');
-DELETE FROM users WHERE email LIKE 'behavior-%';
-DELETE FROM quotes WHERE source = 'TEST-BEHAVIOR';
-DELETE FROM instruments WHERE symbol IN ('TEST-BIDASK', 'TEST-PROV');
-
--- =================================================================
--- TEST 1: Adult customer with encrypted SSN round-trip
--- =================================================================
-\echo '=========================================='
-\echo 'TEST 1: Adult customer SSN encryption round-trip'
-\echo '=========================================='
-
-DELETE FROM customer_profiles WHERE user_id IN (SELECT user_id FROM users WHERE email = 'behavior-adult@example.test');
-DELETE FROM users WHERE email = 'behavior-adult@example.test';
-
-INSERT INTO users(email, password_hash) 
-VALUES ('behavior-adult@example.test', 'synthetic-bcrypt-hash') 
-RETURNING user_id \gset u_
-
-INSERT INTO customer_profiles(
-  user_id, first_name, last_name, phone, address, country, 
-  date_of_birth, citizenship_status, 
-  ssn_encrypted
-)
-VALUES (
-  (SELECT user_id FROM users WHERE email='behavior-adult@example.test'), 
-  'Adult', 'Fixture', '555-0100', '1 Test Way', 'US',
-  (CURRENT_DATE - INTERVAL '25 years')::date,
-  'CITIZEN',
-  pgp_sym_encrypt('111-22-3333', :'key', 'cipher-algo=aes256')
-);
-
--- Verify round-trip
-SELECT 
-  CASE 
-    WHEN pgp_sym_decrypt(ssn_encrypted, :'key') = '111-22-3333' 
-    THEN 'PASS: Adult customer SSN encrypted/decrypted correctly'
-    ELSE 'FAIL: SSN round-trip failed'
-  END as result
-FROM customer_profiles 
-WHERE user_id = (SELECT user_id FROM users WHERE email='behavior-adult@example.test');
-
--- =================================================================
--- TEST 2: Verify SSN stored as BYTEA (encrypted, never plaintext)
--- =================================================================
-\echo '=========================================='
-\echo 'TEST 2: SSN stored as BYTEA, not plaintext'
-\echo '=========================================='
-
-SELECT 
-  CASE 
-    WHEN data_type = 'bytea'
-    THEN 'PASS: ssn_encrypted column is BYTEA type'
-    ELSE 'FAIL: ssn_encrypted is not BYTEA type (' || data_type || ')'
-  END as result
-FROM information_schema.columns 
-WHERE table_name = 'customer_profiles' 
-AND column_name = 'ssn_encrypted';
-
--- =================================================================
--- TEST 3: Under-18 customer rejection by trigger
--- =================================================================
-\echo '=========================================='
-\echo 'TEST 3: Age validation - reject under-18'
-\echo '=========================================='
-
-DELETE FROM customer_profiles WHERE user_id IN (SELECT user_id FROM users WHERE email = 'behavior-minor@example.test');
-DELETE FROM users WHERE email = 'behavior-minor@example.test';
-
-INSERT INTO users(email, password_hash) 
-VALUES ('behavior-minor@example.test', 'synthetic-bcrypt-hash');
-
--- Try to insert a minor (under 18) - should be rejected by trigger
-INSERT INTO customer_profiles(
-  user_id, first_name, last_name, phone, address, country,
-  date_of_birth, citizenship_status, ssn_encrypted
-)
-VALUES (
-  (SELECT user_id FROM users WHERE email='behavior-minor@example.test'),
-  'Minor', 'Fixture', '555-0101', '2 Test Way', 'US',
-  (CURRENT_DATE - INTERVAL '17 years')::date,
-  'CITIZEN',
-  pgp_sym_encrypt('222-33-4444', :'key', 'cipher-algo=aes256')
-);
-
--- Check if the insert succeeded (it shouldn't have)
-SELECT 
-  CASE 
-    WHEN count(*) = 0 THEN 'PASS: Under-18 customer correctly rejected by age trigger'
-    ELSE 'FAIL: Under-18 customer was created (trigger failed)'
-  END as result
-FROM customer_profiles 
-WHERE user_id = (SELECT user_id FROM users WHERE email='behavior-minor@example.test');
-
--- =================================================================
--- TEST 4: Quote constraint - bid >= ask rejection
--- =================================================================
-\echo '=========================================='
-\echo 'TEST 4: Quote constraint - bid >= ask rejection'
-\echo '=========================================='
-
--- Create test instrument with valid asset_class
-INSERT INTO instruments(symbol, instrument_name, asset_class, market_code, currency, sector)
-VALUES ('TEST-BIDASK', 'Test Invalid Bid/Ask', 'COMMON_STOCK', 'TEST', 'USD', 'Technology')
-ON CONFLICT DO NOTHING
-RETURNING instrument_id \gset bidask_
-
--- Try to insert a quote with invalid bid >= ask - should be rejected by CHECK constraint
+-- Transactional behavior checks; run with -v key=<synthetic_test_key>
+-- or SSN_ENCRYPTION_KEY in the environment. No fixtures survive success/failure.
+\set ON_ERROR_STOP on
+\if :{?key}
+\else
+  \getenv key SSN_ENCRYPTION_KEY
+\endif
 BEGIN;
-INSERT INTO quotes(instrument_id, bid, ask, source, quoted_at, is_synthetic)
-VALUES ((SELECT instrument_id FROM instruments WHERE symbol='TEST-BIDASK'), 100.00, 99.00, 'TEST-BEHAVIOR', CURRENT_TIMESTAMP, FALSE);
+SELECT set_config('test.ssn_key', :'key', true) AS ignored \gset
+
+DO $$
+DECLARE
+    adult_id uuid;
+    minor_id uuid;
+    instrument_id_value uuid;
+    encrypted bytea;
+    test_key text := current_setting('test.ssn_key');
+BEGIN
+    INSERT INTO users(email, password_hash)
+    VALUES (gen_random_uuid() || '@behavior.example.test', 'synthetic-hash')
+    RETURNING user_id INTO adult_id;
+    INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address,
+                                  date_of_birth, ssn_encrypted)
+    VALUES (adult_id, 'Adult', 'Fixture', '555-0100', '1 Test Way',
+            (CURRENT_DATE - INTERVAL '25 years')::date,
+            pgp_sym_encrypt('111-22-3333', test_key, 'cipher-algo=aes256'))
+    RETURNING ssn_encrypted INTO encrypted;
+    IF pgp_sym_decrypt(encrypted, test_key) <> '111-22-3333' THEN
+        RAISE EXCEPTION 'SSN round-trip failed';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'public' AND table_name = 'customer_profiles'
+                     AND column_name = 'ssn_encrypted' AND data_type = 'bytea') THEN
+        RAISE EXCEPTION 'SSN column must be BYTEA';
+    END IF;
+
+    INSERT INTO users(email, password_hash)
+    VALUES (gen_random_uuid() || '@behavior.example.test', 'synthetic-hash')
+    RETURNING user_id INTO minor_id;
+    BEGIN
+        INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address,
+                                      date_of_birth, ssn_encrypted)
+        VALUES (minor_id, 'Minor', 'Fixture', '555-0101', '2 Test Way',
+                (CURRENT_DATE - INTERVAL '17 years')::date, encrypted);
+        RAISE EXCEPTION 'Under-18 customer was accepted';
+    EXCEPTION WHEN check_violation THEN
+        NULL; -- Only the expected constraint error counts as success.
+    END;
+
+    INSERT INTO instruments(symbol, instrument_name, asset_class, market_code)
+    VALUES (left(gen_random_uuid()::text, 20), 'Behavior fixture', 'COMMON_STOCK', 'TEST')
+    RETURNING instrument_id INTO instrument_id_value;
+    BEGIN
+        INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source, is_synthetic)
+        VALUES (instrument_id_value, 226, 225, CURRENT_TIMESTAMP, 'TEST-BEHAVIOR', TRUE);
+        RAISE EXCEPTION 'Inverted bid/ask was accepted';
+    EXCEPTION WHEN check_violation THEN
+        NULL;
+    END;
+    BEGIN
+        INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source, is_synthetic)
+        VALUES (instrument_id_value, 225, 225, CURRENT_TIMESTAMP, 'TEST-BEHAVIOR', TRUE);
+        RAISE EXCEPTION 'Equal bid/ask was accepted';
+    EXCEPTION WHEN check_violation THEN
+        NULL;
+    END;
+    INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source, is_synthetic)
+    VALUES (instrument_id_value, 100, 100.50, CURRENT_TIMESTAMP, 'TEST-BEHAVIOR', TRUE);
+END $$;
 ROLLBACK;
-
--- Check if the insert succeeded (it shouldn't have)
-SELECT 
-  CASE 
-    WHEN count(*) = 0 THEN 'PASS: Invalid bid >= ask correctly rejected'
-    ELSE 'FAIL: Invalid quote was created (constraint failed)'
-  END as result
-FROM quotes 
-WHERE source = 'TEST-BEHAVIOR';
-
--- =================================================================
--- TEST 5: Quote with provenance (source + is_synthetic)
--- =================================================================
-\echo '=========================================='
-\echo 'TEST 5: Quote provenance fields present'
-\echo '=========================================='
-
--- Create test instrument with valid asset_class
-INSERT INTO instruments(symbol, instrument_name, asset_class, market_code, currency, sector)
-VALUES ('TEST-PROV', 'Test Provenance', 'COMMON_STOCK', 'TEST', 'USD', 'Technology')
-ON CONFLICT DO NOTHING;
-
--- Insert valid quote with provenance fields
-INSERT INTO quotes(instrument_id, bid, ask, source, quoted_at, is_synthetic)
-VALUES ((SELECT instrument_id FROM instruments WHERE symbol='TEST-PROV'), 50.00, 51.00, 'REAL_SOURCE', CURRENT_TIMESTAMP, FALSE);
-
-SELECT 'PASS: Quote with source and is_synthetic created successfully' as result;
-
--- =================================================================
--- SUMMARY
--- =================================================================
-\echo '=========================================='
-\echo 'All behavior tests completed successfully'
-\echo '=========================================='
+SELECT 'PASS: encrypted BYTEA round-trip, age validation, quote constraints and provenance; fixtures rolled back' AS result;

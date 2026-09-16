@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  * exposes endpoints that require an authenticated principal.</p>
  */
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
 public class UserController {
 
     /**

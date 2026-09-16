@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
--- Verify all 16 required tables exist
+-- Verify all 17 required tables exist
 DO $$
 DECLARE
   missing text;
@@ -8,7 +8,7 @@ BEGIN
   SELECT string_agg(expected.name, ', ')
   INTO missing
   FROM (VALUES
-    ('users'),('customer_profiles'),('financial_profiles'),('analyst_profiles'),('sessions'),
+    ('users'),('customer_profiles'),('financial_profiles'),('analyst_profiles'),('password_reset_tokens'),('sessions'),
     ('instruments'),('quotes'),('accounts'),('orders'),('fills'),
     ('order_status_history'),('holdings'),('holding_movements'),
     ('cash_balances'),('cash_transactions'),('audit_log')
@@ -80,4 +80,4 @@ BEGIN
 
 END $$;
 
-SELECT 'PASS: Schema verification successful - all 16 tables, 5 views, encrypted SSN, no plaintext SSN, trigger, quote provenance fields, and ANALYST role present' AS result;
+SELECT 'PASS: Schema verification successful - all 17 tables, 5 views, encrypted SSN, no plaintext SSN, trigger, quote provenance fields, and ANALYST role present' AS result;

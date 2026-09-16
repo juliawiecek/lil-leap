@@ -14,25 +14,30 @@ POSTGRES_DB="${POSTGRES_DB:-nexttrade}"
 DB_APP_USERNAME="${DB_APP_USERNAME:?DB_APP_USERNAME environment variable is required}"
 DB_APP_PASSWORD="${DB_APP_PASSWORD:?DB_APP_PASSWORD environment variable is required}"
 
-# Create or update the application role using parameterized SQL.
-# Quoting identifiers and values safely prevents SQL injection.
+# Keep the application role distinct from the schema owner.
+if [ "$DB_APP_USERNAME" = "$POSTGRES_USER" ]; then
+    echo "DB_APP_USERNAME must differ from POSTGRES_USER" >&2
+    exit 1
+fi
+export DB_APP_PASSWORD
+
+# psql quotes identifiers/literals; the password is read from the environment,
+# never interpolated into shell-generated SQL or exposed in command arguments.
 psql -v ON_ERROR_STOP=1 \
     --username "$POSTGRES_USER" \
-    --dbname "$POSTGRES_DB" <<-EOSQL
+    --dbname "$POSTGRES_DB" \
+    --set=app_user="$DB_APP_USERNAME" \
+    --set=admin_user="$POSTGRES_USER" \
+    --set=db_name="$POSTGRES_DB" <<'EOSQL'
+    \getenv app_password DB_APP_PASSWORD
+    SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'app_user', :'app_password')
+    WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user')
+    \gexec
+    SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L', :'app_user', :'app_password')
+    \gexec
 
-    -- Create application role if it does not exist; update password if it does.
-    DO \$\$
-    BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$DB_APP_USERNAME') THEN
-            EXECUTE 'CREATE ROLE ' || quote_ident('$DB_APP_USERNAME') || ' LOGIN PASSWORD ' || quote_literal('$DB_APP_PASSWORD');
-        ELSE
-            EXECUTE 'ALTER ROLE ' || quote_ident('$DB_APP_USERNAME') || ' WITH PASSWORD ' || quote_literal('$DB_APP_PASSWORD');
-        END IF;
-    END \$\$;
-
-    -- Grant basic connection and schema usage
-    GRANT CONNECT ON DATABASE $POSTGRES_DB TO "$DB_APP_USERNAME";
-    GRANT USAGE ON SCHEMA public TO "$DB_APP_USERNAME";
+    GRANT CONNECT ON DATABASE :"db_name" TO :"app_user";
+    GRANT USAGE ON SCHEMA public TO :"app_user";
 
     -- Grant full DML (SELECT, INSERT, UPDATE, DELETE) on all runtime tables.
     -- Application uses these tables for normal trading and account operations.
@@ -41,6 +46,7 @@ psql -v ON_ERROR_STOP=1 \
         customer_profiles,
         financial_profiles,
         analyst_profiles,
+        password_reset_tokens,
         sessions,
         instruments,
         quotes,
@@ -52,7 +58,7 @@ psql -v ON_ERROR_STOP=1 \
         holding_movements,
         cash_balances,
         cash_transactions
-    TO "$DB_APP_USERNAME";
+    TO :"app_user";
 
     -- Grant SELECT on all helper views for application queries.
     GRANT SELECT ON
@@ -61,25 +67,20 @@ psql -v ON_ERROR_STOP=1 \
         v_latest_quotes,
         v_active_sessions,
         v_trader_tier_eligibility
-    TO "$DB_APP_USERNAME";
+    TO :"app_user";
 
     -- audit_log is append-only: application may SELECT and INSERT, never UPDATE/DELETE.
     -- Explicitly revoke UPDATE, DELETE, and TRUNCATE to prevent accidental data tampering.
-    GRANT SELECT, INSERT ON audit_log TO "$DB_APP_USERNAME";
-    REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM "$DB_APP_USERNAME";
+    GRANT SELECT, INSERT ON audit_log TO :"app_user";
+    REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM :"app_user";
 
-    -- Ensure the application role cannot create objects in schema public.
-    -- This is a defense-in-depth control: migrations are run by the admin role only.
-    -- Future tables added by the admin role will NOT automatically receive permissions
-    -- (see default privileges below), ensuring we audit any new table before granting access.
-    ALTER DEFAULT PRIVILEGES FOR ROLE "$POSTGRES_USER" IN SCHEMA public
-        GRANT USAGE ON SCHEMAS TO "$DB_APP_USERNAME";
+    -- PUBLIC grants are inherited by every role, so remove schema CREATE there too.
+    REVOKE CREATE ON SCHEMA public FROM PUBLIC, :"app_user";
 
-    -- Set default privileges for future tables created by admin role.
-    -- New tables will NOT automatically receive permissions; this is intentional:
-    -- we must audit security-sensitive tables (especially new audit/security tables)
-    -- and explicitly grant permissions to prevent over-privilege by default.
-    ALTER DEFAULT PRIVILEGES FOR ROLE "$POSTGRES_USER" IN SCHEMA public
-        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "$DB_APP_USERNAME";
-
+    -- Explicit grants above are the allowlist. Undo legacy default grants at
+    -- both levels so future tables require a deliberate permission review.
+    ALTER DEFAULT PRIVILEGES FOR ROLE :"admin_user"
+        REVOKE ALL ON TABLES FROM :"app_user";
+    ALTER DEFAULT PRIVILEGES FOR ROLE :"admin_user" IN SCHEMA public
+        REVOKE ALL ON TABLES FROM :"app_user";
 EOSQL
