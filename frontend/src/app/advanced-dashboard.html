@@ -1,0 +1,686 @@
+<div class="pro-shell" [class.collapsed]="collapsed()">
+  <aside class="pro-sidebar">
+    <a class="pro-logo" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+      >Next<span>Trade</span><app-dashboard-icon name="arrow"
+    /></a>
+    <nav aria-label="Advanced navigation">
+      @for (item of nav; track item.name) {
+        <button
+          type="button"
+          [class.active]="page() === item.name"
+          [attr.aria-current]="page() === item.name ? 'page' : null"
+          [attr.title]="collapsed() ? item.name : null"
+          (click)="navigate(item.name)"
+        >
+          <app-dashboard-icon [name]="item.icon" /><span>{{ item.name }}</span>
+        </button>
+      }
+    </nav>
+    <div class="sidebar-help">
+      <span>Help &amp; Support</span
+      ><button type="button" (click)="openModal('help')">
+        <app-dashboard-icon name="chat" /><span>Chat with us</span></button
+      ><button type="button" (click)="openModal('shortcuts')">
+        <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
+      ><button
+        type="button"
+        (click)="collapsed.set(!collapsed())"
+        [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <app-dashboard-icon name="collapse" /><span>Collapse</span>
+      </button>
+    </div>
+  </aside>
+  <div class="pro-main">
+    <header class="pro-topbar">
+      <div class="pro-search">
+        <app-dashboard-icon name="search" /><input
+          aria-label="Search symbols or companies"
+          placeholder="Search symbols, companies, or keywords (e.g. AAPL, earnings, AI)..."
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          (keydown.escape)="query.set('')"
+        />
+        @if (query().trim()) {
+          <div class="search-results">
+            @for (q of results(); track q.symbol) {
+              <button type="button" (click)="choose(q)">
+                <b>{{ q.symbol }}</b
+                ><span>{{ q.name }}</span
+                ><strong>{{ q.price | currency }}</strong>
+              </button>
+            } @empty {
+              <p>No matching symbols or companies.</p>
+            }
+          </div>
+        }
+      </div>
+      <div class="header-actions">
+        <select
+          aria-label="Workspace"
+          [value]="mode()"
+          (change)="$any($event.target).value === 'NOVICE' && novice.emit()"
+        >
+          <option value="ADVANCED">Advanced · Pro</option>
+          <option value="NOVICE">Novice · Guided</option>
+        </select>
+        <div class="notification-wrap">
+          <button
+            class="notification-button icon-button"
+            type="button"
+            aria-label="Notifications"
+            [attr.aria-expanded]="notifications()"
+            (click)="notifications.set(!notifications())"
+          >
+            <app-dashboard-icon name="bell" /><i></i>
+          </button>
+          @if (notifications()) {
+            <div class="notification-popover">
+              <b>Notifications</b>
+              <p>
+                {{
+                  alerts().length
+                    ? alerts().length + ' price alerts configured.'
+                    : 'You’re all caught up.'
+                }}
+              </p>
+            </div>
+          }
+        </div>
+        <button
+          type="button"
+          class="avatar"
+          aria-label="Account settings"
+          (click)="navigate('Settings')"
+        >
+          {{ (name() || 'A').slice(0, 1).toUpperCase() }}
+        </button>
+      </div>
+    </header>
+    <main class="pro-content">
+      <div class="session-line">
+        <span><i></i>Markets Open</span><span>09:42:17 ET</span><span>Wed, Apr 23, 2025</span>
+      </div>
+      <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
+        <section class="panel summary-panel">
+          <h1>
+            Portfolio Summary
+            <button
+              type="button"
+              class="icon-button"
+              [attr.aria-label]="privateBalance() ? 'Show balances' : 'Hide balances'"
+              (click)="privateBalance.set(!privateBalance())"
+            >
+              <app-dashboard-icon name="eye" />
+            </button>
+          </h1>
+          <div class="summary-metrics">
+            <div class="main-value">
+              <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
+              ><span class="gain">▲ +$12,842.31 (+4.73%) <small>Today</small></span>
+            </div>
+            <div>
+              <span>Buying Power</span
+              ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
+            </div>
+            <div>
+              <span>Day P&amp;L</span><strong class="gain">+$12,842.31</strong
+              ><b class="gain">+4.73%</b>
+            </div>
+            <div>
+              <span>Total Return</span><strong class="gain">+$56,721.18</strong
+              ><b class="gain">+24.86%</b>
+            </div>
+            <div>
+              <span>Cash</span
+              ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong
+              ><small>16.9% of total</small>
+            </div>
+            <div><span>Margin Used</span><strong>$12,400.00</strong><small>4.4%</small></div>
+            <div><span>Net Liquidity</span><strong>$272,250.17</strong></div>
+          </div>
+        </section>
+        <section class="panel index-panel" aria-label="Market indices">
+          @for (market of markets; track market.name) {
+            <button type="button" (click)="navigate('Markets')">
+              <span>{{ market.name }}</span
+              ><strong>{{ market.value }}</strong
+              ><b class="gain">{{ market.change }}</b>
+            </button>
+          }
+        </section>
+        @if (page() === 'Overview') {
+          <app-advanced-chart [desk]="this" />
+          <app-advanced-ticket [desk]="this" />
+        }
+        @if (page() === 'Overview' || page() === 'Portfolio') {
+          <section class="panel positions-panel">
+            <div class="panel-tabs">
+              @for (tab of bottomTabs; track tab) {
+                <button
+                  type="button"
+                  [class.active]="bottomTab() === tab"
+                  (click)="bottomTab.set(tab)"
+                >
+                  {{ tab }}
+                </button>
+              }
+            </div>
+            <div class="table-scroll">
+              @if (bottomTab() === 'Positions') {
+                <table class="positions-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Name</th>
+                      <th>Last</th>
+                      <th>Change %</th>
+                      <th>Quantity</th>
+                      <th>Avg Cost</th>
+                      <th>Market Value</th>
+                      <th>Day P&amp;L</th>
+                      <th>Total P&amp;L</th>
+                      <th>Weight</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of positions(); track p.symbol) {
+                      <tr>
+                        <td>
+                          <button type="button" (click)="choose(quote(p.symbol))">
+                            <b>{{ p.symbol }}</b>
+                          </button>
+                        </td>
+                        <td class="muted">{{ quote(p.symbol).name }}</td>
+                        <td>{{ quote(p.symbol).price | number: '1.2-2' }}</td>
+                        <td
+                          [class.gain]="quote(p.symbol).change > 0"
+                          [class.loss]="quote(p.symbol).change < 0"
+                        >
+                          {{ quote(p.symbol).change > 0 ? '+' : ''
+                          }}{{ quote(p.symbol).change | number: '1.2-2' }}%
+                        </td>
+                        <td>{{ p.quantity }}</td>
+                        <td>{{ p.cost | currency }}</td>
+                        <td>{{ p.value | currency }}</td>
+                        <td [class.gain]="p.day >= 0" [class.loss]="p.day < 0">
+                          {{ p.day >= 0 ? '+' : '' }}{{ p.day | currency }}
+                        </td>
+                        <td [class.gain]="p.total >= 0" [class.loss]="p.total < 0">
+                          {{ p.total >= 0 ? '+' : '' }}{{ p.total | currency }}
+                        </td>
+                        <td>+{{ p.weight }}%</td>
+                        <td>
+                          <button
+                            type="button"
+                            class="icon-button"
+                            [attr.aria-label]="'Trade ' + p.symbol"
+                            (click)="choose(quote(p.symbol)); ticketTab.set('Trade')"
+                          >
+                            <app-dashboard-icon name="more" />
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else if (bottomTab() === 'Orders' || bottomTab() === 'Executions') {
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Symbol</th>
+                      <th>Side</th>
+                      <th>Quantity</th>
+                      <th>Price</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (o of orders(); track o.id) {
+                      @if (bottomTab() === 'Orders' || o.status === 'Filled') {
+                        <tr>
+                          <td>{{ o.time }}</td>
+                          <td>{{ o.symbol }}</td>
+                          <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
+                            {{ o.side }}
+                          </td>
+                          <td>{{ o.quantity }}</td>
+                          <td>{{ o.price | currency }}</td>
+                          <td>{{ o.type }}</td>
+                          <td [class.gain]="o.status === 'Filled'">{{ o.status }}</td>
+                          <td>
+                            @if (o.status === 'Open') {
+                              <button
+                                type="button"
+                                class="cancel-order"
+                                (click)="cancelOrder(o.id)"
+                              >
+                                Cancel
+                              </button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              } @else if (bottomTab() === 'Balances') {
+                <div class="balance-details">
+                  <div>
+                    <span>Cash</span><strong>{{ buyingPower() | currency }}</strong>
+                  </div>
+                  <div>
+                    <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
+                  </div>
+                  <div><span>Margin Used</span><strong>$12,400.00</strong></div>
+                  <div><span>Net Liquidity</span><strong>$272,250.17</strong></div>
+                </div>
+              } @else {
+                <div class="balance-details">
+                  <div><span>Day P&amp;L</span><strong class="gain">+$12,842.31</strong></div>
+                  <div><span>Total Return</span><strong class="gain">+$56,721.18</strong></div>
+                  <div><span>Return %</span><strong class="gain">+24.86%</strong></div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+        @if (page() === 'Orders') {
+          <section class="panel orders-history-panel">
+            <div class="panel-heading"><h2>Order History</h2></div>
+            <div class="order-status-tabs">
+              @for (status of ['All', 'Open', 'Filled', 'Cancelled', 'Rejected']; track status) {
+                <button
+                  type="button"
+                  [class.active]="orderStatus() === status"
+                  (click)="orderStatus.set(status)"
+                >
+                  {{ status }}
+                </button>
+              }
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Limit Price</th>
+                    <th>Avg Fill Price</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (o of filteredOrders(); track o.id) {
+                    <tr>
+                      <td><strong>{{ o.symbol }}</strong></td>
+                      <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
+                        {{ o.side }}
+                      </td>
+                      <td>{{ o.type }}</td>
+                      <td>{{ o.quantity }}</td>
+                      <td>{{ o.type === 'Limit' ? (o.price | currency) : '—' }}</td>
+                      <td>{{ o.status === 'Filled' ? (o.price | currency) : '—' }}</td>
+                      <td>
+                        <span [class.gain]="o.status === 'Filled'" [class.loss]="o.status === 'Cancelled' || o.status === 'Rejected'">
+                          {{ o.status }}
+                        </span>
+                      </td>
+                      <td>{{ o.time }}</td>
+                      <td>
+                        @if (o.status === 'Open') {
+                          <div class="order-actions">
+                            <button type="button" class="order-action-btn">Modify</button>
+                            <button type="button" class="cancel-order" (click)="cancelOrder(o.id)">Cancel</button>
+                          </div>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+        @if (page() === 'Overview' || page() === 'Watchlist' || page() === 'Screeners') {
+          <section class="panel watch-panel">
+            <div class="panel-heading">
+              <h2>{{ page() === 'Screeners' ? 'Stock screener' : 'Watchlist' }}</h2>
+              <button type="button" class="text-link" (click)="navigate('Watchlist')">
+                More <app-dashboard-icon name="chevron" />
+              </button>
+            </div>
+            @if (page() === 'Screeners') {
+              <select
+                aria-label="Stock filter"
+                [value]="filter()"
+                (change)="filter.set($any($event.target).value)"
+              >
+                <option>All stocks</option>
+                <option>Gainers</option>
+                <option>Decliners</option>
+              </select>
+            }
+            <div class="table-scroll">
+              <table class="watch-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Last</th>
+                    <th>Change</th>
+                    <th>Volume</th>
+                    <th>1D</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    q of page() === 'Screeners' ? screened() : quotes;
+                    track q.symbol;
+                    let i = $index
+                  ) {
+                    <tr [class.selected]="selected().symbol === q.symbol">
+                      <td>
+                        <button type="button" (click)="choose(q)">
+                          <b>{{ q.symbol }}</b>
+                        </button>
+                      </td>
+                      <td>{{ q.price | number: '1.2-2' }}</td>
+                      <td [class.gain]="q.change > 0" [class.loss]="q.change < 0">
+                        {{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%
+                      </td>
+                      <td class="muted">{{ q.volume }}</td>
+                      <td>
+                        <button
+                          type="button"
+                          [attr.aria-label]="'View ' + q.symbol + ' chart'"
+                          (click)="choose(q)"
+                        >
+                          <svg viewBox="0 0 80 28" aria-hidden="true">
+                            <path
+                              [attr.d]="spark(i, q.change < 0)"
+                              fill="none"
+                              [attr.stroke]="q.change > 0 ? '#53cb84' : '#f36367'"
+                              stroke-width="1"
+                            />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+        @if (page() === 'Overview' || page() === 'Markets') {
+          <section class="panel market-panel">
+            <div class="panel-heading"><h2>Market Overview</h2></div>
+            <div class="market-tabs">
+              @for (tab of ['Sectors', 'Top Movers', '52W High/Low']; track tab) {
+                <button
+                  type="button"
+                  [class.active]="marketTab() === tab"
+                  (click)="marketTab.set(tab)"
+                >
+                  {{ tab }}
+                </button>
+              }
+            </div>
+            @if (marketTab() === 'Sectors') {
+              <div class="sector-list">
+                @for (s of sectors; track s.name) {
+                  <div>
+                    <span>{{ s.name }}</span
+                    ><span class="sector-bar"
+                      ><i
+                        [style.width.%]="s.change > 0 ? s.change * 48 : -s.change * 48"
+                        [class.negative-bar]="s.change < 0"
+                      ></i></span
+                    ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
+                      >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
+                    >
+                  </div>
+                }
+              </div>
+            } @else if (marketTab() === 'Top Movers') {
+              @for (q of [quotes[3], quotes[1], quotes[0], quotes[6], quotes[4]]; track q.symbol) {
+                <button class="mover-row" type="button" (click)="choose(q)">
+                  <b>{{ q.symbol }}</b
+                  ><span>{{ q.price | currency }}</span
+                  ><strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
+                    >{{ q.change > 0 ? '+' : '' }}{{ q.change }}%</strong
+                  >
+                </button>
+              }
+            } @else {
+              <p class="empty-note">52-week high and low data is not available.</p>
+            }
+          </section>
+        }
+        @if (page() === 'Overview') {
+          <div class="bottom-panels">
+            <section class="panel executions-panel">
+              <div class="panel-heading">
+                <h2>Recent Executions</h2>
+                <button
+                  class="text-link"
+                  type="button"
+                  (click)="navigate('Orders'); bottomTab.set('Executions')"
+                >
+                  View all <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Symbol</th>
+                      <th>Side</th>
+                      <th>Qty</th>
+                      <th>Price</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (o of executions().slice(0, 4); track o.id) {
+                      <tr>
+                        <td>{{ o.time }}</td>
+                        <td>{{ o.symbol }}</td>
+                        <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
+                          {{ o.side }}
+                        </td>
+                        <td>{{ o.quantity }}</td>
+                        <td>{{ o.price | number: '1.2-2' }}</td>
+                        <td class="gain">{{ o.status }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel news-panel">
+              <div class="panel-heading">
+                <h2>News &amp; Analysis</h2>
+                <button type="button" class="text-link" (click)="navigate('Research')">
+                  View all <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              @for (n of news; track n.symbol; let i = $index) {
+                <button type="button" class="news-row" (click)="article.set(i); openModal('news')">
+                  <span class="muted">{{ n.time }}</span
+                  ><b>{{ n.symbol }}</b
+                  ><span>{{ n.title }}</span
+                  ><small>{{ n.source }}</small>
+                </button>
+              }
+            </section>
+            <section class="panel exposure-panel">
+              <div class="panel-heading">
+                <h2>Portfolio Exposure</h2>
+                <button type="button" class="text-link" (click)="openModal('exposure')">
+                  View details <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <div class="exposure-content">
+                <div>
+                  <span class="muted">Asset Class</span>
+                  @for (
+                    asset of [
+                      { name: 'Equities', value: 82.4 },
+                      { name: 'Options', value: 5.6 },
+                      { name: 'Cash', value: 12 },
+                      { name: 'Other', value: 0 },
+                    ];
+                    track asset.name
+                  ) {
+                    <div class="exposure-row">
+                      <span>{{ asset.name }}</span
+                      ><span>{{ asset.value | number: '1.1-1' }}%</span
+                      ><span class="sector-bar"><i [style.width.%]="asset.value"></i></span>
+                    </div>
+                  }
+                </div>
+                <div
+                  class="exposure-ring"
+                  role="img"
+                  aria-label="Equities 82.4%, Options 5.6%, Cash 12%, Other 0%"
+                >
+                  <span><b>$284.7K</b><small>Total</small></span>
+                </div>
+              </div>
+            </section>
+          </div>
+        }
+        @if (page() === 'Settings') {
+          <section class="panel settings-panel">
+            <h2>Workspace settings</h2>
+            <div>
+              <span>Account</span><strong>{{ name() || 'Your account' }}</strong>
+            </div>
+            <div>
+              <span>Workspace</span
+              ><button class="secondary-button" type="button" (click)="novice.emit()">
+                Switch to Novice · Guided
+              </button>
+            </div>
+            <div>
+              <span>Sidebar</span
+              ><button type="button" class="secondary-button" (click)="collapsed.set(!collapsed())">
+                {{ collapsed() ? 'Expand' : 'Collapse' }}
+              </button>
+            </div>
+            <button type="button" class="secondary-button" (click)="signOut.emit()">
+              Sign out ↗
+            </button>
+          </section>
+        }
+      </div>
+    </main>
+  </div>
+</div>
+<dialog #detailDialog aria-labelledby="pro-dialog-title" (click)="backdrop($event)">
+  <div class="dialog-heading">
+    <h2 id="pro-dialog-title">
+      {{
+        modal() === 'review'
+          ? 'Review Order'
+          : modal() === 'news'
+            ? 'News & Analysis'
+            : modal() === 'exposure'
+              ? 'Portfolio Exposure'
+              : modal() === 'indicators'
+                ? 'Chart Indicators'
+                : modal() === 'shortcuts'
+                  ? 'Keyboard Shortcuts'
+                  : 'Help & Support'
+      }}
+    </h2>
+    <button class="icon-button" type="button" aria-label="Close dialog" (click)="closeModal()">
+      <app-dashboard-icon name="close" />
+    </button>
+  </div>
+  @if (modal() === 'review') {
+    <div class="review-details">
+      <div>
+        <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
+      </div>
+      <div>
+        <span>Side / Type</span><strong>{{ side() }} / {{ orderType() }}</strong>
+      </div>
+      <div>
+        <span>Quantity</span><strong>{{ quantity() }}</strong>
+      </div>
+      <div>
+        <span>Price</span
+        ><strong>{{
+          (orderType() === 'Limit' ? +limitPrice() : selected().price) | currency
+        }}</strong>
+      </div>
+      <div>
+        <span>Time in Force</span><strong>{{ tif() }}</strong>
+      </div>
+      @if (takeProfit()) {
+        <div>
+          <span>Take Profit</span><strong>{{ +profitPrice() | currency }}</strong>
+        </div>
+      }
+      @if (stopLoss()) {
+        <div>
+          <span>Stop Loss</span><strong>{{ +stopPrice() | currency }}</strong>
+        </div>
+      }
+      <div>
+        <span>Estimated Total</span><strong>{{ total() | currency }}</strong>
+      </div>
+    </div>
+    <p>Review the symbol, quantity, and price before confirming.</p>
+    <button class="primary-button" type="button" (click)="confirmOrder()">
+      Confirm {{ side() }}
+    </button>
+  } @else if (modal() === 'news') {
+    <p class="muted">{{ news[article()].time }} · {{ news[article()].symbol }}</p>
+    <h3>{{ news[article()].title }}</h3>
+    <p>
+      This headline is part of the supplied dashboard reference. A full article and live news feed
+      are not connected.
+    </p>
+    <button
+      type="button"
+      class="secondary-button"
+      (click)="choose(quote(news[article()].symbol)); closeModal()"
+    >
+      View {{ news[article()].symbol }} chart
+    </button>
+  } @else if (modal() === 'exposure') {
+    <div class="review-details">
+      <div><span>Equities</span><strong>82.4%</strong></div>
+      <div><span>Options</span><strong>5.6%</strong></div>
+      <div><span>Cash</span><strong>12.0%</strong></div>
+      <div><span>Other</span><strong>0.0%</strong></div>
+    </div>
+  } @else if (modal() === 'indicators') {
+    <p><b>EMA (50)</b> · Blue, 50-period exponential moving average.</p>
+    <p><b>EMA (200)</b> · Purple, 200-period exponential moving average.</p>
+    <p><b>VWAP</b> · Yellow, volume-weighted average price.</p>
+    <p><b>RSI (14)</b> · Relative strength index in the lower chart pane.</p>
+  } @else if (modal() === 'shortcuts') {
+    <p><kbd>Tab</kbd> Move between controls.</p>
+    <p><kbd>Enter</kbd> Activate the focused control or review an order.</p>
+    <p><kbd>Esc</kbd> Close a dialog or clear search.</p>
+  } @else {
+    <p>
+      Select a symbol from the watchlist to link its chart and order ticket. Configure the order,
+      then select Review Order.
+    </p>
+    <p>Use the Orders tab to view and cancel open orders. Chat support is not connected yet.</p>
+  }
+</dialog>

@@ -1,0 +1,130 @@
+<section class="panel chart-panel" aria-label="Stock price chart">
+  <div class="chart-toolbar">
+    <span class="chart-company">{{ desk().selected().name }}</span
+    ><strong class="quote-price">{{ desk().selected().price | currency }}</strong
+    ><b [class.gain]="desk().selected().change > 0" [class.loss]="desk().selected().change < 0"
+      >{{
+        desk().selected().symbol === 'AAPL'
+          ? '+3.21'
+          : ((desk().selected().price * desk().selected().change) / 100 | number: '1.2-2')
+      }}
+      ({{ desk().selected().change > 0 ? '+' : ''
+      }}{{ desk().selected().change | number: '1.2-2' }}%)</b
+    >
+    <div class="indicators">
+      <span><i class="blue"></i>EMA (50) <b class="blue-text">173.24</b></span
+      ><span><i class="purple"></i>EMA (200) <b class="purple-text">169.11</b></span
+      ><span><i class="yellow"></i>VWAP <b class="yellow-text">175.02</b></span>
+    </div>
+    <div class="chart-periods">
+      @for (p of desk().periods; track p) {
+        <button
+          type="button"
+          [class.active]="desk().period() === p"
+          [attr.aria-pressed]="desk().period() === p"
+          (click)="desk().period.set(p)"
+        >
+          {{ p }}
+        </button>
+      }
+    </div>
+  </div>
+  <div class="technical-chart">
+    <div class="price-pane">
+      <svg
+        viewBox="0 0 824 160"
+        preserveAspectRatio="none"
+        role="img"
+        [attr.aria-label]="desk().selected().symbol + ' ' + desk().period() + ' candlestick chart'"
+      >
+        <defs>
+          <pattern id="pro-grid" width="112" height="30" patternUnits="userSpaceOnUse">
+            <path d="M112 0H0V30" fill="none" stroke="#233039" stroke-width=".65" />
+          </pattern>
+        </defs>
+        <rect width="824" height="160" fill="url(#pro-grid)" />
+        <path
+          d="M0 51C20 30 43 70 90 83S180 110 300 107 435 124 515 107 650 93 820 67"
+          stroke="#3878ec"
+          fill="none"
+          stroke-width="1"
+        />
+        <path
+          d="M0 146C160 117 270 133 400 123S630 110 820 97"
+          stroke="#a650df"
+          fill="none"
+          stroke-width="1"
+        />
+        <path
+          d="M0 50C35 21 70 63 200 71S410 108 560 100 730 82 820 79"
+          stroke="#e8bc0b"
+          fill="none"
+          stroke-width="1"
+        />
+        @for (c of desk().candles(); track $index) {
+          <line
+            [attr.x1]="c.x"
+            [attr.x2]="c.x"
+            [attr.y1]="c.high"
+            [attr.y2]="c.low"
+            [attr.stroke]="c.up ? '#25b675' : '#ee535d'"
+            stroke-width=".8"
+          />
+          <rect
+            [attr.x]="c.x - 2.1"
+            [attr.y]="c.open < c.close ? c.open : c.close"
+            width="4.2"
+            [attr.height]="(c.open - c.close > 0 ? c.open - c.close : c.close - c.open) || 1"
+            [attr.fill]="c.up ? '#27b779' : '#ef5660'"
+          />
+        }
+      </svg>
+      <div class="price-axis">
+        <span>{{ desk().selected().price * 1.02 | number: '1.2-2' }}</span
+        ><b>{{ desk().selected().price | number: '1.2-2' }}</b
+        ><span>{{ desk().selected().price * 0.985 | number: '1.2-2' }}</span
+        ><span>{{ desk().selected().price * 0.963 | number: '1.2-2' }}</span
+        ><span>{{ desk().selected().price * 0.94 | number: '1.2-2' }}</span>
+      </div>
+    </div>
+    <div class="volume-pane">
+      <span class="pane-label">Volume &nbsp; 2.4M</span
+      ><svg viewBox="0 0 824 54" preserveAspectRatio="none" role="img" aria-label="Trading volume">
+        <path d="M0 14H824M0 34H824" stroke="#243138" stroke-dasharray="2 2" />
+        @for (c of desk().candles(); track $index) {
+          <rect
+            [attr.x]="c.x - 2.5"
+            [attr.y]="54 - c.volume"
+            width="5"
+            [attr.height]="c.volume"
+            [attr.fill]="c.up ? '#287850' : '#954045'"
+          />
+        }
+      </svg>
+      <div class="volume-axis"><span>6M</span><span>3M</span></div>
+    </div>
+    <div class="rsi-pane">
+      <span class="pane-label">RSI (14) &nbsp; 62.3</span
+      ><svg
+        viewBox="0 0 824 46"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Relative strength index"
+      >
+        <path
+          d="M0 8H824M0 25H824M0 40H824"
+          stroke="#78828c"
+          stroke-width=".55"
+          stroke-dasharray="3 2"
+        />
+        <path [attr.d]="desk().rsiPath()" fill="none" stroke="#c7cdd6" stroke-width="1" />
+      </svg>
+      <div class="rsi-axis"><span>70</span><span>50</span><span>30</span></div>
+    </div>
+    <div class="time-axis">
+      @for (time of desk().chartTimes(); track $index) {
+        <span>{{ time }}</span>
+      }
+    </div>
+  </div>
+</section>
