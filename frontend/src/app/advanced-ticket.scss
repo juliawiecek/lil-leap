@@ -1,0 +1,248 @@
+:host {
+  display: contents;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #69d999;
+  outline-offset: 2px;
+}
+h2,
+p {
+  margin: 0;
+}
+h2 {
+  font: 600 12px var(--font-ui);
+}
+.gain {
+  color: var(--green);
+}
+.loss {
+  color: #ff5e66;
+}
+.panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: linear-gradient(130deg, #0f191e80, #101a20a0);
+}
+.order-ticket {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  position: relative;
+}
+.ticket-tabs {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  padding: 0 11px;
+  border-bottom: 1px solid var(--line);
+  gap: 18px;
+}
+.ticket-tabs button {
+  padding: 9px 0;
+  font-size: 9px;
+  color: #bdc7d8;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.ticket-tabs button.active {
+  color: #f1f4f7;
+  font-weight: 600;
+  border-color: #52d991;
+}
+.ticket-body {
+  padding: 12px 11px;
+  max-height: calc(100% - 35px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.side-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 5px;
+  background: #202d35;
+  margin-bottom: 12px;
+}
+.side-switch button {
+  height: 27px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.side-switch .active {
+  color: #072816;
+  font-weight: 600;
+  background: linear-gradient(#7edf9f, #59cc88);
+}
+.ticket-body form > label,
+.ticket-body > label {
+  display: block;
+  margin: 10px 0 3px;
+  font-size: 10px;
+  color: #bfcbda;
+}
+.ticket-body input:not([type='checkbox']),
+.ticket-body select {
+  width: 100%;
+  min-width: 0;
+  height: 29px;
+  padding: 0 10px;
+  background: linear-gradient(#152027, #0e181d);
+  border: 1px solid #3c4a55;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #f0f3f6;
+}
+.symbol-select {
+  display: flex;
+  align-items: center;
+  height: 29px;
+  border: 1px solid #3c4a55;
+  border-radius: 5px;
+  background: #0f1a20;
+}
+.symbol-select select {
+  width: 76px;
+  border: 0;
+  appearance: none;
+  font-weight: 600;
+  background: transparent;
+  flex-shrink: 0;
+}
+.symbol-select > span {
+  color: var(--muted);
+  font-size: 9px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.symbol-select app-dashboard-icon {
+  width: 14px;
+  height: 14px;
+  margin: 0 10px;
+  color: var(--muted);
+}
+.bracket-toggles {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+.bracket-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+}
+.bracket-toggles input {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  border: 1px solid #617283;
+  border-radius: 3px;
+  background: #101a20;
+}
+.bracket-toggles input:checked {
+  appearance: auto;
+  accent-color: #59d68d;
+}
+.cost-summary {
+  border: 1px solid #22343d;
+  border-radius: 5px;
+  padding: 10px 12px;
+  margin: 14px 0;
+}
+.cost-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 9px;
+}
+.cost-summary > div > span:first-child {
+  color: #bdc9d9;
+}
+.cost-summary strong {
+  font-size: 10px;
+  font-weight: 600;
+}
+.primary-button {
+  min-height: 32px;
+  padding: 7px 14px;
+  border-radius: 5px;
+  background: linear-gradient(#7cdf9d, #56ca86);
+  color: #0b2a18;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #63c48b;
+}
+.review-button {
+  width: 100%;
+}
+.secondary-button {
+  padding: 8px 12px;
+  border: 1px solid #3d505d;
+  background: #1a2931;
+  border-radius: 5px;
+  color: #d5e0eb;
+}
+.ticket-message {
+  color: #95d9b0;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+.ticket-message:empty {
+  display: none;
+}
+.ticket-note {
+  margin: 16px 0;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.book-head,
+.book-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.book-head {
+  margin-top: 10px;
+  color: var(--muted);
+}
+.ticket-body > .primary-button {
+  margin: 12px 0;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .ticket-tools {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .order-ticket {
+    order: 3;
+    min-height: 565px;
+  }
+  .ticket-body {
+    max-height: none;
+  }
+}

@@ -1,0 +1,155 @@
+<section class="hub-intro">
+  <div>
+    <span class="eyebrow">ONE CONCEPT AT A TIME</span>
+    <h2>Build your investing foundation.</h2>
+    <p>Short lessons, simple examples, and a quick check of what you’ve learned.</p>
+  </div>
+  <app-dashboard-icon name="learn" />
+</section>
+<section class="learning-progress hub-card">
+  <div>
+    <strong>{{ completed().length }} of {{ lessons.length }} lessons complete</strong
+    ><span>Beginner learning path · progress saved on this device</span>
+  </div>
+  <progress
+    aria-label="Learning progress"
+    [value]="completed().length"
+    [max]="lessons.length"
+  ></progress>
+</section>
+<div class="hub-tabs" aria-label="Learning topics">
+  @for (t of ['All topics', 'Foundations', 'Managing risk', 'Placing orders']; track t) {
+    <button
+      type="button"
+      [class.active]="topic() === t"
+      [attr.aria-pressed]="topic() === t"
+      (click)="setTopic(t)"
+    >
+      {{ t }}
+    </button>
+  }
+</div>
+<div class="learn-layout">
+  <aside class="lesson-list">
+    @for (l of filtered(); track l.title) {
+      <button
+        type="button"
+        [class.active]="active() === l.index"
+        [attr.aria-pressed]="active() === l.index"
+        (click)="selectLesson(l.index)"
+      >
+        <span class="lesson-number">{{
+          completed().includes(l.index) ? '✓' : '0' + (l.index + 1)
+        }}</span
+        ><span
+          ><b>{{ l.title }}</b
+          ><small>{{ l.time }} · {{ l.topic }}</small></span
+        ><app-dashboard-icon name="chevron" />
+      </button>
+    }
+    <p class="subtle">Choose any lesson to start. Each lesson ends with one knowledge check.</p>
+  </aside>
+  <article class="hub-card lesson-reader">
+    <span class="eyebrow">LESSON {{ active() + 1 }} · {{ current().topic }}</span>
+    <h3>{{ current().title }}</h3>
+    <p class="lesson-summary">{{ current().summary }}</p>
+    @for (paragraph of current().paragraphs; track paragraph) {
+      <p>{{ paragraph }}</p>
+    }
+    <div class="example-box">
+      <b>A simple example</b>
+      <p>{{ current().example }}</p>
+    </div>
+    @if (active() === 4) {
+      <div class="compound-calculator">
+        <h4>Explore the numbers</h4>
+        <div class="calculator-inputs">
+          <label
+            >Starting amount<input
+              aria-label="Starting amount"
+              type="number"
+              min="0"
+              max="10000000"
+              [value]="initial()"
+              (input)="
+                initial.set(
+                  +$any($event.target).value < 0
+                    ? 0
+                    : +$any($event.target).value > 10000000
+                      ? 10000000
+                      : +$any($event.target).value
+                )
+              " /></label
+          ><label
+            >Years<input
+              aria-label="Years"
+              type="range"
+              min="1"
+              max="40"
+              [value]="years()"
+              (input)="years.set(+$any($event.target).value)"
+            /><span>{{ years() }} years</span></label
+          ><label
+            >Annual rate<input
+              aria-label="Annual rate"
+              type="range"
+              min="-10"
+              max="15"
+              [value]="rate()"
+              (input)="rate.set(+$any($event.target).value)"
+            /><span>{{ rate() }}%</span></label
+          >
+        </div>
+        <div class="calculator-result">
+          <span>Calculated ending value</span><strong>{{ future() | currency }}</strong>
+        </div>
+      </div>
+    }
+    <section class="knowledge-check">
+      <span class="eyebrow">QUICK CHECK</span>
+      <h4>{{ current().question }}</h4>
+      <div class="quiz-options">
+        @for (choice of current().choices; track choice; let i = $index) {
+          <button
+            type="button"
+            [class.chosen]="answer() === i"
+            [class.correct]="answer() === i && i === current().correct"
+            [attr.aria-pressed]="answer() === i"
+            (click)="answer.set(i)"
+          >
+            <span>{{ ['A', 'B', 'C'][i] }}</span
+            >{{ choice }}
+          </button>
+        }
+      </div>
+      @if (answer() !== null) {
+        <p class="quiz-feedback" role="status">
+          {{ answer() === current().correct ? 'Correct. ' : 'Try again. '
+          }}{{ current().explanation }}
+        </p>
+      }
+      <button
+        class="green-button"
+        type="button"
+        [disabled]="answer() !== current().correct || completed().includes(active())"
+        (click)="finish()"
+      >
+        {{ completed().includes(active()) ? '✓ Lesson completed' : 'Mark lesson complete' }}
+      </button>
+    </section>
+    <a class="source-credit" [href]="current().source" target="_blank" rel="noopener noreferrer"
+      >Read more: {{ current().sourceName }} ↗</a
+    >
+  </article>
+</div>
+<section class="hub-card glossary">
+  <h3>Investing, in plain language</h3>
+  <div>
+    @for (item of glossary; track item.term) {
+      <details>
+        <summary>{{ item.term }}</summary>
+        <p>{{ item.definition }}</p>
+      </details>
+    }
+  </div>
+</section>
