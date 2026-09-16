@@ -73,15 +73,15 @@ pipeline {
       }
     }
 
-    // Run all auth-service JUnit tests before building Docker images.
+    // Run all auth-service unit tests before building Docker images.
     stage('Run Auth Service Tests') {
       steps {
         sh '''
           docker run --rm \
             -v "$WORKSPACE/auth-service:/app" \
             -w /app \
-            maven:3.9-eclipse-temurin-21 \
-            mvn -B clean test
+            node:20-alpine \
+            sh -c "npm ci && npm test"
         '''
       }
     }

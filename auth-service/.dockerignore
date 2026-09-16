@@ -1,7 +1,6 @@
-target/
-certs/
-logs/
-.env*
-*.p12
-*.pfx
-*.key
+node_modules
+dist
+coverage
+*.spec.ts
+.env
+.env.local
