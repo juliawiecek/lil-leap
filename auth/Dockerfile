@@ -1,26 +1,20 @@
-# Stage 1: build. TypeScript needs compiling to JS before it can run -
-# this stage has the full dev toolchain (tsc, type definitions), none of
-# which the running service needs.
 FROM node:20-alpine AS build
 WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY tsconfig.json ./
-COPY src ./src
+COPY package*.json ./
+RUN npm install
+COPY . .
 RUN npm run build
 
-# Stage 2: run. Only production dependencies and the compiled dist/ cross
-# the boundary between stages - no TypeScript compiler, no test files, no
-# dev dependencies ship in the final image.
 FROM node:20-alpine
 WORKDIR /app
+ENV NODE_ENV=production
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+COPY package*.json ./
+RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 
+USER appuser
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

@@ -50,6 +50,14 @@ pipeline {
     }
 
     stage('Validate Compose YAML') {
+      // These synthetic values are used only to validate the deployment model.
+      // Tests and image builds do not inherit them; production secrets are never needed.
+      environment {
+        TLS_KEYSTORE_PASSWORD = 'ci-validation-only-not-for-runtime'
+        TLS_KEYSTORE_PATH = '/dev/null'
+        AUTH_SERVICE_TLS_KEYSTORE_PATH = '/dev/null'
+        APP_JWT_SECRET = 'ci-validation-only-not-for-runtime-32-bytes-min'
+      }
       steps {
         sh '''
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q

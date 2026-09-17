@@ -82,6 +82,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "ssl": true
+          },
           "configurations": {
             "production": {
               "buildTarget": "nexttrade-angular:build:production"

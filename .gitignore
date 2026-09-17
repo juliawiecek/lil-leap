@@ -1,5 +1,11 @@
 # Environment variables
-.env
+certs/
+*.p12
+*.pfx
+*.key
+# .env is committed for demo/education purposes (contains demo credentials only)
+# Use .env.local or .env.production.local for sensitive overrides
+# .env
 .env.local
 .env.*.local
 
@@ -76,6 +82,10 @@ yarn-error.log*
 .settings
 .vscode
 node_modules/
+frontend/test-results/
 dist/
 build/
 *.pid
+
+
+! .env.example

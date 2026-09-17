@@ -53,6 +53,9 @@ public class CustomerProfile {
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
+    @Column(name = "ssn_encrypted", nullable = false)
+    private byte[] ssnEncrypted;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "citizenship_status", length = 50)
     private CitizenshipStatus citizenshipStatus;
@@ -136,6 +139,14 @@ public class CustomerProfile {
 
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
+    }
+
+    public byte[] getSsnEncrypted() {
+        return ssnEncrypted;
+    }
+
+    public void setSsnEncrypted(byte[] ssnEncrypted) {
+        this.ssnEncrypted = ssnEncrypted;
     }
 
     public CitizenshipStatus getCitizenshipStatus() {

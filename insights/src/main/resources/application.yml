@@ -1,0 +1,88 @@
+# NextTrade Spring Boot Application Configuration
+# Database and security settings are externalized via environment variables
+
+spring:
+  application:
+    name: nexttrade-backend
+
+  mvc:
+    log-request-details: false
+
+  datasource:
+    # PostgreSQL JDBC connection
+    # URL format: jdbc:postgresql://[host]:[port]/[database]
+    # Development datasource defaults; TLS credentials are configured separately.
+    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+    
+    # Connection pool configuration
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      # ddl-auto: validate - do not create/update schema; admin role handles migrations
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+
+  # Suppress sensitive datasource information in logs
+  jpa.show-sql: false
+
+logging:
+  level:
+    root: INFO
+    # Never enable HTTP payload, security debug, or SQL bind-value logging.
+    org.springframework.security: INFO
+    org.springframework.web: WARN
+    org.springframework.web.filter.CommonsRequestLoggingFilter: OFF
+    org.hibernate: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.extract: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    # Database error details can include rejected row values (including password hashes).
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+
+# NextTrade custom application configuration
+# Externalized security and session settings
+nexttrade:
+  security:
+    # SSN encryption key (pgcrypto symmetric encryption)
+    # IMPORTANT: Never log or print this value
+    # Must be configured in environment: NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY
+    ssn-encryption-key: ${SSN_ENCRYPTION_KEY:replace_me}
+  
+  session:
+    # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
+    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
+
+server:
+  port: 8080
+  # Direct TLS only. Missing certificate/key configuration fails startup closed.
+  ssl:
+    enabled: true
+    key-store: ${TLS_KEYSTORE:file:./certs/backend.p12}
+    key-store-type: PKCS12
+    key-store-password: ${TLS_KEYSTORE_PASSWORD:}
+    enabled-protocols: TLSv1.2,TLSv1.3
+  # A caller cannot claim HTTPS by sending Forwarded or X-Forwarded-Proto.
+  forward-headers-strategy: none
+  tomcat:
+    accesslog:
+      enabled: false
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  servlet:
+    context-path: /api/v1
