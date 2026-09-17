@@ -9,6 +9,10 @@ import java.util.regex.Pattern;
  * Logging raw payloads or unlabelled secrets is still prohibited.
  */
 public class SensitiveLogConverter extends CompositeConverter<ILoggingEvent> {
+
+    /** Creates the credential-masking converter instantiated by Logback. */
+    public SensitiveLogConverter() {
+    }
     private static final Pattern HEADERS = Pattern.compile(
             "(?im)\\b(authorization|proxy-authorization|cookie|set-cookie)([\\\"']?\\s*[:=]\\s*)[^\\r\\n]+"
     );

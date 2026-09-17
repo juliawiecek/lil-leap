@@ -24,14 +24,30 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /** Creates the application-wide REST exception handler. */
+    public GlobalExceptionHandler() {
+    }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Preserves an explicit HTTP failure status while hiding exception details.
+     * @param exception status-bearing failure from the application
+     * @return the original status with a fixed REQUEST_FAILED response
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
                 "error", "REQUEST_FAILED", "message", "The request could not be completed."));
     }
 
+    /**
+     * Converts unhandled failures into safe responses without exposing exception messages.
+     * Framework HTTP statuses and headers are retained; other failures log only
+     * the exception type and return HTTP 500.
+     * @param exception unhandled framework or application failure
+     * @return a fixed error body with the framework status or HTTP 500
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleUnexpectedException(Exception exception) {
         // Preserve framework statuses such as 404/405/415 without their request-derived messages.
@@ -45,8 +61,11 @@ public class GlobalExceptionHandler {
                 "error", "INTERNAL_ERROR", "message", "The request could not be completed."));
     }
 
-    // Spring's default validation warning includes rejected values. Never render or log
-    // these exceptions: they may contain passwords, SSNs, or whole request fragments.
+    /**
+     * Rejects invalid payloads without rendering or logging rejected values.
+     * @param exception validation or parsing failure that may contain credentials
+     * @return HTTP 400 with a fixed INVALID_REQUEST response
+     */
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(

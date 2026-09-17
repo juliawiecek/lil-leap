@@ -28,10 +28,13 @@ lil-leap/
 
 ## Architecture
 
+The frontend currently previews the interface; its authentication controls are
+not yet connected to the backend. The diagrams below show the intended connection.
+
 ```text
 Frontend (Angular)
        |
-       | HTTP
+       | HTTPS
        v
 Backend (Spring Boot + Spring Security + JWT)
        |
@@ -43,7 +46,7 @@ PostgreSQL 16
 ### Architecture Overview
 
 ```text
-+----------------------------+         HTTP          +-------------------------------------+
++----------------------------+         HTTPS         +-------------------------------------+
 | Frontend (Angular 22)      | -------------------> | Backend (Spring Boot 3.3.4)        |
 | - UI + client-side state   |                      | - REST controllers                 |
 | - Login/Register screens   | <------------------- | - Security (JWT filter + authz)    |
@@ -85,7 +88,7 @@ Docker internal network
 ### Authentication Flow
 
 ```text
-1) Client -> POST /auth/login (email/password)
+1) Client -> POST /api/v1/auth/login (email/password)
 2) AuthController -> UserService validates credentials
 3) JwtService issues signed token
 4) Client stores token and sends: Authorization: Bearer <token>
@@ -118,7 +121,7 @@ Checkout
 ## Backend API (Current)
 
 - `POST /api/v1/users` - Register user (onboarding flow)
-- `POST /auth/login` - Authenticate and return JWT
+- `POST /api/v1/auth/login` - Authenticate and return JWT
 - `GET /api/v1/users/me` - Get current user profile (requires `Authorization: Bearer <token>`)
 
 Primary backend packages under `backend/src/main/java/com/neueda/leap`:
@@ -171,7 +174,7 @@ Important runtime behavior:
 3. Validate compose YAML
 4. Run backend `mvn clean verify` in a Java 21 / Maven container; publish JUnit results
 5. Run frontend `npm ci`, `npm run test:ci`, and `npm run build` in a Node 24 container; publish JUnit results
-6. Build the backend multi-stage image once, tagged `sprint1-greeter-app:ci-<build-number>-<git-commit>`
+6. Build the backend multi-stage image once, tagged `nexttrade:ci-<build-number>-<git-commit>`
 
 Notes:
 
@@ -191,7 +194,7 @@ Notes:
 | --- | --- |
 | Java | 21 |
 | Maven | 3.9+ |
-| Node.js | 20+ |
+| Node.js | 24.15.0 or later 24.x (frontend) |
 | npm | 10+ |
 | Python | 3.11+ |
 | Docker | Latest |
@@ -205,6 +208,9 @@ docker compose up -d db
 
 ### 2) Run Backend Locally
 
+Configure the certificate and TLS environment first using the
+[backend TLS instructions](backend/README.md#tls-setup).
+
 ```bat
 cd backend
 mvn clean test
@@ -213,11 +219,21 @@ mvn spring-boot:run
 
 ### 3) Run Frontend Locally
 
-```bat
+For first-time setup, follow the [frontend HTTPS guide](frontend/README.md#run-locally).
+It covers Windows setup, per-computer certificate trust, and troubleshooting.
+On Windows, run the following from the repository root and accept the localhost
+certificate trust dialog before starting Angular:
+
+```powershell
+.\scripts\setup-local-tls.ps1
 cd frontend
-npm install
+npm ci
 npm start
 ```
+
+Open **https://localhost:4200**. Each developer generates their own certificate;
+private keys are not shared through Git. On later runs, only `npm start` from
+`frontend` is needed unless dependencies or certificates have changed.
 
 ### 4) Run Full Compose Build
 

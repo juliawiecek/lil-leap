@@ -1,6 +1,7 @@
-# Lil Leap Backend
+# NextTrade Backend
 
-Spring Boot service for user onboarding and authentication.
+Spring Boot service for onboarding, authentication, password resets, portfolio queries,
+and order submission.
 
 ## Package Layout
 
@@ -11,6 +12,9 @@ com.neueda.leap
 |- config                # Application configuration
 |- onboarding            # Registration API, DTOs, onboarding entities and service
 |- order                 # Order submission and validation
+|- passwordreset         # Password reset tokens and email delivery
+|- portfolio             # Client-owned holdings, cash, and order history
+|- security              # JWT authentication, TLS enforcement, and log masking
 `- user                  # Authentication entity, repository, and auth exceptions
 ```
 
@@ -19,12 +23,17 @@ com.neueda.leap
 - `onboarding`: Handles registration requests and persists profile/financial/account data.
 - `user`: Stores authentication-focused user data (email, password hash, lock metadata).
 - `order`: Handles authenticated, account-scoped order submission and idempotent retries.
+- `passwordreset`: Delivers reset tokens by email and validates password changes.
+- `portfolio`: Returns holdings, cash balances, and orders belonging to the caller.
 
 ## Local Development
 
 Requirements:
+
 - Java 21
 - Maven 3.9+
+
+Run the following commands from `backend`.
 
 Run tests:
 
@@ -46,13 +55,43 @@ Build a jar:
 mvn clean package
 ```
 
+The executable jar is written to `target/nexttrade.jar`.
+
 ## API
 
-Registration endpoint:
-- `POST /api/v1/users`
+All paths below include the `/api/v1` context prefix and require HTTPS.
 
-The request body is defined in `com.neueda.leap.onboarding.dto.RegisterUserRequest`.
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/users` | Register a user |
+| POST | `/api/v1/auth/login` | Authenticate and issue a JWT |
+| POST | `/api/v1/auth/password-reset/request` | Request a reset email |
+| POST | `/api/v1/auth/password-reset/confirm` | Set a new password using a reset token |
+| GET | `/api/v1/users/me` | Read the authenticated user |
+| GET | `/api/v1/holdings` | Read the caller's holdings |
+| GET | `/api/v1/cash` | Read the caller's cash balances |
+| GET | `/api/v1/orders` | Read the caller's order history |
+| POST | `/api/v1/orders` | Submit an order for an owned account |
+
+The user-profile, portfolio, and order endpoints require a Bearer JWT.
+
+The registration request body is defined in `com.neueda.leap.onboarding.dto.RegisterUserRequest`.
 The response body is defined in `com.neueda.leap.onboarding.dto.UserResponse`.
+
+## Javadocs
+
+Generate and validate the production Java API documentation from `backend`:
+
+```powershell
+mvn javadoc:javadoc
+```
+
+Open `target/site/apidocs/index.html`. The command checks public/protected API
+documentation (including inherited docs) and fails on Javadoc warnings or errors.
+Document parameters, return values, relevant exceptions, ownership rules, and
+retry behavior when changing an API. Private helpers and test methods are outside
+this documentation check. This check is separate from `mvn test` and is not yet
+part of the Jenkins pipeline.
 
 ## TS-02.4: HTTPS and safe logging (BR-02)
 
@@ -92,6 +131,30 @@ Do not enable forwarded-header trust or turn off backend TLS to accommodate a pr
 With the existing context path and controller mappings, login is
 `https://localhost:8080/api/v1/auth/login`; registration and `/me` resolve
 to `/api/v1/users` and `/api/v1/users/me`. Controllers omit the shared context prefix.
+
+### Windows trusted localhost certificate
+
+The repository's `scripts/setup-local-tls.ps1` creates and trusts a localhost
+certificate for your Windows account, shared with the frontend. Run it once from
+the repository root, then use the following from the repository root in the
+terminal that starts the backend:
+
+```powershell
+$tlsDir = Join-Path $env:LOCALAPPDATA 'NextTrade/tls'
+$env:TLS_KEYSTORE = 'file:' + ((Join-Path $tlsDir 'backend.p12') -replace '\\', '/')
+$securePassword = Get-Content (Join-Path $tlsDir 'password.dpapi') | ConvertTo-SecureString
+$env:TLS_KEYSTORE_PASSWORD = [System.Net.NetworkCredential]::new('', $securePassword).Password
+cd backend
+mvn spring-boot:run
+```
+
+Stop the existing backend before restarting it. For IntelliJ, these environment
+variables must be supplied to the backend run configuration; a running IDE does
+not inherit changes made in a separate terminal. The password file is encrypted
+for the Windows account that ran setup; do not print or commit its contents or the
+decrypted password. This certificate is only for local development and expires
+after 90 days. It does not replace deployment certificates or Java client trust
+stores. Open `https://localhost:8080` when connecting directly to the backend.
 
 ### Headers and logging
 

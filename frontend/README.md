@@ -22,20 +22,63 @@ Angular conversion of the approved NextTrade animated landing and authentication
 
 ## Run locally
 
-```bash
-npm install
+Install **Node.js 24.15.0 or a later 24.x release** (includes npm), then clone
+this repository. Each teammate must set up HTTPS on their own computer.
+
+### Windows: first-time setup
+
+Install **Git for Windows** in its default location, then open PowerShell in the
+project folder (`lil-leap`).
+
+**1. Set up HTTPS:**
+
+```powershell
+.\scripts\setup-local-tls.ps1
+```
+
+Click **Yes** when Windows asks to trust the localhost certificate. Wait for the
+script to finish.
+
+**2. Start the frontend:**
+
+```powershell
+cd frontend
+npm ci
 npm start
 ```
 
-Then open `https://localhost:4200`. The development server uses TLS by default.
-For a locally trusted certificate, use
-`npm start -- --ssl-cert /path/to/localhost.crt --ssl-key /path/to/localhost.key`.
-Without supplied files, the Angular CLI generates a development certificate that
-must be trusted locally. Keep private keys outside version control.
+**3. Open https://localhost:4200** after the build finishes.
+Keep the terminal open. Press **Ctrl+C** to stop the app.
+
+### Windows: next time
+
+Open a terminal in `frontend` and run:
+
+```powershell
+npm start
+```
+
+Run `npm ci` again if you pull changes to `package-lock.json`.
+
+### Common problems
+
+- **Missing `package.json`:** run npm commands inside `frontend`.
+- **Empty response:** use **https://localhost:4200**, including `https://`.
+- **Certificate warning on Windows:** rerun the setup script, click **Yes**, then
+  restart the frontend and browser.
+- **Connection refused:** check that `npm start` is still running.
+- **Port already in use:** stop the previous server with **Ctrl+C**.
+- **Certificate expired on Windows:** certificates last 90 days. Rename
+  `%LOCALAPPDATA%\NextTrade\tls` to a backup folder, rerun setup from the project
+  root, then restart the services.
+
+For backend HTTPS, follow the [backend setup guide](../backend/README.md#windows-trusted-localhost-certificate).
+A shared public website needs a domain and a publicly trusted certificate;
+this setup is for local development.
 
 ## Production build
 
-```bash
+```powershell
 npm run build
 ```
 

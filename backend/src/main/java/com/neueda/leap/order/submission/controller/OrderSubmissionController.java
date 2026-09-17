@@ -14,16 +14,27 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Exposes authenticated order submission at {@code POST /api/v1/orders}. */
 @RestController
 @RequestMapping("/orders")
 public class OrderSubmissionController {
 
     private final OrderSubmissionService service;
 
+    /**
+     * Creates the order submission endpoint.
+     * @param service ownership and idempotency checks for submissions
+     */
     public OrderSubmissionController(OrderSubmissionService service) {
         this.service = service;
     }
 
+    /**
+     * Submits a validated order on behalf of the authenticated caller.
+     * @param principal authenticated identity supplied by Spring Security
+     * @param request submission payload validated before this method is called
+     * @return HTTP 201 for a new order or HTTP 200 for an existing retry
+     */
     @PostMapping
     public ResponseEntity<OrderSubmissionResponse> submit(
             @AuthenticationPrincipal JwtPrincipal principal,

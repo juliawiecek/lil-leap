@@ -10,6 +10,10 @@ import java.io.IOException;
 
 /** Rejects plaintext before credentials are parsed; never redirects a credential-bearing request. */
 public class SecureTransportFilter extends OncePerRequestFilter {
+
+    /** Creates the filter that rejects requests not received over TLS. */
+    public SecureTransportFilter() {
+    }
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
