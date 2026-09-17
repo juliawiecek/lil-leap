@@ -120,23 +120,22 @@ class TlsSecurityTest {
         UserResponse user = new UserResponse(id, "Test", "Client", "client@example.com", null, false, Instant.now(), Instant.now());
         when(users.login(any())).thenReturn(user);
         when(users.getById(id)).thenReturn(user);
-        try (HttpClient client = client(protocol)) {
-            HttpResponse<String> login = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/auth/login"))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"client@example.com\",\"password\":\"tls-login-canary\"}"))
-                    .build(), HttpResponse.BodyHandlers.ofString());
-            assertThat(login.statusCode()).isEqualTo(200);
-            assertThat(login.sslSession().orElseThrow().getProtocol()).isEqualTo(protocol);
-            assertThat(login.headers().firstValue("Strict-Transport-Security")).isPresent();
-            assertThat(login.headers().firstValue("Cache-Control").orElseThrow()).contains("no-store");
-            String token = new ObjectMapper().readTree(login.body()).get("token").asText();
-            HttpResponse<String> me = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/api/v1/users/me"))
-                    .header("Authorization", "Bearer " + token).build(), HttpResponse.BodyHandlers.ofString());
-            assertThat(me.statusCode()).isEqualTo(200);
-            assertThat(me.body()).contains(id.toString());
-            assertThat(output.getAll()).doesNotContain(token, "tls-login-canary");
-            assertThat(Files.readString(logFile)).doesNotContain(token, "tls-login-canary");
-        }
+        HttpClient client = client(protocol);
+        HttpResponse<String> login = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/auth/login"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"client@example.com\",\"password\":\"tls-login-canary\"}"))
+                .build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(login.statusCode()).isEqualTo(200);
+        assertThat(login.sslSession().orElseThrow().getProtocol()).isEqualTo(protocol);
+        assertThat(login.headers().firstValue("Strict-Transport-Security")).isPresent();
+        assertThat(login.headers().firstValue("Cache-Control").orElseThrow()).contains("no-store");
+        String token = new ObjectMapper().readTree(login.body()).get("token").asText();
+        HttpResponse<String> me = client.send(HttpRequest.newBuilder(URI.create("https://localhost:" + port + "/api/v1/api/v1/users/me"))
+                .header("Authorization", "Bearer " + token).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(me.statusCode()).isEqualTo(200);
+        assertThat(me.body()).contains(id.toString());
+        assertThat(output.getAll()).doesNotContain(token, "tls-login-canary");
+        assertThat(Files.readString(logFile)).doesNotContain(token, "tls-login-canary");
     }
 
     @Test
@@ -151,17 +150,16 @@ class TlsSecurityTest {
 
     @Test
     void plaintextCannotReachAuthenticationOnTlsPort(CapturedOutput output) throws Exception {
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            HttpResponse<String> response = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/auth/login"))
-                    .header("X-Forwarded-Proto", "https")
-                    .header("Authorization", "Bearer plaintext-token-canary")
-                    .POST(HttpRequest.BodyPublishers.ofString("{\"password\":\"plaintext-password-canary\"}"))
-                    .build(), HttpResponse.BodyHandlers.ofString());
-            assertThat(response.statusCode()).isEqualTo(400);
-            verifyNoInteractions(users);
-            assertThat(output.getAll()).doesNotContain("plaintext-token-canary", "plaintext-password-canary");
-            assertThat(Files.readString(logFile)).doesNotContain("plaintext-token-canary", "plaintext-password-canary");
-        }
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/auth/login"))
+                .header("X-Forwarded-Proto", "https")
+                .header("Authorization", "Bearer plaintext-token-canary")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"password\":\"plaintext-password-canary\"}"))
+                .build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(400);
+        verifyNoInteractions(users);
+        assertThat(output.getAll()).doesNotContain("plaintext-token-canary", "plaintext-password-canary");
+        assertThat(Files.readString(logFile)).doesNotContain("plaintext-token-canary", "plaintext-password-canary");
     }
 
     @Test
