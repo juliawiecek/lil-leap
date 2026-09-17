@@ -30,8 +30,14 @@ class JwtServiceTest {
         JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
         String token = jwtService.issueToken(UUID.randomUUID(), "julia@example.com");
 
-        String tampered = token.substring(0, token.length() - 1)
-                + (token.charAt(token.length() - 1) == 'a' ? 'b' : 'a');
+        // Find the last dot (separating payload from signature)
+        int lastDotIndex = token.lastIndexOf('.');
+        
+        // Tamper with a character in the middle of the signature part
+        int tamperedIndex = lastDotIndex + 5;
+        String tampered = token.substring(0, tamperedIndex)
+                + (token.charAt(tamperedIndex) == 'a' ? 'b' : 'a')
+                + token.substring(tamperedIndex + 1);
 
         assertTrue(jwtService.validate(tampered).isEmpty());
     }
