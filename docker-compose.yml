@@ -1,97 +1,80 @@
 services:
   app:
-    build: ./backend
+    build: ./nextTrade
     # No ports: mapping — the app service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `app` unless a ports: entry is added.
     depends_on:
       - db
-      - mailpit
     environment:
-      # Spring Boot datasource configuration using environment variables
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_APP_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_APP_PASSWORD}
-      # Application-specific configuration
-      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
-      NEXTTRADE_SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES}
-      # Shared with `auth`: backend verifies JWTs issued by auth locally,
-      # using this same HS256 secret — no REST call per request.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET — shared with auth for local token verification}
-      # TLS keystore configuration for backend security
-      TLS_KEYSTORE: file:/run/secrets/backend_tls_keystore
-      TLS_KEYSTORE_PASSWORD: ${TLS_KEYSTORE_PASSWORD:?Set TLS_KEYSTORE_PASSWORD for the backend TLS certificate}
-      # Mailpit SMTP configuration for local development.
-      SPRING_MAIL_HOST: mailpit
-      SPRING_MAIL_PORT: 1025
-    secrets:
-      - backend_tls_keystore
-    # Note: app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-    # db/init-app-role.sh. It is separate from the admin role, which owns the
-    # schema and runs migrations.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: my_app_password
+    ports:
+      - "8082:8080"
 
-  auth:
-    build: ./auth
-    # No ports: mapping, same reasoning as `app` — reachable from other
-    # containers via Docker bridge DNS ("auth"), not from the host.
+  insights:
+    build: ./insights
+    # No ports: mapping — the insights service is intentionally unreachable from the
+    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
+    # but nothing outside Docker can reach `insights` unless a ports: entry is added.
     depends_on:
       - db
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_APP_USERNAME: ${DB_APP_USERNAME}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
-      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
-      # Also shared with `app`, which verifies these tokens locally with the same secret.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET — used to sign tokens auth issues}
-      # TLS is optional here — unset means auth serves plaintext HTTP,
-      # matching architecture's nginx configs which proxy_pass to it over HTTP
-      # internally. Set both to terminate TLS directly at auth instead.
-      TLS_KEYSTORE: ${AUTH_SERVICE_TLS_KEYSTORE_PATH:-}
-      TLS_KEYSTORE_PASSWORD: ${AUTH_SERVICE_TLS_KEYSTORE_PASSWORD:-}
-    # Uses the same app_user role as `app` — see db/init-app-role.sh.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: my_app_password
+    ports:
+      - "8081:8080"
+
+  auth:
+    build: ./auth
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - app
+    ports:
+      - "4200:80"
+    environment:
+      API_BASE_URL: http://app:8080
+
+  insights-frontend:
+    build: ./insights-frontend
+    depends_on:
+      - insights
+    ports:
+      - "4201:80"
+    environment:
+      API_BASE_URL: http://insights:8080
 
   db:
     image: postgres:16-alpine
     environment:
-      # PostgreSQL server configuration using environment variables
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_ADMIN_USERNAME}
-      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
-      # Application role configuration for init-app-role.sh
-      DB_APP_USERNAME: ${DB_APP_USERNAME}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      POSTGRES_DB: nexttrade
+      POSTGRES_USER: main
+      POSTGRES_PASSWORD: main_password
     ports:
-      # Publish PostgreSQL using configurable port
-      # Only db is reachable from the host. This mirrors a real deployment
-      # where the database is internal but needs to be accessible to DBA
-      # tooling running on the developer's machine.
-      - "${DB_PUBLISHED_PORT}:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_ADMIN_USERNAME} -d ${DB_NAME}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      # Only db is reachable from the host. app is not. This mirrors a real
+      # deployment where the database is internal but needs to be accessible
+      # to DBA tooling running on the developer's machine during development.
+      - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       # Numeric prefixes control init order: schema first, then the
       # restricted app role. Both only run once, against an empty volume.
-      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
-
-  # Local SMTP server used to capture password reset emails during development.
-  mailpit:
-    image: axllent/mailpit
-    ports:
-      # Spring Boot sends email through SMTP on port 1025.
-      - "1025:1025"
-      # Mailpit's browser inbox is available on port 8025.
-      - "8025:8025"
-secrets:
-  backend_tls_keystore:
-    file: ${TLS_KEYSTORE_PATH:-./certs/backend.p12}
+      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
 
 volumes:
   db_data:

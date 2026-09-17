@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#000000" />
+  <title>NextTrade — Intro & Secure Access</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --grid-fine: rgba(255, 255, 255, 0.024);
+      --grid-major: rgba(255, 255, 255, 0.055);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 78% 26%, rgba(120, 168, 95, 0.07), transparent 29%),
+        radial-gradient(ellipse at 42% 62%, rgba(255, 255, 255, 0.032), transparent 46%),
+        linear-gradient(145deg, #020302 0%, #080a08 48%, #010101 100%);
+    }
+
+    body {
+      position: relative;
+      isolation: isolate;
+      color: #f2f2ee;
+      font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Nearly invisible grain prevents the black surface from feeling flat. */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.07;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.28) 0.45px, transparent 0.6px);
+      background-size: 5px 5px;
+      mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+    }
+
+    /* Fine trading-chart grid with a second, slightly stronger major grid. */
+    .market-grid {
+      position: fixed;
+      inset: -1px;
+      z-index: -2;
+      background-image:
+        linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px),
+        linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+      background-size:
+        24px 24px,
+        24px 24px,
+        120px 120px,
+        120px 120px;
+      mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
+      transition: opacity 900ms ease;
+    }
+
+    .ambient-light {
+      position: fixed;
+      inset: -20%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.72;
+      background:
+        radial-gradient(ellipse at 76% 28%, rgba(120, 168, 95, 0.07), transparent 28%),
+        linear-gradient(112deg, transparent 34%, rgba(255, 255, 255, 0.018) 48%, transparent 62%);
+      animation: ambient-shift 12s ease-in-out infinite alternate;
+    }
+
+    .market-tape {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 4;
+      overflow: hidden;
+      pointer-events: none;
+      padding: 10px 0 9px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(3, 4, 3, 0.82);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity: 0.84;
+      mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+      transition: opacity 700ms ease;
+    }
+
+    .market-tape::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(120, 168, 95, 0.24), rgba(255, 255, 255, 0.14), transparent);
+    }
+
+    .tape-track {
+      display: flex;
+      width: max-content;
+      gap: 52px;
+      white-space: nowrap;
+      color: rgba(238, 238, 238, 0.9);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      animation: tape-scroll 30s linear infinite;
+    }
+
+    .tape-track .up {
+      color: #91b77d;
+    }
+
+    .tape-track .divider {
+      color: rgba(255, 255, 255, 0.42);
+    }
+
+    .volume-field {
+      position: fixed;
+      left: 4%;
+      right: 4%;
+      bottom: 4%;
+      height: 17%;
+      z-index: 0;
+      display: flex;
+      align-items: flex-end;
+      gap: clamp(5px, 0.72vw, 11px);
+      pointer-events: none;
+      opacity: 0.26;
+      mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
+      -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
+      transition: opacity 700ms ease;
+    }
+
+    .volume-bar {
+      flex: 1 1 0;
+      max-width: 7px;
+      min-width: 1px;
+      height: var(--bar-height);
+      background: rgba(238, 238, 238, 0.42);
+      transform-origin: bottom;
+      animation: volume-breathe var(--bar-speed) ease-in-out var(--bar-delay) infinite alternate;
+    }
+
+    .volume-bar.accent {
+      background: rgba(120, 168, 95, 0.72);
+    }
+
+    .market-scan {
+      position: fixed;
+      top: -12%;
+      bottom: -12%;
+      left: -28vw;
+      z-index: 0;
+      width: 24vw;
+      pointer-events: none;
+      opacity: 0.32;
+      transform: skewX(-8deg);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.035), transparent);
+      filter: blur(7px);
+      animation: market-scan 17s linear infinite;
+    }
+
+    @keyframes ambient-shift {
+      from {
+        transform: translate3d(-1.5%, 0, 0) scale(1);
+        opacity: 0.52;
+      }
+      to {
+        transform: translate3d(1.5%, -1%, 0) scale(1.025);
+        opacity: 0.82;
+      }
+    }
+
+    @keyframes tape-scroll {
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes volume-breathe {
+      from {
+        transform: scaleY(0.62);
+        opacity: 0.42;
+      }
+      to {
+        transform: scaleY(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes market-scan {
+      from {
+        transform: translateX(0) skewX(-8deg);
+      }
+      to {
+        transform: translateX(156vw) skewX(-8deg);
+      }
+    }
+
+    .edge-shade {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.58) 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.84) 0%, transparent 7%, transparent 93%, rgba(0, 0, 0, 0.84) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.72) 100%);
+    }
+
+    .chart-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      transform: scale(1);
+      opacity: 1;
+      filter: blur(0);
+      transition:
+        opacity 1100ms cubic-bezier(0.4, 0, 0.2, 1),
+        transform 1250ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        filter 1100ms ease;
+    }
+
+    #market-chart {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .transition-beam {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 8;
+      width: 0;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(90deg, transparent, rgba(238, 238, 238, 0.95), rgba(120, 168, 95, 0.9), transparent);
+      box-shadow: 0 0 24px rgba(120, 168, 95, 0.18);
+    }
+
+    .brand-lockup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.88);
+      transform-origin: center;
+      transition:
+        top 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        left 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 950ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 680ms ease 160ms,
+        gap 950ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 86px;
+      height: 72px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.32));
+      overflow: visible;
+    }
+
+    .brand-mark::after {
+      content: '';
+      position: absolute;
+      right: 7px;
+      bottom: 0;
+      left: 7px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(238, 238, 238, 0.16), #78a85f);
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+
+    .brand-mark svg {
+      width: 68px;
+      height: 68px;
+      overflow: visible;
+    }
+
+    .brand-mark path {
+      opacity: 0;
+      transform: translateY(10px);
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+
+    .brand-copy {
+      overflow: hidden;
+      padding-right: 8px;
+      white-space: nowrap;
+    }
+
+    .brand-name {
+      display: flex;
+      align-items: baseline;
+      font-size: clamp(48px, 6vw, 76px);
+      font-weight: 650;
+      line-height: 0.96;
+      letter-spacing: -0.055em;
+    }
+
+    .brand-name span {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .brand-name .brand-accent {
+      color: #78a85f;
+    }
+
+    .brand-name .brand-next {
+      font-family: "Segoe UI Variable Display", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 475;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-tagline {
+      margin-top: 11px;
+      color: rgba(238, 238, 238, 0.46);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      letter-spacing: 0.29em;
+      opacity: 0;
+      transform: translateY(7px);
+    }
+
+    .skip-intro {
+      position: fixed;
+      top: 74px;
+      right: clamp(20px, 4vw, 64px);
+      z-index: 20;
+      padding: 8px 0;
+      border: 0;
+      border-bottom: 1px solid rgba(238, 238, 238, 0.22);
+      border-radius: 0;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.58);
+      font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 180ms ease, border-color 180ms ease, opacity 300ms ease;
+    }
+
+    .skip-intro:hover,
+    .skip-intro:focus-visible {
+      color: #f2f2ee;
+      border-color: #78a85f;
+      outline: none;
+    }
+
+    .auth-shell {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      padding: 34px clamp(24px, 5vw, 76px) 26px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(18px);
+      transition:
+        opacity 700ms ease 260ms,
+        transform 850ms cubic-bezier(0.22, 1, 0.36, 1) 220ms,
+        visibility 0s linear 260ms;
+    }
+
+    .auth-header {
+      min-height: 42px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .secure-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(238, 238, 238, 0.48);
+      font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .secure-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #78a85f;
+      box-shadow: 0 0 12px rgba(120, 168, 95, 0.45);
+    }
+
+    .auth-content {
+      width: min(1180px, 100%);
+      margin: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      align-items: center;
+      gap: clamp(64px, 10vw, 150px);
+    }
+
+    .auth-copy {
+      max-width: 610px;
+    }
+
+    .auth-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+      color: #90aa81;
+      font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .auth-eyebrow::before {
+      content: '';
+      width: 30px;
+      height: 1px;
+      background: #78a85f;
+    }
+
+    .auth-copy h1 {
+      max-width: 620px;
+      margin: 0;
+      color: #f2f2ee;
+      font-size: clamp(48px, 6vw, 82px);
+      font-weight: 540;
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .auth-copy h1 em {
+      color: #78a85f;
+      font-style: normal;
+    }
+
+    .auth-copy > p {
+      max-width: 500px;
+      margin: 26px 0 0;
+      color: rgba(238, 238, 238, 0.56);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .market-proof {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 38px;
+      border-top: 1px solid rgba(255, 255, 255, 0.09);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .proof-item {
+      padding: 15px 28px 15px 0;
+    }
+
+    .proof-item + .proof-item {
+      padding-left: 28px;
+      border-left: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .proof-value {
+      display: block;
+      color: #f2f2ee;
+      font: 600 14px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .proof-label {
+      display: block;
+      margin-top: 5px;
+      color: rgba(238, 238, 238, 0.38);
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .auth-panel {
+      position: relative;
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(17, 19, 16, 0.94), rgba(7, 8, 7, 0.91));
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .auth-panel::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 28px;
+      width: 82px;
+      height: 1px;
+      background: #78a85f;
+      box-shadow: 0 0 16px rgba(120, 168, 95, 0.25);
+    }
+
+    .auth-panel h2 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      font-weight: 590;
+      letter-spacing: -0.025em;
+    }
+
+    .auth-subtitle {
+      margin: 0 0 24px;
+      color: rgba(238, 238, 238, 0.46);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 24px;
+      padding: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .auth-tab {
+      min-height: 39px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.43);
+      font: 600 13px/1 Inter, "Helvetica Neue", Arial, sans-serif;
+      cursor: pointer;
+      transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .auth-tab.active {
+      background: rgba(255, 255, 255, 0.075);
+      color: #f2f2ee;
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    .field-group {
+      margin-bottom: 16px;
+    }
+
+    .field-group[hidden] {
+      display: none;
+    }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 8px;
+    }
+
+    .field-group label {
+      color: rgba(238, 238, 238, 0.72);
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .field-row a {
+      color: #90aa81;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .field-group input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 8px;
+      outline: none;
+      background: rgba(0, 0, 0, 0.28);
+      color: #f2f2ee;
+      font: 500 14px/1 Inter, "Helvetica Neue", Arial, sans-serif;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .field-group input::placeholder {
+      color: rgba(238, 238, 238, 0.25);
+    }
+
+    .field-group input:focus {
+      border-color: rgba(120, 168, 95, 0.72);
+      background: rgba(0, 0, 0, 0.42);
+      box-shadow: 0 0 0 3px rgba(120, 168, 95, 0.09);
+    }
+
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 13px;
+      padding: 4px;
+      border: 0;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.42);
+      font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+
+    .password-toggle:focus-visible {
+      color: #f2f2ee;
+      outline: 1px solid #78a85f;
+      outline-offset: 3px;
+    }
+
+    .primary-action {
+      width: 100%;
+      min-height: 49px;
+      margin-top: 5px;
+      border: 1px solid #8ab174;
+      border-radius: 8px;
+      background: #78a85f;
+      color: #080a07;
+      font: 700 14px/1 Inter, "Helvetica Neue", Arial, sans-serif;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .primary-action:hover {
+      background: #88b36f;
+      box-shadow: 0 10px 28px rgba(120, 168, 95, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .primary-action:active {
+      transform: translateY(0);
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: rgba(238, 238, 238, 0.27);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .secondary-action {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: transparent;
+      color: rgba(238, 238, 238, 0.76);
+      font: 600 13px/1 Inter, "Helvetica Neue", Arial, sans-serif;
+      cursor: pointer;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    .secondary-action:hover {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.04);
+      color: #f2f2ee;
+    }
+
+    .form-status {
+      min-height: 16px;
+      margin: 14px 0 0;
+      color: #90aa81;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .auth-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      color: rgba(238, 238, 238, 0.28);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .auth-footer nav {
+      display: flex;
+      gap: 22px;
+    }
+
+    .auth-footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .auth-footer a:hover,
+    .auth-footer a:focus-visible {
+      color: rgba(238, 238, 238, 0.72);
+      outline: none;
+    }
+
+    body.brand-phase .chart-stage {
+      opacity: 0;
+      filter: blur(11px);
+      transform: scale(0.94);
+    }
+
+    body.brand-phase .market-tape {
+      opacity: 0.48;
+    }
+
+    body.brand-phase .volume-field {
+      opacity: 0.05;
+    }
+
+    body.brand-phase .transition-beam {
+      animation: brand-beam 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    body.brand-phase .brand-lockup {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    body.brand-phase .brand-mark path {
+      animation: draw-mark 680ms cubic-bezier(0.22, 1, 0.36, 1) 190ms forwards;
+    }
+
+    body.brand-phase .brand-mark path:nth-child(2) {
+      animation-delay: 315ms;
+    }
+
+    body.brand-phase .brand-mark::after {
+      animation: mark-sheen 660ms cubic-bezier(0.22, 1, 0.36, 1) 500ms forwards;
+    }
+
+    body.brand-phase .brand-name span {
+      animation: reveal-word 720ms cubic-bezier(0.22, 1, 0.36, 1) 430ms forwards;
+    }
+
+    body.brand-phase .brand-name .brand-accent {
+      animation-delay: 520ms;
+    }
+
+    body.brand-phase .brand-tagline {
+      animation: reveal-tagline 560ms ease 860ms forwards;
+    }
+
+    body.auth-phase .brand-lockup {
+      top: 46px;
+      left: clamp(24px, 5vw, 76px);
+      gap: 16px;
+      transform: translate(0, 0) scale(0.5);
+      transform-origin: top left;
+    }
+
+    body.auth-phase .auth-shell {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    body.auth-phase .skip-intro {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.auth-phase .market-grid {
+      opacity: 0.62;
+    }
+
+    body.auth-phase .market-tape {
+      opacity: 0.56;
+    }
+
+    body.auth-phase .volume-field {
+      opacity: 0.11;
+    }
+
+    @keyframes brand-beam {
+      0% { width: 0; opacity: 0; }
+      24% { opacity: 1; }
+      58% { width: min(78vw, 1080px); opacity: 0.86; }
+      100% { width: 0; opacity: 0; }
+    }
+
+    @keyframes draw-mark {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes mark-sheen {
+      to { transform: scaleX(1); }
+    }
+
+    @keyframes reveal-word {
+      to { transform: translateY(0); }
+    }
+
+    @keyframes reveal-tagline {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      .auth-shell {
+        padding: 26px 22px 22px;
+        overflow-y: auto;
+      }
+
+      .auth-content {
+        grid-template-columns: 1fr;
+        gap: 36px;
+        margin: 86px auto 36px;
+      }
+
+      .auth-copy {
+        max-width: 680px;
+      }
+
+      .auth-copy h1 {
+        font-size: clamp(42px, 10vw, 68px);
+      }
+
+      .auth-copy > p {
+        margin-top: 18px;
+      }
+
+      .market-proof {
+        margin-top: 25px;
+      }
+
+      .auth-panel {
+        width: min(100%, 520px);
+      }
+
+      .auth-footer {
+        padding-top: 20px;
+      }
+
+      body.auth-phase .brand-lockup {
+        top: 37px;
+        left: 22px;
+        transform: translate(0, 0) scale(0.42);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .market-tape {
+        top: 0;
+        padding: 9px 0 8px;
+      }
+
+      .skip-intro {
+        top: 51px;
+      }
+
+      .brand-lockup {
+        gap: 14px;
+      }
+
+      .brand-mark {
+        width: 68px;
+        height: 60px;
+      }
+
+      .brand-mark svg {
+        width: 56px;
+        height: 56px;
+      }
+
+      .brand-name {
+        font-size: clamp(38px, 12vw, 54px);
+      }
+
+      .brand-tagline {
+        font-size: 8px;
+        letter-spacing: 0.21em;
+      }
+
+      .auth-header {
+        min-height: 32px;
+      }
+
+      .secure-status {
+        font-size: 8px;
+      }
+
+      .auth-content {
+        margin-top: 76px;
+      }
+
+      .auth-copy h1 {
+        font-size: 44px;
+      }
+
+      .auth-copy > p {
+        font-size: 15px;
+      }
+
+      .market-proof {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .proof-item,
+      .proof-item + .proof-item {
+        padding: 13px 14px 13px 0;
+      }
+
+      .proof-item + .proof-item {
+        padding-left: 14px;
+      }
+
+      .auth-panel {
+        padding: 24px 20px;
+      }
+
+      .auth-footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      body.auth-phase .brand-lockup {
+        top: 34px;
+        transform: translate(0, 0) scale(0.36);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .market-grid {
+        background-position: 0 0;
+      }
+
+      .ambient-light {
+        animation: none;
+      }
+
+      .tape-track,
+      .volume-bar,
+      .market-scan {
+        animation: none;
+      }
+
+      .chart-stage,
+      .brand-lockup,
+      .auth-shell {
+        transition-duration: 1ms;
+        transition-delay: 0ms;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="market-grid" aria-hidden="true"></div>
+  <div class="ambient-light" aria-hidden="true"></div>
+  <div class="market-tape" aria-hidden="true">
+    <div class="tape-track">
+      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
+      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
+      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
+      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
+      <span>EUR/USD 1.1062</span><span class="divider">/</span>
+      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
+      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
+      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
+      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
+      <span>EUR/USD 1.1062</span><span class="divider">/</span>
+    </div>
+  </div>
+  <div class="volume-field" id="volume-field" aria-hidden="true"></div>
+  <div class="market-scan" aria-hidden="true"></div>
+  <main class="chart-stage" aria-label="Animated stock market chart">
+    <canvas id="market-chart" aria-hidden="true"></canvas>
+  </main>
+  <div class="edge-shade" aria-hidden="true"></div>
+
+  <div class="transition-beam" aria-hidden="true"></div>
+
+  <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
+        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
+      </svg>
+    </div>
+    <div class="brand-copy">
+      <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
+      <div class="brand-tagline">The market, forward.</div>
+    </div>
+  </div>
+
+  <button class="skip-intro" id="skip-intro" type="button">Skip intro</button>
+
+  <section class="auth-shell" id="auth-shell" aria-hidden="true">
+    <header class="auth-header">
+      <div class="secure-status">Secure connection</div>
+    </header>
+
+    <div class="auth-content">
+      <section class="auth-copy" aria-labelledby="landing-title">
+        <div class="auth-eyebrow">Built for your next move</div>
+        <h1 id="landing-title">Trade what’s <em>next.</em></h1>
+        <p>One focused platform for real-time markets, clear decisions, and every stage of your investing journey.</p>
+
+        <div class="market-proof" aria-label="Platform highlights">
+          <div class="proof-item">
+            <span class="proof-value">24 / 5</span>
+            <span class="proof-label">Global access</span>
+          </div>
+          <div class="proof-item">
+            <span class="proof-value">Reliable &amp;</span>
+            <span class="proof-label">Secure</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <h2 id="auth-title">Welcome back</h2>
+        <p class="auth-subtitle" id="auth-subtitle">Access your NextTrade account.</p>
+
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+          <button class="auth-tab active" id="signin-tab" type="button" role="tab" aria-selected="true" aria-controls="auth-form">Sign in</button>
+          <button class="auth-tab" id="signup-tab" type="button" role="tab" aria-selected="false" aria-controls="auth-form">Create account</button>
+        </div>
+
+        <form id="auth-form" novalidate>
+          <div class="field-group" id="name-field" hidden>
+            <div class="field-row"><label for="full-name">Full name</label></div>
+            <input id="full-name" name="name" type="text" autocomplete="name" placeholder="Your full name" />
+          </div>
+
+          <div class="field-group">
+            <div class="field-row"><label for="email">Email address</label></div>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          </div>
+
+          <div class="field-group">
+            <div class="field-row">
+              <label for="password">Password</label>
+              <a href="#" id="forgot-link">Forgot password?</a>
+            </div>
+            <div class="input-wrap">
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+              <button class="password-toggle" id="password-toggle" type="button" aria-label="Show password">Show</button>
+            </div>
+          </div>
+
+          <button class="primary-action" id="primary-action" type="submit">Continue securely</button>
+          <div class="auth-divider">or</div>
+          <button class="secondary-action" type="button">Use a passkey</button>
+          <p class="form-status" id="form-status" aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+
+    <footer class="auth-footer">
+      <span>© 2026 NextTrade. All rights reserved.</span>
+      <nav aria-label="Legal">
+        <a href="#">Privacy</a>
+        <a href="#">Security</a>
+        <a href="#">Support</a>
+      </nav>
+    </footer>
+  </section>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('market-chart');
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const authShell = document.getElementById('auth-shell');
+      const skipIntro = document.getElementById('skip-intro');
+      const signInTab = document.getElementById('signin-tab');
+      const signUpTab = document.getElementById('signup-tab');
+      const authTitle = document.getElementById('auth-title');
+      const authSubtitle = document.getElementById('auth-subtitle');
+      const authForm = document.getElementById('auth-form');
+      const nameField = document.getElementById('name-field');
+      const fullName = document.getElementById('full-name');
+      const email = document.getElementById('email');
+      const password = document.getElementById('password');
+      const passwordToggle = document.getElementById('password-toggle');
+      const forgotLink = document.getElementById('forgot-link');
+      const primaryAction = document.getElementById('primary-action');
+      const formStatus = document.getElementById('form-status');
+
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+      let candles = [];
+      /* Begin with a few candles visible, then construct the chart in place. */
+      let reveal = reduceMotion ? 1 : 0.025;
+      let lastFrameTime = performance.now();
+      let brandStarted = false;
+      let pageReady = false;
+      let authMode = 'signin';
+      let brandTimer = 0;
+
+      const candleStep = 30;
+      const RISE_COLOR = '#78a85f';
+      const NEUTRAL_COLOR = '#eeeeee';
+      let randomSeed = 918273;
+
+      function random() {
+        randomSeed = (randomSeed * 1664525 + 1013904223) >>> 0;
+        return randomSeed / 4294967296;
+      }
+
+      function buildVolumeField() {
+        const field = document.getElementById('volume-field');
+        const barCount = Math.max(34, Math.min(72, Math.floor(window.innerWidth / 22)));
+        const fragment = document.createDocumentFragment();
+
+        for (let i = 0; i < barCount; i += 1) {
+          const bar = document.createElement('span');
+          const wave = (Math.sin(i * 1.73) + Math.sin(i * 0.47 + 1.8) + 2) / 4;
+          const height = 12 + wave * 76;
+          bar.className = `volume-bar${i % 7 === 2 || i % 11 === 5 ? ' accent' : ''}`;
+          bar.style.setProperty('--bar-height', `${height.toFixed(1)}%`);
+          bar.style.setProperty('--bar-speed', `${(3.2 + (i % 9) * 0.37).toFixed(2)}s`);
+          bar.style.setProperty('--bar-delay', `${(-i * 0.19).toFixed(2)}s`);
+          fragment.appendChild(bar);
+        }
+
+        field.replaceChildren(fragment);
+      }
+
+      function showAuthPage() {
+        if (pageReady) return;
+        pageReady = true;
+        document.body.classList.add('brand-phase', 'auth-phase');
+        authShell.setAttribute('aria-hidden', 'false');
+      }
+
+      function beginBrandTransition() {
+        if (brandStarted) return;
+        brandStarted = true;
+        document.body.classList.add('brand-phase');
+        brandTimer = window.setTimeout(showAuthPage, reduceMotion ? 0 : 1650);
+      }
+
+      function skipToAuth() {
+        window.clearTimeout(brandTimer);
+        if (!brandStarted) {
+          brandStarted = true;
+          document.body.classList.add('brand-phase');
+        }
+        window.setTimeout(showAuthPage, reduceMotion ? 0 : 180);
+      }
+
+      function setAuthMode(mode) {
+        authMode = mode;
+        const signingUp = mode === 'signup';
+
+        signInTab.classList.toggle('active', !signingUp);
+        signUpTab.classList.toggle('active', signingUp);
+        signInTab.setAttribute('aria-selected', String(!signingUp));
+        signUpTab.setAttribute('aria-selected', String(signingUp));
+        nameField.hidden = !signingUp;
+        fullName.required = signingUp;
+        password.autocomplete = signingUp ? 'new-password' : 'current-password';
+        forgotLink.style.visibility = signingUp ? 'hidden' : 'visible';
+        authTitle.textContent = signingUp ? 'Create your account' : 'Welcome back';
+        authSubtitle.textContent = signingUp
+          ? 'Start with the essentials. Your investor profile comes next.'
+          : 'Access your NextTrade account.';
+        primaryAction.textContent = signingUp ? 'Create account' : 'Continue securely';
+        formStatus.textContent = '';
+
+        if (signingUp) fullName.focus();
+        else email.focus();
+      }
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        seedChart();
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function makeCandle(open, close, volatility = 0.045) {
+        const upperWick = 0.016 + random() * volatility;
+        const lowerWick = 0.016 + random() * volatility;
+
+        return {
+          open: clamp(open, 0.07, 0.93),
+          close: clamp(close, 0.07, 0.93),
+          high: clamp(Math.max(open, close) + upperWick, 0.07, 0.96),
+          low: clamp(Math.min(open, close) - lowerWick, 0.04, 0.93)
+        };
+      }
+
+      function seedChart() {
+        const sidePadding = Math.max(24, width * 0.04);
+        const total = Math.floor((width - sidePadding * 2) / candleStep) + 1;
+        randomSeed = 918273;
+        /* A long-term rising market: advances are broken up by believable
+           pullbacks and consolidations, but each major high trends upward. */
+        const anchors = [
+          0.08, 0.26, 0.17, 0.40, 0.29, 0.53,
+          0.41, 0.66, 0.53, 0.77, 0.65, 0.87,
+          0.77, 0.93
+        ];
+
+        candles = [];
+        let previousClose = anchors[0];
+
+        for (let i = 0; i < total; i += 1) {
+          const progress = i / Math.max(1, total - 1);
+          const anchorPosition = progress * (anchors.length - 1);
+          const anchorIndex = Math.floor(anchorPosition);
+          const mix = anchorPosition - anchorIndex;
+          const start = anchors[anchorIndex];
+          const end = anchors[Math.min(anchorIndex + 1, anchors.length - 1)];
+          const target = start + (end - start) * mix;
+          const open = previousClose + (random() - 0.5) * 0.018;
+          let close = clamp(
+            open + (target - open) * 0.92 + (random() - 0.5) * 0.07,
+            0.07,
+            0.93
+          );
+
+          /* Enforce a tall, graphic candle body while preserving the
+             direction of the current market leg. */
+          if (Math.abs(close - open) < 0.05) {
+            const direction = Math.sign(target - open) || (random() > 0.5 ? 1 : -1);
+            close = clamp(open + direction * (0.05 + random() * 0.025), 0.07, 0.93);
+          }
+
+          const volatility = 0.03 + Math.abs(end - start) * 0.1;
+          const candle = makeCandle(open, close, volatility);
+          candles.push(candle);
+          previousClose = candle.close;
+        }
+
+      }
+
+      function priceY(price) {
+        const chartHeight = Math.min(height * 0.78, 740);
+        const top = (height - chartHeight) / 2;
+        return top + (1 - price) * chartHeight;
+      }
+
+      function drawCandle(candle, x, progress = 1, opacity = 1) {
+        const animatedClose = candle.open + (candle.close - candle.open) * progress;
+        const animatedHigh = Math.max(candle.open, animatedClose) +
+          (candle.high - Math.max(candle.open, candle.close)) * progress;
+        const animatedLow = Math.min(candle.open, animatedClose) -
+          (Math.min(candle.open, candle.close) - candle.low) * progress;
+        const color = animatedClose >= candle.open ? RISE_COLOR : NEUTRAL_COLOR;
+        const bodyWidth = Math.max(5, candleStep * 0.22);
+        const openY = priceY(candle.open);
+        const closeY = priceY(animatedClose);
+        const highY = priceY(animatedHigh);
+        const lowY = priceY(animatedLow);
+        const bodyTop = Math.min(openY, closeY);
+        const bodyHeight = Math.max(8, Math.abs(closeY - openY));
+
+        ctx.globalAlpha = opacity;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, highY);
+        ctx.lineTo(x, lowY);
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+        ctx.globalAlpha = 1;
+      }
+
+      function drawChart(now) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.shadowColor = 'transparent';
+
+        const revealed = candles.length * reveal;
+        const fullyVisible = Math.floor(revealed);
+        const partialProgress = revealed - fullyVisible;
+        const startX = Math.max(24, width * 0.04);
+
+        for (let i = 0; i < fullyVisible; i += 1) {
+          const x = startX + i * candleStep;
+          const edgeFade = clamp(x / 90, 0.18, 1);
+          drawCandle(candles[i], x, 1, edgeFade);
+        }
+
+        if (fullyVisible < candles.length) {
+          const x = startX + fullyVisible * candleStep;
+          drawCandle(candles[fullyVisible], x, partialProgress, partialProgress);
+        }
+
+      }
+
+      function animate(now) {
+        const delta = Math.min(now - lastFrameTime, 32);
+        lastFrameTime = now;
+
+        if (reveal < 1) {
+          reveal = Math.min(1, reveal + delta / 2500);
+        }
+
+        /* Give the chart a little more time before the slower brand handoff. */
+        if (!brandStarted && reveal >= 0.68) {
+          beginBrandTransition();
+        }
+
+        drawChart(now);
+        if (!pageReady) requestAnimationFrame(animate);
+      }
+
+      window.addEventListener('resize', resize, { passive: true });
+      window.addEventListener('pageshow', (event) => {
+        /* Back/forward cache can preserve the finished landing page.
+           Reload only in that case so the full intro sequence reruns. */
+        if (event.persisted) window.location.reload();
+      });
+      skipIntro.addEventListener('click', skipToAuth);
+      signInTab.addEventListener('click', () => setAuthMode('signin'));
+      signUpTab.addEventListener('click', () => setAuthMode('signup'));
+
+      passwordToggle.addEventListener('click', () => {
+        const showing = password.type === 'text';
+        password.type = showing ? 'password' : 'text';
+        passwordToggle.textContent = showing ? 'Show' : 'Hide';
+        passwordToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        password.focus();
+      });
+
+      forgotLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        formStatus.textContent = 'Password recovery will continue in the next step.';
+      });
+
+      authForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!authForm.checkValidity()) {
+          authForm.reportValidity();
+          return;
+        }
+
+        formStatus.textContent = authMode === 'signup'
+          ? 'Your investor profile is ready to be added next.'
+          : 'Secure account connection is ready to be added next.';
+      });
+
+      document.querySelector('.secondary-action').addEventListener('click', () => {
+        formStatus.textContent = 'Passkey authentication is ready to be connected next.';
+      });
+
+      buildVolumeField();
+      resize();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
