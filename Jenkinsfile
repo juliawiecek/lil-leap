@@ -84,7 +84,7 @@ pipeline {
 
     stage('Build Backend Image') {
       steps {
-        sh 'docker build --tag "sprint1-greeter-app:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
+        sh 'docker build --tag "nexttrade:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
       }
     }
 

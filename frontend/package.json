@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node scripts/start.mjs",
     "test": "node --test tests/*.test.mjs",
     "pretest:ci": "node -e \"require('node:fs').mkdirSync('test-results', { recursive: true })\"",
     "test:ci": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",

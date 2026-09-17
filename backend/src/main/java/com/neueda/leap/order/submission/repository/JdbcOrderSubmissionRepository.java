@@ -11,11 +11,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * PostgreSQL persistence for submissions. Uses {@code ON CONFLICT DO NOTHING}
+ * to handle concurrent retries without aborting the surrounding transaction.
+ * Ownership must be checked by the service before reading or inserting an order.
+ */
 @Repository
 public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Creates the PostgreSQL repository.
+     * @param jdbcTemplate JDBC operations participating in the service transaction
+     */
     public JdbcOrderSubmissionRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }

@@ -9,15 +9,35 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
+/**
+ * Submits orders for accounts owned by the authenticated user.
+ * Retries reuse the order identified by account and client reference, even if
+ * the retry supplies different order details. Submission does not execute a trade.
+ */
 @Service
 public class OrderSubmissionService {
 
     private final OrderSubmissionRepository repository;
 
+    /**
+     * Creates the submission service.
+     * @param repository persistence operations for ownership checks and idempotent inserts
+     */
     public OrderSubmissionService(OrderSubmissionRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * Checks account ownership, resolves the instrument, and saves or reuses an order.
+     * The request must already have passed Bean Validation.
+     *
+     * @param authenticatedUserId user identity from the validated JWT
+     * @param request validated submission details and account-scoped retry key
+     * @return the saved order and whether this call created it
+     * @throws ResponseStatusException for missing authentication (401), an unknown or
+     *         foreign account (404), or an unsupported/non-tradable symbol (400)
+     * @throws IllegalStateException if a competing insert conflicts but its order cannot be read
+     */
     @Transactional
     public OrderSubmissionResult submit(UUID authenticatedUserId, SubmitOrderRequest request) {
         if (authenticatedUserId == null) {

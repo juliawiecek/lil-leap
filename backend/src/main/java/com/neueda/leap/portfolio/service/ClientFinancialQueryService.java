@@ -54,10 +54,20 @@ public class ClientFinancialQueryService {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Creates the client-scoped query service.
+     * @param jdbcTemplate database access for account ownership joins
+     */
     public ClientFinancialQueryService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Reads holdings across the user's accounts, sorted by symbol and account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned holdings, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
     public List<HoldingResponse> getHoldings(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(HOLDINGS_SQL, (rs, rowNum) -> new HoldingResponse(
@@ -71,6 +81,12 @@ public class ClientFinancialQueryService {
         ), authenticatedUserId);
     }
 
+    /**
+     * Reads cash balances across the user's accounts, sorted by account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
     public List<CashBalanceResponse> getCashBalances(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(CASH_SQL, (rs, rowNum) -> new CashBalanceResponse(
@@ -81,6 +97,12 @@ public class ClientFinancialQueryService {
         ), authenticatedUserId);
     }
 
+    /**
+     * Reads the user's orders, newest submissions first with order ID as a tie-breaker.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned orders, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
     public List<OrderSummaryResponse> getOrders(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(ORDERS_SQL, (rs, rowNum) -> new OrderSummaryResponse(

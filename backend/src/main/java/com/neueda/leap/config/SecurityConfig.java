@@ -26,10 +26,16 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
  *
  * <p>Provides the password encoder used to securely hash user passwords,
  * and the HTTP security filter chain that enforces stateless JWT-based
- * authentication on every route except registration and login.</p>
+ * authentication for user, portfolio, and order APIs. Registration, login,
+ * and password-reset endpoints allow anonymous requests. Unsupported financial
+ * methods and object-ID routes are denied; other routes require authentication.</p>
  */
 @Configuration
 public class SecurityConfig {
+
+    /** Creates the Spring Security configuration. */
+    public SecurityConfig() {
+    }
 
     /**
      * Creates and returns a delegating password encoder.
@@ -49,7 +55,7 @@ public class SecurityConfig {
      *
      * <p>Sessions are stateless (auth state lives entirely in the JWT), CSRF
      * protection is disabled since there are no cookie-based sessions to
-     * protect, registration and login are open to anonymous callers, and the
+     * protect, registration, login, and password reset are open to anonymous callers, and the
      * {@link JwtAuthenticationFilter} runs ahead of Spring's own username/password
      * filter so a valid bearer token is recognized before any other authentication
      * mechanism is considered.</p>
