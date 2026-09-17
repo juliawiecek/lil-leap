@@ -66,8 +66,32 @@ pipeline {
             -v "$WORKSPACE/backend:/app" \
             -w /app \
             maven:3.9-eclipse-temurin-21 \
-            mvn -B clean test
+            mvn -B clean verify
         '''
+      }
+    }
+
+    stage('Publish Backend Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'backend/target/site/jacoco/**',
+          fingerprint: true,
+          allowEmpty: false
+        )
+        script {
+          try {
+            publishHTML(target: [
+              reportDir: 'backend/target/site/jacoco',
+              reportFiles: 'index.html',
+              reportName: 'Backend JaCoCo Coverage',
+              keepAll: true,
+              alwaysLinkToLastBuild: true,
+              allowMissing: false
+            ])
+          } catch (Exception ex) {
+            echo "HTML Publisher plugin unavailable; JaCoCo artifacts remain archived. ${ex.message}"
+          }
+        }
       }
     }
 
