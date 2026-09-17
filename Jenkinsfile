@@ -76,7 +76,7 @@ pipeline {
         archiveArtifacts(
           artifacts: 'backend/target/site/jacoco/**',
           fingerprint: true,
-          allowEmpty: false
+          allowEmptyArchive: false
         )
         script {
           try {
