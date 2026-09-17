@@ -3,6 +3,18 @@ pipeline {
 
   options {
     timestamps()
+    disableConcurrentBuilds()
+  }
+
+  tools {
+    maven 'Maven 3.9'
+    jdk 'JDK 21'
+  }
+
+  environment {
+    COMPOSE_FILE = 'docker-compose.yml'
+    NEXTTRADE_POM = 'nextTrade/pom.xml'
+    INSIGHTS_POM = 'insights/pom.xml'
   }
 
   stages {
@@ -40,32 +52,28 @@ pipeline {
     stage('Validate Compose YAML') {
       steps {
         sh '''
-          ${COMPOSE_CMD} -f docker-compose.yml config -q
-          ${COMPOSE_CMD} -f docker-compose.yml config
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} config
         '''
       }
     }
 
-    stage('Build Multi-Stage Image') {
+    stage('Unit Tests - nextTrade') {
       steps {
-        sh 'docker build -t sprint1-greeter-app:jenkins-multistage backend/'
+        sh "mvn -f ${NEXTTRADE_POM} -B test"
+      }
+    }
+
+    stage('Unit Tests - insights') {
+      steps {
+        sh "mvn -f ${INSIGHTS_POM} -B test"
       }
     }
 
     stage('Build Compose Services') {
       steps {
-        sh '${COMPOSE_CMD} -f docker-compose.yml build'
+        sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
       }
-    }
-  }
-
-  post {
-    always {
-      sh '''
-        if [ -n "${COMPOSE_CMD}" ]; then
-          ${COMPOSE_CMD} -f docker-compose.yml down -v || true
-        fi
-      '''
     }
   }
 }
