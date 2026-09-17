@@ -1,5 +1,5 @@
 {
-  "name": "auth-service",
+  "name": "auth",
   "version": "1.0.0",
   "description": "NextTrade Identity Service -- registration, login, and refresh-token rotation.",
   "private": true,

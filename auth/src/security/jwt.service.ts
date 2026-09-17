@@ -16,7 +16,11 @@ export class JwtService {
   private readonly clientId: string;
 
   constructor() {
-    this.secret = process.env.APP_JWT_SECRET ?? 'dev-only-insecure-secret-change-me-before-deploying';
+    const secret = process.env.APP_JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('APP_JWT_SECRET must be set in production; refusing to sign tokens with the dev fallback secret.');
+    }
+    this.secret = secret ?? 'dev-only-insecure-secret-change-me-before-deploying';
     this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
     this.clientId = process.env.APP_JWT_CLIENT_ID ?? 'nexttrade-web';
   }

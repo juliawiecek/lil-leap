@@ -73,12 +73,12 @@ pipeline {
       }
     }
 
-    // Run all auth-service unit tests before building Docker images.
+    // Run all auth unit tests before building Docker images.
     stage('Run Auth Service Tests') {
       steps {
         sh '''
           docker run --rm \
-            -v "$WORKSPACE/auth-service:/app" \
+            -v "$WORKSPACE/auth:/app" \
             -w /app \
             node:20-alpine \
             sh -c "npm ci && npm test"
@@ -95,7 +95,7 @@ pipeline {
     stage('Build Auth Service Image') {
       steps {
         sh '''
-          docker build --tag "auth-service:ci-${BUILD_NUMBER}-${GIT_COMMIT}" auth-service/
+          docker build --tag "auth:ci-${BUILD_NUMBER}-${GIT_COMMIT}" auth/
         '''
       }
     }

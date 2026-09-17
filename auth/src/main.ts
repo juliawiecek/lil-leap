@@ -7,23 +7,30 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
-/** Bootstraps the Identity Service. Direct TLS only -- a missing keystore fails startup closed, never falls back to plaintext HTTP. */
+/**
+ * Bootstraps the Identity Service. TLS is opt-in via TLS_KEYSTORE: the architecture
+ * branch's nginx configs proxy_pass plaintext HTTP to this service internally
+ * (TLS terminates elsewhere in that topology), so plaintext is the default here.
+ */
 async function bootstrap(): Promise<void> {
-  // Matches docker-compose.yml's auth-service secret mount; "file:" prefix optional.
-  const rawKeystorePath = process.env.TLS_KEYSTORE ?? 'file:./certs/auth-service.p12';
-  const keystorePath = rawKeystorePath.startsWith('file:') ? rawKeystorePath.slice('file:'.length) : rawKeystorePath;
-  const keystorePassword = process.env.TLS_KEYSTORE_PASSWORD ?? '';
+  // Matches docker-compose.yml's auth secret mount; "file:" prefix optional.
+  const rawKeystorePath = process.env.TLS_KEYSTORE;
+  const keystorePath = rawKeystorePath?.startsWith('file:') ? rawKeystorePath.slice('file:'.length) : rawKeystorePath;
 
-  if (!fs.existsSync(keystorePath)) {
-    throw new Error(`TLS keystore not found at ${keystorePath}; refusing to start on plaintext HTTP.`);
+  let app: NestExpressApplication;
+  if (keystorePath) {
+    if (!fs.existsSync(keystorePath)) {
+      throw new Error(`TLS_KEYSTORE set to ${keystorePath} but no keystore found there; refusing to start on plaintext HTTP.`);
+    }
+    app = await NestFactory.create<NestExpressApplication>(AppModule, {
+      httpsOptions: {
+        pfx: fs.readFileSync(keystorePath),
+        passphrase: process.env.TLS_KEYSTORE_PASSWORD ?? '',
+      },
+    });
+  } else {
+    app = await NestFactory.create<NestExpressApplication>(AppModule);
   }
-
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    httpsOptions: {
-      pfx: fs.readFileSync(keystorePath),
-      passphrase: keystorePassword,
-    },
-  });
 
   // Health stays unprefixed so it's a fixed, predictable probe path.
   app.setGlobalPrefix('auth', { exclude: ['health'] });

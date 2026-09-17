@@ -6,7 +6,7 @@ describe('HealthController', () => {
     const body = controller.check();
 
     expect(body.status).toBe('ok');
-    expect(body.service).toBe('auth-service');
+    expect(body.service).toBe('auth');
     expect(new Date(body.timestamp).toString()).not.toBe('Invalid Date');
   });
 });

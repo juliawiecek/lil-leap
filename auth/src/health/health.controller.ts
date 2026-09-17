@@ -8,7 +8,7 @@ export class HealthController {
   check(): { status: string; service: string; timestamp: string } {
     return {
       status: 'ok',
-      service: 'auth-service',
+      service: 'auth',
       timestamp: new Date().toISOString(),
     };
   }

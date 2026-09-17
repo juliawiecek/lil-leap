@@ -1,4 +1,4 @@
-# Identity Service (auth-service)
+# Identity Service (auth)
 
 NextTrade's standalone authentication service: registration, login, and
 refresh-token rotation for TRADER and ANALYST accounts.
@@ -111,7 +111,7 @@ classDiagram
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant Auth as auth-service
+    participant Auth as auth
     participant DB as Postgres
     participant BE as NextTrade / Insights backend
 
@@ -124,7 +124,7 @@ sequenceDiagram
     Auth-->>FE: 200 access token + refresh token
 
     FE->>BE: request with Bearer access token
-    Note over BE: verifies the token locally with the shared APP_JWT_SECRET -- no call to auth-service
+    Note over BE: verifies the token locally with the shared APP_JWT_SECRET -- no call to auth
     BE-->>FE: response
 
     Note over FE,Auth: access token expires

@@ -15,6 +15,9 @@ services:
       # Application-specific configuration
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
       NEXTTRADE_SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES}
+      # Shared with `auth`: backend verifies JWTs issued by auth locally,
+      # using this same HS256 secret — no REST call per request.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET — shared with auth for local token verification}
       # TLS keystore configuration for backend security
       TLS_KEYSTORE: file:/run/secrets/backend_tls_keystore
       TLS_KEYSTORE_PASSWORD: ${TLS_KEYSTORE_PASSWORD:?Set TLS_KEYSTORE_PASSWORD for the backend TLS certificate}
@@ -27,10 +30,10 @@ services:
     # db/init-app-role.sh. It is separate from the admin role, which owns the
     # schema and runs migrations.
 
-  auth-service:
-    build: ./auth-service
+  auth:
+    build: ./auth
     # No ports: mapping, same reasoning as `app` — reachable from other
-    # containers via Docker bridge DNS ("auth-service"), not from the host.
+    # containers via Docker bridge DNS ("auth"), not from the host.
     depends_on:
       - db
     environment:
@@ -40,11 +43,13 @@ services:
       DB_APP_USERNAME: ${DB_APP_USERNAME}
       DB_APP_PASSWORD: ${DB_APP_PASSWORD}
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY}
-      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET — used by auth-service only, to sign issued tokens}
-      TLS_KEYSTORE: file:/run/secrets/auth_service_tls_keystore
-      TLS_KEYSTORE_PASSWORD: ${TLS_KEYSTORE_PASSWORD:?Set TLS_KEYSTORE_PASSWORD for the auth-service TLS certificate}
-    secrets:
-      - auth_service_tls_keystore
+      # Also shared with `app`, which verifies these tokens locally with the same secret.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET — used to sign tokens auth issues}
+      # TLS is optional here — unset means auth serves plaintext HTTP,
+      # matching architecture's nginx configs which proxy_pass to it over HTTP
+      # internally. Set both to terminate TLS directly at auth instead.
+      TLS_KEYSTORE: ${AUTH_SERVICE_TLS_KEYSTORE_PATH:-}
+      TLS_KEYSTORE_PASSWORD: ${AUTH_SERVICE_TLS_KEYSTORE_PASSWORD:-}
     # Uses the same app_user role as `app` — see db/init-app-role.sh.
 
   db:
@@ -87,8 +92,6 @@ services:
 secrets:
   backend_tls_keystore:
     file: ${TLS_KEYSTORE_PATH:-./certs/backend.p12}
-  auth_service_tls_keystore:
-    file: ${AUTH_SERVICE_TLS_KEYSTORE_PATH:-./certs/auth-service.p12}
 
 volumes:
   db_data:
