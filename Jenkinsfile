@@ -78,20 +78,7 @@ pipeline {
           fingerprint: true,
           allowEmptyArchive: false
         )
-        script {
-          try {
-            publishHTML(target: [
-              reportDir: 'backend/target/site/jacoco',
-              reportFiles: 'index.html',
-              reportName: 'Backend JaCoCo Coverage',
-              keepAll: true,
-              alwaysLinkToLastBuild: true,
-              allowMissing: false
-            ])
-          } catch (Exception ex) {
-            echo "HTML Publisher plugin unavailable; JaCoCo artifacts remain archived. ${ex.message}"
-          }
-        }
+
       }
     }
 
