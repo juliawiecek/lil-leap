@@ -31,12 +31,14 @@ class JwtServiceTest {
         JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
         String token = jwtService.issueToken(UUID.randomUUID(), "julia@example.com");
 
-        int signatureStart = token.lastIndexOf('.') + 1;
-        byte[] signature = Base64.getUrlDecoder().decode(token.substring(signatureStart));
-        // Change an actual signature bit, avoiding unused bits in the final Base64 character.
-        signature[0] ^= 1;
-        String tampered = token.substring(0, signatureStart)
-                + Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
+        // Find the last dot (separating payload from signature)
+        int lastDotIndex = token.lastIndexOf('.');
+        
+        // Tamper with a character in the middle of the signature part
+        int tamperedIndex = lastDotIndex + 5;
+        String tampered = token.substring(0, tamperedIndex)
+                + (token.charAt(tamperedIndex) == 'a' ? 'b' : 'a')
+                + token.substring(tamperedIndex + 1);
 
         assertTrue(jwtService.validate(tampered).isEmpty());
     }
