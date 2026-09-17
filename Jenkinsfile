@@ -75,10 +75,30 @@ pipeline {
       steps {
         archiveArtifacts(
           artifacts: 'backend/target/site/jacoco/**',
-          fingerprint: true,
-          allowEmptyArchive: false
+          fingerprint: true
         )
+      }
+    }
 
+    stage('Run Python Tests With Coverage') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/data-pipeline:/app" \
+            -w /app \
+            python:3.12-slim \
+            sh -ec 'python -m pip install --no-cache-dir -r requirements.txt && python -m pytest -v --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml'
+        '''
+      }
+    }
+
+    stage('Archive Python Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'data-pipeline/htmlcov/**,data-pipeline/coverage.xml',
+          fingerprint: true
+        )
       }
     }
 
