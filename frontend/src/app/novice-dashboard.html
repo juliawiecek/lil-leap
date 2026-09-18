@@ -1,0 +1,627 @@
+<div class="novice-shell">
+  <aside class="novice-sidebar">
+    <a class="wordmark" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+      >Next<span>Trade</span><app-dashboard-icon name="arrow"
+    /></a>
+    <nav aria-label="Main navigation">
+      @for (item of navigation; track item.label) {
+        <button
+          type="button"
+          [class.active]="activeTab() === item.label"
+          [attr.aria-current]="activeTab() === item.label ? 'page' : null"
+          (click)="navigate(item.label)"
+        >
+          <app-dashboard-icon [name]="item.icon" /><span>{{ item.label }}</span>
+        </button>
+      }
+    </nav>
+    <div class="sidebar-account">
+      <span>Your account</span>
+      <button type="button" (click)="navigate('Settings')">Account settings</button>
+      <button type="button" (click)="openModal('help')">Help &amp; support</button>
+      <button type="button" (click)="signOut.emit()">Sign out ↗</button>
+    </div>
+  </aside>
+  <div class="novice-main">
+    <header class="novice-topbar">
+      <div class="company-search">
+        <app-dashboard-icon name="search" />
+        <input
+          aria-label="Search for a company or symbol"
+          placeholder="Search for a company or symbol (e.g. AAPL)"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          (keydown.escape)="query.set('')"
+        />
+        @if (query().trim()) {
+          <div class="company-results">
+            @for (quote of results(); track quote.symbol) {
+              <button type="button" (click)="openTrade('Buy', quote.symbol)">
+                <strong>{{ quote.symbol }}</strong
+                ><span>{{ quote.name }}</span
+                ><b>{{ quote.price | currency }}</b>
+              </button>
+            } @empty {
+              <p>No matching companies or symbols.</p>
+            }
+          </div>
+        }
+      </div>
+      <div class="topbar-actions">
+        <label class="workspace-choice"
+          ><span class="sr-only">Workspace</span
+          ><select
+            aria-label="Workspace"
+            [value]="mode()"
+            (change)="$any($event.target).value === 'ADVANCED' && advanced.emit()"
+          >
+            <option value="NOVICE">Novice · Guided</option>
+            <option value="ADVANCED">Advanced · Focused</option></select
+          ><app-dashboard-icon name="down"
+        /></label>
+        <div class="notifications">
+          <button
+            type="button"
+            class="notification-button"
+            aria-label="Notifications"
+            [attr.aria-expanded]="notifications()"
+            (click)="notifications.set(!notifications())"
+          >
+            <app-dashboard-icon name="bell" /><i></i>
+          </button>
+          @if (notifications()) {
+            <div class="notification-popover">
+              <strong>Notifications</strong>
+              <p>You’re all caught up.</p>
+            </div>
+          }
+        </div>
+        <button
+          type="button"
+          class="profile-avatar"
+          aria-label="Account settings"
+          (click)="navigate('Settings')"
+        >
+          {{ (name() || 'A').slice(0, 1).toUpperCase() }}
+        </button>
+      </div>
+    </header>
+    <main class="novice-content">
+      <div class="page-heading">
+        <div>
+          <span class="greeting">GOOD EVENING</span>
+          <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
+        </div>
+        <div class="market-status">
+          <span><i></i>Market closes in 2h 14m</span><span>Wed, Apr 23, 2025</span>
+        </div>
+      </div>
+      <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
+        <div class="primary-column">
+          @if (activeTab() === 'Overview') {
+            <section class="panel portfolio-panel" aria-label="Portfolio performance">
+              <div class="portfolio-top">
+                <div>
+                  <div class="value-label">
+                    Total portfolio value
+                    <button
+                      type="button"
+                      class="icon-button"
+                      [attr.aria-label]="
+                        showBalance() ? 'Hide portfolio balance' : 'Show portfolio balance'
+                      "
+                      (click)="showBalance.set(!showBalance())"
+                    >
+                      <app-dashboard-icon name="eye" />
+                    </button>
+                  </div>
+                  <div class="portfolio-value">
+                    {{ showBalance() ? (portfolioValue() | currency) : '••••••••' }}
+                  </div>
+                  <div class="portfolio-gain">
+                    <strong>{{ showBalance() ? '+$482.17 (+1.99%)' : '••••••' }}</strong
+                    ><span>Today</span>
+                  </div>
+                </div>
+                <div class="period-picker" aria-label="Chart time range">
+                  @for (item of periods; track item) {
+                    <button
+                      type="button"
+                      [class.selected]="period() === item"
+                      [attr.aria-pressed]="period() === item"
+                      (click)="period.set(item)"
+                    >
+                      {{ item }}
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="portfolio-chart">
+                <div class="chart-y-axis">
+                  <span>25.0K</span><span>24.5K</span><span>24.0K</span><span>23.5K</span>
+                </div>
+                <div class="chart-plot">
+                  @if (showBalance()) {
+                    <span class="chart-price">{{ portfolioValue() | currency }}</span>
+                  }
+                  <svg
+                    viewBox="0 0 780 155"
+                    preserveAspectRatio="none"
+                    role="img"
+                    [attr.aria-label]="period() + ' portfolio value chart'"
+                  >
+                    <defs>
+                      <linearGradient id="novice-chart-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#63ca74" stop-opacity=".22" />
+                        <stop offset="100%" stop-color="#63ca74" stop-opacity=".015" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M0 15H780M0 55H780M0 95H780M0 135H780"
+                      stroke="#293333"
+                      stroke-dasharray="2 3"
+                      fill="none"
+                    />
+                    <path [attr.d]="chartPath() + 'L780 150H0Z'" fill="url(#novice-chart-fill)" />
+                    <path
+                      [attr.d]="chartPath()"
+                      fill="none"
+                      stroke="#8bdd88"
+                      stroke-width="1.6"
+                      vector-effect="non-scaling-stroke"
+                    />
+                    <circle
+                      cx="780"
+                      [attr.cy]="period() === '1D' ? 18 : 20"
+                      r="3.8"
+                      fill="#87df88"
+                    />
+                    <path d="M0 150H780" stroke="#2a3337" />
+                  </svg>
+                  <div class="chart-x-axis">
+                    @for (label of chartTimes(); track $index) {
+                      <span>{{ label }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="portfolio-stats">
+                <div>
+                  <span>Buying power</span
+                  ><strong>{{ showBalance() ? (buyingPower() | currency) : '••••••' }}</strong>
+                </div>
+                <div>
+                  <span>Invested</span
+                  ><strong>{{ showBalance() ? (invested() | currency) : '••••••' }}</strong>
+                </div>
+                <div>
+                  <span>Today’s return</span
+                  ><strong class="positive">{{
+                    showBalance() ? '+$482.17 (+1.99%)' : '••••••'
+                  }}</strong>
+                </div>
+                <div>
+                  <span>Total return</span
+                  ><strong class="positive">{{
+                    showBalance() ? '+$2,341.56 (+10.47%)' : '••••••'
+                  }}</strong>
+                </div>
+              </div>
+            </section>
+          }
+          @if (activeTab() === 'Overview' || activeTab() === 'Portfolio') {
+            <section class="panel investments-panel">
+              <div class="panel-heading">
+                <h2>Your investments</h2>
+                <button type="button" class="text-link" (click)="navigate('Portfolio')">
+                  View all holdings <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <div class="investment-tabs" aria-label="Investment view">
+                @for (item of ['Holdings', 'Asset classes']; track item) {
+                  <button
+                    type="button"
+                    [class.selected]="investmentTab() === item"
+                    [attr.aria-pressed]="investmentTab() === item"
+                    (click)="investmentTab.set(item)"
+                  >
+                    {{ item }}
+                  </button>
+                }
+              </div>
+              @if (investmentTab() === 'Holdings') {
+                <div class="table-scroll">
+                  <table class="holdings-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Name</th>
+                        <th>Value</th>
+                        <th>Shares</th>
+                        <th>Avg. price</th>
+                        <th>Today</th>
+                        <th>Total return</th>
+                        <th><span class="sr-only">Actions</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (holding of holdings(); track holding.symbol) {
+                        <tr>
+                          <td>
+                            <button
+                              class="holding-symbol"
+                              type="button"
+                              (click)="openTrade('Buy', holding.symbol)"
+                            >
+                              <span class="company-logo" [class]="'company-logo ' + holding.logo">
+                                @if (holding.logo === 'apple') {
+                                  <app-dashboard-icon name="apple" />
+                                } @else if (holding.logo === 'microsoft') {
+                                  <i></i><i></i><i></i><i></i>
+                                } @else if (holding.logo === 'nvidia') {
+                                  <svg viewBox="0 0 30 24" aria-hidden="true">
+                                    <path
+                                      d="M2 12Q12 1 25 9L28 12Q17 23 5 15L5 10Q14 4 22 11L22 15Q12 20 9 12Q14 7 19 12L19 15Q14 18 12 12M15 3H28V21H15"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                    />
+                                  </svg>
+                                } @else {
+                                  {{
+                                    holding.logo === 'vanguard' ? 'V' : holding.symbol.slice(0, 1)
+                                  }}
+                                }</span
+                              ><b>{{ holding.symbol }}</b>
+                            </button>
+                          </td>
+                          <td class="company-name">{{ holding.name }}</td>
+                          <td>{{ holding.value | currency }}</td>
+                          <td>{{ holding.shares | number: '1.3-3' }}</td>
+                          <td>{{ holding.average | currency }}</td>
+                          <td class="positive">
+                            +{{ holding.today | currency
+                            }}<span>+{{ holding.change | number: '1.2-2' }}%</span>
+                          </td>
+                          <td class="positive">
+                            +{{ holding.total | currency
+                            }}<span>+{{ holding.totalPercent | number: '1.2-2' }}%</span>
+                          </td>
+                          <td>
+                            <button
+                              class="icon-button holding-actions"
+                              type="button"
+                              [attr.aria-label]="'Trade ' + holding.symbol"
+                              (click)="openTrade('Buy', holding.symbol)"
+                            >
+                              <app-dashboard-icon name="more" />
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="asset-class-list">
+                  <div>
+                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>72%</strong
+                    ><span>$17,770.15</span>
+                  </div>
+                  <div>
+                    <span><i class="asset-dot cash"></i>Cash</span><strong>28%</strong
+                    ><span>$6,910.27</span>
+                  </div>
+                </div>
+              }
+            </section>
+          }
+          @if (activeTab() === 'Overview') {
+            <section class="panel market-panel">
+              <div class="panel-heading">
+                <h2>Market snapshot</h2>
+                <button class="text-link" type="button" (click)="openModal('markets')">
+                  View markets <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <div class="market-cards">
+                @for (market of markets; track market.name; let i = $index) {
+                  <button class="market-card" type="button" (click)="openModal('markets')">
+                    <span
+                      >{{ market.name
+                      }}<span class="market-numbers"
+                        >{{ market.value }} <b class="positive">{{ market.change }}</b></span
+                      ></span
+                    ><svg viewBox="0 0 110 36" aria-hidden="true">
+                      <path
+                        [attr.d]="makePath(110, 30, i + 3)"
+                        fill="none"
+                        stroke="#80d98b"
+                        stroke-width="1.2"
+                      />
+                    </svg>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+          @if (activeTab() === 'Watchlist') {
+            <section class="panel expanded-list">
+              <div class="panel-heading">
+                <h2>Your watchlist</h2>
+                <span>Search above to add a company</span>
+              </div>
+              @for (quote of watchlist(); track quote.symbol) {
+                <button
+                  class="watchlist-item"
+                  type="button"
+                  (click)="openTrade('Buy', quote.symbol)"
+                >
+                  <b>{{ quote.symbol }}</b
+                  ><span>{{ quote.name }}</span
+                  ><strong>{{ quote.price | currency }}</strong
+                  ><span [class.positive]="quote.change > 0" [class.negative]="quote.change < 0"
+                    >{{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%</span
+                  ><app-dashboard-icon name="chevron" />
+                </button>
+              }
+            </section>
+          }
+          @if (activeTab() === 'Orders') {
+            <section class="panel expanded-list">
+              <div class="panel-heading"><h2>Order history</h2></div>
+              @for (order of orderHistory(); track order.id) {
+                <div class="watchlist-item">
+                  <b>{{ order.side }} {{ order.symbol }}</b
+                  ><span>{{ order.shares }} shares</span
+                  ><span>{{ order.price | currency }} per share</span
+                  ><span class="positive">Filled</span>
+                </div>
+              } @empty {
+                <div class="empty-state">
+                  <app-dashboard-icon name="orders" />
+                  <h2>No orders yet</h2>
+                  <p>Your completed orders will appear here.</p>
+                  <button class="green-button" type="button" (click)="openTrade()">
+                    Open trade ticket
+                  </button>
+                </div>
+              }
+            </section>
+          }
+          <app-novice-learn [hidden]="activeTab() !== 'Learn'" />
+          @if (activeTab() === 'Settings') {
+            <section class="panel settings-panel">
+              <h2>Account settings</h2>
+              <div>
+                <span>Account name</span><strong>{{ name() || 'Your account' }}</strong>
+              </div>
+              <div>
+                <span>Workspace</span
+                ><label
+                  ><span class="sr-only">Workspace preference</span
+                  ><select (change)="$any($event.target).value === 'ADVANCED' && advanced.emit()">
+                    <option value="NOVICE">Novice · Guided</option>
+                    <option value="ADVANCED">Advanced · Focused</option>
+                  </select></label
+                >
+              </div>
+              <div>
+                <span>Portfolio balance</span
+                ><button
+                  class="secondary-button"
+                  type="button"
+                  (click)="showBalance.set(!showBalance())"
+                >
+                  {{ showBalance() ? 'Hide balance' : 'Show balance' }}
+                </button>
+              </div>
+              <button class="secondary-button" type="button" (click)="signOut.emit()">
+                Sign out ↗
+              </button>
+            </section>
+          }
+        </div>
+        @if (activeTab() === 'Overview') {
+          <div class="secondary-column">
+            <section class="panel allocation-panel">
+              <div class="panel-heading">
+                <h2>Asset allocation</h2>
+                <button type="button" class="text-link" (click)="openModal('allocation')">
+                  View details <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <div class="allocation-content">
+                <div
+                  class="allocation-donut"
+                  role="img"
+                  aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent"
+                >
+                  <div><strong>$24,680</strong><span>Total</span></div>
+                </div>
+                <div class="allocation-legend">
+                  <div>
+                    <i class="asset-dot stocks"></i><span>Stocks<small>$17,770.15</small></span
+                    ><b>72%</b>
+                  </div>
+                  <div>
+                    <i class="asset-dot cash"></i><span>Cash<small>$6,910.27</small></span
+                    ><b>28%</b>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="diversification" (click)="openModal('allocation')">
+                <span class="shield-icon"><app-dashboard-icon name="shield" /></span
+                ><span
+                  >Moderate diversification<small
+                    >A healthy mix of assets for a balanced approach.</small
+                  ></span
+                ><app-dashboard-icon name="chevron" />
+              </button>
+            </section>
+            <section class="panel trade-panel">
+              <h2>Ready to trade?</h2>
+              <p>Buy or sell shares. You’ll review the details before confirming.</p>
+              <div class="trade-actions">
+                <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
+                ><button type="button" class="secondary-button" (click)="openTrade('Sell')">
+                  Sell</button
+                ><button type="button" class="outline-button" (click)="openTrade()">
+                  Open trade ticket
+                </button>
+              </div>
+            </section>
+            <section class="panel watchlist-panel">
+              <div class="panel-heading">
+                <h2>Watchlist</h2>
+                <button type="button" class="text-link" (click)="navigate('Watchlist')">
+                  View watchlist <app-dashboard-icon name="chevron" />
+                </button>
+              </div>
+              <table class="watch-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>1D</th>
+                    <th>Sparkline</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (quote of watchlist(); track quote.symbol; let i = $index) {
+                    <tr>
+                      <td>
+                        <button type="button" (click)="openTrade('Buy', quote.symbol)">
+                          {{ quote.symbol }}
+                        </button>
+                      </td>
+                      <td>{{ quote.price | currency }}</td>
+                      <td [class.positive]="quote.change > 0" [class.negative]="quote.change < 0">
+                        {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                      </td>
+                      <td>
+                        <svg
+                          viewBox="0 0 100 28"
+                          role="img"
+                          [attr.aria-label]="
+                            quote.symbol + (quote.change > 0 ? ' rising' : ' falling')
+                          "
+                        >
+                          <path
+                            [attr.d]="makePath(100, 20, i + 8, quote.change < 0)"
+                            fill="none"
+                            [attr.stroke]="quote.change > 0 ? '#81dc8e' : '#f05459'"
+                            stroke-width="1.25"
+                          />
+                        </svg>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          </div>
+        }
+      </div>
+    </main>
+  </div>
+</div>
+<dialog
+  #dialog
+  class="detail-dialog"
+  aria-labelledby="novice-dialog-title"
+  (click)="onDialogClick($event)"
+>
+  <div class="dialog-heading">
+    <h2 id="novice-dialog-title">
+      {{
+        modal() === 'trade'
+          ? side() + ' ' + tradeQuote().symbol
+          : modal() === 'allocation'
+            ? 'Asset allocation'
+            : modal() === 'markets'
+              ? 'Market snapshot'
+              : modal() === 'help'
+                ? 'Help & support'
+                : 'Details'
+      }}
+    </h2>
+    <button type="button" class="icon-button" aria-label="Close dialog" (click)="closeModal()">
+      <app-dashboard-icon name="close" />
+    </button>
+  </div>
+  @if (modal() === 'trade') {
+    <div class="trade-quote">
+      <span
+        >{{ tradeQuote().name }}<strong>{{ tradeQuote().price | currency }}</strong></span
+      ><button class="secondary-button" type="button" (click)="toggleWatch()">
+        {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
+      </button>
+    </div>
+    <form (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+      <div class="side-picker">
+        @for (action of ['Buy', 'Sell']; track action) {
+          <button
+            type="button"
+            [class.selected]="side() === action"
+            (click)="side.set(action); reviewing.set(false); tradeMessage.set('')"
+          >
+            {{ action }}
+          </button>
+        }
+      </div>
+      <label for="novice-shares">Number of shares</label
+      ><input
+        id="novice-shares"
+        type="number"
+        min="1"
+        step="1"
+        required
+        placeholder="0"
+        [value]="quantity()"
+        (input)="
+          quantity.set($any($event.target).value); reviewing.set(false); tradeMessage.set('')
+        "
+      />
+      <div class="trade-total">
+        <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
+      </div>
+      <p>Buying power: {{ buyingPower() | currency }}</p>
+      @if (reviewing()) {
+        <p class="review-confirmation">
+          {{ side() }} {{ quantity() }} shares of {{ tradeQuote().symbol }} at
+          {{ tradeQuote().price | currency }} per share. Review the details before confirming.
+        </p>
+      }
+      <button class="green-button submit-trade" type="submit">
+        {{ reviewing() ? 'Confirm ' : 'Review ' }}{{ side().toLowerCase() }}
+      </button>
+      <p role="status">{{ tradeMessage() }}</p>
+    </form>
+  } @else if (modal() === 'allocation') {
+    <div class="asset-class-list">
+      <div><span>Stocks</span><strong>72%</strong><span>$17,770.15</span></div>
+      <div><span>Cash</span><strong>28%</strong><span>$6,910.27</span></div>
+    </div>
+    <p>
+      Spreading investments across asset classes can help manage concentration. Review how your
+      stock holdings are spread across companies and sectors.
+    </p>
+  } @else if (modal() === 'markets') {
+    <div class="asset-class-list">
+      @for (market of markets; track market.name) {
+        <div>
+          <strong>{{ market.name }}</strong
+          ><span>{{ market.value }}</span
+          ><span class="positive">{{ market.change }}</span>
+        </div>
+      }
+    </div>
+  } @else {
+    <p>
+      Search for a company to open its trade ticket. Use Portfolio to view holdings and Orders to
+      review completed trades.
+    </p>
+    <p>You can change your workspace under Account settings.</p>
+  }
+</dialog>

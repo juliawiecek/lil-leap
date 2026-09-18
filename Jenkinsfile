@@ -3,6 +3,13 @@ pipeline {
 
   options {
     timestamps()
+    skipDefaultCheckout(true)
+    disableConcurrentBuilds()
+    timeout(time: 45, unit: 'MINUTES')
+  }
+
+  tools {
+    nodejs 'NodeJS'
   }
 
   stages {
@@ -41,14 +48,64 @@ pipeline {
       steps {
         sh '''
           ${COMPOSE_CMD} -f docker-compose.yml config -q
-          ${COMPOSE_CMD} -f docker-compose.yml config
         '''
       }
     }
 
-    stage('Build Multi-Stage Image') {
+    // Run all backend JUnit tests before building Docker images.
+    stage('Run Backend Tests') {
       steps {
-        sh 'docker build -t sprint1-greeter-app:jenkins-multistage backend/'
+        sh '''
+          docker run --rm \
+            -v "$WORKSPACE/backend:/app" \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B clean verify
+        '''
+      }
+    }
+
+    stage('Publish Backend Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'backend/target/site/jacoco/**',
+          fingerprint: true
+        )
+      }
+    }
+
+
+    stage('Run Python Tests With Coverage') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/data-pipeline:/app" \
+            -w /app \
+            python:3.12-slim \
+            sh -ec 'python -m venv /tmp/python-venv
+            /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
+            /tmp/python-venv/bin/python -m pytest -v \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=html:htmlcov \
+            --cov-report=xml:coverage.xml'
+            '''
+          }
+        }
+
+    stage('Archive Python Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'data-pipeline/htmlcov/**,data-pipeline/coverage.xml',
+          fingerprint: true
+        )
+      }
+    }
+
+    stage('Build Backend Image') {
+      steps {
+        sh 'docker build --tag "nexttrade:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
       }
     }
 

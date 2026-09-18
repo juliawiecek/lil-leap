@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * frontend onboarding flow.</p>
  */
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
 public class RegistrationController {
 
     /**

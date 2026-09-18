@@ -8,6 +8,10 @@ import com.neueda.leap.onboarding.enums.AccountType;
 import com.neueda.leap.onboarding.enums.TraderLevel;
 import com.neueda.leap.onboarding.service.RegistrationService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -62,7 +66,7 @@ class RegistrationControllerTest {
 
         String json = validPayload();
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
@@ -85,7 +89,7 @@ class RegistrationControllerTest {
 
         String json = validPayload().replace("julia@example.com", "not-an-email");
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isBadRequest());
 
@@ -97,7 +101,7 @@ class RegistrationControllerTest {
 
         String json = validPayload().replace("Password123!", "123");
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isBadRequest());
 
@@ -109,7 +113,7 @@ class RegistrationControllerTest {
 
         String json = validPayload().replace("\"first_name\": \"Julia\"", "\"first_name\": \"\"");
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isBadRequest());
 
@@ -125,10 +129,22 @@ class RegistrationControllerTest {
 
         String json = validPayload();
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("USER_ALREADY_EXISTS"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"phone", "ssn"})
+    void registrationRejectsMissingDatabaseRequiredFields(String field) throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        ObjectNode body = (ObjectNode) json.readTree(validPayload());
+        body.remove(field);
+        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(body)))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(registrationService);
     }
 
     private String validPayload() {

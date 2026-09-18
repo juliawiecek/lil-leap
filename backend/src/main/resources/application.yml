@@ -5,10 +5,13 @@ spring:
   application:
     name: nexttrade-backend
 
+  mvc:
+    log-request-details: false
+
   datasource:
     # PostgreSQL JDBC connection
     # URL format: jdbc:postgresql://[host]:[port]/[database]
-    # Defaults allow docker-compose up without .env file
+    # Development datasource defaults.
     url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}
     password: ${DB_APP_PASSWORD:my_app_password}
@@ -28,8 +31,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        use_sql_comments: true
+        format_sql: false
+        use_sql_comments: false
 
   # Suppress sensitive datasource information in logs
   jpa.show-sql: false
@@ -37,13 +40,17 @@ spring:
 logging:
   level:
     root: INFO
-    # Debug Spring Security for authentication/authorization issues
+    # Never enable HTTP payload, security debug, or SQL bind-value logging.
     org.springframework.security: INFO
-    # Debug Hibernate for SQL/ORM issues (requires spring.jpa.show-sql: true)
+    org.springframework.web: WARN
+    org.springframework.web.filter.CommonsRequestLoggingFilter: OFF
     org.hibernate: INFO
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.extract: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    # Database error details can include rejected row values (including password hashes).
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
 
 # NextTrade custom application configuration
 # Externalized security and session settings
@@ -60,5 +67,13 @@ nexttrade:
 
 server:
   port: 8080
+  tomcat:
+    accesslog:
+      enabled: false
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
   servlet:
     context-path: /api/v1

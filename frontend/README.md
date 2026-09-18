@@ -22,16 +22,31 @@ Angular conversion of the approved NextTrade animated landing and authentication
 
 ## Run locally
 
-```bash
-npm install
+Install **Node.js 24.15.0 or a later 24.x release** (includes npm), then clone
+this repository. From the project folder (`lil-leap`):
+
+```powershell
+cd frontend
+npm ci
 npm start
 ```
 
-Then open `http://localhost:4200`.
+Open **http://localhost:4200** after the build finishes.
+Keep the terminal open. Press **Ctrl+C** to stop the app.
+On later runs, run `npm start` from `frontend`.
+Run `npm ci` again if you pull changes to `package-lock.json`.
+
+### Common problems
+
+- **Missing `package.json`:** run npm commands inside `frontend`.
+- **Connection refused:** check that `npm start` is still running.
+- **Port already in use:** stop the previous server with **Ctrl+C**.
+
+For backend startup, follow the [backend setup guide](../backend/README.md#local-development).
 
 ## Production build
 
-```bash
+```powershell
 npm run build
 ```
 
@@ -44,3 +59,18 @@ The compiled site is written to `dist/nexttrade-angular/browser`.
 - `src/app/app.ts`: Angular state, interactions, and chart rendering
 
 The current authentication controls are front-end placeholders. They do not send credentials or connect to a brokerage backend yet.
+
+## Error logging
+
+Bootstrap and Angular/global runtime errors log fixed event messages, never raw
+errors, stacks, HTTP payloads, or form data.
+
+Run `npm test` (Node 24+, or Node 22.18+) for application startup and secret-bearing
+error tests, then `npm run build` for the production compilation check.
+
+Deploy `dist/nexttrade-angular/browser` on a static host. The development server
+is not a production host. Keep static-host/proxy access logs free of query strings,
+cookies, Authorization headers, and request/response bodies.
+
+Future API integration must not log credentials or store tokens in URLs.
+Backend logging setup is in [backend/README.md](../backend/README.md).

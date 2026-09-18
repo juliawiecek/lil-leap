@@ -67,7 +67,7 @@
             <div class="review-heading"><h3>{{ section.title }}</h3><button class="back-link" type="button" (click)="goTo(i)">Edit<span class="sr-only"> {{ section.title }}</span></button></div>
             <dl>
               @for (field of section.fields; track field.id) {
-                @if (visible(field)) { <div><dt>{{ field.label }}</dt><dd>{{ display(field) }}</dd></div> }
+                @if (visible(field)) { <div [class.review-detail]="!!field.when"><dt>{{ field.label }}</dt><dd>{{ display(field) }}</dd></div> }
               }
             </dl>
           </section>

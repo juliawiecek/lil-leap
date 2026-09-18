@@ -40,12 +40,14 @@ dt { color: rgba(238,238,238,.5); } dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; gap: 24px; max-width: 740px; margin: auto; } .profile-sidebar { position: static; } .profile-sidebar > .back-link { margin-bottom: 18px; } h1 { font-size: 36px; } h1 br { display: none; } ol { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 20px 0; } li { font-size: 11px; gap: 7px; } }
 @media (max-width: 560px) { .profile-layout { padding: 20px 18px 36px; } .profile-panel { padding: 24px 18px; } .fields { grid-template-columns: 1fr; } h2 { font-size: 25px; } dl > div { grid-template-columns: 1fr; gap: 2px; } }
 /* Match onboarding to the shared NextTrade typography system. */
-h1, h2, h3 { font-family: 'Space Grotesk', var(--font-ui); font-weight: 600; }
-h1 { letter-spacing: -0.04em; line-height: 1.1; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; }
+h3 { font-family: var(--font-ui); font-weight: 600; }
+h1 { letter-spacing: -0.025em; line-height: 1.1; }
 h2 { letter-spacing: -0.03em; line-height: 1.2; }
 h3 { letter-spacing: -0.015em; }
 .eyebrow { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; }
 p { font-size: 15px; line-height: 1.65; }
+.subtitle { font-size: 14px; line-height: 1.55; }
 label { font-size: 14px; font-weight: 500; }
 input, select { font-size: 16px; font-weight: 400; }
 small { font-size: 13px; line-height: 1.55; }
@@ -56,7 +58,7 @@ li span { font-variant-numeric: tabular-nums; }
 .disclosure-fields .disclosure-question {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 12rem);
   column-gap: 24px;
   padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, .1);
@@ -64,11 +66,13 @@ li span { font-variant-numeric: tabular-nums; }
 .disclosure-question label { margin: 0; align-self: center; }
 .disclosure-question select { grid-column: 2; grid-row: 1 / 3; align-self: center; }
 .disclosure-question small { grid-column: 1; }
-.disclosure-fields .disclosure-detail { grid-column: 1 / -1; }
+.disclosure-fields .disclosure-detail { grid-column: 1 / -1; padding-inline-start: 24px; }
+.review-detail dt { padding-inline-start: 24px; }
 @media (max-width: 560px) {
   .disclosure-fields .disclosure-question { grid-template-columns: 1fr; gap: 8px; }
   .disclosure-question select { grid-column: 1; grid-row: auto; }
   .disclosure-question small { margin-top: 0; }
+  .review-detail dd { padding-inline-start: 24px; }
 }
 @media (max-width: 900px) { li { font-size: 12px; } }
 

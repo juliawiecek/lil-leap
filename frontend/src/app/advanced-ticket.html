@@ -1,0 +1,166 @@
+<section class="panel order-ticket" aria-label="Trade ticket">
+  <div class="ticket-tabs">
+    @for (tab of ['Trade', 'Order Book', 'Options', 'Alerts']; track tab) {
+      <button
+        type="button"
+        [class.active]="desk().ticketTab() === tab"
+        (click)="desk().ticketTab.set(tab)"
+      >
+        {{ tab }}
+      </button>
+    }
+  </div>
+  <div class="ticket-body">
+    @if (desk().ticketTab() === 'Trade') {
+      <form (submit)="$event.preventDefault(); desk().reviewOrder()">
+        <div class="side-switch">
+          @for (action of ['Buy', 'Sell']; track action) {
+            <button
+              type="button"
+              [class.active]="desk().side() === action"
+              (click)="desk().side.set(action); desk().message.set('')"
+            >
+              {{ action }}
+            </button>
+          }
+        </div>
+        <label for="pro-symbol">Symbol</label>
+        <div class="symbol-select">
+          <select
+            id="pro-symbol"
+            [value]="desk().selected().symbol"
+            (change)="desk().choose(desk().quote($any($event.target).value))"
+          >
+            @for (q of desk().quotes; track q.symbol) {
+              <option>{{ q.symbol }}</option>
+            }</select
+          ><span>{{ desk().selected().name }}</span
+          ><app-dashboard-icon name="search" />
+        </div>
+        <label for="pro-type">Order Type</label
+        ><select
+          id="pro-type"
+          [value]="desk().orderType()"
+          (change)="desk().orderType.set($any($event.target).value); desk().message.set('')"
+        >
+          <option>Limit</option>
+          <option>Market</option></select
+        ><label for="pro-quantity">Quantity</label
+        ><input
+          id="pro-quantity"
+          type="number"
+          required
+          min="1"
+          step="1"
+          [value]="desk().quantity()"
+          (input)="desk().quantity.set($any($event.target).value); desk().message.set('')"
+        />
+        @if (desk().orderType() === 'Limit') {
+          <label for="pro-limit">Limit Price</label
+          ><input
+            id="pro-limit"
+            type="number"
+            required
+            min="0.01"
+            step="0.01"
+            [value]="desk().limitPrice()"
+            (input)="desk().limitPrice.set($any($event.target).value); desk().message.set('')"
+          />
+        }
+        <label for="pro-tif">Time in Force</label
+        ><select
+          id="pro-tif"
+          [value]="desk().tif()"
+          (change)="desk().tif.set($any($event.target).value)"
+        >
+          <option>Day</option>
+          <option>GTC</option>
+        </select>
+        <div class="bracket-toggles">
+          <label
+            ><input
+              type="checkbox"
+              [checked]="desk().takeProfit()"
+              (change)="desk().takeProfit.set($any($event.target).checked)"
+            />Take Profit</label
+          ><label
+            ><input
+              type="checkbox"
+              [checked]="desk().stopLoss()"
+              (change)="desk().stopLoss.set($any($event.target).checked)"
+            />Stop Loss</label
+          >
+        </div>
+        @if (desk().takeProfit()) {
+          <label for="profit-price">Take Profit Price</label
+          ><input
+            id="profit-price"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+            [value]="desk().profitPrice()"
+            (input)="desk().profitPrice.set($any($event.target).value)"
+          />
+        }
+        @if (desk().stopLoss()) {
+          <label for="stop-price">Stop Loss Price</label
+          ><input
+            id="stop-price"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+            [value]="desk().stopPrice()"
+            (input)="desk().stopPrice.set($any($event.target).value)"
+          />
+        }
+        <div class="cost-summary">
+          <div>
+            <span>Estimated Cost</span><span>{{ desk().cost() | currency }}</span>
+          </div>
+          <div>
+            <span>Est. Fees</span><span>{{ desk().fees() | currency }}</span>
+          </div>
+          <div>
+            <strong>Total</strong><strong>{{ desk().total() | currency }}</strong>
+          </div>
+        </div>
+        <button class="primary-button review-button" type="submit">Review Order</button>
+      </form>
+    } @else if (desk().ticketTab() === 'Order Book') {
+      <h2>{{ desk().selected().symbol }} Order Book</h2>
+      <div class="book-head"><span>Bid</span><span>Size</span><span>Ask</span></div>
+      @for (offset of [1, 2, 3, 4, 5, 6, 7, 8]; track offset) {
+        <div class="book-row">
+          <span class="gain">{{ desk().selected().price - offset * 0.01 | number: '1.2-2' }}</span
+          ><span>{{ offset * 100 }}</span
+          ><span class="loss">{{ desk().selected().price + offset * 0.01 | number: '1.2-2' }}</span>
+        </div>
+      }
+    } @else if (desk().ticketTab() === 'Alerts') {
+      <h2>Price alerts</h2>
+      <label for="alert-price">{{ desk().selected().symbol }} target price</label
+      ><input
+        id="alert-price"
+        type="number"
+        min="0.01"
+        step="0.01"
+        [value]="desk().alertPrice()"
+        (input)="desk().alertPrice.set($any($event.target).value)"
+      /><button class="primary-button" type="button" (click)="desk().createAlert()">
+        Create alert
+      </button>
+      @for (alert of desk().alerts(); track $index) {
+        <p>{{ alert.symbol }} · {{ alert.price | currency }}</p>
+      }
+    } @else {
+      <h2>{{ desk().selected().symbol }} Options</h2>
+      <p class="ticket-note">Options contracts are not connected to this workspace yet.</p>
+      <button type="button" class="secondary-button" (click)="desk().ticketTab.set('Trade')">
+        Return to stock trading
+      </button>
+    }
+    <p class="ticket-message" role="status">{{ desk().message() }}</p>
+  </div>
+</section>

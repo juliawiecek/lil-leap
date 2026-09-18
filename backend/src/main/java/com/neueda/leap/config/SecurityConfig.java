@@ -5,6 +5,10 @@ import com.neueda.leap.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -13,16 +17,23 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 /**
  * Configuration class for application security-related beans.
  *
  * <p>Provides the password encoder used to securely hash user passwords,
  * and the HTTP security filter chain that enforces stateless JWT-based
- * authentication on every route except registration and login.</p>
+ * authentication for user, portfolio, and order APIs. Registration, login,
+ * and password-reset endpoints allow anonymous requests. Unsupported financial
+ * methods and object-ID routes are denied; other routes require authentication.</p>
  */
 @Configuration
 public class SecurityConfig {
+
+    /** Creates the Spring Security configuration. */
+    public SecurityConfig() {
+    }
 
     /**
      * Creates and returns a delegating password encoder.
@@ -42,7 +53,7 @@ public class SecurityConfig {
      *
      * <p>Sessions are stateless (auth state lives entirely in the JWT), CSRF
      * protection is disabled since there are no cookie-based sessions to
-     * protect, registration and login are open to anonymous callers, and the
+     * protect, registration, login, and password reset are open to anonymous callers, and the
      * {@link JwtAuthenticationFilter} runs ahead of Spring's own username/password
      * filter so a valid bearer token is recognized before any other authentication
      * mechanism is considered.</p>
@@ -63,11 +74,46 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .requestCache(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .permissionsPolicy(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()")))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/users", "/auth/login").permitAll()
+                        .requestMatchers(
+                                "/users",
+                                "/auth/login",
+                                "/auth/password-reset/**"
+                        ).permitAll()
+                        // These collections accept no caller-selected scope. Identity comes from JWT.
+                        .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
+                        // Submission verifies account ownership in OrderSubmissionService.
+                        .requestMatchers(HttpMethod.POST, "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
+                        // Other financial writes and object-ID routes are not implemented yet.
+                        .requestMatchers("/holdings", "/holdings/**", "/cash", "/cash/**", "/orders", "/orders/**")
+                        .denyAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"ACCESS_DENIED\",\"message\":\"Access is denied.\"}");
+                        })
+                        .authenticationEntryPoint(
                         (request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

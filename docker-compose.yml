@@ -91,6 +91,15 @@ secrets:
   backend_tls_keystore:
     file: ${TLS_KEYSTORE_PATH:-./certs/backend.p12}
 
+  # Local SMTP server used to capture password reset emails during development.
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      # Spring Boot sends email through SMTP on port 1025.
+      - "1025:1025"
+      # Mailpit's browser inbox is available on port 8025.
+      - "8025:8025"
+
 volumes:
   db_data:
     # Named volume: persists Postgres data across `docker compose down` and

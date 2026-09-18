@@ -8,7 +8,7 @@ Every developer runs an isolated PostgreSQL database using the same version-cont
 
 ### Schema and Versioning
 
-- **Single Source of Truth**: [db/finalized-schema.sql](finalized-schema.sql) contains the complete 15-table relational model
+- **Single Source of Truth**: [db/finalized-schema.sql](finalized-schema.sql) contains the complete 17-table relational model
 - **Owner Role**: `main` (or `DB_ADMIN_USERNAME`) creates and owns all schema objects
 - **Application Role**: `app_user` (or `DB_APP_USERNAME`) has restricted DML permissions only (SELECT, INSERT, UPDATE, DELETE) on runtime tables
 - **Migrations**: Future schema changes must be versioned (e.g., `03-migration-name.sql`) and applied by the `main` role
@@ -22,7 +22,7 @@ Every developer runs an isolated PostgreSQL database using the same version-cont
 
 ## Configuration
 
-All database connection values are environment-based. Default values allow `docker compose up` without configuration.
+All database connection values are environment-based. Set the required credentials in `.env` before starting Compose.
 
 ### Environment Variables
 
@@ -58,13 +58,15 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 
 ## Database Schema
 
-### 15 Core Tables
+### 17 Core Tables
 
 | Table | Purpose |
 |-------|---------|
 | `users` | Authentication only (email, password_hash, login security) |
 | `customer_profiles` | Customer identity (name, address, DOB, encrypted SSN) |
 | `financial_profiles` | KYC, risk profile, employment, regulatory disclosures |
+| `analyst_profiles` | Internal analyst identity |
+| `password_reset_tokens` | Hashed, expiring password-reset tokens |
 | `sessions` | Time-limited, revocable user sessions |
 | `instruments` | Tradable instruments (stocks, FX, crypto) with sector |
 | `quotes` | Market prices (bid/ask, provenance tracking, synthetic flag) |
@@ -115,7 +117,7 @@ docker compose logs -f db
 ### Verify Initialization
 
 ```bash
-# List all tables (15 expected)
+# List all tables (17 expected)
 docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "\dt"
 
 # List all views (5 expected)
@@ -126,7 +128,7 @@ docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "\dv"
 
 ```bash
 # Verify schema completeness and hardening constraints
-docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -f /docker-entrypoint-initdb.d/01-schema.sql < db/tests/001_schema_verification.sql
+docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" < db/tests/001_schema_verification.sql
 ```
 
 ### Run Role Integration Tests
@@ -153,7 +155,7 @@ DB_HOST=localhost DB_PORT=5432 DB_NAME="$DB_NAME" \
 
 ```bash
 # Test transaction rollback and ledger integrity
-docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -f db/tests/003_atomicity_test.sql
+docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" < db/tests/003_atomicity_test.sql
 ```
 
 ## Volume Persistence
@@ -208,21 +210,22 @@ docker compose down -v  # Delete volume
 docker compose up -d db # Start fresh
 ```
 
-Or, if you want to keep the container but reset the database:
+To reapply only application-role permissions on an existing database (without resetting data):
 
 ```bash
-docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" \
-  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" \
-  -f db/finalized-schema.sql \
-  -f db/init-app-role.sh
+docker compose exec -T db bash /docker-entrypoint-initdb.d/02-app-role.sh
 ```
+
+The role script uses safely quoted identifiers and passwords. It removes public-schema
+CREATE permission and does not grant access to future tables automatically; grant new
+runtime tables explicitly after review. Schema changes on existing volumes require migrations.
 
 ## Important Notes
 
 - **Plaintext SSN**: Never committed, logged, or printed. Always encrypt for storage and transit.
-- **Default Credentials**: `.env.example` and `docker-compose.yml` use safe defaults. Replace before production use.
+- **Default Credentials**: `env.example` documents required credentials. Supply private values before startup.
 - **Volume Semantics**: `docker compose down -v` is **destructive**. Use only when you intend to reset.
-- **Init Scripts**: Run once per empty volume. To re-apply manually, use `psql -f` or `psql -c`.
+- **Init Scripts**: Run once per empty volume. Apply SQL files with `psql -f`; run shell scripts with `bash`. Do not pass shell scripts to `psql`.
 
 ## See Also
 
