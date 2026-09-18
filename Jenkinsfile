@@ -72,6 +72,44 @@ pipeline {
       }
     }
 
+    stage('Publish Backend Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'backend/target/site/jacoco/**',
+          fingerprint: true
+        )
+      }
+    }
+
+
+    stage('Run Python Tests With Coverage') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/data-pipeline:/app" \
+            -w /app \
+            python:3.12-slim \
+            sh -ec 'python -m venv /tmp/python-venv
+            /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
+            /tmp/python-venv/bin/python -m pytest -v \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=html:htmlcov \
+            --cov-report=xml:coverage.xml'
+            '''
+          }
+        }
+
+    stage('Archive Python Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'data-pipeline/htmlcov/**,data-pipeline/coverage.xml',
+          fingerprint: true
+        )
+      }
+    }
+
     stage('Unit Tests - insights') {
       steps {
         sh "mvn -f ${INSIGHTS_POM} -B test"

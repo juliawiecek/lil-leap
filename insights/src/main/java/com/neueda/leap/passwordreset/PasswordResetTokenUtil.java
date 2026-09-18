@@ -15,6 +15,10 @@ import java.util.HexFormat;
 @Component
 public class PasswordResetTokenUtil {
 
+    /** Creates a token utility backed by a cryptographically secure random source. */
+    public PasswordResetTokenUtil() {
+    }
+
     private static final int TOKEN_BYTE_LENGTH = 32;
 
     private final SecureRandom secureRandom = new SecureRandom();

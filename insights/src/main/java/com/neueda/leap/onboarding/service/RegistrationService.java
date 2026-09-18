@@ -13,6 +13,9 @@ public interface RegistrationService {
      *
      * @param request the registration payload
      * @return a representation of the newly registered user
+     * @throws com.neueda.leap.user.exception.UserAlreadyExistsException if the
+     *         normalized email is already registered
+     * @throws IllegalArgumentException if the date of birth is missing or the user is under 18
      */
     UserResponse register(RegisterUserRequest request);
 }

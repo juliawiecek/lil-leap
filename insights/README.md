@@ -1,6 +1,7 @@
-# Lil Leap Backend
+# NextTrade Backend
 
-Spring Boot service for user onboarding and authentication.
+Spring Boot service for onboarding, authentication, password resets, portfolio queries,
+and order submission.
 
 ## Package Layout
 
@@ -10,7 +11,10 @@ com.neueda.leap
 |- common.exception      # Cross-cutting exception handlers
 |- config                # Application configuration
 |- onboarding            # Registration API, DTOs, onboarding entities and service
-|- order                 # Example order model and validation service
+|- order                 # Order submission and validation
+|- passwordreset         # Password reset tokens and email delivery
+|- portfolio             # Client-owned holdings, cash, and order history
+|- security              # JWT authentication and log masking
 `- user                  # Authentication entity, repository, and auth exceptions
 ```
 
@@ -18,13 +22,18 @@ com.neueda.leap
 
 - `onboarding`: Handles registration requests and persists profile/financial/account data.
 - `user`: Stores authentication-focused user data (email, password hash, lock metadata).
-- `order`: Contains a simple order model and validation logic.
+- `order`: Handles authenticated, account-scoped order submission and idempotent retries.
+- `passwordreset`: Delivers reset tokens by email and validates password changes.
+- `portfolio`: Returns holdings, cash balances, and orders belonging to the caller.
 
 ## Local Development
 
 Requirements:
+
 - Java 21
 - Maven 3.9+
+
+Run the following commands from `backend`.
 
 Run tests:
 
@@ -34,7 +43,9 @@ mvn clean test
 
 Run the application:
 
-Configure the TLS certificate first as described below. Plain HTTP is not supported.
+Configure the database environment using [env.example](../env.example).
+Set `DB_HOST=localhost` when connecting to the Docker database from the host.
+The backend listens at `http://localhost:8080/api/v1`.
 
 ```bash
 mvn spring-boot:run
@@ -46,58 +57,50 @@ Build a jar:
 mvn clean package
 ```
 
+The executable jar is written to `target/nexttrade.jar`.
+
 ## API
 
-Registration endpoint:
-- `POST /api/v1/users`
+All paths below include the `/api/v1` context prefix and use `http://localhost:8080` for local development.
 
-The request body is defined in `com.neueda.leap.onboarding.dto.RegisterUserRequest`.
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/users` | Register a user |
+| POST | `/api/v1/auth/login` | Authenticate and issue a JWT |
+| POST | `/api/v1/auth/password-reset/request` | Request a reset email |
+| POST | `/api/v1/auth/password-reset/confirm` | Set a new password using a reset token |
+| GET | `/api/v1/users/me` | Read the authenticated user |
+| GET | `/api/v1/holdings` | Read the caller's holdings |
+| GET | `/api/v1/cash` | Read the caller's cash balances |
+| GET | `/api/v1/orders` | Read the caller's order history |
+| POST | `/api/v1/orders` | Submit an order for an owned account |
+
+The user-profile, portfolio, and order endpoints require a Bearer JWT.
+
+The registration request body is defined in `com.neueda.leap.onboarding.dto.RegisterUserRequest`.
 The response body is defined in `com.neueda.leap.onboarding.dto.UserResponse`.
 
-## TS-02.4: HTTPS and safe logging (BR-02)
+## Javadocs
 
-### TLS setup
-
-The backend terminates TLS directly on port 8080, with TLS 1.2 and 1.3 only.
-No plaintext connector is installed. Missing or invalid certificate configuration
-prevents startup. A security filter also rejects insecure requests with a fixed
-403 `HTTPS_REQUIRED` response before reading credentials; it does not redirect
-credential-bearing requests. `Forwarded` and `X-Forwarded-*` headers are ignored.
-
-Provide a PKCS12 keystore containing the server private key and certificate chain:
-
-| Setting | Local application | Docker Compose |
-| --- | --- | --- |
-| Keystore | `TLS_KEYSTORE` (default `file:./certs/backend.p12`, relative to working directory) | `TLS_KEYSTORE_PATH` (default `./certs/backend.p12`, relative to repository root), mounted read-only as a Docker secret |
-| Keystore password | `TLS_KEYSTORE_PASSWORD` | `TLS_KEYSTORE_PASSWORD` (required) |
-
-For local development, run this from `backend` (keytool prompts for the password):
+Generate and validate the production Java API documentation from `backend`:
 
 ```powershell
-New-Item -ItemType Directory -Force certs
-keytool -genkeypair -alias backend -keyalg RSA -keysize 3072 -storetype PKCS12 -keystore certs/backend.p12 -validity 30 -dname "CN=localhost" -ext "SAN=dns:localhost,ip:127.0.0.1"
-# Set TLS_KEYSTORE_PASSWORD in your private environment, matching the prompted password.
-mvn spring-boot:run
+mvn javadoc:javadoc
 ```
 
-Trust the development certificate locally. Production requires a certificate
-issued by your trusted CA for the deployed hostname. Keep the keystore and its
-password outside version control; inject the password through the deployment's
-secret manager. For Compose, set `TLS_KEYSTORE_PATH` to the supplied keystore and
-use `docker compose up --build`. The app remains internal to the Docker network.
-If publishing it, publish only its TLS port. A load balancer must use TLS
-passthrough, or connect to the backend using HTTPS with certificate verification.
-Do not enable forwarded-header trust or turn off backend TLS to accommodate a proxy.
+Open `target/site/apidocs/index.html`. The command checks public/protected API
+documentation (including inherited docs) and fails on Javadoc warnings or errors.
+Document parameters, return values, relevant exceptions, ownership rules, and
+retry behavior when changing an API. Private helpers and test methods are outside
+this documentation check. This check is separate from `mvn test` and is not yet
+part of the Jenkins pipeline.
 
-With the existing context path and controller mappings, login is
-`https://localhost:8080/api/v1/auth/login`; registration and `/me` currently resolve
-to `/api/v1/api/v1/users` and `/api/v1/api/v1/users/me`. This task preserves those mappings.
+## Safe logging and API security (BR-02)
 
 ### Headers and logging
 
-HTTPS API responses include HSTS (one year, including subdomains), `nosniff`, frame
-denial, an API-only CSP, no-referrer, disabled camera/microphone/geolocation, and
-no-store caching. Ensure all subdomains support HTTPS before deploying this HSTS policy.
+API responses include `nosniff`, frame denial, an API-only CSP, no-referrer,
+disabled camera/microphone/geolocation, and no-store caching.
 
 - Request-detail, access, SQL statement, bind/extract, and SQL error-detail logging
   are disabled. Do not enable HTTP/security DEBUG/TRACE or request/response body logging.
@@ -119,19 +122,80 @@ no-store caching. Ensure all subdomains support HTTPS before deploying this HSTS
 
 ### Verification
 
-`mvn clean test` generates a temporary localhost certificate using the JDK's keytool;
-no database, deployment certificate, or Docker daemon is required. Tests cover:
+`mvn clean test` runs without a database or Docker daemon. Tests cover:
 
-- Real TLS 1.2/1.3 login and `/me`, the connector's enabled protocols, and plaintext rejection.
-- Spoofed forwarding headers and rejection before JWT validation or service calls.
+- HTTP login and authenticated `/me` requests against the embedded server.
 - Security headers, safe validation/parsing/unexpected errors, and DTO masking.
 - Real console and rotating-file output, including exceptions and issued tokens.
 
-The frontend has separate security tests (`npm test`) and an HTTPS development server.
-This transport/logging control supports BR-02; position, cash and order ownership checks
-remain the responsibility of their API/service authorization controls.
+The frontend has separate security tests (`npm test`) and an HTTP development server.
+Position, cash and order ownership checks remain the responsibility of their
+API/service authorization controls.
 
-Implementation references: [Spring Boot TLS and forwarding](https://docs.spring.io/spring-boot/3.3/how-to/webserver.html),
-[Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
+Implementation references: [Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
 [Logback masking converters](https://logback.qos.ch/manual/layouts.html).
 
+## TS-03.3: Automated cross-client isolation tests (BR-02)
+
+Run the suite with Java 21:
+
+```bash
+mvn -B test -Dtest=CrossClientAccessIntegrationTest
+# All backend regression tests (also run by Jenkins):
+mvn -B clean verify
+```
+
+`CrossClientAccessIntegrationTest` uses the production security configuration, real
+signed JWTs, financial controller, query service and JDBC queries against an isolated
+H2 database. It does not mock authorization or financial data. Each case creates Alice,
+Bob and an accountless client; Alice and Bob each have two accounts with different
+balances, quantities and orders but the same instrument. Transactions roll fixtures
+back between cases. Tokens are issued by the real JWT service for these fixture users;
+login/password verification has its own tests.
+
+| Coverage | Expected result |
+| --- | --- |
+| Each client's holdings, cash and orders | 200; all and only that client's accounts/data |
+| Accountless client | 200; empty collections |
+| User/client/account/order query selectors, including duplicate values | 403 `ACCESS_DENIED` |
+| Guessed object paths, including nonexistent IDs | Same generic 403 |
+| Unsupported financial writes and object-ID paths | 403; financial data unchanged |
+| Another client's order cancellation attempt | 403; stored data unchanged |
+| Spoofed identity headers | Cannot override the signed JWT identity |
+| Missing/invalid token or an edited JWT subject | 401; never treated as an authorized client |
+
+### Current API boundary
+
+`GET /holdings`, `GET /cash`, and `GET /orders` return only the signed-in client's data.
+`POST /orders` submits an order for an account owned by that client; unknown and other
+clients' accounts both return 404. Query selectors remain forbidden. Other financial
+writes, object-ID routes and cancellation are denied by security configuration.
+All routes use the `/api/v1` context prefix.
+
+An initial submission returns 201 with `SUBMITTED` status. Retrying the same account
+and `clientReference` returns the existing order with 200, including concurrent retries.
+Submission creates no fill. PostgreSQL `ON CONFLICT DO NOTHING` handles the race without
+aborting the transaction; a subsequent read retrieves the winning order.
+
+### PostgreSQL contract tests
+
+The ordinary test suite uses H2 and does not validate PostgreSQL-specific persistence.
+`PostgresContractTest` additionally covers all net-worth bracket values, JSONB objects,
+registration through the real security chain, owned/foreign order submissions, and
+concurrent idempotent retries using real PostgreSQL transactions.
+
+Initialize a **disposable test database** with `db/finalized-schema.sql` and
+`db/init-app-role.sh`, then run from `backend` with the restricted application role:
+
+```powershell
+$env:TEST_POSTGRES_URL = 'jdbc:postgresql://localhost:5432/nexttrade_test'
+$env:TEST_POSTGRES_USER = 'app_user'
+# Set TEST_POSTGRES_PASSWORD to the test application role's password.
+mvn -B test
+```
+
+These tests are skipped when `TEST_POSTGRES_URL` is absent. Most fixtures roll back;
+the concurrency case commits its fixtures and deletes them afterward. Use a disposable
+database so an interrupted run cannot leave fixtures in application data.
+
+The separate SQL checks in `db/tests` cover schema, ledger atomicity and client scoping.

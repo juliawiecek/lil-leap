@@ -133,7 +133,7 @@ class CrossClientAccessIntegrationTest {
         UUID victim = otherClient(client);
         assertOwnData(client, path, authenticated(get(API + path), client)
                 .header("X-User-Id", victim).header("X-Client-Id", victim)
-                .header("X-Account-Id", ACCOUNTS.get(victim).get(0)));
+                .header("X-Account-Id", ACCOUNTS.get(victim).getFirst()));
     }
 
     @ParameterizedTest
@@ -141,8 +141,8 @@ class CrossClientAccessIntegrationTest {
     void clientAndObjectSelectorsAreExplicitlyForbidden(UUID client, String path, String selector) throws Exception {
         var before = snapshot();
         UUID victim = otherClient(client);
-        UUID target = selector.startsWith("account") ? ACCOUNTS.get(victim).get(0)
-                : selector.startsWith("order") ? orderId(ACCOUNTS.get(victim).get(0)) : victim;
+        UUID target = selector.startsWith("account") ? ACCOUNTS.get(victim).getFirst()
+                : selector.startsWith("order") ? orderId(ACCOUNTS.get(victim).getFirst()) : victim;
         assertDenied(authenticated(get(API + path), client).param(selector, target.toString()));
         assertThat(snapshot()).isEqualTo(before);
     }
@@ -168,7 +168,7 @@ class CrossClientAccessIntegrationTest {
     void crossClientWritesAreForbiddenAndNeitherClientsDataChanges(
             UUID client, String path, String method, boolean objectPath) throws Exception {
         UUID victim = otherClient(client);
-        UUID account = ACCOUNTS.get(victim).get(0);
+        UUID account = ACCOUNTS.get(victim).getFirst();
         String uri = API + path + (objectPath ? "/" + targetId(victim, path) : "");
         var before = snapshot();
         String body = json.writeValueAsString(Map.of("userId", victim, "clientId", victim,
@@ -186,7 +186,7 @@ class CrossClientAccessIntegrationTest {
     @MethodSource("clients")
     void cancellationOfAnotherClientsOrderIsForbidden(UUID client) throws Exception {
         var before = snapshot();
-        UUID order = orderId(ACCOUNTS.get(otherClient(client)).get(0));
+        UUID order = orderId(ACCOUNTS.get(otherClient(client)).getFirst());
         assertDenied(authenticated(post(API + "/orders/" + order + "/cancel"), client));
         assertThat(snapshot()).isEqualTo(before);
     }
@@ -194,10 +194,10 @@ class CrossClientAccessIntegrationTest {
     @ParameterizedTest
     @MethodSource("collections")
     void missingAndInvalidTokensAre401RatherThanOwnershipDenials(String path) throws Exception {
-        mvc.perform(secure(get(API + path))).andExpect(status().isUnauthorized());
-        mvc.perform(secure(get(API + path)).header("Authorization", "Bearer invalid-token"))
+        mvc.perform(withContextPath(get(API + path))).andExpect(status().isUnauthorized());
+        mvc.perform(withContextPath(get(API + path)).header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
-        mvc.perform(secure(post(API + path))).andExpect(status().isUnauthorized());
+        mvc.perform(withContextPath(post(API + path))).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -208,7 +208,7 @@ class CrossClientAccessIntegrationTest {
         String forged = parts[0] + "." + Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(json.writeValueAsBytes(payload)) + "." + parts[2];
         for (String path : COLLECTIONS) {
-            mvc.perform(secure(get(API + path)).header("Authorization", "Bearer " + forged))
+            mvc.perform(withContextPath(get(API + path)).header("Authorization", "Bearer " + forged))
                     .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
         }
     }
@@ -237,15 +237,15 @@ class CrossClientAccessIntegrationTest {
     private void assertDenied(MockHttpServletRequestBuilder request) throws Exception {
         mvc.perform(request).andExpect(status().isForbidden())
                 .andExpect(content().json("{\"error\":\"ACCESS_DENIED\",\"message\":\"Access is denied.\"}", true))
-                .andExpect(header().exists("Strict-Transport-Security"));
+                .andExpect(header().doesNotExist("Strict-Transport-Security"));
     }
 
     private MockHttpServletRequestBuilder authenticated(MockHttpServletRequestBuilder request, UUID client) {
-        return secure(request).header("Authorization", "Bearer " + token(client));
+        return withContextPath(request).header("Authorization", "Bearer " + token(client));
     }
 
-    private MockHttpServletRequestBuilder secure(MockHttpServletRequestBuilder request) {
-        return request.contextPath(API).secure(true);
+    private MockHttpServletRequestBuilder withContextPath(MockHttpServletRequestBuilder request) {
+        return request.contextPath(API);
     }
 
     private String token(UUID client) {
@@ -255,7 +255,7 @@ class CrossClientAccessIntegrationTest {
     private static UUID otherClient(UUID client) { return client.equals(ALICE) ? BOB : ALICE; }
     private static UUID orderId(UUID account) { return new UUID(0, account.getLeastSignificantBits() + 100); }
     private static UUID targetId(UUID client, String path) {
-        UUID account = ACCOUNTS.get(client).get(0);
+        UUID account = ACCOUNTS.get(client).getFirst();
         return path.equals("/orders") ? orderId(account) : account;
     }
 

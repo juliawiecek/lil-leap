@@ -22,20 +22,31 @@ Angular conversion of the approved NextTrade animated landing and authentication
 
 ## Run locally
 
-```bash
-npm install
+Install **Node.js 24.15.0 or a later 24.x release** (includes npm), then clone
+this repository. From the project folder (`lil-leap`):
+
+```powershell
+cd frontend
+npm ci
 npm start
 ```
 
-Then open `https://localhost:4200`. The development server uses TLS by default.
-For a locally trusted certificate, use
-`npm start -- --ssl-cert /path/to/localhost.crt --ssl-key /path/to/localhost.key`.
-Without supplied files, the Angular CLI generates a development certificate that
-must be trusted locally. Keep private keys outside version control.
+Open **http://localhost:4200** after the build finishes.
+Keep the terminal open. Press **Ctrl+C** to stop the app.
+On later runs, run `npm start` from `frontend`.
+Run `npm ci` again if you pull changes to `package-lock.json`.
+
+### Common problems
+
+- **Missing `package.json`:** run npm commands inside `frontend`.
+- **Connection refused:** check that `npm start` is still running.
+- **Port already in use:** stop the previous server with **Ctrl+C**.
+
+For backend startup, follow the [backend setup guide](../backend/README.md#local-development).
 
 ## Production build
 
-```bash
+```powershell
 npm run build
 ```
 
@@ -61,21 +72,17 @@ Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `
 
 The current authentication controls are front-end placeholders. They do not send credentials or connect to a brokerage backend yet.
 
-## TS-02.4 security controls
+## Error logging
 
-The application only bootstraps on HTTPS. On HTTP it displays a secure-connection
-notice before mounting any credential form. Bootstrap and Angular/global runtime
-errors log fixed event messages, never raw errors, stacks, HTTP payloads, or form data.
+Bootstrap and Angular/global runtime errors log fixed event messages, never raw
+errors, stacks, HTTP payloads, or form data.
 
-Run `npm test` (Node 24+, or Node 22.18+) for HTTP/HTTPS bootstrap and secret-bearing
+Run `npm test` (Node 24+, or Node 22.18+) for application startup and secret-bearing
 error tests, then `npm run build` for the production compilation check.
 
-Deploy `dist/nexttrade-angular/browser` on a TLS-only static host with TLS 1.2/1.3.
-The development server is not a production host. Configure HSTS, `X-Content-Type-Options:
-nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a CSP appropriate
-for Angular at that host. Do not serve credential pages over HTTP; the bootstrap
-guard is defense in depth. Keep static-host/proxy access logs free of query strings,
+Deploy `dist/nexttrade-angular/browser` on a static host. The development server
+is not a production host. Keep static-host/proxy access logs free of query strings,
 cookies, Authorization headers, and request/response bodies.
 
-Future API integration must use HTTPS URLs and must not log credentials or store
-tokens in URLs. Backend certificate and logging setup is in [backend/README.md](../backend/README.md).
+Future API integration must not log credentials or store tokens in URLs.
+Backend logging setup is in [backend/README.md](../backend/README.md).

@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderValidationServiceImpl implements OrderValidationService {
 
+    /** Creates the validator for the legacy order model. */
+    public OrderValidationServiceImpl() {
+    }
+
     /**
      * Validates the provided order.
      *

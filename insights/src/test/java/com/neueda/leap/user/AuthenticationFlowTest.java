@@ -64,7 +64,6 @@ class AuthenticationFlowTest {
                 }""";
 
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
-                .secure(true)
                 .contentType(MediaType.APPLICATION_JSON).content(loginJson))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -72,8 +71,7 @@ class AuthenticationFlowTest {
         String token = objectMapper.readTree(loginResult.getResponse().getContentAsString())
                 .get("token").asText();
 
-        mockMvc.perform(get("/api/v1/users/me")
-                .secure(true)
+        mockMvc.perform(get("/users/me")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))

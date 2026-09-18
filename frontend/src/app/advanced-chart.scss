@@ -1,0 +1,300 @@
+:host {
+  display: contents;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid #69d999;
+  outline-offset: 2px;
+}
+.gain {
+  color: var(--green);
+}
+.loss {
+  color: #ff5e66;
+}
+.panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: linear-gradient(130deg, #0f191e80, #101a20a0);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.chart-panel {
+  grid-column: 1;
+  grid-row: 2;
+  overflow: hidden;
+}
+.chart-toolbar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 13px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.chart-company {
+  font-size: 10px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quote-price {
+  font-size: 15px;
+}
+.chart-toolbar > b {
+  font-size: 12px;
+}
+.indicators {
+  display: flex;
+  gap: 17px;
+  font-size: 9px;
+  margin-left: 7px;
+  color: #bcc8d8;
+}
+.indicators span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.indicators i {
+  height: 7px;
+  width: 7px;
+  border-radius: 50%;
+}
+.indicators b {
+  font-weight: 400;
+  margin-left: 2px;
+}
+.blue {
+  background: #3a78ef;
+}
+.blue-text {
+  color: #4a83ff;
+}
+.purple {
+  background: #a950e2;
+}
+.purple-text {
+  color: #b376e7;
+}
+.yellow {
+  background: #f3d21a;
+}
+.yellow-text {
+  color: #f3d21a;
+}
+.indicators .yellow {
+  height: 2px;
+  border-radius: 0;
+}
+.chart-periods {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  margin-left: auto;
+  border: 1px solid #1d2b32;
+  border-radius: 4px;
+}
+.chart-periods button {
+  font-size: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.chart-periods .active {
+  background: #63d68c;
+  color: #0e2a1b;
+  font-weight: 600;
+}
+.technical-chart {
+  padding: 0 13px;
+}
+.price-pane {
+  display: flex;
+  height: 157px;
+}
+.price-pane svg {
+  display: block;
+  width: calc(100% - 34px);
+  flex: 1;
+  min-width: 0;
+}
+.price-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: start;
+  width: 34px;
+  padding-left: 5px;
+  font-size: 9px;
+  border-left: 1px solid #43515b;
+}
+.price-axis b {
+  margin-left: -5px;
+  background: #7add98;
+  color: #133521;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.volume-pane,
+.rsi-pane {
+  position: relative;
+  padding-top: 17px;
+  padding-right: 34px;
+  border-top: 1px solid #2b3941;
+}
+.volume-pane {
+  height: 62px;
+}
+.rsi-pane {
+  height: 62px;
+}
+.pane-label {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 9px;
+}
+.volume-pane svg {
+  width: 100%;
+  height: 44px;
+  display: block;
+}
+.rsi-pane svg {
+  width: 100%;
+  height: 44px;
+  display: block;
+}
+.volume-axis,
+.rsi-axis {
+  position: absolute;
+  right: 0;
+  top: 17px;
+  bottom: 0;
+  width: 34px;
+  border-left: 1px solid #43515b;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding-left: 5px;
+  font-size: 9px;
+}
+.time-axis {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #43515b;
+  margin-right: 34px;
+  padding-top: 6px;
+  font-size: 9px;
+  color: #b9c8da;
+}
+
+@media (max-width: 1500px) {
+  .chart-toolbar {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 5px 12px;
+    height: 62px;
+  }
+  .indicators {
+    order: 2;
+    margin-left: 0;
+  }
+  .chart-periods {
+    order: 3;
+  }
+  .price-pane {
+    height: 139px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .chart-panel {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 950px) {
+  .chart-toolbar {
+    gap: 4px 8px;
+  }
+  .chart-company {
+    display: none;
+  }
+  .indicators {
+    gap: 8px;
+    font-size: 8px;
+  }
+  .chart-periods button {
+    padding: 3px 4px;
+  }
+}
+
+@media (max-width: 760px) {
+  .chart-panel {
+    order: 2;
+    height: 352px;
+    flex-shrink: 0;
+  }
+  .chart-toolbar {
+    height: 75px;
+    gap: 4px 8px;
+    padding-inline: 8px;
+  }
+  .chart-toolbar > b {
+    font-size: 10px;
+  }
+  .quote-price {
+    font-size: 13px;
+  }
+  .chart-symbol {
+    width: 73px;
+  }
+  .chart-symbol select {
+    width: 52px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+  .indicators {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 7px;
+    gap: 3px;
+  }
+  .chart-periods {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .chart-periods button {
+    flex: 1;
+  }
+  .price-pane {
+    height: 127px;
+  }
+  .technical-chart {
+    padding-inline: 8px;
+  }
+  .time-axis {
+    font-size: 7px;
+  }
+}

@@ -15,6 +15,8 @@ public interface UserService {
      *
      * @param request the login request payload
      * @return a representation of the authenticated user
+     * @throws com.neueda.leap.user.exception.InvalidCredentialsException if the
+     *         email is unknown or the password does not match
      */
     UserResponse login(LoginRequest request);
 
@@ -23,6 +25,8 @@ public interface UserService {
      *
      * @param id the user identifier
      * @return a representation of the resolved user
+     * @throws org.springframework.web.server.ResponseStatusException with HTTP 401
+     *         if the token's user no longer exists
      */
     UserResponse getById(UUID id);
 }

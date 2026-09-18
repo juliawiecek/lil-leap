@@ -72,6 +72,7 @@ public class RegistrationServiceImpl implements RegistrationService {
      * @param request the registration request containing user details
      * @return a {@link UserResponse} representing the saved user
      * @throws UserAlreadyExistsException if a user with the normalized email already exists
+     * @throws IllegalArgumentException if the date of birth is missing or the user is under 18
      */
     @Override
     @Transactional
@@ -246,7 +247,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return new String(com.fasterxml.jackson.core.io.JsonStringEncoder.getInstance().quoteAsString(value));
     }
 
     /**

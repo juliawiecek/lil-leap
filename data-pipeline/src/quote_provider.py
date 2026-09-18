@@ -12,6 +12,8 @@ from typing import Callable
 import pandas as pd
 
 from src.generate_quotes import generate_quotes, load_quotes
+from src.database import connect, DatabaseUnavailableError
+from src.quote_repository import QuoteRepository
 
 
 class QuoteNotFoundError(LookupError):
@@ -38,6 +40,29 @@ class Quote:
     def to_dict(self) -> dict[str, object]:
         """Return the quote in JSON-friendly form."""
         return asdict(self)
+
+
+class PostgresQuoteProvider:
+    """Read the durable latest quote from PostgreSQL."""
+
+    def __init__(self, connection_factory=connect, market_code: str = "NASDAQ") -> None:
+        self.connection_factory = connection_factory
+        self.market_code = market_code.strip().upper()
+
+    def get_quote(self, symbol: str) -> Quote:
+        ticker = symbol.strip().upper()
+        try:
+            with self.connection_factory() as connection:
+                stored = QuoteRepository(connection).latest_by_market_symbol(self.market_code, ticker)
+        except DatabaseUnavailableError as exc:
+            raise QuoteSourceError("PostgreSQL quote source is unavailable") from exc
+        except Exception as exc:
+            raise QuoteSourceError("Unable to read PostgreSQL quote source") from exc
+        if stored is None:
+            raise QuoteNotFoundError(f"Quote not found for {self.market_code}:{ticker}")
+        return Quote(symbol=stored.symbol, quote_timestamp=stored.quoted_at.isoformat(),
+                     price=float(stored.midpoint), bid=float(stored.bid), ask=float(stored.ask),
+                     currency=stored.currency.strip(), source=stored.source, synthetic=stored.is_synthetic)
 
 
 class CsvQuoteProvider:
@@ -203,3 +228,4 @@ class CachedQuoteService:
         """Clear all cached quotes, primarily for tests and operations."""
         with self._lock:
             self._cache.clear()
+

@@ -44,15 +44,14 @@ class SecurityConfigTest {
 
     @Test
     void protectedRoute_withNoToken_shouldReturn401NotDefault403() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me").secure(true))
+        mockMvc.perform(get("/users/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHENTICATED"));
     }
 
     @Test
     void protectedRoute_withInvalidToken_shouldReturn401FromFilter() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me")
-                .secure(true)
+        mockMvc.perform(get("/users/me")
                 .header("Authorization", "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
@@ -68,7 +67,6 @@ class SecurityConfigTest {
                 """;
 
         mockMvc.perform(post("/auth/password-reset/request")
-                        .secure(true)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
@@ -85,7 +83,6 @@ class SecurityConfigTest {
                 """;
 
         mockMvc.perform(post("/auth/password-reset/confirm")
-                        .secure(true)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());

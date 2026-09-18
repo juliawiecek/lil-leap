@@ -1,0 +1,455 @@
+:host {
+  display: block;
+  font-family: var(--font-ui);
+  background: #0c1011;
+  color: #f1f3f5;
+  color-scheme: dark;
+  --muted: #b1bac8;
+  --green: #7ede8b;
+  --line: #20282c;
+}
+:host([hidden]) {
+  display: none !important;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+h2,
+h3,
+h4 {
+  font-family: var(--font-ui);
+}
+h2 {
+  font-size: 27px;
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+}
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+a {
+  color: var(--green);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.3px;
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 10px;
+}
+.hub-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 25px 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: none;
+  margin-bottom: 18px;
+}
+.hub-intro p {
+  margin-top: 10px;
+}
+.hub-intro > app-dashboard-icon {
+  width: 46px;
+  height: 46px;
+  color: var(--green);
+}
+.hub-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.hub-tabs button {
+  white-space: nowrap;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 12px 18px;
+  font-size: 13px;
+}
+.hub-tabs .active {
+  color: var(--green);
+  border-color: var(--green);
+}
+.hub-card {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  min-width: 0;
+}
+.card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+.subtle {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.badge {
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 5px;
+  color: var(--green);
+  background: none;
+}
+.source-credit {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.green-button {
+  display: inline-block;
+  text-align: center;
+  padding: 9px 14px;
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  color: #0c1011;
+  background: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+}
+.learning-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  margin-bottom: 16px;
+  padding: 18px 22px;
+}
+.learning-progress strong {
+  font-size: 14px;
+}
+.learning-progress span {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+progress {
+  width: 36%;
+  height: 9px;
+  accent-color: var(--green);
+  border: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+progress::-webkit-progress-bar {
+  background: var(--line);
+}
+progress::-webkit-progress-value {
+  background: var(--green);
+}
+.learn-layout {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 20px;
+}
+.lesson-list > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 13px;
+  margin-bottom: 9px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  text-align: left;
+  color: #f1f3f5;
+}
+.lesson-list > button.active {
+  border-color: var(--green);
+  background: none;
+}
+.lesson-number {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  background: var(--line);
+  border-radius: 50%;
+  color: var(--green);
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.lesson-list b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.lesson-list small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.lesson-list app-dashboard-icon {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.lesson-reader {
+  padding: 27px;
+}
+.lesson-reader h3 {
+  font-size: 24px;
+  letter-spacing: -0.4px;
+}
+.lesson-reader p {
+  margin-top: 15px;
+  font-size: 14px;
+}
+.lesson-reader .lesson-summary {
+  color: var(--muted);
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+.example-box {
+  background: none;
+  border-left: 2px solid var(--green);
+  padding: 17px;
+  margin: 24px 0;
+}
+.example-box b {
+  font-size: 12px;
+  color: var(--green);
+}
+.example-box p {
+  margin-top: 7px;
+  font-size: 13px;
+}
+.knowledge-check {
+  border-top: 1px solid var(--line);
+  padding-top: 23px;
+  margin-top: 22px;
+}
+.knowledge-check h4 {
+  font-size: 15px;
+}
+.quiz-options {
+  display: grid;
+  gap: 9px;
+  margin: 15px 0;
+}
+.quiz-options button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: #f1f3f5;
+  text-align: left;
+  font-size: 12px;
+}
+.quiz-options button > span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--line);
+}
+.quiz-options .chosen {
+  border-color: var(--green);
+}
+.quiz-options .correct {
+  border-color: var(--green);
+  background: none;
+}
+.knowledge-check .quiz-feedback {
+  font-size: 12px;
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+.glossary {
+  margin-top: 22px;
+}
+.glossary > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 22px;
+  margin-top: 15px;
+}
+.glossary details {
+  border-top: 1px solid var(--line);
+  padding: 13px 0;
+}
+.glossary summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #f1f3f5;
+}
+.glossary p {
+  margin-top: 10px;
+  font-size: 12px;
+}
+.compound-calculator {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 18px;
+}
+.calculator-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-top: 16px;
+}
+.calculator-inputs label {
+  font-size: 11px;
+  color: var(--muted);
+  display: grid;
+  gap: 8px;
+}
+.calculator-inputs input {
+  width: 100%;
+  accent-color: var(--green);
+}
+.calculator-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.calculator-result strong {
+  font-size: 22px;
+  color: var(--green);
+}
+.calculator-result span {
+  font-size: 12px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+@media (max-width: 1100px) {
+  .learn-layout {
+    grid-template-columns: 245px minmax(0, 1fr);
+  }
+  .glossary > div {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .hub-intro {
+    padding: 20px;
+  }
+  .hub-intro h2 {
+    font-size: 23px;
+  }
+  .hub-intro > app-dashboard-icon {
+    display: none;
+  }
+  .learn-layout {
+    grid-template-columns: 1fr;
+  }
+  .hub-card,
+  .lesson-reader {
+    padding: 18px;
+  }
+  .hub-tabs button {
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+  .learning-progress {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .learning-progress progress {
+    width: 100%;
+  }
+  .lesson-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .lesson-list > button {
+    margin: 0;
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+  .lesson-list app-dashboard-icon {
+    display: none;
+  }
+  .lesson-list > p {
+    grid-column: 1/-1;
+  }
+  .lesson-reader h3 {
+    font-size: 21px;
+  }
+  .glossary > div {
+    grid-template-columns: 1fr;
+  }
+  .calculator-inputs {
+    grid-template-columns: 1fr;
+  }
+  .calculator-result {
+    flex-direction: column;
+    align-items: start;
+    gap: 8px;
+  }
+  .card-heading .green-button {
+    width: 100%;
+  }
+}
