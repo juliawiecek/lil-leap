@@ -16,7 +16,10 @@ output/*.parquet
 # Keep the .gitkeep file in the output directory
 !output/.gitkeep
 
-
+# Python coverage output
+.coverage
+coverage.xml
+htmlcov/
 
 
 

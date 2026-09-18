@@ -11,26 +11,30 @@ from src.quote_provider import (
     CachedQuoteService,
     CsvQuoteProvider,
     QuoteNotFoundError,
+    PostgresQuoteProvider,
     QuoteSourceError,
 )
 
 
 def create_app(
-    provider: CsvQuoteProvider | None = None,
+    provider: object | None = None,
     service: CachedQuoteService | None = None,
 ) -> Flask:
     """Create and configure the quote API application."""
     app = Flask(__name__)
 
     if service is None:
-        active_provider = provider or CsvQuoteProvider(
-            csv_path=Path(os.getenv("QUOTE_CSV_PATH", "output/quotes.csv")),
-            replay_interval_seconds=float(
-                os.getenv("QUOTE_REPLAY_INTERVAL_SECONDS", "5")
-            ),
-            periods=int(os.getenv("QUOTE_PERIODS", "390")),
-            seed=int(os.getenv("QUOTE_SEED", "42")),
-        )
+        if provider is not None:
+            active_provider = provider
+        elif os.getenv("QUOTE_PROVIDER", "postgres").strip().lower() == "csv":
+            active_provider = CsvQuoteProvider(
+                csv_path=Path(os.getenv("QUOTE_CSV_PATH", "output/quotes.csv")),
+                replay_interval_seconds=float(os.getenv("QUOTE_REPLAY_INTERVAL_SECONDS", "5")),
+                periods=int(os.getenv("QUOTE_PERIODS", "390")),
+                seed=int(os.getenv("QUOTE_SEED", "42")),
+            )
+        else:
+            active_provider = PostgresQuoteProvider()
         service = CachedQuoteService(
             provider=active_provider,
             cache_seconds=float(os.getenv("QUOTE_CACHE_SECONDS", "5")),
@@ -82,3 +86,4 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")))
+
