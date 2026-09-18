@@ -60,8 +60,19 @@ pipeline {
             -v "$WORKSPACE/backend:/app" \
             -w /app \
             maven:3.9-eclipse-temurin-21 \
-            mvn -B clean test
+            mvn -B clean verify
         '''
+      }
+    }
+
+    stage('Publish Backend Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'backend/target/site/jacoco/**',
+          fingerprint: true,
+          allowEmptyArchive: false
+        )
+
       }
     }
 
