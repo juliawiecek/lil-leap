@@ -45,12 +45,6 @@ pipeline {
     }
 
     stage('Validate Compose YAML') {
-      // These synthetic values are used only to validate the deployment model.
-      // Tests and image builds do not inherit them; production secrets are never needed.
-      environment {
-        TLS_KEYSTORE_PASSWORD = 'ci-validation-only-not-for-runtime'
-        TLS_KEYSTORE_PATH = '/dev/null'
-      }
       steps {
         sh '''
           ${COMPOSE_CMD} -f docker-compose.yml config -q
@@ -116,10 +110,6 @@ pipeline {
     }
 
     stage('Build Compose Services') {
-      environment {
-        TLS_KEYSTORE_PASSWORD = 'ci-build-only-not-for-runtime'
-        TLS_KEYSTORE_PATH = '/dev/null'
-      }
       steps {
         sh '${COMPOSE_CMD} -f docker-compose.yml build'
       }
@@ -129,8 +119,6 @@ pipeline {
   post {
     always {
       sh '''
-        export TLS_KEYSTORE_PASSWORD="ci-cleanup-only-not-for-runtime"
-        export TLS_KEYSTORE_PATH="/dev/null"
         if [ -n "${COMPOSE_CMD}" ]; then
           ${COMPOSE_CMD} -f docker-compose.yml down -v || true
         fi

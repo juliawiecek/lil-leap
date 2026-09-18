@@ -1,13 +1,7 @@
-/** Keep the credential UI unavailable when the page itself was loaded over HTTP. */
-export async function startSecureApplication(
-  protocol: string,
+/** Bootstrap the application while keeping startup errors out of logs. */
+export async function startApplication(
   bootstrap: () => Promise<unknown>,
-  showHttpsRequired: () => void,
 ): Promise<void> {
-  if (protocol !== 'https:') {
-    showHttpsRequired();
-    return;
-  }
   try {
     await bootstrap();
   } catch {
