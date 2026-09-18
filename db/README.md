@@ -22,7 +22,7 @@ Every developer runs an isolated PostgreSQL database using the same version-cont
 
 ## Configuration
 
-All database connection values are environment-based. Set the required credentials in `.env` before starting Compose. Starting the backend also requires a TLS keystore and its password (see [backend TLS setup](../backend/README.md#tls-setup)).
+All database connection values are environment-based. Set the required credentials in `.env` before starting Compose.
 
 ### Environment Variables
 

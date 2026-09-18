@@ -1,8 +1,4 @@
 # Environment variables
-certs/
-*.p12
-*.pfx
-*.key
 # .env is committed for demo/education purposes (contains demo credentials only)
 # Use .env.local or .env.production.local for sensitive overrides
 # .env

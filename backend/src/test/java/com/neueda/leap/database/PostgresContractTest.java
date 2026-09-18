@@ -64,7 +64,7 @@ class PostgresContractTest {
         body.put("email", UUID.randomUUID() + "@example.test");
         body.put("net_worth_bracket", bracket.value());
         body.put("broker_firm_name", "Synthetic \"firm\"\nline\tend");
-        String response = mvc.perform(post("/api/v1/users").contextPath("/api/v1").secure(true)
+        String response = mvc.perform(post("/api/v1/users").contextPath("/api/v1")
                         .contentType("application/json").content(json.writeValueAsBytes(body)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         entityManager.flush();
@@ -88,21 +88,21 @@ class PostgresContractTest {
         var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
         byte[] body = json.writeValueAsBytes(request);
         String ownToken = tokens.issueToken(user, user + "@example.test");
-        String first = mvc.perform(post("/api/v1/orders").contextPath("/api/v1").secure(true)
+        String first = mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("SUBMITTED"))
                 .andReturn().getResponse().getContentAsString();
-        mvc.perform(post("/api/v1/orders").contextPath("/api/v1").secure(true)
+        mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.orderId").value(json.readTree(first).get("orderId").asText()));
         for (UUID target : new UUID[]{account, UUID.randomUUID()}) {
             var foreign = new SubmitOrderRequest(target, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
-            mvc.perform(post("/api/v1/orders").contextPath("/api/v1").secure(true)
+            mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                             .header("Authorization", "Bearer " + tokens.issueToken(UUID.randomUUID(), "other@example.test"))
                             .contentType("application/json").content(json.writeValueAsBytes(foreign)))
                     .andExpect(status().isNotFound());
         }
-        mvc.perform(post("/api/v1/orders").contextPath("/api/v1").secure(true)
+        mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).param("userId", UUID.randomUUID().toString())
                         .contentType("application/json").content(body)).andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);

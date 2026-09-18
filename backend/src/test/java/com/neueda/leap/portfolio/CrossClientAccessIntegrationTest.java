@@ -194,10 +194,10 @@ class CrossClientAccessIntegrationTest {
     @ParameterizedTest
     @MethodSource("collections")
     void missingAndInvalidTokensAre401RatherThanOwnershipDenials(String path) throws Exception {
-        mvc.perform(secure(get(API + path))).andExpect(status().isUnauthorized());
-        mvc.perform(secure(get(API + path)).header("Authorization", "Bearer invalid-token"))
+        mvc.perform(withContextPath(get(API + path))).andExpect(status().isUnauthorized());
+        mvc.perform(withContextPath(get(API + path)).header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
-        mvc.perform(secure(post(API + path))).andExpect(status().isUnauthorized());
+        mvc.perform(withContextPath(post(API + path))).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -208,7 +208,7 @@ class CrossClientAccessIntegrationTest {
         String forged = parts[0] + "." + Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(json.writeValueAsBytes(payload)) + "." + parts[2];
         for (String path : COLLECTIONS) {
-            mvc.perform(secure(get(API + path)).header("Authorization", "Bearer " + forged))
+            mvc.perform(withContextPath(get(API + path)).header("Authorization", "Bearer " + forged))
                     .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
         }
     }
@@ -237,15 +237,15 @@ class CrossClientAccessIntegrationTest {
     private void assertDenied(MockHttpServletRequestBuilder request) throws Exception {
         mvc.perform(request).andExpect(status().isForbidden())
                 .andExpect(content().json("{\"error\":\"ACCESS_DENIED\",\"message\":\"Access is denied.\"}", true))
-                .andExpect(header().exists("Strict-Transport-Security"));
+                .andExpect(header().doesNotExist("Strict-Transport-Security"));
     }
 
     private MockHttpServletRequestBuilder authenticated(MockHttpServletRequestBuilder request, UUID client) {
-        return secure(request).header("Authorization", "Bearer " + token(client));
+        return withContextPath(request).header("Authorization", "Bearer " + token(client));
     }
 
-    private MockHttpServletRequestBuilder secure(MockHttpServletRequestBuilder request) {
-        return request.contextPath(API).secure(true);
+    private MockHttpServletRequestBuilder withContextPath(MockHttpServletRequestBuilder request) {
+        return request.contextPath(API);
     }
 
     private String token(UUID client) {

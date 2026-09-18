@@ -14,7 +14,7 @@ com.neueda.leap
 |- order                 # Order submission and validation
 |- passwordreset         # Password reset tokens and email delivery
 |- portfolio             # Client-owned holdings, cash, and order history
-|- security              # JWT authentication, TLS enforcement, and log masking
+|- security              # JWT authentication and log masking
 `- user                  # Authentication entity, repository, and auth exceptions
 ```
 
@@ -43,7 +43,9 @@ mvn clean test
 
 Run the application:
 
-Configure the TLS certificate first as described below. Plain HTTP is not supported.
+Configure the database environment using [env.example](../env.example).
+Set `DB_HOST=localhost` when connecting to the Docker database from the host.
+The backend listens at `http://localhost:8080/api/v1`.
 
 ```bash
 mvn spring-boot:run
@@ -59,7 +61,7 @@ The executable jar is written to `target/nexttrade.jar`.
 
 ## API
 
-All paths below include the `/api/v1` context prefix and require HTTPS.
+All paths below include the `/api/v1` context prefix and use `http://localhost:8080` for local development.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -93,74 +95,12 @@ retry behavior when changing an API. Private helpers and test methods are outsid
 this documentation check. This check is separate from `mvn test` and is not yet
 part of the Jenkins pipeline.
 
-## TS-02.4: HTTPS and safe logging (BR-02)
-
-### TLS setup
-
-The backend terminates TLS directly on port 8080, with TLS 1.2 and 1.3 only.
-No plaintext connector is installed. Missing or invalid certificate configuration
-prevents startup. A security filter also rejects insecure requests with a fixed
-403 `HTTPS_REQUIRED` response before reading credentials; it does not redirect
-credential-bearing requests. `Forwarded` and `X-Forwarded-*` headers are ignored.
-
-Provide a PKCS12 keystore containing the server private key and certificate chain:
-
-| Setting | Local application | Docker Compose |
-| --- | --- | --- |
-| Keystore | `TLS_KEYSTORE` (default `file:./certs/backend.p12`, relative to working directory) | `TLS_KEYSTORE_PATH` (default `./certs/backend.p12`, relative to repository root), mounted read-only as a Docker secret |
-| Keystore password | `TLS_KEYSTORE_PASSWORD` | `TLS_KEYSTORE_PASSWORD` (required) |
-
-For local development, run this from `backend` (keytool prompts for the password):
-
-```powershell
-New-Item -ItemType Directory -Force certs
-keytool -genkeypair -alias backend -keyalg RSA -keysize 3072 -storetype PKCS12 -keystore certs/backend.p12 -validity 30 -dname "CN=localhost" -ext "SAN=dns:localhost,ip:127.0.0.1"
-# Set TLS_KEYSTORE_PASSWORD in your private environment, matching the prompted password.
-mvn spring-boot:run
-```
-
-Trust the development certificate locally. Production requires a certificate
-issued by your trusted CA for the deployed hostname. Keep the keystore and its
-password outside version control; inject the password through the deployment's
-secret manager. For Compose, set `TLS_KEYSTORE_PATH` to the supplied keystore and
-use `docker compose up --build`. The app remains internal to the Docker network.
-If publishing it, publish only its TLS port. A load balancer must use TLS
-passthrough, or connect to the backend using HTTPS with certificate verification.
-Do not enable forwarded-header trust or turn off backend TLS to accommodate a proxy.
-
-With the existing context path and controller mappings, login is
-`https://localhost:8080/api/v1/auth/login`; registration and `/me` resolve
-to `/api/v1/users` and `/api/v1/users/me`. Controllers omit the shared context prefix.
-
-### Windows trusted localhost certificate
-
-The repository's `scripts/setup-local-tls.ps1` creates and trusts a localhost
-certificate for your Windows account, shared with the frontend. Run it once from
-the repository root, then use the following from the repository root in the
-terminal that starts the backend:
-
-```powershell
-$tlsDir = Join-Path $env:LOCALAPPDATA 'NextTrade/tls'
-$env:TLS_KEYSTORE = 'file:' + ((Join-Path $tlsDir 'backend.p12') -replace '\\', '/')
-$securePassword = Get-Content (Join-Path $tlsDir 'password.dpapi') | ConvertTo-SecureString
-$env:TLS_KEYSTORE_PASSWORD = [System.Net.NetworkCredential]::new('', $securePassword).Password
-cd backend
-mvn spring-boot:run
-```
-
-Stop the existing backend before restarting it. For IntelliJ, these environment
-variables must be supplied to the backend run configuration; a running IDE does
-not inherit changes made in a separate terminal. The password file is encrypted
-for the Windows account that ran setup; do not print or commit its contents or the
-decrypted password. This certificate is only for local development and expires
-after 90 days. It does not replace deployment certificates or Java client trust
-stores. Open `https://localhost:8080` when connecting directly to the backend.
+## Safe logging and API security (BR-02)
 
 ### Headers and logging
 
-HTTPS API responses include HSTS (one year, including subdomains), `nosniff`, frame
-denial, an API-only CSP, no-referrer, disabled camera/microphone/geolocation, and
-no-store caching. Ensure all subdomains support HTTPS before deploying this HSTS policy.
+API responses include `nosniff`, frame denial, an API-only CSP, no-referrer,
+disabled camera/microphone/geolocation, and no-store caching.
 
 - Request-detail, access, SQL statement, bind/extract, and SQL error-detail logging
   are disabled. Do not enable HTTP/security DEBUG/TRACE or request/response body logging.
@@ -182,20 +122,17 @@ no-store caching. Ensure all subdomains support HTTPS before deploying this HSTS
 
 ### Verification
 
-`mvn clean test` generates a temporary localhost certificate using the JDK's keytool;
-no database, deployment certificate, or Docker daemon is required. Tests cover:
+`mvn clean test` runs without a database or Docker daemon. Tests cover:
 
-- Real TLS 1.2/1.3 login and `/me`, the connector's enabled protocols, and plaintext rejection.
-- Spoofed forwarding headers and rejection before JWT validation or service calls.
+- HTTP login and authenticated `/me` requests against the embedded server.
 - Security headers, safe validation/parsing/unexpected errors, and DTO masking.
 - Real console and rotating-file output, including exceptions and issued tokens.
 
-The frontend has separate security tests (`npm test`) and an HTTPS development server.
-This transport/logging control supports BR-02; position, cash and order ownership checks
-remain the responsibility of their API/service authorization controls.
+The frontend has separate security tests (`npm test`) and an HTTP development server.
+Position, cash and order ownership checks remain the responsibility of their
+API/service authorization controls.
 
-Implementation references: [Spring Boot TLS and forwarding](https://docs.spring.io/spring-boot/3.3/how-to/webserver.html),
-[Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
+Implementation references: [Spring Security headers](https://docs.spring.io/spring-security/reference/servlet/exploits/headers.html),
 [Logback masking converters](https://logback.qos.ch/manual/layouts.html).
 
 ## TS-03.3: Automated cross-client isolation tests (BR-02)

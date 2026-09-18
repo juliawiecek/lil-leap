@@ -34,7 +34,7 @@ not yet connected to the backend. The diagrams below show the intended connectio
 ```text
 Frontend (Angular)
        |
-       | HTTPS
+       | HTTP
        v
 Backend (Spring Boot + Spring Security + JWT)
        |
@@ -46,7 +46,7 @@ PostgreSQL 16
 ### Architecture Overview
 
 ```text
-+----------------------------+         HTTPS         +-------------------------------------+
++----------------------------+         HTTP          +-------------------------------------+
 | Frontend (Angular 22)      | -------------------> | Backend (Spring Boot 3.3.4)        |
 | - UI + client-side state   |                      | - REST controllers                 |
 | - Login/Register screens   | <------------------- | - Security (JWT filter + authz)    |
@@ -180,11 +180,9 @@ Notes:
 
 - The Jenkins agent must be Linux with a local Docker daemon, Docker Compose, and permission to run Docker. The standard Jenkins JUnit plugin is required for test reporting; the Docker Pipeline plugin, host Java, Maven and Node installations are not required. The daemon must be able to mount the agent's workspace path.
 - This is a test/build pipeline, with no deployment stage. `ci/run-checks.sh` removes its own temporary test containers on completion/failure or a handled interruption. It never calls `compose down -v` or removes runtime volumes. Test files are owned by the Jenkins UID. Agent/daemon crashes may still require orphan-container cleanup.
-- Compose validation alone receives a synthetic `TLS_KEYSTORE_PASSWORD` and `/dev/null` as `TLS_KEYSTORE_PATH`. These variables are scoped to that stage; tests and image builds receive no deployment credentials. Validation checks the resolved model, not certificate validity. The backend tests generate temporary certificates to test actual TLS handshakes.
-- Validation uses `config -q` only. Do not print expanded Compose configuration: it includes database, encryption and TLS passwords.
-- A future deployment stage must bind a real keystore file and password from Jenkins credentials only for its deployment commands. Runtime TLS requirements in `docker-compose.yml` remain mandatory. See [backend TLS setup](backend/README.md#tls-setup).
+- Validation uses `config -q` only. Do not print expanded Compose configuration: it includes database and encryption passwords.
 - Failed test/build commands stop the pipeline before image creation. Reports are collected even on failure; missing reports do not hide the original command failure. Concurrent runs of this job are disabled, and there is a 45-minute overall timeout.
-- The packaging Dockerfile still uses `-DskipTests`; the preceding mandatory backend verification stage runs the tests. `backend/.dockerignore` excludes local output and TLS secrets from the image build context. No image is pushed or deployed by this pipeline.
+- The packaging Dockerfile still uses `-DskipTests`; the preceding mandatory backend verification stage runs the tests. `backend/.dockerignore` excludes local output and environment files from the image build context. No image is pushed or deployed by this pipeline.
 
 ## Local Development
 
@@ -208,8 +206,9 @@ docker compose up -d db
 
 ### 2) Run Backend Locally
 
-Configure the certificate and TLS environment first using the
-[backend TLS instructions](backend/README.md#tls-setup).
+Configure the database environment using [env.example](env.example).
+For a backend running outside Docker, set `DB_HOST=localhost`.
+The API is available at `http://localhost:8080/api/v1`.
 
 ```bat
 cd backend
@@ -219,21 +218,17 @@ mvn spring-boot:run
 
 ### 3) Run Frontend Locally
 
-For first-time setup, follow the [frontend HTTPS guide](frontend/README.md#run-locally).
-It covers Windows setup, per-computer certificate trust, and troubleshooting.
-On Windows, run the following from the repository root and accept the localhost
-certificate trust dialog before starting Angular:
+Run the following from the repository root:
 
 ```powershell
-.\scripts\setup-local-tls.ps1
 cd frontend
 npm ci
 npm start
 ```
 
-Open **https://localhost:4200**. Each developer generates their own certificate;
-private keys are not shared through Git. On later runs, only `npm start` from
-`frontend` is needed unless dependencies or certificates have changed.
+Open **http://localhost:4200**. On later runs, only `npm start` from
+`frontend` is needed unless dependencies have changed. See the
+[frontend guide](frontend/README.md#run-locally) for troubleshooting.
 
 ### 4) Run Full Compose Build
 

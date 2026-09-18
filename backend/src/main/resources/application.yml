@@ -11,7 +11,7 @@ spring:
   datasource:
     # PostgreSQL JDBC connection
     # URL format: jdbc:postgresql://[host]:[port]/[database]
-    # Development datasource defaults; TLS credentials are configured separately.
+    # Development datasource defaults.
     url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}
     password: ${DB_APP_PASSWORD:my_app_password}
@@ -67,15 +67,6 @@ nexttrade:
 
 server:
   port: 8080
-  # Direct TLS only. Missing certificate/key configuration fails startup closed.
-  ssl:
-    enabled: true
-    key-store: ${TLS_KEYSTORE:file:./certs/backend.p12}
-    key-store-type: PKCS12
-    key-store-password: ${TLS_KEYSTORE_PASSWORD:}
-    enabled-protocols: TLSv1.2,TLSv1.3
-  # A caller cannot claim HTTPS by sending Forwarded or X-Forwarded-Proto.
-  forward-headers-strategy: none
   tomcat:
     accesslog:
       enabled: false
