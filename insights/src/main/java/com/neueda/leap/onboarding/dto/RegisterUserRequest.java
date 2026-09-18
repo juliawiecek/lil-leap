@@ -7,6 +7,7 @@ import com.neueda.leap.onboarding.enums.EmploymentStatus;
 import com.neueda.leap.onboarding.enums.NetWorthBracket;
 import com.neueda.leap.onboarding.enums.RiskProfile;
 import com.neueda.leap.onboarding.enums.TraderLevel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -32,7 +33,7 @@ import java.time.LocalDate;
  * @param postalCode the user's postal/ZIP code
  * @param country the user's country of residence
  * @param citizenshipStatus the user's citizenship or residency status
- * @param ssn the user's social security number in 9-digit or 123-45-6789 format (optional)
+ * @param ssn the user's social security number in 9-digit or 123-45-6789 format
  * @param employmentStatus the user's employment status
  * @param employerName the employer or business name when employed/self-employed
  * @param occupation the occupation when employed/self-employed
@@ -55,16 +56,28 @@ import java.time.LocalDate;
  * @param beneficialOwnerName beneficial owner's name when another owner exists
  * @param beneficialOwnerRelationship beneficial owner's relationship when another owner exists
  */
+@Schema(
+        name = "RegisterUserRequest",
+        description = "Comprehensive user registration and investor onboarding request"
+)
 public record RegisterUserRequest (
 
         @JsonProperty("first_name")
         @NotBlank
         @Size(max = 100)
+        @Schema(
+                description = "User's first name",
+                example = "John"
+        )
         String firstName,
 
         @JsonProperty("last_name")
         @NotBlank
         @Size(max = 100)
+        @Schema(
+                description = "User's last name",
+                example = "Doe"
+        )
         String lastName,
 
         @JsonProperty("date_of_birth")
@@ -74,16 +87,29 @@ public record RegisterUserRequest (
         @JsonProperty("email")
         @NotBlank
         @Email
-        @Size(max = 320)
+        @Size(max = 255)
+        @Schema(
+                description = "User's email address (must be unique)",
+                example = "investor@example.com"
+        )
         String email,
 
         @JsonProperty("phone")
-        @Size(max = 30)
+        @NotBlank
+        @Size(max = 20)
+        @Schema(
+                description = "User's phone number",
+                example = "+1-555-123-4567"
+        )
         String phone,
 
         @JsonProperty("password")
         @NotBlank
         @Size(min = 8, max = 128)
+        @Schema(
+                description = "User's password (minimum 8 characters)",
+                example = "SecurePass123!"
+        )
         String password,
 
         @JsonProperty("street_address")
@@ -120,8 +146,9 @@ public record RegisterUserRequest (
         CitizenshipStatus citizenshipStatus,
 
         @JsonProperty("ssn")
+        @NotBlank
         @Pattern(
-                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})?$",
+                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})$",
                 message = "SSN must be 9 digits or 123-45-6789"
         )
         String ssn,

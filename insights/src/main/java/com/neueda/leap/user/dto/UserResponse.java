@@ -1,6 +1,7 @@
 package com.neueda.leap.user.dto;
 
 import com.neueda.leap.user.entity.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,14 +18,60 @@ import java.util.UUID;
  * @param createdAt creation timestamp
  * @param updatedAt last update timestamp
  */
+@Schema(
+        name = "UserResponse",
+        description = "User profile information returned by authentication endpoints"
+)
 public record UserResponse(
+        @Schema(
+                description = "Unique user identifier (UUID)",
+                example = "550e8400-e29b-41d4-a716-446655440000"
+        )
         UUID id,
+
+        @Schema(
+                description = "User's first name (null on auth user entity)",
+                example = "John",
+                nullable = true
+        )
         String firstName,
+
+        @Schema(
+                description = "User's last name (null on auth user entity)",
+                example = "Doe",
+                nullable = true
+        )
         String lastName,
+
+        @Schema(
+                description = "User's registered email address",
+                example = "investor@example.com"
+        )
         String email,
+
+        @Schema(
+                description = "User's phone number (null on auth user entity)",
+                example = "+1-555-123-4567",
+                nullable = true
+        )
         String phone,
+
+        @Schema(
+                description = "Email verification status",
+                example = "false"
+        )
         boolean emailVerified,
+
+        @Schema(
+                description = "User account creation timestamp (ISO 8601)",
+                example = "2024-01-15T10:30:00Z"
+        )
         Instant createdAt,
+
+        @Schema(
+                description = "User account last update timestamp (ISO 8601)",
+                example = "2024-01-15T10:30:00Z"
+        )
         Instant updatedAt
 ) {
 

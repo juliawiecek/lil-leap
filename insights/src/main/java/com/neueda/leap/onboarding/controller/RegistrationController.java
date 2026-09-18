@@ -3,6 +3,11 @@ package com.neueda.leap.onboarding.controller;
 import com.neueda.leap.onboarding.dto.RegisterUserRequest;
 import com.neueda.leap.onboarding.dto.UserResponse;
 import com.neueda.leap.onboarding.service.RegistrationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
  * frontend onboarding flow.</p>
  */
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
+@Tag(name = "Registration", description = "APIs for user registration and onboarding")
 public class RegistrationController {
 
     /**
@@ -43,6 +49,27 @@ public class RegistrationController {
      *         and an HTTP 201 Created status
      */
     @PostMapping
+    @Operation(
+            summary = "Register a new user",
+            description = "Creates a new user account with investor onboarding details. " +
+                    "Returns the created user's public information with HTTP 201 Created status."
+    )
+    @ApiResponse(
+            responseCode = "201",
+            description = "User registered successfully",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = UserResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request - Validation failed (missing or invalid fields)"
+    )
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict - User with this email already exists"
+    )
     public ResponseEntity<UserResponse> register(
             @Valid @RequestBody
             RegisterUserRequest request

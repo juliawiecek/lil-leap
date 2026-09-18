@@ -52,6 +52,20 @@ logging:
     # Database error details can include rejected row values (including password hashes).
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
 
+# OpenAPI/Swagger UI configuration (TS-DOC-02)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+  show-actuator: false
+  use-fqn: true
+
 # NextTrade custom application configuration
 # Externalized security and session settings
 nexttrade:

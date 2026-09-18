@@ -4,6 +4,11 @@ import com.neueda.leap.security.JwtService;
 import com.neueda.leap.user.dto.LoginRequest;
 import com.neueda.leap.user.dto.LoginResponse;
 import com.neueda.leap.user.dto.UserResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Authentication", description = "APIs for user authentication and session management")
 public class AuthController {
 
     /**
@@ -54,6 +60,27 @@ public class AuthController {
      * @return a {@link ResponseEntity} containing the session token and user data
      */
     @PostMapping("/login")
+    @Operation(
+            summary = "Authenticate user and obtain session token",
+            description = "Validates user credentials and returns a signed JWT session token along with user details. " +
+                    "Invalid credentials return a generic 401 response without revealing if the email is registered."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Authentication successful",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = LoginResponse.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - Invalid credentials (email or password incorrect)"
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request - Validation failed (missing or invalid fields)"
+    )
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody
             LoginRequest request
