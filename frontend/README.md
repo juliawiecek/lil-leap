@@ -52,6 +52,18 @@ npm run build
 
 The compiled site is written to `dist/nexttrade-angular/browser`.
 
+## Run with Docker
+
+The repository `docker-compose.yml` already defines a `frontend` service that builds from `./frontend`
+and publishes the container on `http://localhost:4200`.
+
+```bash
+docker compose up --build frontend
+```
+
+The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4200`.
+Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `app` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://app:8080` directly from the browser.
+
 ## Main files
 
 - `src/app/app.html`: Angular template
