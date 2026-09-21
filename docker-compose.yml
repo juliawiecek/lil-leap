@@ -56,6 +56,8 @@ services:
       - "3000:3000"
     depends_on:
       - db
+    environment:
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-my_jwt_top_secret}
 
   frontend:
     build: ./frontend
