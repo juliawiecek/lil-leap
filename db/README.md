@@ -229,6 +229,8 @@ runtime tables explicitly after review. Schema changes on existing volumes requi
 
 ## See Also
 
+- [Durable order execution migration](migrations/007_durable_order_execution.sql) — Apply as the schema owner before deploying the worker to an existing database. Fresh databases use the updated finalized schema.
+
 - [db/DATABASE_DECISIONS.md](DATABASE_DECISIONS.md) — Architecture and design decisions
 - [db/finalized-schema.sql](finalized-schema.sql) — Complete schema with comments
 - [db/init-app-role.sh](init-app-role.sh) — Application role creation and permissions
