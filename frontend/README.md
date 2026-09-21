@@ -62,7 +62,7 @@ docker compose up --build frontend
 ```
 
 The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4200`.
-Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `app` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://app:8080` directly from the browser.
+Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `orders` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://orders:8080` directly from the browser.
 
 ## Main files
 

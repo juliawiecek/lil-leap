@@ -21,7 +21,7 @@ lil-leap/
 |- frontend/                # Angular 22 application
 |- db/                      # PostgreSQL schema + role/bootstrap scripts
 |- data-pipeline/           # Python synthetic quote generator + API
-|- docker-compose.yml       # app + db services for local container workflow
+|- docker-compose.yml       # orders + holdings + insights + db services for local container workflow
 |- Jenkinsfile              # CI pipeline (compose validation + image builds)
 `- README.md
 ```
@@ -79,9 +79,15 @@ Host Machine
 
 Docker internal network
 +----------------------------+        jdbc:postgresql://db:5432/nexttrade
-| app container              | -------------------------------------------> db
-| built from ./backend       |
-| no host ports mapped       |
+| orders container           | -------------------------------------------> db
+| built from ./nextTrade-orders |
+| host port 8082 -> 8080     |
++----------------------------+
+
++----------------------------+        jdbc:postgresql://db:5432/nexttrade
+| holdings container         | -------------------------------------------> db
+| built from ./nextTrade-holdings |
+| host port 8083 -> 8080     |
 +----------------------------+
 ```
 
@@ -157,12 +163,14 @@ Current hardcoded development credentials:
 `docker-compose.yml` defines:
 
 - `db` service (`postgres:16-alpine`) exposed on host `5432`
-- `app` service built from `backend/` with no host `ports:` mapping
+- `orders` service built from `nextTrade-orders/` on host `8082`
+- `holdings` service built from `nextTrade-holdings/` on host `8083`
+- `insights` service built from `insights/` on host `8081`
 
 Important runtime behavior:
 
-- The backend can reach Postgres internally at `db:5432`
-- The backend container is intentionally not reachable from host unless you add a port mapping
+- The backend services reach Postgres internally at `db:5432`
+- Each backend service is addressable on the Docker network by its service name (`orders`, `holdings`, `insights`)
 - DB initialization scripts run only on first startup of an empty `db_data` volume
 
 ## Jenkins Pipeline Behavior
@@ -184,7 +192,7 @@ Notes:
 - This is a test/build pipeline, with no deployment stage. The `post { always { ... } }` block runs `compose down -v` to clean up containers and volumes after every build, success or failure. Agent/daemon crashes may still require orphan-container cleanup.
 - Compose validation alone receives a synthetic `TLS_KEYSTORE_PASSWORD` and `/dev/null` as `TLS_KEYSTORE_PATH`. These variables are scoped to that stage; tests and image builds receive no deployment credentials. Validation checks the resolved model, not certificate validity. The backend tests generate temporary certificates to test actual TLS handshakes.
 - Validation uses `config -q` only. Do not print expanded Compose configuration: it includes database, encryption and TLS passwords.
-- A future deployment stage must bind a real keystore file and password from Jenkins credentials only for its deployment commands. Runtime TLS requirements in `docker-compose.yml` remain mandatory. See [backend TLS setup](backend/README.md#tls-setup).
+- A future deployment stage must bind a real keystore file and password from Jenkins credentials only for its deployment commands. Runtime TLS requirements in `docker-compose.yml` remain mandatory. See `auth/README.md` and `docker-compose.yml` for the current keystore configuration.
 - Failed test/build commands stop the pipeline before image creation. Reports are collected even on failure; missing reports do not hide the original command failure. Concurrent runs of this job are disabled, and there is a 45-minute overall timeout.
 - The packaging Dockerfile still uses `-DskipTests`; the preceding mandatory backend verification stage runs the tests. `backend/.dockerignore` excludes local output and environment files from the image build context. No image is pushed or deployed by this pipeline.
 
