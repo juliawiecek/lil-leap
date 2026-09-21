@@ -68,14 +68,16 @@ pipeline {
 
     stage('Unit Tests - nextTrade') {
       steps {
-        sh "mvn -f ${NEXTTRADE_POM} -B test"
+        dir('nextTrade') {
+          sh 'mvn -B -ntp clean verify'
+        }
       }
     }
 
     stage('Publish Backend Coverage') {
       steps {
         archiveArtifacts(
-          artifacts: 'backend/target/site/jacoco/**',
+          artifacts: 'nextTrade/target/site/jacoco/**',
           fingerprint: true
         )
       }
