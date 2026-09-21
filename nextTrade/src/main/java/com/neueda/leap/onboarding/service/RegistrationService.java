@@ -124,13 +124,13 @@ public class RegistrationService {
     }
 
     /**
-     * Validates that the user is at least 18 years old.
+     * Validates that the user is at least 21 years old.
      *
      * @param dateOfBirth user date of birth
      */
     private void validateAdult(LocalDate dateOfBirth) {
-        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 18) {
-            throw new IllegalArgumentException("User must be at least 18 years old.");
+        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 21) {
+            throw new IllegalArgumentException("User must be at least 21 years old.");
         }
     }
 

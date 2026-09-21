@@ -45,7 +45,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   readonly sections: { title: string; description: string; fields: ProfileField[] }[] = [
   {
     "title": "Personal details",
-    "description": "Confirm your legal name and contact details. You must be at least 18 to apply.",
+    "description": "Confirm your legal name and contact details. You must be at least 21 to apply.",
     "fields": [
       {
         "id": "first_name",
@@ -409,7 +409,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
 
   readonly latestBirthDate = (() => {
     const now = new Date();
-    const year = now.getFullYear() - 18;
+    const year = now.getFullYear() - 21;
     const month = now.getMonth();
     const day = Math.min(now.getDate(), new Date(year, month + 1, 0).getDate());
     return [year, String(month + 1).padStart(2, '0'), String(day).padStart(2, '0')].join('-');
@@ -550,7 +550,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
         }
       }
       if (field.id === 'date_of_birth' && value > this.latestBirthDate) {
-        control.setCustomValidity('You must be at least 18 years old to apply.');
+        control.setCustomValidity('You must be at least 21 years old to apply.');
       }
       if (field.id === 'phone' && value && !/^\+?[0-9() .-]{7,20}$/.test(value)) {
         control.setCustomValidity('Enter a valid phone number, up to 20 characters.');
