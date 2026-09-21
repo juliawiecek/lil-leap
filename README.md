@@ -1,56 +1,68 @@
 # NextTrade
 ## Team: Lil Leap
 
-NextTrade is an e-trading platform built for the Fidelity LEAP program. This repo contains a Spring Boot backend, Angular frontend, PostgreSQL schema, a synthetic quote data pipeline, and Docker/Jenkins automation.
+NextTrade is a trading platform built by the Lil Leap team, made up of two applications: NextTrade, the core trading experience, and NextTrade Insights, which provides analytics and reporting of NextTrade's data. This repo contains the NextTrade and Insights Spring Boot services, their Angular frontends, a standalone auth Identity Service, PostgreSQL schema, a synthetic quote data pipeline, and Docker/Jenkins automation.
 
 ## Team
 
 | Team Member | Role                     |
 | --- |--------------------------|
-| Julia Wiecek | Team Lead                |
-| Lalima Karri | Developer, Angular       |
+| Kevin Marin | Technical Lead                |
+| Lalima Karri | Developer, Angular(Scrum Master)       |
 | Ilhan Gelle | Developer, Security      |
 | Tanush Kaushik | Developer, Data Engineer |
-| Kevin Marin | Developer, Spring Boot   |
+| Julia Wiecek | Developer, Spring Boot   |
 
 ## Project Structure
 
+This reflects the target architecture the team is splitting the platform into,
+not every directory's current state — see [Architecture](#architecture) below.
+
 ```text
 lil-leap/
-|- backend/                 # Spring Boot 3.3.4, Java 21, Maven
-|- frontend/                # Angular 22 application
-|- db/                      # PostgreSQL schema + role/bootstrap scripts
-|- data-pipeline/           # Python synthetic quote generator + API
-|- docker-compose.yml       # app + db services for local container workflow
-|- Jenkinsfile              # CI pipeline (compose validation + image builds)
+|- auth/                       # NestJS Identity Service (Authentication Service)
+|- nextTrade-holdings/         # Spring Boot: holdings, cash, trade history (Holdings & Trade Service)
+|- nextTrade-orderSellService/ # Spring Boot: order validation, submission, execution (Order & Sell Service)
+|- insights/                   # Spring Boot: analytics and reporting (Reporting Service)
+|- frontend/                   # Angular app for NextTrade (trading UI)
+|- insights-frontend/          # Angular app for Insights (reporting UI)
+|- db/                         # PostgreSQL schema + role/bootstrap scripts
+|- data-pipeline/              # Python synthetic quote generator + API
+|- docker-compose.yml          # service orchestration for local container workflow
+|- Jenkinsfile                 # CI pipeline (compose validation + service builds)
 `- README.md
 ```
 
 ## Architecture
 
-The frontend currently previews the interface; its authentication controls are
-not yet connected to the backend. The diagrams below show the intended connection.
+The target architecture splits the platform into four backend services behind
+two Angular frontends, following the layered shape below.
 
 ```text
-Frontend (Angular)
-       |
-       | HTTP
-       v
-Backend (Spring Boot + Spring Security + JWT)
-       |
-       | JDBC
-       v
-PostgreSQL 16
+Web Applications (Angular)
+  frontend/ (Client App)                 insights-frontend/ (Reporting App)
+        |                                          |
+        | HTTPS / REST API                         |
+        v                                          v
+Backend Services
+  auth/                nextTrade-holdings/    nextTrade-orderSellService/    insights/
+  Authentication        Holdings & Trade        Order & Sell                  Reporting
+  Service                Service                 Service                      Service
+        |                     |                       |                           |
+        +---------------------+---- Database Queries -+---------------------------+
+                                          v
+                                 PostgreSQL Database
+                        (users, accounts, holdings, orders, instruments, ...)
 ```
 
 ### Architecture Overview
 
 ```text
 +----------------------------+         HTTP          +-------------------------------------+
-| Frontend (Angular 22)      | -------------------> | Backend (Spring Boot 3.3.4)        |
-| - UI + client-side state   |                      | - REST controllers                 |
-| - Login/Register screens   | <------------------- | - Security (JWT filter + authz)    |
-+----------------------------+      JSON responses   | - Services + validation            |
+| Frontend (Angular 22)      | -------------------> | Backend service (Spring Boot 3.3.4)  |
+| - UI + client-side state   |                      | - REST controllers                   |
+| - Login/Register screens   | <------------------- | - Security (JWT filter + authz)      |
++----------------------------+      JSON responses   | - Services + validation              |
                                                      +-------------------+-----------------+
                                                                          |
                                                                          | JDBC
@@ -65,25 +77,27 @@ PostgreSQL 16
 
 ### Container Topology (Docker Compose)
 
+The compose file has not yet split `app` into separate holdings/order-sell
+containers — that's the target from the [Architecture](#architecture) section
+above, not what's running today. Current services:
+
 ```text
 Host Machine
-  |
-  |-- Port 5432 exposed
-  v
-+----------------------------+
-| db container               |
-| postgres:16-alpine         |
-| POSTGRES_DB=nexttrade      |
-| POSTGRES_USER=main         |
-+----------------------------+
+  |-- 3000 -> auth                (built from ./auth)
+  |-- 4200 -> frontend            (built from ./frontend)
+  |-- 4201 -> insights-frontend   (built from ./insights-frontend)
+  |-- 5432 -> db                  (postgres:16-alpine)
+  |-- 8081 -> insights            (built from ./insights)
+  |-- 8081 -> quote-service       (built from ./data-pipeline) [!] port collision with insights, see below
+  |-- 8082 -> app                 (built from ./nextTrade)
+  `-- 1025/8025 -> mailpit        (axllent/mailpit, SMTP capture)
 
 Docker internal network
-+----------------------------+        jdbc:postgresql://db:5432/nexttrade
-| app container              | -------------------------------------------> db
-| built from ./backend       |
-| no host ports mapped       |
-+----------------------------+
+  app, insights, auth, quote-service --jdbc/psql--> db (nexttrade database, app_user role)
+  frontend --HTTP--> app
+  insights-frontend --HTTP--> insights
 ```
+
 
 ### Authentication Flow
 
@@ -95,6 +109,8 @@ Docker internal network
 5) JwtAuthenticationFilter validates token on protected routes
 6) /api/v1/users/me returns authenticated user data
 ```
+
+Authentication itself now lives in the standalone `auth/` Identity Service, not this monolith flow — see the [auth service's class diagram](auth/README.md#class-diagram) and [auth service's sequence diagram](auth/README.md#flow) for the current registration/login/refresh flow, entities, and services.
 
 ### CI Build Flow (Jenkins)
 
