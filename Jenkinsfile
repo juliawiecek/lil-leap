@@ -77,7 +77,7 @@ pipeline {
     stage('Publish Backend Coverage') {
       steps {
         archiveArtifacts(
-          artifacts: 'backend/target/site/jacoco/**',
+          artifacts: 'nextTrade/target/site/jacoco/**',
           fingerprint: true
         )
       }
