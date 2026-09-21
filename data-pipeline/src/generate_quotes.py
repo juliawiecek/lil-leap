@@ -5,15 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-
-SYMBOL_CONFIG = {
-    "AAPL": {"start_price": 225.00, "drift": 0.08, "volatility": 0.25},
-    "MSFT": {"start_price": 510.00, "drift": 0.08, "volatility": 0.22},
-    "NVDA": {"start_price": 175.00, "drift": 0.10, "volatility": 0.40},
-    "AMZN": {"start_price": 235.00, "drift": 0.08, "volatility": 0.28},
-    "GOOGL": {"start_price": 205.00, "drift": 0.08, "volatility": 0.24}
-}
+from src.instrument_catalog import SYMBOL_CONFIG
 
 
 def generate_price_path(
