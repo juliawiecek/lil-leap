@@ -388,6 +388,9 @@ CREATE TABLE orders (
     status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED',  -- BR-06: 2-phase: SUBMITTED → ACCEPTED or REJECTED
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     accepted_at TIMESTAMPTZ,  -- BR-06: separate acceptance from execution
+    next_execution_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    execution_attempts BIGINT NOT NULL DEFAULT 0 CHECK (execution_attempts >= 0),
+    last_execution_error VARCHAR(50),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
     -- Per-order price tolerance override (NULL = use account default)
@@ -410,6 +413,8 @@ CREATE INDEX idx_orders_account ON orders(account_id);
 CREATE INDEX idx_orders_instrument ON orders(instrument_id);
 CREATE INDEX idx_orders_submitted_at ON orders(submitted_at DESC);
 CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_execution_due ON orders(next_execution_at, order_id)
+    WHERE accepted_at IS NOT NULL AND status IN ('ACCEPTED', 'PENDING');
 
 -- ==========================================================
 -- FILLS (BR-06, BR-08: Execution against non-stale quotes)

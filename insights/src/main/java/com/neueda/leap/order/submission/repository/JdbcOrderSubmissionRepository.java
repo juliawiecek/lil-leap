@@ -74,8 +74,8 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
         return jdbcTemplate.query(
                 """
                 INSERT INTO orders(account_id, instrument_id, client_reference, side,
-                                   quantity, order_type, status, buffer_percent)
-                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?)
+                                   quantity, order_type, status, buffer_percent, accepted_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'ACCEPTED', ?, CURRENT_TIMESTAMP)
                 ON CONFLICT (account_id, client_reference) DO NOTHING
                 RETURNING order_id, account_id, instrument_id, client_reference, side,
                           quantity, order_type, status, submitted_at, buffer_percent

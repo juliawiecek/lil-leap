@@ -133,7 +133,7 @@ class CrossClientAccessIntegrationTest {
         UUID victim = otherClient(client);
         assertOwnData(client, path, authenticated(get(API + path), client)
                 .header("X-User-Id", victim).header("X-Client-Id", victim)
-                .header("X-Account-Id", ACCOUNTS.get(victim).getFirst()));
+                .header("X-Account-Id", ACCOUNTS.get(victim).get(0)));
     }
 
     @ParameterizedTest
@@ -141,8 +141,8 @@ class CrossClientAccessIntegrationTest {
     void clientAndObjectSelectorsAreExplicitlyForbidden(UUID client, String path, String selector) throws Exception {
         var before = snapshot();
         UUID victim = otherClient(client);
-        UUID target = selector.startsWith("account") ? ACCOUNTS.get(victim).getFirst()
-                : selector.startsWith("order") ? orderId(ACCOUNTS.get(victim).getFirst()) : victim;
+        UUID target = selector.startsWith("account") ? ACCOUNTS.get(victim).get(0)
+                : selector.startsWith("order") ? orderId(ACCOUNTS.get(victim).get(0)) : victim;
         assertDenied(authenticated(get(API + path), client).param(selector, target.toString()));
         assertThat(snapshot()).isEqualTo(before);
     }
@@ -168,7 +168,7 @@ class CrossClientAccessIntegrationTest {
     void crossClientWritesAreForbiddenAndNeitherClientsDataChanges(
             UUID client, String path, String method, boolean objectPath) throws Exception {
         UUID victim = otherClient(client);
-        UUID account = ACCOUNTS.get(victim).getFirst();
+        UUID account = ACCOUNTS.get(victim).get(0);
         String uri = API + path + (objectPath ? "/" + targetId(victim, path) : "");
         var before = snapshot();
         String body = json.writeValueAsString(Map.of("userId", victim, "clientId", victim,
@@ -186,7 +186,7 @@ class CrossClientAccessIntegrationTest {
     @MethodSource("clients")
     void cancellationOfAnotherClientsOrderIsForbidden(UUID client) throws Exception {
         var before = snapshot();
-        UUID order = orderId(ACCOUNTS.get(otherClient(client)).getFirst());
+        UUID order = orderId(ACCOUNTS.get(otherClient(client)).get(0));
         assertDenied(authenticated(post(API + "/orders/" + order + "/cancel"), client));
         assertThat(snapshot()).isEqualTo(before);
     }
@@ -255,7 +255,7 @@ class CrossClientAccessIntegrationTest {
     private static UUID otherClient(UUID client) { return client.equals(ALICE) ? BOB : ALICE; }
     private static UUID orderId(UUID account) { return new UUID(0, account.getLeastSignificantBits() + 100); }
     private static UUID targetId(UUID client, String path) {
-        UUID account = ACCOUNTS.get(client).getFirst();
+        UUID account = ACCOUNTS.get(client).get(0);
         return path.equals("/orders") ? orderId(account) : account;
     }
 

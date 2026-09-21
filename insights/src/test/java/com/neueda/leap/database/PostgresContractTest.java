@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Run against a disposable database initialized with db/finalized-schema.sql and the app role. */
 @SpringBootTest(properties = {"spring.jpa.hibernate.ddl-auto=validate",
+        "orders.execution.enabled=false",
         "nexttrade.security.ssn-encryption-key=synthetic-contract-test-key"})
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "TEST_POSTGRES_URL", matches = ".+")
@@ -90,7 +91,7 @@ class PostgresContractTest {
         String ownToken = tokens.issueToken(user, user + "@example.test");
         String first = mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("SUBMITTED"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("ACCEPTED"))
                 .andReturn().getResponse().getContentAsString();
         mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
@@ -126,7 +127,8 @@ class PostgresContractTest {
             }
             return existing;
         }).when(repository).findByAccountAndClientReference(account, request.clientReference());
-        try (var executor = Executors.newFixedThreadPool(2)) {
+        var executor = Executors.newFixedThreadPool(2);
+        try {
             var first = executor.submit(() -> orders.submit(user, request));
             var second = executor.submit(() -> orders.submit(user, request));
             var a = first.get(20, TimeUnit.SECONDS);
@@ -135,6 +137,10 @@ class PostgresContractTest {
             assertThat(a.created()).isNotEqualTo(b.created());
             assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
         } finally {
+            executor.shutdownNow();
+            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Order submission workers did not stop");
+            }
             jdbc.update("DELETE FROM orders WHERE account_id = ?", account);
             jdbc.update("DELETE FROM accounts WHERE account_id = ?", account);
             jdbc.update("DELETE FROM users WHERE user_id = ?", user);

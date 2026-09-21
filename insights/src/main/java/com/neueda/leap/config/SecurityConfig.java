@@ -2,7 +2,6 @@ package com.neueda.leap.config;
 
 import com.neueda.leap.security.JwtAuthenticationFilter;
 import com.neueda.leap.security.JwtService;
-import com.neueda.leap.security.SecureTransportFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,7 +17,6 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 /**
@@ -83,12 +81,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                    "/api/v1/users",
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         // These collections accept no caller-selected scope. Identity comes from JWT.
                         .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
+                        .requestMatchers(HttpMethod.POST, "/orders")
                         .access(AuthorizationManagers.allOf(
                                 AuthenticatedAuthorizationManager.authenticated(),
                                 (authentication, context) -> new AuthorizationDecision(
@@ -111,7 +114,6 @@ public class SecurityConfig {
                             response.getWriter().write(
                                     "{\"error\":\"UNAUTHENTICATED\",\"message\":\"Authentication is required.\"}");
                         }))
-                .addFilterAfter(new SecureTransportFilter(), HeaderWriterFilter.class)
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
