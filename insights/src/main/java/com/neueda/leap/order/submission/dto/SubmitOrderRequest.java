@@ -20,7 +20,8 @@ import java.util.Locale;
  * @param quantity positive whole-unit quantity
  * @param orderType MARKET, case-insensitive, or null to use MARKET
  * @param bufferPercent optional nonnegative buffer percentage, at most three integer
- *        and two fractional digits; stored without reserving funds at submission
+ *        and two fractional digits; overrides the account default for buying-power
+ *        checks without reserving funds at submission
  */
 public record SubmitOrderRequest(
         @NotNull UUID accountId,

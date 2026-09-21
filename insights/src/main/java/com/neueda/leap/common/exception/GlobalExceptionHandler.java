@@ -1,6 +1,7 @@
 package com.neueda.leap.common.exception;
 
 import com.neueda.leap.passwordreset.InvalidPasswordResetTokenException;
+import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,17 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler() {
     }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * Rejects an order with a fixed rule code without exposing financial data.
+     * @param exception sufficiency rule rejection
+     * @return HTTP 422 with a safe reason code and message
+     */
+    @ExceptionHandler(OrderSufficiencyException.class)
+    public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
+        return ResponseEntity.unprocessableEntity().body(Map.of(
+                "error", exception.reason().name(), "message", exception.getMessage()));
+    }
 
     /**
      * Preserves an explicit HTTP failure status while hiding exception details.
