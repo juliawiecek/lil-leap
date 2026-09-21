@@ -57,7 +57,7 @@ services:
     depends_on:
       - db
     environment:
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-my_jwt_top_secret}
+      APP_JWT_SECRET: my_jwt_top_secret
 
   frontend:
     build: ./frontend
@@ -84,6 +84,8 @@ services:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: main_password
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -109,9 +111,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_APP_USERNAME: ${DB_APP_USERNAME}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
       QUOTE_PROVIDER: postgres
       QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-5}
       QUOTE_PERIODS: ${QUOTE_PERIODS:-10}
