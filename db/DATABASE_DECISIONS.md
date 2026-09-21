@@ -111,20 +111,20 @@ SELECT pgp_sym_decrypt(ssn_encrypted, 'my_encryption_key') AS ssn FROM customer_
 
 ## Age and Residency Compliance
 
-### Minimum Trading Age: 18 Years
+### Minimum Trading Age: 21 Years
 
-**Decision**: Customers must be at least 18 years old, enforced by:
-1. **Constraint**: `customer_profiles.chk_age_18_or_older` CHECK (date_of_birth <= CURRENT_DATE - INTERVAL '18 years')
-2. **Trigger**: `tg_customer_profiles_age_validation` BEFORE INSERT OR UPDATE OF date_of_birth — rejects under-18 with SQLSTATE 23514 (check_violation)
+**Decision**: Customers must be at least 21 years old, enforced by:
+1. **Constraint**: `customer_profiles.chk_age_21_or_older` CHECK (date_of_birth <= CURRENT_DATE - INTERVAL '21 years')
+2. **Trigger**: `tg_customer_profiles_age_validation` BEFORE INSERT OR UPDATE OF date_of_birth — rejects under-21 with SQLSTATE 23514 (check_violation)
 
 **Why Two Controls**:
 - Constraint: Efficient, always enforced
 - Trigger: Provides explicit error message and controlled exception
 - **Not** time-dependent: Does not use `AGE()` function (which changes daily); uses fixed calculation
 
-**Rationale**: Trading Rules document specifies 18+ age requirement; common for brokerage platforms
+**Rationale**: Trading Rules document specifies 21+ age requirement; common for brokerage platforms
 
-**Future**: May add accredited investor designation (age 18+, net worth, investment experience) for options/margin products
+**Future**: May add accredited investor designation (age 21+, net worth, investment experience) for options/margin products
 
 ---
 
@@ -372,7 +372,7 @@ The following decisions are intentionally deferred pending further business/tech
 |-----------|----------|-------------|------------|
 | **System of Record** | PostgreSQL | Schema constraints, app code | ACID compliance vs. scaling complexity |
 | **SSN Storage** | Encrypted BYTEA | pgcrypto, schema validation | Performance (decrypt on each access) vs. security |
-| **Minimum Age** | 18 years | Constraint + trigger | No dynamic age calculation vs. fixed-at-insert |
+| **Minimum Age** | 21 years | Constraint + trigger | No dynamic age calculation vs. fixed-at-insert |
 | **Session Timeout** | ~10 minutes | Application-configurable | Simplicity vs. granular per-user policies |
 | **Quote Provenance** | source + is_synthetic | Schema + uniqueness | Extra columns vs. auditability |
 | **Instruments** | US stocks MVP | asset_class enum | Simplicity vs. extensibility |

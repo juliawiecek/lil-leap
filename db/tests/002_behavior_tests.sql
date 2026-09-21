@@ -41,8 +41,8 @@ BEGIN
         INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address,
                                       date_of_birth, ssn_encrypted)
         VALUES (minor_id, 'Minor', 'Fixture', '555-0101', '2 Test Way',
-                (CURRENT_DATE - INTERVAL '17 years')::date, encrypted);
-        RAISE EXCEPTION 'Under-18 customer was accepted';
+                (CURRENT_DATE - INTERVAL '19 years')::date, encrypted);
+        RAISE EXCEPTION 'Under-21 customer was accepted';
     EXCEPTION WHEN check_violation THEN
         NULL; -- Only the expected constraint error counts as success.
     END;

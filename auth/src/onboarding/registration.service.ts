@@ -147,7 +147,7 @@ export class RegistrationService {
     await manager.save(account);
   }
 
-  /** Validates that the user is at least 18 years old. */
+  /** Validates that the user is at least 21 years old. */
   private validateAdult(dateOfBirth: string): void {
     const dob = new Date(dateOfBirth);
     const today = new Date();
@@ -156,8 +156,8 @@ export class RegistrationService {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       age--;
     }
-    if (Number.isNaN(dob.getTime()) || age < 18) {
-      throw new BadRequestException('User must be at least 18 years old.');
+    if (Number.isNaN(dob.getTime()) || age < 21) {
+      throw new BadRequestException('User must be at least 21 years old.');
     }
   }
 
