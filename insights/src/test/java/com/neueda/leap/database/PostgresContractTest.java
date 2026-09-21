@@ -203,7 +203,7 @@ class PostgresContractTest {
                 .andExpect(jsonPath("$.error").value("QUOTE_UNAVAILABLE"));
         jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, 10)", account, instrument);
         submit(user, account, "SELL").andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT quantity FROM holdings WHERE account_id = ? AND instrument_id = ?",
                 Long.class, account, instrument)).isEqualTo(10L);

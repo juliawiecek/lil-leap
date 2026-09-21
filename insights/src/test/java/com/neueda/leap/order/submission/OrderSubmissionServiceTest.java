@@ -63,7 +63,6 @@ class OrderSubmissionServiceTest {
 
         assertTrue(result.created());
         assertEquals("ACCEPTED", result.order().status());
-        assertEquals("SUBMITTED", result.order().status());
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrumentId);
         sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);

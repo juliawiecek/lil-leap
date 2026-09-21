@@ -3,6 +3,9 @@ package com.neueda.leap.order.execution;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.JdbcOrderSubmissionRepository;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
+import com.neueda.leap.order.service.OrderSufficiencyService;
+import com.neueda.leap.order.submission.repository.JdbcOrderSufficiencyRepository;
+import com.neueda.leap.marketdata.JdbcQuoteRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,12 +51,16 @@ class OrderExecutionDurabilityTest {
                 UUID.class, user, UUID.randomUUID().toString().substring(0, 20));
         instrument = jdbc.queryForObject("INSERT INTO instruments(symbol,instrument_name,asset_class,market_code) VALUES (?,'Test','COMMON_STOCK','TEST') RETURNING instrument_id",
                 UUID.class, "T" + UUID.randomUUID().toString().substring(0, 8));
+        jdbc.update("INSERT INTO cash_balances(account_id, balance) VALUES (?, 1000)", account);
+        jdbc.update("INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source) VALUES (?, 9, 10, CURRENT_TIMESTAMP, 'TEST')", instrument);
     }
 
     @AfterEach
     void cleanup() {
         jdbc.update("DELETE FROM fills WHERE order_id IN (SELECT order_id FROM orders WHERE account_id = ?)", account);
         jdbc.update("DELETE FROM orders WHERE account_id = ?", account);
+        jdbc.update("DELETE FROM cash_balances WHERE account_id = ?", account);
+        jdbc.update("DELETE FROM quotes WHERE instrument_id = ?", instrument);
         jdbc.update("DELETE FROM accounts WHERE account_id = ?", account);
         jdbc.update("DELETE FROM users WHERE user_id = ?", user);
         jdbc.update("DELETE FROM instruments WHERE instrument_id = ?", instrument);
@@ -61,10 +68,15 @@ class OrderExecutionDurabilityTest {
 
     private UUID accept() {
         String symbol = jdbc.queryForObject("SELECT symbol FROM instruments WHERE instrument_id = ?", String.class, instrument);
-        var service = new OrderSubmissionService(new JdbcOrderSubmissionRepository(jdbc));
+        var service = submissionService();
         return transaction.execute(tx -> service.submit(user,
                 new SubmitOrderRequest(account, symbol, UUID.randomUUID(), "BUY", 1, "MARKET", null))
                 .order().orderId());
+    }
+
+    private OrderSubmissionService submissionService() {
+        return new OrderSubmissionService(new JdbcOrderSubmissionRepository(jdbc),
+                new OrderSufficiencyService(new JdbcOrderSufficiencyRepository(jdbc), new JdbcQuoteRepository(jdbc)));
     }
 
     private OrderExecutionWorker worker(OrderExecutor executor) {
@@ -250,7 +262,7 @@ class OrderExecutionDurabilityTest {
     void clientRetryOfPendingOrderReusesCommittedAcceptance() {
         String symbol = jdbc.queryForObject("SELECT symbol FROM instruments WHERE instrument_id = ?", String.class, instrument);
         var request = new SubmitOrderRequest(account, symbol, UUID.randomUUID(), "BUY", 1, "MARKET", null);
-        var service = new OrderSubmissionService(new JdbcOrderSubmissionRepository(jdbc));
+        var service = submissionService();
         var first = transaction.execute(tx -> service.submit(user, request));
         var unavailable = worker(orderId -> OrderExecutor.Outcome.PENDING);
         unavailable.execute(unavailable.claimNext());
