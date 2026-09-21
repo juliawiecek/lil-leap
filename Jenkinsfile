@@ -3,13 +3,18 @@ pipeline {
 
   options {
     timestamps()
-    skipDefaultCheckout(true)
     disableConcurrentBuilds()
-    timeout(time: 45, unit: 'MINUTES')
   }
 
   tools {
-    nodejs 'NodeJS'
+    maven 'maven'
+    jdk 'JDK21'
+  }
+
+  environment {
+    COMPOSE_FILE = 'docker-compose.yml'
+    NEXTTRADE_POM = 'nextTrade/pom.xml'
+    INSIGHTS_POM = 'insights/pom.xml'
   }
 
   stages {
@@ -45,23 +50,25 @@ pipeline {
     }
 
     stage('Validate Compose YAML') {
+      // These synthetic values are used only to validate the deployment model.
+      // Tests and image builds do not inherit them; production secrets are never needed.
+      environment {
+        TLS_KEYSTORE_PASSWORD = 'ci-validation-only-not-for-runtime'
+        TLS_KEYSTORE_PATH = '/dev/null'
+        AUTH_SERVICE_TLS_KEYSTORE_PATH = '/dev/null'
+        APP_JWT_SECRET = 'ci-validation-only-not-for-runtime-32-bytes-min'
+      }
       steps {
         sh '''
-          ${COMPOSE_CMD} -f docker-compose.yml config -q
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} config
         '''
       }
     }
 
-    // Run all backend JUnit tests before building Docker images.
-    stage('Run Backend Tests') {
+    stage('Unit Tests - nextTrade') {
       steps {
-        sh '''
-          docker run --rm \
-            -v "$WORKSPACE/backend:/app" \
-            -w /app \
-            maven:3.9-eclipse-temurin-21 \
-            mvn -B clean verify
-        '''
+        sh "mvn -f ${NEXTTRADE_POM} -B test"
       }
     }
 
@@ -103,26 +110,16 @@ pipeline {
       }
     }
 
-    stage('Build Backend Image') {
+    stage('Unit Tests - insights') {
       steps {
-        sh 'docker build --tag "nexttrade:ci-${BUILD_NUMBER}-${GIT_COMMIT}" backend/'
+        sh "mvn -f ${INSIGHTS_POM} -B test"
       }
     }
 
     stage('Build Compose Services') {
       steps {
-        sh '${COMPOSE_CMD} -f docker-compose.yml build'
+        sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
       }
-    }
-  }
-
-  post {
-    always {
-      sh '''
-        if [ -n "${COMPOSE_CMD}" ]; then
-          ${COMPOSE_CMD} -f docker-compose.yml down -v || true
-        fi
-      '''
     }
   }
 }

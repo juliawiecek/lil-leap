@@ -1,0 +1,7 @@
+export enum EmploymentStatus {
+  EMPLOYED = 'EMPLOYED',
+  SELF_EMPLOYED = 'SELF_EMPLOYED',
+  RETIRED = 'RETIRED',
+  STUDENT = 'STUDENT',
+  UNEMPLOYED = 'UNEMPLOYED',
+}
