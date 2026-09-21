@@ -2,7 +2,6 @@ package com.neueda.leap.config;
 
 import com.neueda.leap.security.JwtAuthenticationFilter;
 import com.neueda.leap.security.JwtService;
-import com.neueda.leap.security.SecureTransportFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -83,7 +82,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                    "/api/v1/users",
+                    "/users",
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
@@ -111,7 +110,6 @@ public class SecurityConfig {
                             response.getWriter().write(
                                     "{\"error\":\"UNAUTHENTICATED\",\"message\":\"Authentication is required.\"}");
                         }))
-                .addFilterAfter(new SecureTransportFilter(), HeaderWriterFilter.class)
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
