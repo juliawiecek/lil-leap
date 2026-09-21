@@ -14,7 +14,7 @@ The supplied finalized PostgreSQL SQL is authoritative where the diagram is less
 
 Select option values match SQL enums; labels are friendly text. Before a future API submission, convert true/false selection strings to booleans, blank optional values to null, and annual_income to a decimal representation. Exclude detail fields when their controlling answer is No, and employer details when not employed/self-employed. JSONB key names above are an application convention; the SQL does not constrain their shape.
 
-The full name entered at signup is split into editable first/last names for confirmation. Age validation uses the actual birthday and an 18-year cutoff. Phone and string lengths reflect the SQL limits. Annual income is optional, nonnegative, and accepts cents. SSN is optional as in the SQL, with format validation when provided.
+The full name entered at signup is split into editable first/last names for confirmation. Age validation uses the actual birthday and a 21-year cutoff. Phone and string lengths reflect the SQL limits. Annual income is optional, nonnegative, and accepts cents. SSN is optional as in the SQL, with format validation when provided.
 
 Country, citizenship, employment, net worth, risk, and liquidity are kept as required application questions even where the database permits null. Accredited and politically exposed declarations require an explicit answer. Employer and occupation are required only for employed/self-employed applicants.
 

@@ -81,6 +81,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                    "/users",
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
@@ -91,6 +92,7 @@ public class SecurityConfig {
                                 AuthenticatedAuthorizationManager.authenticated(),
                                 (authentication, context) -> new AuthorizationDecision(
                                         context.getRequest().getParameterMap().isEmpty())))
+                        // Submission authorizes the body account against the JWT in the service.
                         .requestMatchers(HttpMethod.POST, "/orders")
                         .access(AuthorizationManagers.allOf(
                                 AuthenticatedAuthorizationManager.authenticated(),

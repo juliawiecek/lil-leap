@@ -72,7 +72,7 @@ public class RegistrationServiceImpl implements RegistrationService {
      * @param request the registration request containing user details
      * @return a {@link UserResponse} representing the saved user
      * @throws UserAlreadyExistsException if a user with the normalized email already exists
-     * @throws IllegalArgumentException if the date of birth is missing or the user is under 18
+     * @throws IllegalArgumentException if the date of birth is missing or the user is under 21
      */
     @Override
     @Transactional
@@ -135,13 +135,13 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     /**
-     * Validates that the user is at least 18 years old.
+     * Validates that the user is at least 21 years old.
      *
      * @param dateOfBirth user date of birth
      */
     private void validateAdult(LocalDate dateOfBirth) {
-        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 18) {
-            throw new IllegalArgumentException("User must be at least 18 years old.");
+        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 21) {
+            throw new IllegalArgumentException("User must be at least 21 years old.");
         }
     }
 

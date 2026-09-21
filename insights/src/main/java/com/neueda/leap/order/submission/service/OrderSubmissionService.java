@@ -2,6 +2,7 @@ package com.neueda.leap.order.submission.service;
 
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
+import com.neueda.leap.order.service.OrderSufficiencyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +20,16 @@ import java.util.UUID;
 public class OrderSubmissionService {
 
     private final OrderSubmissionRepository repository;
+    private final OrderSufficiencyService sufficiency;
 
     /**
      * Creates the submission service.
      * @param repository persistence operations for ownership checks and idempotent inserts
+     * @param sufficiency cash and holdings checks before a new order is saved
      */
-    public OrderSubmissionService(OrderSubmissionRepository repository) {
+    public OrderSubmissionService(OrderSubmissionRepository repository, OrderSufficiencyService sufficiency) {
         this.repository = repository;
+        this.sufficiency = sufficiency;
     }
 
     /**
@@ -38,6 +42,8 @@ public class OrderSubmissionService {
      * @throws ResponseStatusException for missing authentication (401), an unknown or
      *         foreign account (404), or an unsupported/non-tradable symbol (400)
      * @throws IllegalStateException if a competing insert conflicts but its order cannot be read
+     * @throws com.neueda.leap.order.service.OrderSufficiencyException if a new order
+     *         lacks sufficient cash, holdings, or a usable buy quote (422)
      */
     @Transactional
     public OrderSubmissionResult submit(UUID authenticatedUserId, SubmitOrderRequest request) {
@@ -59,6 +65,8 @@ public class OrderSubmissionService {
         UUID instrumentId = repository.findTradableInstrumentIdBySymbol(symbol)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "Unsupported or non-tradable symbol"));
+
+        sufficiency.validate(request, instrumentId);
 
         var saved = repository.insert(
                 request.accountId(), instrumentId, symbol, request.clientReference(),
