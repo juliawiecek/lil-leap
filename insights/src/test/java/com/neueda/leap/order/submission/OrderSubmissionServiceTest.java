@@ -4,6 +4,8 @@ import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
+import com.neueda.leap.order.service.OrderSufficiencyService;
+import com.neueda.leap.order.service.OrderSufficiencyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,11 +22,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyLong;
 
 class OrderSubmissionServiceTest {
 
     private OrderSubmissionRepository repository;
     private OrderSubmissionService service;
+    private OrderSufficiencyService sufficiency;
     private UUID userId;
     private UUID accountId;
     private UUID instrumentId;
@@ -33,7 +41,8 @@ class OrderSubmissionServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(OrderSubmissionRepository.class);
-        service = new OrderSubmissionService(repository);
+        sufficiency = mock(OrderSufficiencyService.class);
+        service = new OrderSubmissionService(repository, sufficiency);
         userId = UUID.randomUUID();
         accountId = UUID.randomUUID();
         instrumentId = UUID.randomUUID();
@@ -54,6 +63,9 @@ class OrderSubmissionServiceTest {
 
         assertTrue(result.created());
         assertEquals("SUBMITTED", result.order().status());
+        var sequence = inOrder(sufficiency, repository);
+        sequence.verify(sufficiency).validate(request, instrumentId);
+        sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
     }
 
     @Test
@@ -68,6 +80,7 @@ class OrderSubmissionServiceTest {
 
         assertFalse(result.created());
         assertEquals(existing.orderId(), result.order().orderId());
+        verifyNoInteractions(sufficiency);
         verify(repository, never()).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
     }
 
@@ -77,6 +90,7 @@ class OrderSubmissionServiceTest {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> service.submit(userId, request("AAPL", "BUY", 10)));
         assertEquals(404, error.getStatusCode().value());
+        verifyNoInteractions(sufficiency);
     }
 
     @Test
@@ -87,6 +101,20 @@ class OrderSubmissionServiceTest {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> service.submit(userId, request("NOPE", "BUY", 10)));
         assertEquals(400, error.getStatusCode().value());
+        verifyNoInteractions(sufficiency);
+    }
+
+    @Test
+    void insufficientResourcesPreventOrderInsert() {
+        var request = request("AAPL", "BUY", 10);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findTradableInstrumentIdBySymbol("AAPL")).thenReturn(Optional.of(instrumentId));
+        doThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.INSUFFICIENT_CASH))
+                .when(sufficiency).validate(request, instrumentId);
+
+        assertThrows(OrderSufficiencyException.class, () -> service.submit(userId, request));
+
+        verify(repository, never()).insert(any(), any(), any(), any(), any(), anyLong(), any(), any());
     }
 
     private SubmitOrderRequest request(String symbol, String side, long quantity) {

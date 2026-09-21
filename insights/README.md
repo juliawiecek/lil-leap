@@ -177,6 +177,40 @@ and `clientReference` returns the existing order with 200, including concurrent 
 Submission creates no fill. PostgreSQL `ON CONFLICT DO NOTHING` handles the race without
 aborting the transaction; a subsequent read retrieves the winning order.
 
+### Cash and holdings sufficiency (TS-06.1)
+
+Before saving a new order, the submission service checks the authorized account's
+current resources. BUY orders require USD cash covering `quantity × latest ask ×
+(1 + bufferPercent / 100)`, rounded **up** to cents after multiplication. An explicit
+order buffer (including zero) overrides `accounts.execution_buffer_percent`; an
+omitted buffer uses that account default. Prices come from the existing PostgreSQL
+quote repository, never from the request. SELL orders require at least the requested
+quantity in that account's position for the resolved instrument; no quote is needed.
+Missing cash or holdings rows count as zero. Other accounts cannot contribute funds
+or shares, even when they belong to the same user.
+
+Failures return HTTP 422 with `INSUFFICIENT_CASH`, `INSUFFICIENT_HOLDINGS`, or
+`QUOTE_UNAVAILABLE` in the `error` field and a fixed message. They create no order or
+fill and do not modify cash or holdings. Ownership is checked first; an idempotent
+retry returns the original order before rechecking resources.
+
+This is the pre-submission sufficiency gate, using the portfolio API's cash and
+holdings caches. Successful orders remain `SUBMITTED`. The current pipeline has no
+acceptance, reservation, or settlement implementation: pending orders do not reserve
+resources. The future acceptance/execution step must recheck sufficiency and reserve
+resources atomically to prevent concurrent overcommitment; execution-time quote
+freshness remains a separate rule, as described in the quote-storage ADR.
+
+Run the rule and submission tests from the repository root:
+
+```powershell
+mvn -B -f insights/pom.xml '-Dtest=OrderSufficiencyServiceTest,OrderSubmissionServiceTest' test
+```
+
+The PostgreSQL contract suite also exercises real HTTP rejections, account isolation,
+missing positions/quotes, exact-balance success, latest-ask selection, unchanged
+balances after rejection, and retries after resources change.
+
 ### PostgreSQL contract tests
 
 The ordinary test suite uses H2 and does not validate PostgreSQL-specific persistence.

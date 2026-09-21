@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -84,7 +85,9 @@ class PostgresContractTest {
     void ownerCanSubmitAndRetryButOtherClientsCannotWrite() throws Exception {
         UUID user = createUser();
         UUID account = createAccount(user);
-        createInstrument();
+        UUID instrument = createInstrument();
+        fundAccount(account, "1020.00");
+        quote(instrument);
         var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
         byte[] body = json.writeValueAsBytes(request);
         String ownToken = tokens.issueToken(user, user + "@example.test");
@@ -115,6 +118,8 @@ class PostgresContractTest {
         UUID user = createUser();
         UUID account = createAccount(user);
         UUID instrument = createInstrument();
+        fundAccount(account, "1020.00");
+        quote(instrument);
         TestTransaction.flagForCommit();
         TestTransaction.end();
         var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
@@ -138,10 +143,108 @@ class PostgresContractTest {
         } finally {
             executor.shutdown();
             jdbc.update("DELETE FROM orders WHERE account_id = ?", account);
+            jdbc.update("DELETE FROM cash_balances WHERE account_id = ?", account);
+            jdbc.update("DELETE FROM quotes WHERE instrument_id = ?", instrument);
             jdbc.update("DELETE FROM accounts WHERE account_id = ?", account);
             jdbc.update("DELETE FROM users WHERE user_id = ?", user);
             jdbc.update("DELETE FROM instruments WHERE instrument_id = ?", instrument);
         }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"BUY,1019.99,10,INSUFFICIENT_CASH", "SELL,100000,9,INSUFFICIENT_HOLDINGS"})
+    void insufficientOrdersAreRejectedBeforePersistence(String side, String cash, long owned, String reason) throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, cash);
+        quote(instrument);
+        jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, ?)", account, instrument, owned);
+        // Neither another account owned by this user nor a foreign account can supply resources.
+        for (UUID owner : new UUID[]{user, createUser()}) {
+            UUID otherAccount = createAccount(owner);
+            fundAccount(otherAccount, "100000.00");
+            jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, 1000)", otherAccount, instrument);
+        }
+        var balancesBefore = jdbc.queryForList("SELECT * FROM cash_balances ORDER BY account_id");
+        var holdingsBefore = jdbc.queryForList("SELECT * FROM holdings ORDER BY account_id, instrument_id");
+
+        submit(user, account, side).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(reason));
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isZero();
+        assertThat(jdbc.queryForList("SELECT * FROM cash_balances ORDER BY account_id")).isEqualTo(balancesBefore);
+        assertThat(jdbc.queryForList("SELECT * FROM holdings ORDER BY account_id, instrument_id")).isEqualTo(holdingsBefore);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"BUY,INSUFFICIENT_CASH", "SELL,INSUFFICIENT_HOLDINGS"})
+    void missingBalancesAreTreatedAsZero(String side, String reason) throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        quote(createInstrument());
+        submit(user, account, side).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value(reason));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isZero();
+    }
+
+    @Test
+    void buyWithoutQuoteIsRejectedButExactHoldingSellSucceeds() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "100000.00");
+        submit(user, account, "BUY").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("QUOTE_UNAVAILABLE"));
+        jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, 10)", account, instrument);
+        submit(user, account, "SELL").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings WHERE account_id = ? AND instrument_id = ?",
+                Long.class, account, instrument)).isEqualTo(10L);
+    }
+
+    @Test
+    void retryReturnsOriginalOrderEvenAfterCashAndQuoteAreRemoved() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "1020.00");
+        quote(instrument);
+        var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
+        var original = orders.submit(user, request);
+        jdbc.update("DELETE FROM cash_balances WHERE account_id = ?", account);
+        jdbc.update("DELETE FROM quotes WHERE instrument_id = ?", instrument);
+        var retry = orders.submit(user, request);
+        assertThat(retry.created()).isFalse();
+        assertThat(retry.order().orderId()).isEqualTo(original.order().orderId());
+    }
+
+    @Test
+    void latestAskDeterminesBuyingPower() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "1020.00");
+        quote(instrument);
+        jdbc.update("INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source) VALUES (?, 99, 101, CURRENT_TIMESTAMP + INTERVAL '1 second', 'TEST')", instrument);
+        submit(user, account, "BUY").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("INSUFFICIENT_CASH"));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions submit(UUID user, UUID account, String side) throws Exception {
+        var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), side, 10, "MARKET", null);
+        return mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
+                .header("Authorization", "Bearer " + tokens.issueToken(user, user + "@example.test"))
+                .contentType("application/json").content(json.writeValueAsBytes(request)));
+    }
+
+    private void fundAccount(UUID account, String cash) {
+        jdbc.update("INSERT INTO cash_balances(account_id, balance) VALUES (?, ?)", account, new java.math.BigDecimal(cash));
+    }
+
+    private void quote(UUID instrument) {
+        jdbc.update("INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source) VALUES (?, 99, 100, CURRENT_TIMESTAMP, 'TEST')", instrument);
     }
 
     private UUID createUser() {

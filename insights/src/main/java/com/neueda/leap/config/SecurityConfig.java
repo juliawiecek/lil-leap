@@ -92,6 +92,12 @@ public class SecurityConfig {
                                 AuthenticatedAuthorizationManager.authenticated(),
                                 (authentication, context) -> new AuthorizationDecision(
                                         context.getRequest().getParameterMap().isEmpty())))
+                        // Submission authorizes the body account against the JWT in the service.
+                        .requestMatchers(HttpMethod.POST, "/orders")
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                (authentication, context) -> new AuthorizationDecision(
+                                        context.getRequest().getParameterMap().isEmpty())))
                         // Other financial writes and object-ID routes are not implemented yet.
                         .requestMatchers("/holdings", "/holdings/**", "/cash", "/cash/**", "/orders", "/orders/**")
                         .denyAll()
