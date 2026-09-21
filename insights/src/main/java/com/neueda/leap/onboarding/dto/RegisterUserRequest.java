@@ -21,7 +21,7 @@ import java.time.LocalDate;
  *
  * @param firstName the user's first name
  * @param lastName the user's last name
- * @param dateOfBirth the user's birth date; applicant must be at least 18
+ * @param dateOfBirth the user's birth date; applicant must be at least 21
  * @param email the user's email address
  * @param phone the user's phone number
  * @param password the raw password provided during registration

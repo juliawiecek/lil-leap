@@ -93,21 +93,21 @@ CREATE TABLE customer_profiles (
     CONSTRAINT chk_last_name CHECK (length(trim(last_name)) > 0),
     CONSTRAINT chk_phone CHECK (length(trim(phone)) > 0),
     CONSTRAINT chk_address CHECK (length(trim(address)) > 0),
-    -- BR-01: Users must be 18+ (actual birthday, not just year)
-    CONSTRAINT chk_age_18_or_older CHECK (date_of_birth <= CURRENT_DATE - INTERVAL '18 years')
+    -- BR-01: Users must be 21+ (actual birthday, not just year)
+    CONSTRAINT chk_age_21_or_older CHECK (date_of_birth <= CURRENT_DATE - INTERVAL '21 years')
 );
 
 CREATE INDEX idx_profile_user ON customer_profiles(user_id);
 CREATE INDEX idx_profile_updated_at ON customer_profiles(updated_at DESC);
 
--- TRIGGER: Minimum age validation (18+)
--- Rejects inserts/updates where date_of_birth indicates customer is younger than 18.
+-- TRIGGER: Minimum age validation (21+)
+-- Rejects inserts/updates where date_of_birth indicates customer is younger than 21.
 -- Uses SQLSTATE 23514 (check_violation) for controlled rejection.
-CREATE OR REPLACE FUNCTION check_customer_age_18()
+CREATE OR REPLACE FUNCTION check_customer_age_21()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.date_of_birth > CURRENT_DATE - INTERVAL '18 years' THEN
-        RAISE EXCEPTION 'Customer must be at least 18 years old' USING ERRCODE = '23514';
+    IF NEW.date_of_birth > CURRENT_DATE - INTERVAL '21 years' THEN
+        RAISE EXCEPTION 'Customer must be at least 21 years old' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END;
@@ -116,7 +116,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tg_customer_profiles_age_validation
 BEFORE INSERT OR UPDATE OF date_of_birth ON customer_profiles
 FOR EACH ROW
-EXECUTE FUNCTION check_customer_age_18();
+EXECUTE FUNCTION check_customer_age_21();
 
 -- CONSTRAINT: Prevent future dates of birth
 -- (Additional database-level constraint alongside trigger)
