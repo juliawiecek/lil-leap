@@ -68,7 +68,9 @@ pipeline {
 
     stage('Unit Tests - nextTrade') {
       steps {
-        sh "mvn -f ${NEXTTRADE_POM} -B test"
+        dir('nextTrade') {
+          sh 'mvn -B -ntp clean verify'
+        }
       }
     }
 
