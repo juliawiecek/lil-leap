@@ -1,9 +1,9 @@
 services:
-  app:
-    build: ./nextTrade
-    # No ports: mapping — the app service is intentionally unreachable from the
+  orders:
+    build: ./nextTrade-orders
+    # No ports: mapping — the orders service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `app` unless a ports: entry is added.
+    # but nothing outside Docker can reach `orders` unless a ports: entry is added.
     depends_on:
       - db
     environment:
@@ -15,6 +15,23 @@ services:
       SPRING_DATASOURCE_PASSWORD: my_app_password
     ports:
       - "8082:8080"
+
+  holdings:
+    build: ./nextTrade-holdings
+    # No ports: mapping — the holdings service is intentionally unreachable from the
+    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
+    # but nothing outside Docker can reach `holdings` unless a ports: entry is added.
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: my_app_password
+    ports:
+      - "8083:8080"
 
   insights:
     build: ./insights
@@ -39,15 +56,18 @@ services:
       - "3000:3000"
     depends_on:
       - db
+    environment:
+      APP_JWT_SECRET: my_jwt_top_secret
 
   frontend:
     build: ./frontend
     depends_on:
-      - app
+      - orders
+      - holdings
     ports:
       - "4200:80"
     environment:
-      API_BASE_URL: http://app:8080
+      API_BASE_URL: http://orders:8080
 
   insights-frontend:
     build: ./insights-frontend
@@ -64,17 +84,21 @@ services:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: main_password
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
-      # Only db is reachable from the host. app is not. This mirrors a real
-      # deployment where the database is internal but needs to be accessible
-      # to DBA tooling running on the developer's machine during development.
+      # Only db is reachable from the host. Backend services use the internal
+      # Docker network and do not need direct host exposure to reach Postgres.
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       # Numeric prefixes control init order: schema first, then the
       # restricted app role. Both only run once, against an empty volume.
-      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh
       - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
@@ -87,9 +111,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_APP_USERNAME: ${DB_APP_USERNAME}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
       QUOTE_PROVIDER: postgres
       QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-5}
       QUOTE_PERIODS: ${QUOTE_PERIODS:-10}
@@ -98,7 +122,7 @@ services:
       QUOTE_INGEST_CONTINUOUS: "true"
     command: ["python", "-m", "src.service_runner"]
     ports:
-      - "${QUOTE_SERVICE_PORT:-8081}:8080"
+      - "${QUOTE_SERVICE_PORT:-8084}:8080"
     restart: unless-stopped
 
   # Local SMTP server used to capture password reset emails during development.

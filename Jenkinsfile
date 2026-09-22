@@ -13,7 +13,7 @@ pipeline {
 
   environment {
     COMPOSE_FILE = 'docker-compose.yml'
-    NEXTTRADE_POM = 'nextTrade/pom.xml'
+    NEXTTRADE_POM = 'nextTrade-orders/pom.xml'
     INSIGHTS_POM = 'insights/pom.xml'
   }
 
@@ -66,18 +66,41 @@ pipeline {
       }
     }
 
-    stage('Unit Tests - nextTrade') {
+    stage('Unit Tests - nextTrade-orders') {
       steps {
-        dir('nextTrade') {
+        dir('nextTrade-orders') {
           sh 'mvn -B -ntp clean verify'
         }
       }
     }
 
-    stage('Publish Backend Coverage') {
+    stage('Unit Tests - nextTrade-holdings') {
+      steps {
+        dir('nextTrade-holdings') {
+          sh 'mvn -B -ntp clean verify'
+        }
+      }
+    }
+
+    stage('Unit Tests - insights-service') {
+      steps {
+        sh "mvn -f ${INSIGHTS_POM} -B -ntp clean verify"
+      }
+    }
+
+    stage('Publish Coverage - nextTrade-orders') {
       steps {
         archiveArtifacts(
-          artifacts: 'nextTrade/target/site/jacoco/**',
+          artifacts: 'nextTrade-orders/target/site/jacoco/**',
+          fingerprint: true
+        )
+      }
+    }
+
+    stage('Publish Coverage - nextTrade-holdings') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'nextTrade-holdings/target/site/jacoco/**',
           fingerprint: true
         )
       }
@@ -112,11 +135,6 @@ pipeline {
       }
     }
 
-    stage('Unit Tests - insights') {
-      steps {
-        sh "mvn -f ${INSIGHTS_POM} -B test"
-      }
-    }
 
     stage('Build Compose Services') {
       steps {
