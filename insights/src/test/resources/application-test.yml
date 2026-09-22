@@ -4,7 +4,7 @@ spring:
 
   datasource:
     # Use H2 in-memory database for integration tests
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL
     driverClassName: org.h2.Driver
     username: sa
     password:
@@ -51,3 +51,7 @@ server:
   port: 8080
   servlet:
     context-path: /api/v1
+
+orders:
+  execution:
+    enabled: false

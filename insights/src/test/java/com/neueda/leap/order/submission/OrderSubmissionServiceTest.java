@@ -50,7 +50,7 @@ class OrderSubmissionServiceTest {
     }
 
     @Test
-    void validOrderIsPersistedAsSubmitted() {
+    void validOrderIsPersistedAsAccepted() {
         SubmitOrderRequest request = request("aapl", "buy", 10);
         OrderSubmissionResponse saved = response("AAPL");
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
@@ -62,7 +62,7 @@ class OrderSubmissionServiceTest {
         var result = service.submit(userId, request);
 
         assertTrue(result.created());
-        assertEquals("SUBMITTED", result.order().status());
+        assertEquals("ACCEPTED", result.order().status());
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrumentId);
         sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
@@ -123,6 +123,6 @@ class OrderSubmissionServiceTest {
 
     private OrderSubmissionResponse response(String symbol) {
         return new OrderSubmissionResponse(UUID.randomUUID(), accountId, instrumentId, symbol,
-                clientReference, "BUY", 10, "MARKET", "SUBMITTED", Instant.now(), null);
+                clientReference, "BUY", 10, "MARKET", "ACCEPTED", Instant.now(), null);
     }
 }

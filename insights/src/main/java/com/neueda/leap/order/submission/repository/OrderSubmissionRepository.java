@@ -32,7 +32,7 @@ public interface OrderSubmissionRepository {
     Optional<OrderSubmissionResponse> findByAccountAndClientReference(UUID accountId, UUID clientReference);
 
     /**
-     * Attempts to insert a SUBMITTED order without executing it or reserving funds.
+     * Attempts to insert an ACCEPTED order without executing it or reserving funds.
      * A concurrent duplicate returns empty instead of aborting the transaction;
      * the caller must then read the existing order.
      * @param accountId account whose ownership has already been checked

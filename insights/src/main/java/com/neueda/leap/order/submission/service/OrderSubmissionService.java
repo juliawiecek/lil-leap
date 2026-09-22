@@ -13,7 +13,8 @@ import java.util.UUID;
 /**
  * Submits orders for accounts owned by the authenticated user.
  * Retries reuse the order identified by account and client reference, even if
- * the retry supplies different order details. Submission does not execute a trade.
+ * the retry supplies different order details. Acceptance commits before the database
+ * worker can claim the order; submission does not execute a trade.
  */
 @Service
 public class OrderSubmissionService {
