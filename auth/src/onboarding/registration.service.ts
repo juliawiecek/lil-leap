@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/user-role.enum';
 import { UserAlreadyExistsException } from '../user/exceptions/user-already-exists.exception';
+import { normalizeEmail, UserService } from '../user/user.service';
 import { RegisterRequestDto } from '../user/dto/register-request.dto';
 import { PasswordEncoderService } from '../security/password-encoder.service';
 import { SsnEncryptionService } from '../security/ssn-encryption.service';
@@ -20,25 +20,11 @@ function trimToNull(value?: string | null): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-function escapeJson(value: string | null): string {
-  if (value == null) return '';
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
 /** Registration business logic: one shared entry point, branching by role. */
 @Injectable()
 export class RegistrationService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(CustomerProfile)
-    private readonly customerProfileRepository: Repository<CustomerProfile>,
-    @InjectRepository(FinancialProfile)
-    private readonly financialProfileRepository: Repository<FinancialProfile>,
-    @InjectRepository(Account)
-    private readonly accountRepository: Repository<Account>,
-    @InjectRepository(AnalystProfile)
-    private readonly analystProfileRepository: Repository<AnalystProfile>,
+    private readonly userService: UserService,
     private readonly passwordEncoder: PasswordEncoderService,
     private readonly ssnEncryptionService: SsnEncryptionService,
     private readonly dataSource: DataSource,
@@ -46,18 +32,12 @@ export class RegistrationService {
 
   async register(request: RegisterRequestDto): Promise<User> {
     return this.dataSource.transaction(async (manager) => {
-      const normalizedEmail = request.email.trim().toLowerCase();
-
-      const existing = await manager
-        .createQueryBuilder(User, 'user')
-        .where('LOWER(user.email) = :email', { email: normalizedEmail })
-        .getOne();
-      if (existing) {
-        throw new UserAlreadyExistsException('An account with this email already exists.');
+      if (await this.userService.findByEmail(request.email, manager)) {
+        throw new UserAlreadyExistsException();
       }
 
       const user = manager.create(User, {
-        email: normalizedEmail,
+        email: normalizeEmail(request.email),
         passwordHash: this.passwordEncoder.encode(request.password),
         userRole: request.userRole,
       });
@@ -75,7 +55,7 @@ export class RegistrationService {
 
   /** Persists the ANALYST-only extension table for a newly created user. */
   private async registerAnalyst(
-    manager: import('typeorm').EntityManager,
+    manager: EntityManager,
     request: RegisterRequestDto,
     user: User,
   ): Promise<void> {
@@ -93,7 +73,7 @@ export class RegistrationService {
    * account.
    */
   private async registerTrader(
-    manager: import('typeorm').EntityManager,
+    manager: EntityManager,
     request: RegisterRequestDto,
     user: User,
   ): Promise<void> {
@@ -127,11 +107,11 @@ export class RegistrationService {
       employmentStatus: request.employmentStatus!,
       employerName: trimToNull(request.employerName),
       occupation: trimToNull(request.occupation),
-      annualIncome: this.parseCurrencyAmount(request.annualIncome),
+      annualIncome: this.normalizeMoney(request.annualIncome),
       liquidityPosition: this.normalizeMoney(request.liquidityPosition),
       politicallyExposedPerson: request.politicallyExposedPerson === true,
-      regulatoryDisclosures: this.buildRegulatoryDisclosuresJson(request),
-      beneficialOwnerInfo: this.buildBeneficialOwnerJson(request),
+      regulatoryDisclosures: this.buildRegulatoryDisclosures(request),
+      beneficialOwnerInfo: this.buildBeneficialOwnerInfo(request),
       fundsSourceVerified: false,
     });
     await manager.save(financialProfile);
@@ -163,34 +143,30 @@ export class RegistrationService {
 
   /** Joins structured address fields into the single address column expected by schema. */
   private buildAddressLine(request: RegisterRequestDto): string {
-    const apartment = trimToNull(request.apartment);
-    const parts = apartment
-      ? [request.streetAddress!.trim(), apartment, request.city!.trim(), request.stateProvince!.trim(), request.postalCode!.trim()]
-      : [request.streetAddress!.trim(), request.city!.trim(), request.stateProvince!.trim(), request.postalCode!.trim()];
-    return parts.join(', ');
+    return [request.streetAddress, request.apartment, request.city, request.stateProvince, request.postalCode]
+      .map(trimToNull)
+      .filter((part) => part != null)
+      .join(', ');
   }
 
-  private buildRegulatoryDisclosuresJson(request: RegisterRequestDto): string {
-    return (
-      '{' +
-      `"brokerAffiliation":${request.brokerAffiliation === true},` +
-      `"brokerFirmName":"${escapeJson(trimToNull(request.brokerFirmName))}",` +
-      `"brokerAffiliationDetails":"${escapeJson(trimToNull(request.brokerAffiliationDetails))}",` +
-      `"controlPerson":${request.controlPerson === true},` +
-      `"controlCompanyName":"${escapeJson(trimToNull(request.controlCompanyName))}",` +
-      `"controlCompanyRole":"${escapeJson(trimToNull(request.controlCompanyRole))}"` +
-      '}'
-    );
+  // Plain objects -- TypeORM serializes jsonb itself; a pre-built string would be stored as a JSON string scalar.
+  private buildRegulatoryDisclosures(request: RegisterRequestDto): Record<string, unknown> {
+    return {
+      brokerAffiliation: request.brokerAffiliation === true,
+      brokerFirmName: trimToNull(request.brokerFirmName) ?? '',
+      brokerAffiliationDetails: trimToNull(request.brokerAffiliationDetails) ?? '',
+      controlPerson: request.controlPerson === true,
+      controlCompanyName: trimToNull(request.controlCompanyName) ?? '',
+      controlCompanyRole: trimToNull(request.controlCompanyRole) ?? '',
+    };
   }
 
-  private buildBeneficialOwnerJson(request: RegisterRequestDto): string {
-    return (
-      '{' +
-      `"otherBeneficialOwner":${request.otherBeneficialOwner === true},` +
-      `"beneficialOwnerName":"${escapeJson(trimToNull(request.beneficialOwnerName))}",` +
-      `"beneficialOwnerRelationship":"${escapeJson(trimToNull(request.beneficialOwnerRelationship))}"` +
-      '}'
-    );
+  private buildBeneficialOwnerInfo(request: RegisterRequestDto): Record<string, unknown> {
+    return {
+      otherBeneficialOwner: request.otherBeneficialOwner === true,
+      beneficialOwnerName: trimToNull(request.beneficialOwnerName) ?? '',
+      beneficialOwnerRelationship: trimToNull(request.beneficialOwnerRelationship) ?? '',
+    };
   }
 
   /** Removes all non-digit SSN separators. */
@@ -199,15 +175,10 @@ export class RegistrationService {
     return trimmed == null ? null : trimmed.replace(/\D/g, '');
   }
 
-  /** Removes currency separators from numeric text values. */
+  /** Removes currency separators; kept as a string for numeric column binding. */
   private normalizeMoney(value?: string | null): string | null {
     const trimmed = trimToNull(value);
     return trimmed == null ? null : trimmed.replace(/,/g, '');
-  }
-
-  /** Parses a currency string into a decimal amount (kept as a string for numeric column binding). */
-  private parseCurrencyAmount(value?: string | null): string | null {
-    return this.normalizeMoney(value);
   }
 
   /** Generates a deterministic-length account number with an NT prefix. */

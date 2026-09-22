@@ -10,7 +10,7 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 
-/** Auth REST surface: register, login, refresh. One endpoint per operation for both roles. */
+/** Auth REST surface: register, login, refresh, logout. One endpoint per operation for both roles. */
 @Controller()
 export class AuthController {
   constructor(
@@ -47,5 +47,17 @@ export class AuthController {
     const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email);
 
     return new RefreshResponseDto(accessToken, rotation.newRawRefreshToken);
+  }
+
+  /**
+   * Revokes the refresh token so it can't mint new access tokens. Always 204, even for an
+   * unknown or already-revoked token -- the caller is logged out either way, and the response
+   * doesn't reveal whether the token was valid. Already-issued access tokens stay valid until
+   * they expire (APP_JWT_EXPIRATION_MINUTES); they're verified statelessly downstream.
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(@Body() request: RefreshRequestDto): Promise<void> {
+    await this.refreshTokenService.revoke(request.refreshToken);
   }
 }

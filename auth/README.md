@@ -1,12 +1,14 @@
 # Identity Service (auth)
 
-NextTrade's standalone authentication service: registration, login, and
-refresh-token rotation for TRADER and ANALYST accounts.
+NextTrade's standalone authentication service: registration, login,
+refresh-token rotation, and logout for TRADER and ANALYST accounts.
 
 ## Status
 
-Type-checks clean, unit tests passing (`npm test`) covering JWT issuance,
-password hashing, health, and the controller's happy/error paths.
+Type-checks clean. Unit tests (`npm test`) cover JWT issuance, password
+hashing, refresh-token rotation/revocation, error mapping, health, and the
+controller. End-to-end tests (`npm run test:e2e`) run the full
+register -> login -> refresh -> logout flow over HTTPS against a real Postgres.
 
 ## Class diagram
 
@@ -16,6 +18,7 @@ classDiagram
         +register(request) Promise~UserResponseDto~
         +login(request) Promise~LoginResponseDto~
         +refresh(request) Promise~RefreshResponseDto~
+        +logout(request) Promise~void~
     }
 
     class RegistrationService {
@@ -25,6 +28,7 @@ classDiagram
     }
 
     class UserService {
+        +findByEmail(email, manager?) Promise~User~
         +login(request) Promise~User~
     }
 
@@ -35,6 +39,7 @@ classDiagram
     class RefreshTokenService {
         +issue(user) Promise~string~
         +rotate(rawToken) Promise~RotationResult~
+        +revoke(rawToken) Promise~void~
     }
 
     class PasswordEncoderService {
@@ -59,7 +64,6 @@ classDiagram
         +tokenHash: string
         +expiresAt: Date
         +revokedAt: Date
-        +isActive() boolean
     }
 
     class CustomerProfile {
@@ -87,6 +91,7 @@ classDiagram
     AuthController --> JwtService
     AuthController --> RefreshTokenService
 
+    RegistrationService --> UserService : email lookup
     RegistrationService --> PasswordEncoderService
     RegistrationService --> SsnEncryptionService
     RegistrationService --> User : creates
@@ -131,6 +136,10 @@ sequenceDiagram
     FE->>Auth: POST /auth/refresh
     Auth->>DB: revoke old session, issue new one
     Auth-->>FE: 200 new access + refresh token
+
+    FE->>Auth: POST /auth/logout (refresh token)
+    Auth->>DB: set sessions.revoked_at
+    Auth-->>FE: 204
 ```
 
 Tokens carry the claim shape (`sub`, `email`, `client_id`, HS256) NextTrade
@@ -144,6 +153,7 @@ filters — this service only issues tokens, it doesn't verify them.
 | POST   | `/auth/register` | none           | Creates the account, no tokens issued   |
 | POST   | `/auth/login`    | none           | Returns access + refresh tokens         |
 | POST   | `/auth/refresh`  | refresh token  | Rotates the refresh token on every use  |
+| POST   | `/auth/logout`   | refresh token  | Revokes that session; always 204        |
 | GET    | `/health`        | none           | Unprefixed, no DB dependency            |
 
 ## Design notes
@@ -157,10 +167,20 @@ filters — this service only issues tokens, it doesn't verify them.
   either service verifies on both.
 - **Refresh tokens**: opaque random values, SHA-256-hashed before storage.
   Reuse of an already-rotated token is treated as a compromise signal.
+  Revocation is a single conditional `UPDATE ... WHERE revoked_at IS NULL AND
+  expires_at > now()`, shared by refresh and logout, so two concurrent uses of
+  one token can't both succeed.
+- **Logout**: revokes only the session behind the given refresh token (other
+  devices stay signed in). Returns 204 even for an unknown or already-revoked
+  token, so it can't be used to probe token validity. Access tokens already
+  issued stay valid until they expire (`APP_JWT_EXPIRATION_MINUTES`, default
+  15) because downstream services verify them statelessly — the frontend
+  should drop its access token on logout.
 - **SSN encryption**: done in Postgres via pgcrypto
   (`pgp_sym_encrypt`/`pgp_sym_decrypt`) — plaintext never touches application
   memory or logs.
-- **Errors**: fixed codes and generic messages (`USER_ALREADY_EXISTS`,
+- **Errors**: expected failures extend `AuthException`, which carries the
+  HTTP status and code; fixed codes and generic messages (`USER_ALREADY_EXISTS`,
   `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_REQUEST`,
   `INTERNAL_ERROR`) — request payloads can carry passwords/SSNs, so raw
   messages are never echoed back.
@@ -193,3 +213,22 @@ npm install
 | Unit tests            | `npm test` — no DB required |
 | Unit tests (watch)    | `npm run test:watch` |
 | Coverage report       | `npm run test:cov`   |
+| End-to-end tests      | `npm run test:e2e` — see below |
+
+## End-to-end tests
+
+`test/auth.e2e-spec.ts` boots the real `AppModule` over HTTPS and needs:
+
+- a Postgres with `db/finalized-schema.sql` and `db/init-app-role.sh` applied
+  (the `db` service in `docker-compose.yml` does both), and
+- a PKCS12 keystore — `SecureTransportMiddleware` rejects plaintext. A
+  throwaway one:
+  `openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 1 -subj "/CN=localhost"`
+  then `openssl pkcs12 -export -inkey key.pem -in cert.pem -out auth.p12 -passout pass:changeit`.
+
+```
+DB_HOST=localhost DB_APP_PASSWORD=... APP_JWT_SECRET=... NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY=... TLS_KEYSTORE=file:./auth.p12 TLS_KEYSTORE_PASSWORD=changeit npm run test:e2e
+```
+
+Each run registers uniquely-named users and deletes them (and their sessions
+and profiles) afterwards.

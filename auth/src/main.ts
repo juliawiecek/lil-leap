@@ -1,11 +1,9 @@
 import 'reflect-metadata';
 import * as fs from 'fs';
-import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { configureApp } from './app.setup';
 
 /**
  * Bootstraps the Identity Service. TLS is opt-in via TLS_KEYSTORE: the architecture
@@ -32,24 +30,7 @@ async function bootstrap(): Promise<void> {
     app = await NestFactory.create<NestExpressApplication>(AppModule);
   }
 
-  // Health stays unprefixed so it's a fixed, predictable probe path.
-  app.setGlobalPrefix('auth', { exclude: ['health'] });
-
-  app.use(
-    helmet({
-      hsts: { maxAge: 31536000, includeSubDomains: true },
-      frameguard: { action: 'deny' },
-      contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
-      referrerPolicy: { policy: 'no-referrer' },
-    }),
-  );
-  app.use((_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) => {
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    next();
-  });
-
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  configureApp(app);
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
