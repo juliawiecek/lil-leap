@@ -284,6 +284,17 @@ CREATE INDEX idx_instruments_symbol ON instruments(symbol);
 CREATE INDEX idx_instruments_asset_class ON instruments(asset_class);
 CREATE INDEX idx_instruments_tradable ON instruments(tradable);
 
+-- TS-06.3: Operator-maintained country restrictions, applying to both BUY and SELL.
+-- No real policy is seeded here. Runtime app access is SELECT only.
+CREATE TABLE instrument_jurisdiction_restrictions (
+    instrument_id UUID NOT NULL REFERENCES instruments(instrument_id) ON DELETE RESTRICT,
+    country_code VARCHAR(2) NOT NULL CHECK (country_code ~ '^[A-Z]{2}$'),
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    reason VARCHAR(200) NOT NULL CHECK (length(trim(reason)) > 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (instrument_id, country_code)
+);
+
 -- ==========================================================
 -- QUOTES (BR-08: Non-stale quotes, BR-13: Indicative pricing)
 -- Current bid/ask prices with timestamp for staleness detection

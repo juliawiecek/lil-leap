@@ -60,6 +60,10 @@ psql -v ON_ERROR_STOP=1 \
         cash_transactions
     TO :"app_user";
 
+    -- TS-06.3: Trading clients cannot change location policy through the runtime role.
+    REVOKE ALL ON instrument_jurisdiction_restrictions FROM PUBLIC, :"app_user";
+    GRANT SELECT ON instrument_jurisdiction_restrictions TO :"app_user";
+
     -- Grant SELECT on all helper views for application queries.
     GRANT SELECT ON
         v_account_cash,

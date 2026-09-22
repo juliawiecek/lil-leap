@@ -2,6 +2,7 @@ package com.neueda.leap.common.exception;
 
 import com.neueda.leap.passwordreset.InvalidPasswordResetTokenException;
 import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.order.service.OrderJurisdictionException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,17 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler() {
     }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * Rejects restricted orders without exposing registration data or rule reasons.
+     * @param exception jurisdiction rule rejection
+     * @return HTTP 422 with a fixed code and safe message
+     */
+    @ExceptionHandler(OrderJurisdictionException.class)
+    public ResponseEntity<Map<String, String>> handleOrderJurisdiction(OrderJurisdictionException exception) {
+        return ResponseEntity.unprocessableEntity().body(Map.of(
+                "error", exception.reason().name(), "message", exception.getMessage()));
+    }
 
     /**
      * Rejects an order with a fixed rule code without exposing financial data.

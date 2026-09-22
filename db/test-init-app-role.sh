@@ -75,6 +75,18 @@ for VIEW in "${VIEWS[@]}"; do
     fi
 done
 
+# Rule maintenance belongs to operators, not the application's trading credentials.
+for PRIV in SELECT INSERT UPDATE DELETE TRUNCATE; do
+    RESULT=$(psql_admin_query "SELECT has_table_privilege(:'app_user', 'instrument_jurisdiction_restrictions', '$PRIV');")
+    EXPECTED=f
+    [ "$PRIV" = SELECT ] && EXPECTED=t
+    if [ "$RESULT" = "$EXPECTED" ]; then
+        pass "$PRIV on jurisdiction rules has expected access ($EXPECTED)"
+    else
+        fail "$PRIV on jurisdiction rules has unexpected access"
+    fi
+done
+
 echo ""
 echo "=========================================="
 echo "Test 5: audit_log is append-only (SELECT/INSERT yes, UPDATE/DELETE no)"

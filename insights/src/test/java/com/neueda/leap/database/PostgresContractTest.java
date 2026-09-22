@@ -14,6 +14,8 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,7 +37,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Run against a disposable database initialized with db/finalized-schema.sql and the app role. */
+/** Run against a disposable database with a fixture role allowed to maintain restriction rules. */
 @SpringBootTest(properties = {"spring.jpa.hibernate.ddl-auto=validate",
         "nexttrade.security.ssn-encryption-key=synthetic-contract-test-key"})
 @AutoConfigureMockMvc
@@ -71,6 +73,8 @@ class PostgresContractTest {
         entityManager.flush();
         entityManager.clear();
         UUID user = UUID.fromString(json.readTree(response).get("id").asText());
+        assertThat(jdbc.queryForObject("SELECT country FROM customer_profiles WHERE user_id = ?",
+                String.class, user)).isEqualTo(body.get("country").asText().trim());
         assertThat(jdbc.queryForObject("SELECT net_worth_bracket FROM financial_profiles WHERE user_id = ?",
                 String.class, user)).isEqualTo(bracket.value());
         assertThat(jdbc.queryForObject("SELECT jsonb_typeof(regulatory_disclosures) FROM financial_profiles WHERE user_id = ?",
@@ -146,6 +150,7 @@ class PostgresContractTest {
             jdbc.update("DELETE FROM cash_balances WHERE account_id = ?", account);
             jdbc.update("DELETE FROM quotes WHERE instrument_id = ?", instrument);
             jdbc.update("DELETE FROM accounts WHERE account_id = ?", account);
+            jdbc.update("DELETE FROM customer_profiles WHERE user_id = ?", user);
             jdbc.update("DELETE FROM users WHERE user_id = ?", user);
             jdbc.update("DELETE FROM instruments WHERE instrument_id = ?", instrument);
         }
@@ -248,8 +253,106 @@ class PostgresContractTest {
     }
 
     private UUID createUser() {
-        return jdbc.queryForObject("INSERT INTO users(email, password_hash) VALUES (?, 'synthetic-hash') RETURNING user_id",
+        UUID user = jdbc.queryForObject("INSERT INTO users(email, password_hash) VALUES (?, 'synthetic-hash') RETURNING user_id",
                 UUID.class, UUID.randomUUID() + "@example.test");
+        jdbc.update("""
+                INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address, country,
+                    date_of_birth, ssn_encrypted)
+                VALUES (?, 'Test', 'Client', '5550100', 'Synthetic address', 'United States',
+                    DATE '1990-01-01', pgp_sym_encrypt('synthetic-only', 'synthetic-test-key'))
+                """, user);
+        return user;
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"BUY", "SELL"})
+    void restrictedTradesAreRejectedUsingRegistrationDespiteSpoofedLocation(String side) throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "100000.00");
+        quote(instrument);
+        jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, 100)", account, instrument);
+        restrict(instrument, "US");
+        var cashBefore = jdbc.queryForList("SELECT * FROM cash_balances WHERE account_id = ?", account);
+        var holdingsBefore = jdbc.queryForList("SELECT * FROM holdings WHERE account_id = ?", account);
+        ObjectNode body = json.valueToTree(new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), side, 10, "MARKET", null));
+        body.put("country", "Canada");
+        mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
+                        .header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .header("X-Country", "CA").header("X-Forwarded-For", "192.0.2.1")
+                        .contentType("application/json").content(json.writeValueAsBytes(body)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(content().json("""
+                        {"error":"LOCATION_RESTRICTED",
+                         "message":"This instrument cannot be traded from your registered location."}
+                        """, true));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM fills JOIN orders USING(order_id) WHERE account_id = ?", Integer.class, account)).isZero();
+        assertThat(jdbc.queryForList("SELECT * FROM cash_balances WHERE account_id = ?", account)).isEqualTo(cashBefore);
+        assertThat(jdbc.queryForList("SELECT * FROM holdings WHERE account_id = ?", account)).isEqualTo(holdingsBefore);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "Unknown"})
+    void unavailableRegistrationCountryRejectsOrder(String country) throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        createInstrument();
+        jdbc.update("UPDATE customer_profiles SET country = ? WHERE user_id = ?", country, user);
+        submit(user, account, "BUY").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_UNAVAILABLE"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isZero();
+    }
+
+    @Test
+    void missingRegistrationProfileRejectsOrder() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        createInstrument();
+        jdbc.update("DELETE FROM customer_profiles WHERE user_id = ?", user);
+        submit(user, account, "SELL").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_UNAVAILABLE"));
+    }
+
+    @Test
+    void restrictionIsScopedToRegisteredCountryAndCanBeDisabled() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "100000.00");
+        quote(instrument);
+        restrict(instrument, "CA");
+        submit(user, account, "BUY").andExpect(status().isCreated());
+        jdbc.update("UPDATE customer_profiles SET country = 'Canada' WHERE user_id = ?", user);
+        submit(user, account, "BUY").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_RESTRICTED"));
+        jdbc.update("UPDATE instrument_jurisdiction_restrictions SET enabled = FALSE WHERE instrument_id = ?", instrument);
+        submit(user, account, "BUY").andExpect(status().isCreated());
+    }
+
+    @Test
+    void newRestrictionRejectsNewOrdersButPreservesExistingRetry() throws Exception {
+        UUID user = createUser();
+        UUID account = createAccount(user);
+        UUID instrument = createInstrument();
+        fundAccount(account, "100000.00");
+        quote(instrument);
+        var request = new SubmitOrderRequest(account, "CONTRACT", UUID.randomUUID(), "BUY", 10, "MARKET", null);
+        var original = orders.submit(user, request);
+        restrict(instrument, "US");
+        var retry = orders.submit(user, request);
+        assertThat(retry.created()).isFalse();
+        assertThat(retry.order().orderId()).isEqualTo(original.order().orderId());
+        submit(user, account, "BUY").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_RESTRICTED"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
+    }
+
+    private void restrict(UUID instrument, String country) {
+        jdbc.update("INSERT INTO instrument_jurisdiction_restrictions(instrument_id, country_code, reason) VALUES (?, ?, 'Synthetic test rule; no real policy')",
+                instrument, country);
     }
 
     private UUID createAccount(UUID user) {

@@ -6,8 +6,12 @@ import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import com.neueda.leap.order.service.OrderSufficiencyService;
 import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.order.service.OrderJurisdictionService;
+import com.neueda.leap.order.service.OrderJurisdictionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -33,6 +37,7 @@ class OrderSubmissionServiceTest {
     private OrderSubmissionRepository repository;
     private OrderSubmissionService service;
     private OrderSufficiencyService sufficiency;
+    private OrderJurisdictionService jurisdiction;
     private UUID userId;
     private UUID accountId;
     private UUID instrumentId;
@@ -42,7 +47,8 @@ class OrderSubmissionServiceTest {
     void setUp() {
         repository = mock(OrderSubmissionRepository.class);
         sufficiency = mock(OrderSufficiencyService.class);
-        service = new OrderSubmissionService(repository, sufficiency);
+        jurisdiction = mock(OrderJurisdictionService.class);
+        service = new OrderSubmissionService(repository, sufficiency, jurisdiction);
         userId = UUID.randomUUID();
         accountId = UUID.randomUUID();
         instrumentId = UUID.randomUUID();
@@ -63,7 +69,8 @@ class OrderSubmissionServiceTest {
 
         assertTrue(result.created());
         assertEquals("SUBMITTED", result.order().status());
-        var sequence = inOrder(sufficiency, repository);
+        var sequence = inOrder(jurisdiction, sufficiency, repository);
+        sequence.verify(jurisdiction).validate(userId, instrumentId);
         sequence.verify(sufficiency).validate(request, instrumentId);
         sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
     }
@@ -80,7 +87,7 @@ class OrderSubmissionServiceTest {
 
         assertFalse(result.created());
         assertEquals(existing.orderId(), result.order().orderId());
-        verifyNoInteractions(sufficiency);
+        verifyNoInteractions(sufficiency, jurisdiction);
         verify(repository, never()).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
     }
 
@@ -90,7 +97,7 @@ class OrderSubmissionServiceTest {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> service.submit(userId, request("AAPL", "BUY", 10)));
         assertEquals(404, error.getStatusCode().value());
-        verifyNoInteractions(sufficiency);
+        verifyNoInteractions(sufficiency, jurisdiction);
     }
 
     @Test
@@ -101,7 +108,7 @@ class OrderSubmissionServiceTest {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> service.submit(userId, request("NOPE", "BUY", 10)));
         assertEquals(400, error.getStatusCode().value());
-        verifyNoInteractions(sufficiency);
+        verifyNoInteractions(sufficiency, jurisdiction);
     }
 
     @Test
@@ -119,6 +126,21 @@ class OrderSubmissionServiceTest {
 
     private SubmitOrderRequest request(String symbol, String side, long quantity) {
         return new SubmitOrderRequest(accountId, symbol, clientReference, side, quantity, "MARKET", null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"BUY", "SELL"})
+    void restrictedLocationPreventsBuyAndSellPersistence(String side) {
+        var request = request("AAPL", side, 10);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findTradableInstrumentIdBySymbol("AAPL")).thenReturn(Optional.of(instrumentId));
+        doThrow(new OrderJurisdictionException(OrderJurisdictionException.Reason.LOCATION_RESTRICTED))
+                .when(jurisdiction).validate(userId, instrumentId);
+
+        assertThrows(OrderJurisdictionException.class, () -> service.submit(userId, request));
+
+        verifyNoInteractions(sufficiency);
+        verify(repository, never()).insert(any(), any(), any(), any(), any(), anyLong(), any(), any());
     }
 
     private OrderSubmissionResponse response(String symbol) {

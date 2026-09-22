@@ -3,6 +3,7 @@ package com.neueda.leap.order.submission;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.order.service.OrderJurisdictionException;
 import com.neueda.leap.order.submission.controller.OrderSubmissionController;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
@@ -65,5 +66,18 @@ class OrderSubmissionControllerTest {
 
     private SubmitOrderRequest request() {
         return new SubmitOrderRequest(UUID.randomUUID(), "AAPL", UUID.randomUUID(), "BUY", 10, "MARKET", null);
+    }
+
+    @ParameterizedTest
+    @EnumSource(OrderJurisdictionException.Reason.class)
+    void jurisdictionRejectionsReturnSafe422Responses(OrderJurisdictionException.Reason reason) throws Exception {
+        var request = request();
+        var rejection = new OrderJurisdictionException(reason);
+        when(service.submit(user, request)).thenThrow(rejection);
+        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .contentType("application/json").content(json.writeValueAsBytes(request)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
+                        "error", reason.name(), "message", rejection.getMessage())), true));
     }
 }

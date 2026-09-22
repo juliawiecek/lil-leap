@@ -211,6 +211,18 @@ The PostgreSQL contract suite also exercises real HTTP rejections, account isola
 missing positions/quotes, exact-balance success, latest-ask selection, unchanged
 balances after rejection, and retries after resources change.
 
+### Location/jurisdiction restrictions (TS-06.3)
+
+New orders check the authenticated client's registered country against enabled
+instrument restrictions before cash/holdings validation and persistence. Restricted
+BUY and SELL requests return HTTP 422 `LOCATION_RESTRICTED`; unavailable registration
+countries return `LOCATION_UNAVAILABLE`. Rules are maintained by database operators,
+with read-only application access. No real restriction list is seeded.
+
+Existing databases require the additive migration before deployment. See the
+[TS-06.3 guide](TS-06.3-JURISDICTION.md) for behavior, migration commands, rule
+maintenance, automated tests, manual verification, and country-level scope.
+
 ### PostgreSQL contract tests
 
 The ordinary test suite uses H2 and does not validate PostgreSQL-specific persistence.
@@ -219,13 +231,16 @@ registration through the real security chain, owned/foreign order submissions, a
 concurrent idempotent retries using real PostgreSQL transactions.
 
 Initialize a **disposable test database** with `db/finalized-schema.sql` and
-`db/init-app-role.sh`, then run from `backend` with the restricted application role:
+`db/init-app-role.sh`, then run from the repository root with a disposable test
+fixture role allowed to maintain jurisdiction rules (such as the test schema owner).
+Keep the production runtime role read-only on rules; verify that boundary with
+`db/tests/007_jurisdiction_restrictions.sql` and `db/test-init-app-role.sh`.
 
 ```powershell
 $env:TEST_POSTGRES_URL = 'jdbc:postgresql://localhost:5432/nexttrade_test'
-$env:TEST_POSTGRES_USER = 'app_user'
-# Set TEST_POSTGRES_PASSWORD to the test application role's password.
-mvn -B test
+$env:TEST_POSTGRES_USER = 'YOUR_TEST_FIXTURE_ROLE'
+# Set TEST_POSTGRES_PASSWORD to the test fixture role's password.
+mvn -B -f insights/pom.xml test
 ```
 
 These tests are skipped when `TEST_POSTGRES_URL` is absent. Most fixtures roll back;

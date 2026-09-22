@@ -8,7 +8,7 @@ Every developer runs an isolated PostgreSQL database using the same version-cont
 
 ### Schema and Versioning
 
-- **Single Source of Truth**: [db/finalized-schema.sql](finalized-schema.sql) contains the complete 17-table relational model
+- **Single Source of Truth**: [db/finalized-schema.sql](finalized-schema.sql) contains the complete 18-table relational model
 - **Owner Role**: `main` (or `DB_ADMIN_USERNAME`) creates and owns all schema objects
 - **Application Role**: `app_user` (or `DB_APP_USERNAME`) has restricted DML permissions only (SELECT, INSERT, UPDATE, DELETE) on runtime tables
 - **Migrations**: Future schema changes must be versioned (e.g., `03-migration-name.sql`) and applied by the `main` role
@@ -58,7 +58,7 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 
 ## Database Schema
 
-### 17 Core Tables
+### 18 Core Tables
 
 | Table | Purpose |
 |-------|---------|
@@ -69,6 +69,7 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 | `password_reset_tokens` | Hashed, expiring password-reset tokens |
 | `sessions` | Time-limited, revocable user sessions |
 | `instruments` | Tradable instruments (stocks, FX, crypto) with sector |
+| `instrument_jurisdiction_restrictions` | Operator-maintained instrument/country blocks (application role: SELECT only) |
 | `quotes` | Market prices (bid/ask, provenance tracking, synthetic flag) |
 | `accounts` | User trading accounts with tier and margin/options flags |
 | `orders` | Order submission with idempotency key (client_reference) |
@@ -117,7 +118,7 @@ docker compose logs -f db
 ### Verify Initialization
 
 ```bash
-# List all tables (17 expected)
+# List all tables (18 expected)
 docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "\dt"
 
 # List all views (5 expected)
@@ -226,6 +227,17 @@ runtime tables explicitly after review. Schema changes on existing volumes requi
 - **Default Credentials**: `env.example` documents required credentials. Supply private values before startup.
 - **Volume Semantics**: `docker compose down -v` is **destructive**. Use only when you intend to reset.
 - **Init Scripts**: Run once per empty volume. Apply SQL files with `psql -f`; run shell scripts with `bash`. Do not pass shell scripts to `psql`.
+
+## TS-06.3 jurisdiction rule migration
+
+Before deploying the jurisdiction check to an existing database, apply
+`migrations/007_instrument_jurisdiction_restrictions.sql` as its schema owner with
+`psql -v app_user=app_user -f ...` (substitute the runtime role if different).
+Fresh databases already include this table in `finalized-schema.sql`.
+The migration is additive, preserves rule data when reapplied, and gives the app
+SELECT-only access. Policy is maintained by operators; no real restrictions are seeded.
+See [the TS-06.3 guide](../insights/TS-06.3-JURISDICTION.md) for complete commands and
+`tests/007_jurisdiction_restrictions.sql` for constraint/permission verification.
 
 ## See Also
 
