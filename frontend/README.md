@@ -46,7 +46,9 @@ requests same-origin, so no CORS setup is needed. Never call the auth
 service by absolute URL.
 
 Tokens are held in memory only (`src/app/auth-api.ts`), so reloading the page
-signs you out.
+signs you out. While you're active the app refreshes them in the background;
+after 10 minutes without input it signs you out (`src/app/session-keeper.ts`,
+BR-03 — keep `SESSION_INACTIVITY_MINUTES` there in step with the auth service).
 
 ### Common problems
 

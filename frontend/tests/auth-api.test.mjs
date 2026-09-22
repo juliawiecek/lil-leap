@@ -81,6 +81,45 @@ test('a network failure gets a connection message', async () => {
   await assert.rejects(new AuthClient(fetchImpl).login('a@example.com', 'pw'), { userMessage: /could not reach NextTrade/ });
 });
 
+/** An unsigned JWT-shaped token whose payload carries `iat` / `exp` (seconds). */
+const tokenWith = (claims) => `h.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.s`;
+
+test('times the access token from its lifetime, so a skewed device clock does not matter', async () => {
+  // Issued "an hour ago" by the server's clock, valid 10 minutes -- as a device an hour behind would see it.
+  const iat = Math.floor(Date.now() / 1000) - 3600;
+  const { fetchImpl } = fakeFetch({ ...loginResponse, body: { ...loginResponse.body, accessToken: tokenWith({ iat, exp: iat + 600 }) } });
+  const client = new AuthClient(fetchImpl);
+  assert.equal(client.accessTokenExpiresAt, null);
+
+  const before = Date.now();
+  await client.login('a@example.com', 'pw');
+
+  const remaining = client.accessTokenExpiresAt - before;
+  assert.ok(remaining >= 600_000 && remaining < 605_000, `expected ~10 minutes left, got ${remaining} ms`);
+});
+
+test('refresh swaps in the new token pair', async () => {
+  const { calls, fetchImpl } = fakeFetch(loginResponse, { status: 200, body: { accessToken: 'access-2', refreshToken: 'refresh-2' } }, { status: 204 });
+  const client = new AuthClient(fetchImpl);
+  await client.login('a@example.com', 'pw');
+
+  await client.refresh();
+  assert.deepEqual(calls[1], { url: '/auth/refresh', method: 'POST', body: { refreshToken: 'refresh' } });
+  assert.equal(client.accessToken, 'access-2');
+
+  await client.logout();
+  assert.deepEqual(calls[2].body, { refreshToken: 'refresh-2' });
+});
+
+test('a rejected refresh (session idle too long) clears the tokens', async () => {
+  const { fetchImpl } = fakeFetch(loginResponse, { status: 401, body: { error: 'INVALID_REFRESH_TOKEN', message: 'x' } });
+  const client = new AuthClient(fetchImpl);
+  await client.login('a@example.com', 'pw');
+
+  await assert.rejects(client.refresh(), { userMessage: 'Your session has ended. Please sign in again.' });
+  assert.equal(client.accessToken, null);
+});
+
 test('toTraderRegistration converts yes/no answers to booleans and drops blank fields', () => {
   const request = toTraderRegistration(
     { first_name: ' Ada ', apartment: '', accredited_investor: 'false', broker_affiliation: 'true', broker_firm_name: 'true' },

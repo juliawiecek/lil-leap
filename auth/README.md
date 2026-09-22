@@ -173,9 +173,16 @@ filters — this service only issues tokens, it doesn't verify them.
 - **Logout**: revokes only the session behind the given refresh token (other
   devices stay signed in). Returns 204 even for an unknown or already-revoked
   token, so it can't be used to probe token validity. Access tokens already
-  issued stay valid until they expire (`APP_JWT_EXPIRATION_MINUTES`, default
-  15) because downstream services verify them statelessly — the frontend
+  issued stay valid until they expire (at most `SESSION_INACTIVITY_MINUTES`)
+  because downstream services verify them statelessly — the frontend
   should drop its access token on logout.
+- **Inactivity timeout (BR-03)**: a session expires `SESSION_INACTIVITY_MINUTES`
+  (default 10) after it is issued, and every refresh issues a new one, so an
+  active client slides its session forward while an idle one is signed out
+  once the window passes (refresh then returns 401). Access tokens default to
+  the same window and are capped at it (`APP_JWT_EXPIRATION_MINUTES` can only
+  shorten them). The frontend refreshes shortly before expiry while the user
+  is active and signs out after 10 idle minutes (`frontend/src/app/session-keeper.ts`).
 - **SSN encryption**: done in Postgres via pgcrypto
   (`pgp_sym_encrypt`/`pgp_sym_decrypt`) — plaintext never touches application
   memory or logs.
@@ -199,7 +206,7 @@ filters — this service only issues tokens, it doesn't verify them.
 
 See `.env.example`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_APP_USERNAME`,
 `DB_APP_PASSWORD`, `APP_JWT_SECRET`, `APP_JWT_EXPIRATION_MINUTES`,
-`APP_JWT_CLIENT_ID`, `APP_REFRESH_EXPIRATION_DAYS`,
+`APP_JWT_CLIENT_ID`, `SESSION_INACTIVITY_MINUTES`,
 `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY`, `TLS_KEYSTORE`,
 `TLS_KEYSTORE_PASSWORD`, `PORT` (defaults to 3000).
 

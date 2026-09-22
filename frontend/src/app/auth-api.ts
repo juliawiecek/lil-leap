@@ -23,8 +23,10 @@ export class AuthApiError extends Error {
   }
 }
 
+const SIGNED_OUT_MESSAGE = 'Your session has ended. Please sign in again.';
 const MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: 'Invalid email or password.',
+  INVALID_REFRESH_TOKEN: SIGNED_OUT_MESSAGE,
   USER_ALREADY_EXISTS: 'An account with this email already exists. Go back to sign up with a different email, or sign in.',
   INVALID_REQUEST: 'Some details were not accepted. Please review your information and try again.',
 };
@@ -35,6 +37,7 @@ export class AuthClient {
   #fetch: typeof fetch;
   #baseUrl: string;
   #accessToken: string | null = null;
+  #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;
 
   constructor(fetchImpl: typeof fetch = (input, init) => fetch(input, init), baseUrl = '/auth') {
@@ -45,6 +48,11 @@ export class AuthClient {
   /** Bearer token for calls to the trading APIs, or null when signed out. */
   get accessToken(): string | null {
     return this.#accessToken;
+  }
+
+  /** When the access token stops being accepted, on this device's clock (ms since epoch); null when signed out. */
+  get accessTokenExpiresAt(): number | null {
+    return this.#accessTokenExpiresAt;
   }
 
   /** Creates the account. Issues no tokens -- call login afterwards. */
@@ -58,21 +66,55 @@ export class AuthClient {
       refreshToken: string;
       user: AuthUser;
     };
-    this.#accessToken = body.accessToken;
-    this.#refreshToken = body.refreshToken;
+    this.#setTokens(body.accessToken, body.refreshToken);
     return body.user;
+  }
+
+  /**
+   * Swaps the refresh token for a new token pair. The server treats each refresh as
+   * activity and extends the session; a session idle past its window fails, which
+   * clears the tokens here too.
+   */
+  async refresh(): Promise<void> {
+    const refreshToken = this.#refreshToken;
+    if (!refreshToken) throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    try {
+      const body = (await this.#post('/refresh', { refreshToken })) as { accessToken: string; refreshToken: string };
+      this.#setTokens(body.accessToken, body.refreshToken);
+    } catch (error) {
+      this.#setTokens(null, null);
+      throw error;
+    }
   }
 
   /** Always signs out locally; revoking the session server-side is best effort and never throws. */
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
-    this.#accessToken = null;
-    this.#refreshToken = null;
+    this.#setTokens(null, null);
     if (!refreshToken) return;
     try {
       await this.#post('/logout', { refreshToken });
     } catch {
       // The session still expires server-side; the user is signed out here either way.
+    }
+  }
+
+  /**
+   * Expiry is the token's lifetime (exp - iat) counted from now, not its absolute
+   * `exp`: a device clock that's minutes off would otherwise refresh too late and
+   * sign an active user out.
+   */
+  #setTokens(accessToken: string | null, refreshToken: string | null): void {
+    this.#accessToken = accessToken;
+    this.#refreshToken = refreshToken;
+    this.#accessTokenExpiresAt = null;
+    const payload = accessToken?.split('.')[1];
+    if (!payload) return;
+    try {
+      const { exp, iat } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: unknown; iat?: unknown };
+      if (typeof exp === 'number' && typeof iat === 'number') this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+    } catch {
+      // Unreadable token: leave expiry unknown, which makes the session keeper refresh on next activity.
     }
   }
 

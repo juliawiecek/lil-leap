@@ -161,6 +161,36 @@ describe('auth (e2e)', () => {
       expect(reuse.body.error).toBe('INVALID_REFRESH_TOKEN');
     });
 
+    it('gives each session a 10-minute inactivity window that a refresh renews (BR-03)', async () => {
+      const { refreshToken } = await login();
+      const rotated = (await post('/auth/refresh', { refreshToken }).expect(200)).body.refreshToken;
+
+      const sessions = await dataSource.query(
+        `SELECT extract(epoch FROM s.expires_at - s.issued_at) AS window_seconds FROM sessions s
+           JOIN users u USING (user_id) WHERE u.email = $1 ORDER BY s.issued_at DESC LIMIT 2`,
+        [traderEmail],
+      );
+      for (const session of sessions) {
+        expect(Number(session.window_seconds)).toBeGreaterThan(9.9 * 60);
+        expect(Number(session.window_seconds)).toBeLessThan(10.1 * 60);
+      }
+      expect(rotated).toEqual(expect.any(String));
+    });
+
+    it('rejects a session that has been idle past the window', async () => {
+      const { refreshToken } = await login();
+      // Simulate 10 idle minutes: the session's window has passed without a refresh.
+      await dataSource.query(
+        `UPDATE sessions SET issued_at = now() - interval '11 minutes', expires_at = now() - interval '1 minute'
+          WHERE session_id = (SELECT s.session_id FROM sessions s JOIN users u USING (user_id)
+                               WHERE u.email = $1 ORDER BY s.issued_at DESC LIMIT 1)`,
+        [traderEmail],
+      );
+
+      const res = await post('/auth/refresh', { refreshToken }).expect(401);
+      expect(res.body.error).toBe('INVALID_REFRESH_TOKEN');
+    });
+
     it('lets only one of two concurrent rotations of the same token succeed', async () => {
       const { refreshToken } = await login();
 

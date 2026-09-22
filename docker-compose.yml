@@ -80,6 +80,8 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
       # Must match the key insights uses, since both read the encrypted SSN column.
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
+      # BR-03: sessions end after this many idle minutes; access tokens never last longer.
+      SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
 
   frontend:
     build: ./frontend
