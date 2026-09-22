@@ -36,6 +36,18 @@ Keep the terminal open. Press **Ctrl+C** to stop the app.
 On later runs, run `npm start` from `frontend`.
 Run `npm ci` again if you pull changes to `package-lock.json`.
 
+### Signing in (auth service)
+
+Sign up, sign in, and sign out call the auth service at relative `/auth/...`
+paths. `npm start` forwards them to `http://localhost:3000` through
+`proxy.conf.json`, so run the auth service locally first (see
+`../auth/README.md`). In Docker, nginx proxies `/auth/` the same way. Both keep
+requests same-origin, so no CORS setup is needed. Never call the auth
+service by absolute URL.
+
+Tokens are held in memory only (`src/app/auth-api.ts`), so reloading the page
+signs you out.
+
 ### Common problems
 
 - **Missing `package.json`:** run npm commands inside `frontend`.

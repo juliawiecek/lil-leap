@@ -11,7 +11,10 @@
   signal,
 } from '@angular/core';
 
+import { AuthApiError } from './auth-api';
+import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
+import { toTraderRegistration } from './registration-payload';
 import { StockDashboard, Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup';
@@ -46,6 +49,7 @@ export class App implements AfterViewInit, OnDestroy {
   @ViewChild('password') private password!: ElementRef<HTMLInputElement>;
 
   private readonly renderer = inject(Renderer2);
+  private readonly auth = inject(AuthService);
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly candleStep = 30;
   private readonly riseColor = '#78a85f';
@@ -57,6 +61,9 @@ export class App implements AfterViewInit, OnDestroy {
   readonly dashboardOpen = signal(false);
   readonly traderLevel = signal<Experience>('NOVICE');
   readonly newAccount = signal(false);
+  readonly signingIn = signal(false);
+  readonly registering = signal(false);
+  readonly registrationError = signal('');
 
   openDashboard(level: Experience, fresh = true): void {
     this.traderLevel.set(level);
@@ -72,6 +79,7 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   signOut(): void {
+    void this.auth.logout();
     this.dashboardOpen.set(false);
     this.applicantName.set('');
     this.applicantEmail.set('');
@@ -81,6 +89,7 @@ export class App implements AfterViewInit, OnDestroy {
   readonly applicantEmail = signal('');
 
   returnToSignup(): void {
+    this.registrationError.set('');
     this.profileOpen.set(false);
     this.setAuthMode('signup');
   }
@@ -204,7 +213,43 @@ export class App implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.openDashboard('NOVICE', false);
+    void this.signIn();
+  }
+
+  private async signIn(): Promise<void> {
+    if (this.signingIn()) return;
+    this.signingIn.set(true);
+    this.formStatus.set('');
+    try {
+      await this.auth.login(this.email.nativeElement.value, this.password.nativeElement.value);
+      this.openDashboard('NOVICE', false);
+    } catch (error) {
+      this.formStatus.set(this.messageFor(error));
+    } finally {
+      this.signingIn.set(false);
+    }
+  }
+
+  /** Registration issues no tokens, so a successful sign-up signs in with the same credentials. */
+  async completeRegistration(answers: Record<string, string>): Promise<void> {
+    if (this.registering()) return;
+    this.registering.set(true);
+    this.registrationError.set('');
+    const email = this.applicantEmail();
+    const password = this.password.nativeElement.value;
+    try {
+      await this.auth.register(toTraderRegistration(answers, email, password));
+      await this.auth.login(email, password);
+      this.openDashboard(answers['trader_level'] === 'ADVANCED' ? 'ADVANCED' : 'NOVICE');
+    } catch (error) {
+      this.registrationError.set(this.messageFor(error));
+    } finally {
+      this.registering.set(false);
+    }
+  }
+
+  private messageFor(error: unknown): string {
+    return error instanceof AuthApiError ? error.userMessage : 'Something went wrong. Please try again.';
   }
 
   private buildVolumeField(): void {

@@ -74,10 +74,10 @@
         }
         <div class="profile-actions">
           <button type="button" class="back-link" (click)="goTo(2)">Back</button>
-          <button type="button" class="continue-button" (click)="finish()">Explore my workspace →</button>
+          <button type="button" class="continue-button" [disabled]="submitting()" (click)="finish()">{{ submitting() ? 'Opening your account…' : 'Explore my workspace →' }}</button>
         </div>
       }
-      <p class="profile-status" role="status">{{ status() }}</p>
+      <p class="profile-status" role="status">{{ submitError() || status() }}</p>
     </section>
   </div>
 </main>
