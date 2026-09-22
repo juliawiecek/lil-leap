@@ -2,14 +2,18 @@ package com.neueda.leap.order.submission;
 
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.repository.AccountTradingProfile;
+import com.neueda.leap.order.submission.repository.InstrumentTradingProfile;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
+import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.order.service.OrderSufficiencyService;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,19 +54,21 @@ class OrderSubmissionServiceTest {
     }
 
     @Test
-    void validOrderIsPersistedAsSubmitted() {
+    void validOrderIsPersistedAsAccepted() {
         SubmitOrderRequest request = request("aapl", "buy", 10);
         OrderSubmissionResponse saved = response("AAPL");
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
-        when(repository.findTradableInstrumentIdBySymbol("AAPL")).thenReturn(Optional.of(instrumentId));
+        when(repository.findInstrumentTradingProfileBySymbol("AAPL")).thenReturn(Optional.of(new InstrumentTradingProfile(instrumentId, true, true)));
         when(repository.insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null))
                 .thenReturn(Optional.of(saved));
 
         var result = service.submit(userId, request);
 
         assertTrue(result.created());
-        assertEquals("SUBMITTED", result.order().status());
+        assertEquals("ACCEPTED", result.order().status());
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrumentId);
         sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
@@ -96,11 +102,12 @@ class OrderSubmissionServiceTest {
     @Test
     void unsupportedSymbolIsRejected() {
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
-        when(repository.findTradableInstrumentIdBySymbol("NOPE")).thenReturn(Optional.empty());
-        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+        when(repository.findInstrumentTradingProfileBySymbol("NOPE")).thenReturn(Optional.empty());
+        assertThrows(OrderRuleException.class,
                 () -> service.submit(userId, request("NOPE", "BUY", 10)));
-        assertEquals(400, error.getStatusCode().value());
         verifyNoInteractions(sufficiency);
     }
 
@@ -108,7 +115,9 @@ class OrderSubmissionServiceTest {
     void insufficientResourcesPreventOrderInsert() {
         var request = request("AAPL", "BUY", 10);
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
-        when(repository.findTradableInstrumentIdBySymbol("AAPL")).thenReturn(Optional.of(instrumentId));
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
+        when(repository.findInstrumentTradingProfileBySymbol("AAPL")).thenReturn(Optional.of(new InstrumentTradingProfile(instrumentId, true, true)));
         doThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.INSUFFICIENT_CASH))
                 .when(sufficiency).validate(request, instrumentId);
 
@@ -123,6 +132,6 @@ class OrderSubmissionServiceTest {
 
     private OrderSubmissionResponse response(String symbol) {
         return new OrderSubmissionResponse(UUID.randomUUID(), accountId, instrumentId, symbol,
-                clientReference, "BUY", 10, "MARKET", "SUBMITTED", Instant.now(), null);
+                clientReference, "BUY", 10, "MARKET", "ACCEPTED", Instant.now(), null);
     }
 }

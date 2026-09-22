@@ -35,10 +35,10 @@ Expected: `PASS: authenticated user scoping isolates holdings, cash, and orders`
 ```bash
 docker-compose up --build -d
 docker-compose ps
-docker-compose logs app --tail=80
+docker-compose logs orders --tail=80
 ```
 
-Expected: database healthy, app running, and logs contain `Started Main`.
+Expected: database healthy, orders running, and logs contain `Started Main`.
 
 ## Endpoint paths
 

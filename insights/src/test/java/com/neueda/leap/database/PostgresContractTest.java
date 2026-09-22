@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Run against a disposable database initialized with db/finalized-schema.sql and the app role. */
 @SpringBootTest(properties = {"spring.jpa.hibernate.ddl-auto=validate",
+        "orders.execution.enabled=false",
         "nexttrade.security.ssn-encryption-key=synthetic-contract-test-key"})
 @AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "TEST_POSTGRES_URL", matches = ".+")
@@ -93,7 +94,7 @@ class PostgresContractTest {
         String ownToken = tokens.issueToken(user, user + "@example.test");
         String first = mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("SUBMITTED"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("ACCEPTED"))
                 .andReturn().getResponse().getContentAsString();
         mvc.perform(post("/api/v1/orders").contextPath("/api/v1")
                         .header("Authorization", "Bearer " + ownToken).contentType("application/json").content(body))
@@ -141,6 +142,10 @@ class PostgresContractTest {
             assertThat(a.created()).isNotEqualTo(b.created());
             assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
         } finally {
+            executor.shutdownNow();
+            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Order submission workers did not stop");
+            }
             executor.shutdown();
             jdbc.update("DELETE FROM orders WHERE account_id = ?", account);
             jdbc.update("DELETE FROM cash_balances WHERE account_id = ?", account);
@@ -198,7 +203,7 @@ class PostgresContractTest {
                 .andExpect(jsonPath("$.error").value("QUOTE_UNAVAILABLE"));
         jdbc.update("INSERT INTO holdings(account_id, instrument_id, quantity) VALUES (?, ?, 10)", account, instrument);
         submit(user, account, "SELL").andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM orders WHERE account_id = ?", Integer.class, account)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT quantity FROM holdings WHERE account_id = ? AND instrument_id = ?",
                 Long.class, account, instrument)).isEqualTo(10L);

@@ -172,11 +172,18 @@ clients' accounts both return 404. Query selectors remain forbidden. Other finan
 writes, object-ID routes and cancellation are denied by security configuration.
 All routes use the `/api/v1` context prefix.
 
-An initial submission returns 201 with `SUBMITTED` status. Retrying the same account
+An initial submission returns 201 with `ACCEPTED` status after persisting its acceptance timestamp. Retrying the same account
 and `clientReference` returns the existing order with 200, including concurrent retries.
 Submission creates no fill. PostgreSQL `ON CONFLICT DO NOTHING` handles the race without
 aborting the transaction; a subsequent read retrieves the winning order.
 
+The database-backed execution worker resumes accepted and pending orders on startup.
+Execution failures preserve acceptance and are retried without creating another order.
+Until an `OrderExecutor` implementation is supplied, orders remain pending. Existing
+databases must apply `db/migrations/007_durable_order_execution.sql` before deploying.
+See the [execution handler contract](src/main/java/com/neueda/leap/order/execution/OrderExecutor.java)
+for transaction requirements and the [PostgreSQL recovery tests](src/test/java/com/neueda/leap/order/execution/OrderExecutionDurabilityTest.java)
+for failure, retry, concurrency, and startup recovery coverage.
 ### Cash and holdings sufficiency (TS-06.1)
 
 Before saving a new order, the submission service checks the authorized account's
