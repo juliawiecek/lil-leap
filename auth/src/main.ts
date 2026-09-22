@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
+import { tlsKeystorePath } from './security/tls';
 
 /**
  * Bootstraps the Identity Service. TLS is opt-in via TLS_KEYSTORE: the architecture
@@ -11,9 +12,7 @@ import { configureApp } from './app.setup';
  * (TLS terminates elsewhere in that topology), so plaintext is the default here.
  */
 async function bootstrap(): Promise<void> {
-  // Matches docker-compose.yml's auth secret mount; "file:" prefix optional.
-  const rawKeystorePath = process.env.TLS_KEYSTORE;
-  const keystorePath = rawKeystorePath?.startsWith('file:') ? rawKeystorePath.slice('file:'.length) : rawKeystorePath;
+  const keystorePath = tlsKeystorePath();
 
   let app: NestExpressApplication;
   if (keystorePath) {

@@ -184,12 +184,16 @@ filters — this service only issues tokens, it doesn't verify them.
   `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_REQUEST`,
   `INTERNAL_ERROR`) — request payloads can carry passwords/SSNs, so raw
   messages are never echoed back.
-- **Transport**: HTTPS-only, direct PKCS12 keystore, `X-Forwarded-*` ignored,
-  standard security headers (HSTS/CSP/frame-deny/no-referrer/permissions-policy).
-- **No CORS**: this service has no `ports:` mapping in `docker-compose.yml`
-  — only reachable container-to-container, never by a browser. Add
-  `enableCors()` scoped to specific origins only if a frontend ever calls it
-  directly.
+- **Transport**: in docker-compose, TLS terminates at the frontends' nginx,
+  which proxies `/auth/` to `http://auth:3000` over the internal network, so
+  this service runs plaintext (`TLS_KEYSTORE` unset). Set `TLS_KEYSTORE` to
+  have it terminate TLS itself; it then serves HTTPS only and rejects
+  plaintext with `403 HTTPS_REQUIRED` (`X-Forwarded-*` ignored). Standard
+  security headers (HSTS/CSP/frame-deny/no-referrer/permissions-policy) either way.
+- **No CORS**: browsers reach this service only through nginx on the page's
+  own origin (`/auth/...`), and it has no `ports:` mapping in
+  `docker-compose.yml`. Frontends must call relative `/auth/...` paths; a
+  hardcoded `http://auth:3000` or `localhost:3000` URL would be cross-origin.
 
 ## Environment variables
 
@@ -207,7 +211,7 @@ npm install
 
 | Purpose               | Command             |
 |-----------------------|----------------------|
-| Watch mode            | `npm run start:dev` — requires a reachable Postgres + a valid `TLS_KEYSTORE` |
+| Watch mode            | `npm run start:dev` — requires a reachable Postgres; `TLS_KEYSTORE` optional |
 | Production build      | `npm run build`      |
 | Run built output      | `npm run start:prod` |
 | Unit tests            | `npm test` — no DB required |
@@ -217,12 +221,13 @@ npm install
 
 ## End-to-end tests
 
-`test/auth.e2e-spec.ts` boots the real `AppModule` over HTTPS and needs:
+`test/auth.e2e-spec.ts` boots the real `AppModule` over HTTPS;
+`test/behind-nginx.e2e-spec.ts` boots it plaintext, as docker-compose runs it.
+They need:
 
 - a Postgres with `db/finalized-schema.sql` and `db/init-app-role.sh` applied
   (the `db` service in `docker-compose.yml` does both), and
-- a PKCS12 keystore — `SecureTransportMiddleware` rejects plaintext. A
-  throwaway one:
+- a PKCS12 keystore for the HTTPS suite. A throwaway one:
   `openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 1 -subj "/CN=localhost"`
   then `openssl pkcs12 -export -inkey key.pem -in cert.pem -out auth.p12 -passout pass:changeit`.
 

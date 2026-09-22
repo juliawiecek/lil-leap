@@ -6,6 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { tlsKeystorePath } from '../src/security/tls';
 
 /**
  * Full register -> login -> refresh -> logout flow against a real Postgres with
@@ -30,7 +31,7 @@ describe('auth (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const keystore = process.env.TLS_KEYSTORE?.replace(/^file:/, '');
+    const keystore = tlsKeystorePath();
     if (!keystore) {
       throw new Error('TLS_KEYSTORE must point to a PKCS12 keystore for the e2e run.');
     }

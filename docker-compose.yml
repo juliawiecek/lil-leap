@@ -13,6 +13,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
     ports:
       - "8082:8080"
 
@@ -30,20 +32,33 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
     ports:
       - "8081:8080"
 
   auth:
     build: ./auth
-    ports:
-      - "3000:3000"
+    # No ports: mapping -- browsers reach auth only through the frontends' nginx
+    # (/auth/ -> http://auth:3000), so requests stay same-origin and need no CORS.
+    # TLS terminates at nginx, so TLS_KEYSTORE is unset and auth serves plaintext
+    # on the internal network.
     depends_on:
       - db
+    environment:
+      DB_HOST: db
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
+      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
+      # Must match the key insights uses, since both read the encrypted SSN column.
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
 
   frontend:
     build: ./frontend
     depends_on:
       - app
+      - auth
     ports:
       - "4200:80"
     environment:
@@ -53,6 +68,7 @@ services:
     build: ./insights-frontend
     depends_on:
       - insights
+      - auth
     ports:
       - "4201:80"
     environment:
