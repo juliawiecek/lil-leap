@@ -1,4 +1,4 @@
-# NextTrade Angular
+ b# NextTrade Angular
 
 Angular conversion of the approved NextTrade animated landing and authentication experience.
 
@@ -43,11 +43,11 @@ The repository `docker-compose.yml` already defines a `frontend` service that bu
 and publishes the container on `http://localhost:4200`.
 
 ```bash
-docker compose up --build frontend
+ecause docker compose up --build insights-frontend
 ```
 
-The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4200`.
-Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `app` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://app:8080` directly from the browser.
+The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4201`.
+Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `insights` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://insights:8080` directly from the browser.
 
 ## Main files
 

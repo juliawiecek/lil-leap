@@ -51,10 +51,10 @@ docker-compose exec -T db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" < db/tests/
 ```bash
 docker-compose up --build -d
 docker-compose ps
-docker-compose logs app --tail=80
+docker-compose logs orders --tail=80
 ```
 
-Expected: PostgreSQL healthy, app running, logs contain `Started Main`.
+Expected: PostgreSQL healthy, orders running, logs contain `Started Main`.
 
 ## Endpoint
 

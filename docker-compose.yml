@@ -1,9 +1,9 @@
 services:
-  app:
-    build: ./nextTrade
-    # No ports: mapping — the app service is intentionally unreachable from the
+  orders:
+    build: ./nextTrade-orders
+    # No ports: mapping — the orders service is intentionally unreachable from the
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `app` unless a ports: entry is added.
+    # but nothing outside Docker can reach `orders` unless a ports: entry is added.
     depends_on:
       db:
         condition: service_healthy
@@ -14,10 +14,32 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
-      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
+      # The Java services need at least 32 bytes.
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
     ports:
       - "8082:8080"
+
+  holdings:
+    build: ./nextTrade-holdings
+    # No ports: mapping — the holdings service is intentionally unreachable from the
+    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
+    # but nothing outside Docker can reach `holdings` unless a ports: entry is added.
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
+      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
+      # db/init-app-role.sh. It is separate from "main", which owns the schema
+      # and runs migrations.
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: my_app_password
+      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
+      # The Java services need at least 32 bytes.
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
+    ports:
+      - "8083:8080"
 
   insights:
     build: ./insights
@@ -34,7 +56,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
-      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
+      # The Java services need at least 32 bytes.
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
     ports:
       - "8081:8080"
@@ -52,7 +75,8 @@ services:
       DB_HOST: db
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: my_app_password
-      # Same secret in auth (signs) and app/insights (verify) -- tokens are checked locally.
+      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
+      # The Java services need at least 32 bytes.
       APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
       # Must match the key insights uses, since both read the encrypted SSN column.
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
@@ -60,12 +84,13 @@ services:
   frontend:
     build: ./frontend
     depends_on:
-      - app
+      - orders
+      - holdings
       - auth
     ports:
       - "4200:80"
     environment:
-      API_BASE_URL: http://app:8080
+      API_BASE_URL: http://orders:8080
 
   insights-frontend:
     build: ./insights-frontend
@@ -83,20 +108,18 @@ services:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: main_password
-      # Read by 02-app-role.sh, which exits without them; must match the services' credentials.
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: my_app_password
     healthcheck:
       # TCP on purpose: during first-run init Postgres listens only on a local socket,
       # so this stays unhealthy until the schema and app role are in place.
-      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "main", "-d", "nexttrade"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
-      # Only db is reachable from the host. app is not. This mirrors a real
-      # deployment where the database is internal but needs to be accessible
-      # to DBA tooling running on the developer's machine during development.
+      # Only db is reachable from the host. Backend services use the internal
+      # Docker network and do not need direct host exposure to reach Postgres.
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -114,9 +137,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-nexttrade}
-      DB_APP_USERNAME: ${DB_APP_USERNAME:-app_user}
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
       QUOTE_PROVIDER: postgres
       QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-5}
       QUOTE_PERIODS: ${QUOTE_PERIODS:-10}
@@ -125,7 +148,6 @@ services:
       QUOTE_INGEST_CONTINUOUS: "true"
     command: ["python", "-m", "src.service_runner"]
     ports:
-      # 8081 is taken by insights.
       - "${QUOTE_SERVICE_PORT:-8084}:8080"
     restart: unless-stopped
 

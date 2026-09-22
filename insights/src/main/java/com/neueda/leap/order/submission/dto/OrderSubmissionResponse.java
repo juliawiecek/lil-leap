@@ -14,7 +14,7 @@ import java.util.UUID;
  * @param side BUY or SELL
  * @param quantity requested whole-unit quantity
  * @param orderType submitted order type
- * @param status stored order status; SUBMITTED on initial insertion
+ * @param status stored order status; ACCEPTED on initial insertion
  * @param submittedAt original submission time
  * @param bufferPercent optional stored buffer percentage; may be null
  */

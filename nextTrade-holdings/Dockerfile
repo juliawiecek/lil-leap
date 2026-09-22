@@ -30,8 +30,8 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-# Copy only the compiled jar from the build stage. Nothing else.
-COPY --from=build /app/target/nexttrade.jar app.jar
+# Copy only the compiled holdings service jar from the build stage. Nothing else.
+COPY --from=build /app/target/nexttrade-holdings.jar app.jar
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

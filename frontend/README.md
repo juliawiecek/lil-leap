@@ -54,7 +54,7 @@ signs you out.
 - **Connection refused:** check that `npm start` is still running.
 - **Port already in use:** stop the previous server with **Ctrl+C**.
 
-For backend startup, follow the [backend setup guide](../backend/README.md#local-development).
+For backend startup, follow the [orders backend setup guide](../nextTrade-orders/README.md#local-development).
 
 ## Production build
 
@@ -74,7 +74,9 @@ docker compose up --build frontend
 ```
 
 The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4200`.
-Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `app` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://app:8080` directly from the browser.
+Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `orders` service on the internal Docker Compose network.
+Requests sent to `/api/holdings/...` are reverse proxied to the `holdings` service, with the `/api/holdings/` prefix stripped before forwarding.
+This lets the Angular app use same-origin relative paths instead of calling service hostnames directly from the browser.
 
 ## Main files
 
@@ -97,4 +99,4 @@ is not a production host. Keep static-host/proxy access logs free of query strin
 cookies, Authorization headers, and request/response bodies.
 
 Future API integration must not log credentials or store tokens in URLs.
-Backend logging setup is in [backend/README.md](../backend/README.md).
+Backend logging setup is in [the orders backend README](../nextTrade-orders/README.md).

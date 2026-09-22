@@ -17,7 +17,6 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 /**
@@ -86,6 +85,7 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         // These collections accept no caller-selected scope. Identity comes from JWT.
                         .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
                         .access(AuthorizationManagers.allOf(
