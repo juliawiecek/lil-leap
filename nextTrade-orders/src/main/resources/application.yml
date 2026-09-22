@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: nexttrade-orders
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+orders:
+  execution:
+    # BR-08: Quote staleness threshold in seconds
+    # Quotes older than this are considered stale and trigger a retry
+    # Synthetic quote service generates quotes every 5 seconds; 60s = ~12 quote cycles
+    max-quote-age-seconds: 60
