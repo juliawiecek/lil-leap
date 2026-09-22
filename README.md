@@ -240,13 +240,9 @@ Important runtime behavior:
 
 Notes:
 
-- `insights/` does not get a JaCoCo coverage-publish stage the way the two
-  nextTrade services do.
 - The Jenkins agent needs a local Docker daemon with Compose, permission to
   run Docker, and the `maven` and `JDK21` tools configured. No host Maven or
   Node install is required.
-- This pipeline builds and tests only — there is no deploy stage and no
-  image push.
 - Compose validation never prints the fully-resolved config, since that
   would include the database and TLS passwords; only `config -q` runs, and
   only with placeholder secrets scoped to that stage.
@@ -347,8 +343,6 @@ cd insights
 mvn test
 ```
 
-See [insights/JACOCO_COVERAGE.md](insights/JACOCO_COVERAGE.md) for coverage reporting.
-
 ### auth (Jest)
 
 ```bat
@@ -371,7 +365,23 @@ python -m pip install -r requirements.txt
 pytest
 ```
 
-See [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) for coverage reporting.
+### Code Coverage
+
+| Service              | Generate                                  | Report                                              |
+| --------------------- | ------------------------------------------ | ----------------------------------------------------- |
+| `nextTrade-orders`    | `cd nextTrade-orders && mvn clean verify` | `nextTrade-orders/target/site/jacoco/index.html`    |
+| `nextTrade-holdings`  | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
+| `insights`            | see [insights/JACOCO_COVERAGE.md](insights/JACOCO_COVERAGE.md) | `insights/target/site/jacoco/index.html` |
+| `auth`                | `cd auth && npm run test:cov`             | `auth/coverage/lcov-report/index.html`              |
+| `data-pipeline`       | see [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) | `data-pipeline/htmlcov/index.html` |
+
+JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
+`mvn clean test` (as used elsewhere in this README for quick feedback) does
+not produce a coverage report; use `mvn clean verify` when you need one.
+Jenkins archives the `nextTrade-orders` and `nextTrade-holdings` JaCoCo
+reports and the `data-pipeline` coverage output as build artifacts (see
+[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)); `insights` and `auth`
+coverage are local-only today.
 
 ## JavaDocs
 
