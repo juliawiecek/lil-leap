@@ -62,12 +62,19 @@ public class OrderExecutionWorker {
                     jdbc.update("UPDATE orders SET status = 'FILLED', updated_at = CURRENT_TIMESTAMP, last_execution_error = NULL WHERE order_id = ?",
                             claim.orderId());
                     return false;
+                } else if (outcome == OrderExecutor.Outcome.REJECTED) {
+                    // AC1: Terminal rejection. Order status already set to REJECTED by executor.
+                    // No retry, no deferral. Order execution is complete.
+                    Integer rejections = jdbc.queryForObject("SELECT count(*) FROM order_status_history WHERE order_id = ? AND status = 'REJECTED'",
+                            Integer.class, claim.orderId());
+                    if (rejections == null || rejections == 0) throw new IllegalStateException("Rejection must record reason in order_status_history");
+                    return false;
                 } else if (outcome == OrderExecutor.Outcome.PENDING) {
                     // Roll back any accidental partial effects from an unavailable executor.
                     tx.setRollbackOnly();
                     return true;
                 } else {
-                    throw new IllegalStateException("Execution outcome is required");
+                    throw new IllegalStateException("Execution outcome is required: " + outcome);
                 }
             }));
         } catch (RuntimeException failure) {
