@@ -271,4 +271,36 @@ class OrderExecutionDurabilityTest {
         assertThat(retry.order().orderId()).isEqualTo(first.order().orderId());
         assertThat(retry.order().status()).isEqualTo("PENDING");
     }
+
+    @Test
+    void rejectedOutcomeTerminatesExecutionAndRecordsRejectionReason() {
+        // AC3: REJECTED outcome terminates order execution with reason in order_status_history
+        UUID id = accept();
+        var rejecting = fillingWorker(orderId -> {
+            // Executor records REJECTED status and reason (e.g., PRICE_OUT_OF_TOLERANCE)
+            jdbc.update("""
+                UPDATE orders SET status = 'REJECTED', last_execution_error = ?
+                WHERE order_id = ?
+                """, "PRICE_OUT_OF_TOLERANCE", orderId);
+            jdbc.update("""
+                INSERT INTO order_status_history(order_id, status, reason_code, reason_text, created_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, orderId, "REJECTED", "PRICE_OUT_OF_TOLERANCE", "Price out of tolerance after 10 attempts");
+            return OrderExecutor.Outcome.REJECTED;
+        });
+        rejecting.execute(rejecting.claimNext());
+        
+        // Assert - Order is REJECTED and no further execution attempts are allowed
+        assertThat(status(id)).isEqualTo("REJECTED");
+        assertThat(jdbc.queryForObject("SELECT last_execution_error FROM orders WHERE order_id = ?", String.class, id))
+            .isEqualTo("PRICE_OUT_OF_TOLERANCE");
+        assertThat(rejecting.claimNext()).isNull();  // No more claims available (execution is terminal)
+        
+        // Verify rejection reason is persisted in order_status_history
+        Integer rejectionCount = jdbc.queryForObject("""
+            SELECT count(*) FROM order_status_history 
+            WHERE order_id = ? AND status = 'REJECTED' AND reason_code = 'PRICE_OUT_OF_TOLERANCE'
+            """, Integer.class, id);
+        assertThat(rejectionCount).isEqualTo(1);
+    }
 }
