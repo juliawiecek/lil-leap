@@ -378,7 +378,7 @@ npm install
 | Run built output      | `npm run start:prod` |
 | Unit tests            | `npm test` — no DB required |
 | Unit tests (watch)    | `npm run test:watch` |
-| Coverage report       | `npm run test:cov`   |
+| Coverage report       | `npm run test:cov`, then open `coverage/lcov-report/index.html` in a browser |
 | End-to-end tests      | `npm run test:e2e` — see below |
 
 ## End-to-end tests
