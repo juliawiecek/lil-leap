@@ -65,7 +65,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users", "/auth/login").permitAll()
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/users", "/api/v1/users", "/clients/register").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
                         (request, response, authException) -> {

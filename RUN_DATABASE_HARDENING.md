@@ -217,8 +217,8 @@ PASS: Synthetic adult customer created, SSN encrypted and decrypted correctly
 Test 2: SSN stored as BYTEA (encrypted), not plaintext
 PASS: Schema verification confirms BYTEA storage (no plaintext in database)
 
-Test 3: Under-18 customer rejected by age trigger
-PASS: Under-18 customer rejected by age trigger
+Test 3: Under-21 customer rejected by age trigger
+PASS: Under-21 customer rejected by age trigger
 
 Test 4: Quote with bid >= ask rejected
 PASS: Quote with bid >= ask rejected by constraint

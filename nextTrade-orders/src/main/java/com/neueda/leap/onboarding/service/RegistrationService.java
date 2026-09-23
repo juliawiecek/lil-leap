@@ -6,6 +6,7 @@ import com.neueda.leap.onboarding.entity.Account;
 import com.neueda.leap.onboarding.entity.CustomerProfile;
 import com.neueda.leap.onboarding.entity.FinancialProfile;
 import com.neueda.leap.user.entity.User;
+import com.neueda.leap.security.SsnEncryptionService;
 import com.neueda.leap.onboarding.enums.TraderLevel;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import com.neueda.leap.onboarding.repository.AccountRepository;
@@ -18,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.Period;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -37,6 +38,7 @@ public class RegistrationService {
     private final FinancialProfileRepository financialProfileRepository;
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SsnEncryptionService ssnEncryptionService;
 
     /**
      * Creates a new registration service with required dependencies.
@@ -45,6 +47,7 @@ public class RegistrationService {
      * @param customerProfileRepository customer profile repository
      * @param financialProfileRepository financial profile repository
      * @param accountRepository account repository
+     * @param ssnEncryptionService SSN encryption service
      * @param passwordEncoder password encoder
      */
     public RegistrationService(
@@ -52,13 +55,15 @@ public class RegistrationService {
             CustomerProfileRepository customerProfileRepository,
             FinancialProfileRepository financialProfileRepository,
             AccountRepository accountRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SsnEncryptionService ssnEncryptionService
     ) {
         this.userRepository = userRepository;
         this.customerProfileRepository = customerProfileRepository;
         this.financialProfileRepository = financialProfileRepository;
         this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
+        this.ssnEncryptionService = ssnEncryptionService;
     }
 
     /**
@@ -81,7 +86,6 @@ public class RegistrationService {
         User user = new User();
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setSsn(normalizeSsn(request.ssn()));
         User savedUser = userRepository.save(user);
 
         CustomerProfile profile = new CustomerProfile();
@@ -93,6 +97,7 @@ public class RegistrationService {
         profile.setAddress(buildAddressLine(request));
         profile.setCountry(request.country().trim());
         profile.setCitizenshipStatus(request.citizenshipStatus());
+        profile.setSsnEncrypted(ssnEncryptionService.encrypt(normalizeSsn(request.ssn())));
         CustomerProfile savedProfile = customerProfileRepository.save(profile);
 
         FinancialProfile financialProfile = new FinancialProfile();
@@ -129,8 +134,8 @@ public class RegistrationService {
      * @param dateOfBirth user date of birth
      */
     private void validateAdult(LocalDate dateOfBirth) {
-        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 21) {
-            throw new IllegalArgumentException("User must be at least 21 years old.");
+        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now(ZoneOffset.UTC).minusYears(21))) {
+            throw new com.neueda.leap.onboarding.exception.RegistrationValidationException("User must be at least 21 years old.");
         }
     }
 
@@ -236,7 +241,7 @@ public class RegistrationService {
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return new String(com.fasterxml.jackson.core.io.JsonStringEncoder.getInstance().quoteAsString(value));
     }
 
     /**

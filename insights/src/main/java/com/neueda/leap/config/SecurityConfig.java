@@ -85,7 +85,7 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/password-reset/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users", "/clients/register").permitAll()
                         // These collections accept no caller-selected scope. Identity comes from JWT.
                         .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
                         .access(AuthorizationManagers.allOf(

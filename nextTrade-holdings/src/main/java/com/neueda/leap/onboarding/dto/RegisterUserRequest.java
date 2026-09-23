@@ -21,7 +21,7 @@ import java.time.LocalDate;
  *
  * @param firstName the user's first name
  * @param lastName the user's last name
- * @param dateOfBirth the user's birth date; applicant must be at least 18
+ * @param dateOfBirth the user's birth date; applicant must be at least 21
  * @param email the user's email address
  * @param phone the user's phone number
  * @param password the raw password provided during registration
@@ -32,7 +32,7 @@ import java.time.LocalDate;
  * @param postalCode the user's postal/ZIP code
  * @param country the user's country of residence
  * @param citizenshipStatus the user's citizenship or residency status
- * @param ssn the user's social security number in 9-digit or 123-45-6789 format (optional)
+ * @param ssn the user's social security number in 9-digit or 123-45-6789 format (required)
  * @param employmentStatus the user's employment status
  * @param employerName the employer or business name when employed/self-employed
  * @param occupation the occupation when employed/self-employed
@@ -74,11 +74,12 @@ public record RegisterUserRequest (
         @JsonProperty("email")
         @NotBlank
         @Email
-        @Size(max = 320)
+        @Size(max = 255)
         String email,
 
         @JsonProperty("phone")
-        @Size(max = 30)
+        @NotBlank
+        @Size(max = 20)
         String phone,
 
         @JsonProperty("password")
@@ -120,14 +121,14 @@ public record RegisterUserRequest (
         CitizenshipStatus citizenshipStatus,
 
         @JsonProperty("ssn")
+        @NotBlank
         @Pattern(
-                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})?$",
+                regexp = "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})$",
                 message = "SSN must be 9 digits or 123-45-6789"
         )
         String ssn,
 
         @JsonProperty("employment_status")
-        @NotNull
         EmploymentStatus employmentStatus,
 
         @JsonProperty("employer_name")
@@ -139,25 +140,20 @@ public record RegisterUserRequest (
         String occupation,
 
         @JsonProperty("annual_income")
-        @NotBlank
         @Size(max = 32)
         String annualIncome,
 
         @JsonProperty("net_worth_bracket")
-        @NotNull
         NetWorthBracket netWorthBracket,
 
         @JsonProperty("risk_profile")
-        @NotNull
         RiskProfile riskProfile,
 
         @JsonProperty("liquidity_position")
-        @NotBlank
         @Size(max = 32)
         String liquidityPosition,
 
         @JsonProperty("accredited_investor")
-        @NotNull
         Boolean accreditedInvestor,
 
         @JsonProperty("account_name")
@@ -174,11 +170,9 @@ public record RegisterUserRequest (
         TraderLevel traderLevel,
 
         @JsonProperty("is_politically_exposed_person")
-        @NotNull
         Boolean politicallyExposedPerson,
 
         @JsonProperty("broker_affiliation")
-        @NotNull
         Boolean brokerAffiliation,
 
         @JsonProperty("broker_firm_name")
@@ -190,7 +184,6 @@ public record RegisterUserRequest (
         String brokerAffiliationDetails,
 
         @JsonProperty("control_person")
-        @NotNull
         Boolean controlPerson,
 
         @JsonProperty("control_company_name")
@@ -202,7 +195,6 @@ public record RegisterUserRequest (
         String controlCompanyRole,
 
         @JsonProperty("other_beneficial_owner")
-        @NotNull
         Boolean otherBeneficialOwner,
 
         @JsonProperty("beneficial_owner_name")

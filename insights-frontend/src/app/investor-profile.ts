@@ -25,7 +25,9 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   readonly fullName = input('');
   readonly email = input('');
   readonly back = output<void>();
-  readonly completed = output<'NOVICE' | 'ADVANCED'>();
+  readonly completed = output<Record<string, string>>();
+  readonly submitting = input(false);
+  readonly submissionError = input('');
   readonly step = signal(0);
   readonly values = signal<Record<string, string>>({});
   readonly status = signal('');
@@ -136,17 +138,17 @@ export class InvestorProfile implements OnInit, AfterViewInit {
         "type": "text",
         "inputMode": "numeric",
         "placeholder": "123-45-6789",
-        "optional": true,
         "maxLength": 11
       }
     ]
   },
   {
     "title": "Employment & finances",
-    "description": "Tell us about your financial situation. All amounts are in USD.",
+    "description": "These financial details are optional for now. All amounts are in USD.",
     "fields": [
       {
         "id": "employment_status",
+        "optional": true,
         "label": "Employment status",
         "options": [
           {
@@ -193,6 +195,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "annual_income",
+        "optional": true,
         "label": "Annual salary in USD",
         "type": "text",
         "inputMode": "decimal",
@@ -200,6 +203,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "net_worth_bracket",
+        "optional": true,
         "label": "Net worth bracket",
         "options": [
           {
@@ -226,6 +230,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "risk_profile",
+        "optional": true,
         "label": "Risk profile",
         "options": [
           {
@@ -244,6 +249,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "liquidity_position",
+        "optional": true,
         "label": "Liquidity position in USD",
         "inputMode": "decimal",
         "pattern": "[0-9,]+([.][0-9]{1,2})?",
@@ -252,6 +258,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "accredited_investor",
+        "optional": true,
         "label": "Do you identify as an accredited investor?",
         "options": [
           {
@@ -304,6 +311,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "is_politically_exposed_person",
+        "optional": true,
         "label": "Are you a politically exposed person?",
         "options": [
           {
@@ -319,6 +327,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "broker_affiliation",
+        "optional": true,
         "label": "Are you affiliated with a broker-dealer?",
         "options": [
           {
@@ -347,6 +356,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "control_person",
+        "optional": true,
         "label": "Are you a control person of a publicly traded company?",
         "options": [
           {
@@ -376,6 +386,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       },
       {
         "id": "other_beneficial_owner",
+        "optional": true,
         "label": "Will someone else own the funds in this account?",
         "options": [
           {
@@ -566,6 +577,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   }
 
   goTo(step: number): void {
+    if (this.submitting()) return;
     this.step.set(step);
     this.status.set('');
     this.focusHeading();
@@ -579,7 +591,14 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   }
 
   finish(): void {
-    this.completed.emit(this.values()['trader_level'] === 'ADVANCED' ? 'ADVANCED' : 'NOVICE');
+    if (this.submitting()) return;
+    const values: Record<string, string> = {};
+    for (const section of this.sections) {
+      for (const field of section.fields) {
+        if (this.visible(field)) values[field.id] = this.values()[field.id] ?? '';
+      }
+    }
+    this.completed.emit(values);
   }
 
   private focusHeading(): void {

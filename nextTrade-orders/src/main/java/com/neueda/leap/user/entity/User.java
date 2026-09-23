@@ -27,9 +27,6 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "ssn")
-    private String ssn;
-
     @Column(name = "user_role", nullable = false, length = 20)
     private String userRole = "TRADER";
 
@@ -108,13 +105,6 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    public String getSsn() {
-        return ssn;
-    }
-
-    public void setSsn(String ssn) {
-        this.ssn = ssn;
-    }
 
     public String getUserRole() {
         return userRole;

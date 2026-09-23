@@ -22,7 +22,7 @@ BEGIN
     INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address,
                                   date_of_birth, ssn_encrypted)
     VALUES (adult_id, 'Adult', 'Fixture', '555-0100', '1 Test Way',
-            (CURRENT_DATE - INTERVAL '25 years')::date,
+            (CURRENT_DATE - INTERVAL '21 years')::date,
             pgp_sym_encrypt('111-22-3333', test_key, 'cipher-algo=aes256'))
     RETURNING ssn_encrypted INTO encrypted;
     IF pgp_sym_decrypt(encrypted, test_key) <> '111-22-3333' THEN
@@ -41,7 +41,7 @@ BEGIN
         INSERT INTO customer_profiles(user_id, first_name, last_name, phone, address,
                                       date_of_birth, ssn_encrypted)
         VALUES (minor_id, 'Minor', 'Fixture', '555-0101', '2 Test Way',
-                (CURRENT_DATE - INTERVAL '19 years')::date, encrypted);
+                (CURRENT_DATE - INTERVAL '21 years' + INTERVAL '1 day')::date, encrypted);
         RAISE EXCEPTION 'Under-21 customer was accepted';
     EXCEPTION WHEN check_violation THEN
         NULL; -- Only the expected constraint error counts as success.

@@ -1,0 +1,9 @@
+{
+  "/api/**": {
+    "target": "http://127.0.0.1:8082",
+    "secure": false,
+    "pathRewrite": {
+      "^/api/v1/auth/login$": "/auth/login"
+    }
+  }
+}

@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.Period;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -140,8 +140,8 @@ public class RegistrationServiceImpl implements RegistrationService {
      * @param dateOfBirth user date of birth
      */
     private void validateAdult(LocalDate dateOfBirth) {
-        if (dateOfBirth == null || Period.between(dateOfBirth, LocalDate.now()).getYears() < 21) {
-            throw new IllegalArgumentException("User must be at least 21 years old.");
+        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now(ZoneOffset.UTC).minusYears(21))) {
+            throw new com.neueda.leap.onboarding.exception.RegistrationValidationException("User must be at least 21 years old.");
         }
     }
 

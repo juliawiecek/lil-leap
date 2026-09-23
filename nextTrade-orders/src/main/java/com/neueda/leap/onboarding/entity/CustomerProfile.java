@@ -53,6 +53,9 @@ public class CustomerProfile {
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
+    @Column(name = "ssn_encrypted", nullable = false, columnDefinition = "bytea")
+    private byte[] ssnEncrypted;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "citizenship_status", length = 50)
     private CitizenshipStatus citizenshipStatus;
@@ -153,5 +156,8 @@ public class CustomerProfile {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+    public byte[] getSsnEncrypted() { return ssnEncrypted; }
+
+    public void setSsnEncrypted(byte[] ssnEncrypted) { this.ssnEncrypted = ssnEncrypted; }
 }
 

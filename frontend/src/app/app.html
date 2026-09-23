@@ -133,7 +133,7 @@
               </ul>
             </div>
           }
-          <button class="primary-action" type="submit">{{ authMode() === 'signup' ? 'Create account' : 'Continue securely' }}</button>
+          <button class="primary-action" type="submit" [disabled]="submitting()" [attr.aria-busy]="submitting()">{{ submitting() ? 'Signing in…' : authMode() === 'signup' ? 'Create account' : 'Continue securely' }}</button>
           
           
           <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
@@ -156,7 +156,9 @@
     [fullName]="applicantName()"
     [email]="applicantEmail()"
     (back)="returnToSignup()"
-    (completed)="openDashboard($event)"
+    [submitting]="submitting()"
+    [submissionError]="registrationError()"
+    (completed)="register($event)"
   />
 }
 

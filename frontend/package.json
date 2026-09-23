@@ -8,7 +8,8 @@
     "pretest:ci": "node -e \"require('node:fs').mkdirSync('test-results', { recursive: true })\"",
     "test:ci": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "test:e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.9.0",
@@ -23,6 +24,7 @@
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
+    "@playwright/test": "^1.63.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2"
   }

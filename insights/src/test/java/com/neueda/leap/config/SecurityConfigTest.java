@@ -2,6 +2,8 @@ package com.neueda.leap.config;
 
 import com.neueda.leap.security.JwtServiceImpl;
 import com.neueda.leap.user.UserController;
+import com.neueda.leap.onboarding.controller.RegistrationController;
+import com.neueda.leap.onboarding.service.RegistrationService;
 import com.neueda.leap.user.UserService;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 @WebMvcTest({
         UserController.class,
+        RegistrationController.class,
         PasswordResetController.class
 })
 @Import({SecurityConfig.class, JwtServiceImpl.class})
@@ -38,6 +41,9 @@ class SecurityConfigTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private RegistrationService registrationService;
 
     @MockBean
     private PasswordResetService passwordResetService;
@@ -86,5 +92,13 @@ class SecurityConfigTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
+    }
+    @Test
+    void registrationRoutesPermitAnonymousRequests() throws Exception {
+        for (String endpoint : new String[]{"/clients/register", "/users"}) {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(endpoint)
+                    .contentType("application/json").content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
     }
 }

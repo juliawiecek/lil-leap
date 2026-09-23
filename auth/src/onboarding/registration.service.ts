@@ -151,9 +151,9 @@ export class RegistrationService {
   private validateAdult(dateOfBirth: string): void {
     const dob = new Date(dateOfBirth);
     const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    let age = today.getUTCFullYear() - dob.getUTCFullYear();
+    const monthDiff = today.getUTCMonth() - dob.getUTCMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < dob.getUTCDate())) {
       age--;
     }
     if (Number.isNaN(dob.getTime()) || age < 21) {

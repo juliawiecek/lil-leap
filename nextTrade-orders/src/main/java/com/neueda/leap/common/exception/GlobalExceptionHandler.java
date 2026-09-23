@@ -1,6 +1,7 @@
 package com.neueda.leap.common.exception;
 
 import com.neueda.leap.user.exception.InvalidCredentialsException;
+import com.neueda.leap.onboarding.exception.RegistrationValidationException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,5 +50,15 @@ public class GlobalExceptionHandler {
     handleInvalidCredentialsException(InvalidCredentialsException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of
                 ("error", "INVALID_CREDENTIALS", "message", exception.getMessage()));
+    }
+    /**
+     * Returns a client error for an invalid registration age.
+     * @param exception the failed registration rule
+     * @return HTTP 400 with a public validation message
+     */
+    @ExceptionHandler(RegistrationValidationException.class)
+    public ResponseEntity<Map<String, String>> handleRegistrationValidation(RegistrationValidationException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "INVALID_REGISTRATION", "message", exception.getMessage()));
     }
 }

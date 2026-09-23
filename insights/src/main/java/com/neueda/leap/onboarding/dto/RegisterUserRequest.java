@@ -129,7 +129,6 @@ public record RegisterUserRequest (
         String ssn,
 
         @JsonProperty("employment_status")
-        @NotNull
         EmploymentStatus employmentStatus,
 
         @JsonProperty("employer_name")
@@ -141,25 +140,20 @@ public record RegisterUserRequest (
         String occupation,
 
         @JsonProperty("annual_income")
-        @NotBlank
         @Size(max = 32)
         String annualIncome,
 
         @JsonProperty("net_worth_bracket")
-        @NotNull
         NetWorthBracket netWorthBracket,
 
         @JsonProperty("risk_profile")
-        @NotNull
         RiskProfile riskProfile,
 
         @JsonProperty("liquidity_position")
-        @NotBlank
         @Size(max = 32)
         String liquidityPosition,
 
         @JsonProperty("accredited_investor")
-        @NotNull
         Boolean accreditedInvestor,
 
         @JsonProperty("account_name")
@@ -176,11 +170,9 @@ public record RegisterUserRequest (
         TraderLevel traderLevel,
 
         @JsonProperty("is_politically_exposed_person")
-        @NotNull
         Boolean politicallyExposedPerson,
 
         @JsonProperty("broker_affiliation")
-        @NotNull
         Boolean brokerAffiliation,
 
         @JsonProperty("broker_firm_name")
@@ -192,7 +184,6 @@ public record RegisterUserRequest (
         String brokerAffiliationDetails,
 
         @JsonProperty("control_person")
-        @NotNull
         Boolean controlPerson,
 
         @JsonProperty("control_company_name")
@@ -204,7 +195,6 @@ public record RegisterUserRequest (
         String controlCompanyRole,
 
         @JsonProperty("other_beneficial_owner")
-        @NotNull
         Boolean otherBeneficialOwner,
 
         @JsonProperty("beneficial_owner_name")

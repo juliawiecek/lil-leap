@@ -54,22 +54,6 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
         return false;
       }
 
-      if (
-        !(
-          r.employmentStatus != null &&
-          notBlank(r.annualIncome) &&
-          r.netWorthBracket != null &&
-          r.riskProfile != null &&
-          notBlank(r.liquidityPosition) &&
-          r.accreditedInvestor != null &&
-          r.politicallyExposedPerson != null
-        )
-      ) {
-        this.failureMessage =
-          'employmentStatus, annualIncome, netWorthBracket, riskProfile, liquidityPosition, accreditedInvestor and isPoliticallyExposedPerson are required for TRADER registration';
-        return false;
-      }
-
       if (!(notBlank(r.accountName) && r.accountType != null && r.traderLevel != null)) {
         this.failureMessage = 'accountName, accountType and traderLevel are required for TRADER registration';
         return false;
@@ -148,12 +132,13 @@ export class RegisterRequestDto {
 
   @Expose({ name: 'date_of_birth' })
   @IsOptional()
-  @IsDateString()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date_of_birth must be YYYY-MM-DD' })
   dateOfBirth?: string;
 
   @Expose({ name: 'phone' })
   @IsOptional()
-  @MaxLength(30)
+  @MaxLength(20)
   phone?: string;
 
   @Expose({ name: 'street_address' })

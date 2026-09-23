@@ -2,6 +2,8 @@ package com.neueda.leap.config;
 
 import com.neueda.leap.security.JwtService;
 import com.neueda.leap.user.UserController;
+import com.neueda.leap.onboarding.controller.RegistrationController;
+import com.neueda.leap.onboarding.service.RegistrationService;
 import com.neueda.leap.user.UserService;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * real filter chain active (unlike {@code UserControllerTest}, which disables
  * filters to test the controller in isolation).
  */
-@WebMvcTest(UserController.class)
+@WebMvcTest({UserController.class, RegistrationController.class})
 @Import({SecurityConfig.class, JwtService.class})
 class SecurityConfigTest {
 
@@ -29,6 +31,9 @@ class SecurityConfigTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private RegistrationService registrationService;
 
     @Test
     void protectedRoute_withNoToken_shouldReturn401NotDefault403() throws Exception {
@@ -43,5 +48,13 @@ class SecurityConfigTest {
                 .header("Authorization", "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+    @Test
+    void registrationRoutesPermitAnonymousRequests() throws Exception {
+        for (String endpoint : new String[]{"/clients/register", "/api/v1/users"}) {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(endpoint)
+                    .contentType("application/json").content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
     }
 }

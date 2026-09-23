@@ -13,6 +13,11 @@ Every developer runs an isolated PostgreSQL database using the same version-cont
 - **Application Role**: `app_user` (or `DB_APP_USERNAME`) has restricted DML permissions only (SELECT, INSERT, UPDATE, DELETE) on runtime tables
 - **Migrations**: Future schema changes must be versioned (e.g., `03-migration-name.sql`) and applied by the `main` role
 
+For TS-01.5, existing normalized databases need
+[`008_registration_minimum_age.sql`](migrations/008_registration_minimum_age.sql)
+before deploying registration changes. See the
+[registration contract and rollout notes](../docs/TS-01.5-registration.md).
+
 ### Isolation and Persistence
 
 - **Docker Volume**: Postgres data is stored in a named Docker volume (`db_data`)
@@ -93,7 +98,7 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 ### Security & Compliance Features
 
 - **Encrypted SSN**: Customer SSN is reversibly encrypted with pgcrypto PGP symmetric encryption, stored as BYTEA in `customer_profiles.ssn_encrypted`
-- **Age Validation**: Trigger `tg_customer_profiles_age_validation` rejects customers under 18 (SQLSTATE 23514)
+- **Age Validation**: Trigger `tg_customer_profiles_age_validation` rejects customers under 21 (SQLSTATE 23514)
 - **Append-Only Audit**: `audit_log` allows application SELECT/INSERT only; UPDATE/DELETE/TRUNCATE are explicitly revoked
 - **Quote Provenance**: `quotes.source` and `quotes.is_synthetic` track data lineage and test data
 - **Ledger-Based Settlement**: Holdings and cash use dual ledger + cache model; ledger is source of truth

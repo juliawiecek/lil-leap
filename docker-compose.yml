@@ -13,6 +13,7 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?Set SSN_ENCRYPTION_KEY}
     ports:
       - "8082:8080"
 
@@ -30,6 +31,7 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?Set SSN_ENCRYPTION_KEY}
     ports:
       - "8083:8080"
 
@@ -47,6 +49,7 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?Set SSN_ENCRYPTION_KEY}
     ports:
       - "8081:8080"
 
@@ -58,6 +61,7 @@ services:
       - db
     environment:
       APP_JWT_SECRET: my_jwt_top_secret
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?Set SSN_ENCRYPTION_KEY}
 
   frontend:
     build: ./frontend

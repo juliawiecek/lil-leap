@@ -1,7 +1,7 @@
-<main class="profile-page">
+<main class="profile-page" [attr.aria-busy]="submitting()">
   <div class="profile-layout">
     <aside class="profile-sidebar">
-      <button class="back-link" type="button" (click)="back.emit()">← Back to account details</button>
+      <button class="back-link" type="button" [disabled]="submitting()" (click)="back.emit()">← Back to account details</button>
       <div class="eyebrow">Your next chapter</div>
       <h1>Make your<br /><em>next move.</em></h1>
       <p>A few more details to build your investor profile.</p>
@@ -56,7 +56,7 @@
           </fieldset>
         }
         <div class="profile-actions">
-          <button type="button" class="back-link" (click)="step() === 0 ? back.emit() : goTo(step() - 1)">Back</button>
+          <button type="button" [disabled]="submitting()" class="back-link" (click)="step() === 0 ? back.emit() : goTo(step() - 1)">Back</button>
           <button type="submit" class="continue-button">{{ step() === 2 ? 'Review details' : 'Continue' }} →</button>
         </div>
       </form>
@@ -64,7 +64,7 @@
       @if (step() === 3) {
         @for (section of sections; track section.title; let i = $index) {
           <section class="review-section">
-            <div class="review-heading"><h3>{{ section.title }}</h3><button class="back-link" type="button" (click)="goTo(i)">Edit<span class="sr-only"> {{ section.title }}</span></button></div>
+            <div class="review-heading"><h3>{{ section.title }}</h3><button class="back-link" type="button" [disabled]="submitting()" (click)="goTo(i)">Edit<span class="sr-only"> {{ section.title }}</span></button></div>
             <dl>
               @for (field of section.fields; track field.id) {
                 @if (visible(field)) { <div><dt>{{ field.label }}</dt><dd>{{ display(field) }}</dd></div> }
@@ -73,11 +73,11 @@
           </section>
         }
         <div class="profile-actions">
-          <button type="button" class="back-link" (click)="goTo(2)">Back</button>
-          <button type="button" class="continue-button" (click)="finish()">Explore my workspace →</button>
+          <button type="button" [disabled]="submitting()" class="back-link" (click)="goTo(2)">Back</button>
+          <button type="button" [disabled]="submitting()" class="continue-button" (click)="finish()">{{ submitting() ? 'Creating account…' : 'Create account' }}</button>
         </div>
       }
-      <p class="profile-status" role="status">{{ status() }}</p>
+      <p class="profile-status" role="status">{{ submissionError() || status() }}</p>
     </section>
   </div>
 </main>

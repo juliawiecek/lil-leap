@@ -62,6 +62,9 @@ class RegistrationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private com.neueda.leap.security.SsnEncryptionService ssnEncryptionService;
+
     @InjectMocks
     private RegistrationService registrationService;
 
@@ -102,7 +105,7 @@ class RegistrationServiceTest {
 
         assertEquals("julia@example.com", savedUser.getEmail());
         assertEquals("hashedPassword", savedUser.getPasswordHash());
-        assertEquals("123456789", savedUser.getSsn());
+        verify(ssnEncryptionService).encrypt("123456789");
 
         assertEquals("Julia", savedProfile.getFirstName());
         assertEquals("Wiecek", savedProfile.getLastName());

@@ -14,6 +14,8 @@
 import { InvestorProfile } from './investor-profile';
 import { StockDashboard, Experience } from './stock-dashboard';
 
+import { AccountApi, type ProfileValues } from './account-api';
+
 type AuthMode = 'signin' | 'signup';
 
 interface Candle {
@@ -51,6 +53,10 @@ export class App implements AfterViewInit, OnDestroy {
   private readonly riseColor = '#78a85f';
   private readonly neutralColor = '#eeeeee';
 
+  private readonly accountApi = new AccountApi();
+  readonly submitting = signal(false);
+  readonly registrationError = signal('');
+
   readonly authMode = signal<AuthMode>('signin');
   readonly pageReady = signal(false);
   readonly profileOpen = signal(false);
@@ -72,6 +78,7 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   signOut(): void {
+    this.accountApi.signOut();
     this.dashboardOpen.set(false);
     this.applicantName.set('');
     this.applicantEmail.set('');
@@ -81,6 +88,8 @@ export class App implements AfterViewInit, OnDestroy {
   readonly applicantEmail = signal('');
 
   returnToSignup(): void {
+    if (this.submitting()) return;
+    this.registrationError.set('');
     this.profileOpen.set(false);
     this.setAuthMode('signup');
   }
@@ -148,6 +157,7 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   setAuthMode(mode: AuthMode): void {
+    if (this.submitting()) return;
     this.passwordDraft.set(this.password.nativeElement.value);
     this.confirmationDraft.set('');
     this.passwordStarted.set(!!this.password.nativeElement.value);
@@ -171,8 +181,9 @@ export class App implements AfterViewInit, OnDestroy {
     this.formStatus.set('Password recovery will continue in the next step.');
   }
 
-  onSubmit(event: Event, form: HTMLFormElement): void {
+  async onSubmit(event: Event, form: HTMLFormElement): Promise<void> {
     event.preventDefault();
+    if (this.submitting()) return;
     if (!form.checkValidity()) {
       form.reportValidity();
       return;
@@ -204,7 +215,39 @@ export class App implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.openDashboard('NOVICE', false);
+    this.submitting.set(true);
+    this.formStatus.set('');
+    try {
+      const user = await this.accountApi.login(this.email.nativeElement.value, this.password.nativeElement.value);
+      this.applicantEmail.set(user.email);
+      this.applicantName.set(user.firstName || user.email);
+      this.openDashboard('NOVICE', false);
+    } catch (error) {
+      this.formStatus.set(error instanceof Error ? error.message : 'We could not sign you in. Please try again.');
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  async register(values: ProfileValues): Promise<void> {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    this.registrationError.set('');
+    try {
+      await this.accountApi.register(values, this.applicantEmail(), this.passwordDraft());
+      this.password.nativeElement.value = '';
+      this.passwordDraft.set('');
+      this.confirmationDraft.set('');
+      this.passwordStarted.set(false);
+      this.profileOpen.set(false);
+      this.authMode.set('signin');
+      this.formStatus.set('Account created. Sign in to continue.');
+      this.password.nativeElement.focus();
+    } catch (error) {
+      this.registrationError.set(error instanceof Error ? error.message : 'We could not create your account. Please try again.');
+    } finally {
+      this.submitting.set(false);
+    }
   }
 
   private buildVolumeField(): void {
