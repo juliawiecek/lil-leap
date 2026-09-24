@@ -25,7 +25,10 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   readonly fullName = input('');
   readonly email = input('');
   readonly back = output<void>();
-  readonly completed = output<'NOVICE' | 'ADVANCED'>();
+  /** The answers currently shown, keyed by field id (= the register API's field names). */
+  readonly completed = output<Record<string, string>>();
+  readonly submitting = input(false);
+  readonly submitError = input('');
   readonly step = signal(0);
   readonly values = signal<Record<string, string>>({});
   readonly status = signal('');
@@ -136,8 +139,8 @@ export class InvestorProfile implements OnInit, AfterViewInit {
         "type": "text",
         "inputMode": "numeric",
         "placeholder": "123-45-6789",
-        "optional": true,
-        "maxLength": 11
+        "maxLength": 11,
+        "hint": "Required to open a brokerage account. Stored encrypted."
       }
     ]
   },
@@ -579,7 +582,12 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   }
 
   finish(): void {
-    this.completed.emit(this.values()['trader_level'] === 'ADVANCED' ? 'ADVANCED' : 'NOVICE');
+    const values = this.values();
+    const answers: Record<string, string> = {};
+    for (const field of this.sections.flatMap(section => section.fields)) {
+      if (this.visible(field)) answers[field.id] = values[field.id] ?? '';
+    }
+    this.completed.emit(answers);
   }
 
   private focusHeading(): void {
