@@ -48,17 +48,9 @@
         }
       </div>
       <div class="topbar-actions">
-        <label class="workspace-choice"
-          ><span class="sr-only">Workspace</span
-          ><select
-            aria-label="Workspace"
-            [value]="mode()"
-            (change)="$any($event.target).value === 'ADVANCED' && advanced.emit()"
-          >
-            <option value="NOVICE">Novice · Guided</option>
-            <option value="ADVANCED">Advanced · Focused</option></select
-          ><app-dashboard-icon name="down"
-        /></label>
+        <div class="workspace-choice">
+          <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Novice · Guided</span>
+        </div>
         <div class="notifications">
           <button
             type="button"
@@ -397,14 +389,7 @@
                 <span>Account name</span><strong>{{ name() || 'Your account' }}</strong>
               </div>
               <div>
-                <span>Workspace</span
-                ><label
-                  ><span class="sr-only">Workspace preference</span
-                  ><select (change)="$any($event.target).value === 'ADVANCED' && advanced.emit()">
-                    <option value="NOVICE">Novice · Guided</option>
-                    <option value="ADVANCED">Advanced · Focused</option>
-                  </select></label
-                >
+                <span>Trader tier</span><strong title="Assigned from the net worth and income you declared">Novice · Guided</strong>
               </div>
               <div>
                 <span>Portfolio balance</span

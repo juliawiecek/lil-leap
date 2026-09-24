@@ -12,7 +12,7 @@ import java.util.UUID;
  * Account entity representing a trading account.
  * BR-04, BR-05, BR-11: Trading accounts with tier constraints and execution buffer.
  */
-@Entity
+@Entity(name = "OrderAccount") // onboarding.entity.Account already uses the default name "Account"
 @Table(name = "accounts")
 public class Account {
     

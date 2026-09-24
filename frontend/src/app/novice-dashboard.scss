@@ -231,11 +231,12 @@ h2 {
   align-items: center;
   position: relative;
 }
-.workspace-choice select {
-  appearance: none;
+.workspace-choice .tier-badge {
+  display: flex;
+  align-items: center;
   border: 1px solid #283231;
   border-radius: 7px;
-  padding: 8px 35px 8px 12px;
+  padding: 8px 12px;
   background: #131b19;
   color: #edf2ef;
   width: 160px;

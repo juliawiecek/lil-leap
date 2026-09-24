@@ -12,7 +12,7 @@ import { CustomerProfile } from './entities/customer-profile.entity';
 import { FinancialProfile } from './entities/financial-profile.entity';
 import { Account } from './entities/account.entity';
 import { AnalystProfile } from './entities/analyst-profile.entity';
-import { TraderLevel } from './enums/trader-level.enum';
+import { assignTier, TierAssignment } from './tier-rules';
 
 function trimToNull(value?: string | null): string | null {
   if (value == null) return null;
@@ -36,6 +36,9 @@ export class RegistrationService {
         throw new UserAlreadyExistsException();
       }
 
+      // Decided before any row is written, so a rejected applicant leaves nothing behind.
+      const tier = request.userRole === UserRole.TRADER ? assignTier(request.netWorthBracket!, request.annualIncome) : null;
+
       const user = manager.create(User, {
         email: normalizeEmail(request.email),
         passwordHash: this.passwordEncoder.encode(request.password),
@@ -46,7 +49,7 @@ export class RegistrationService {
       if (request.userRole === UserRole.ANALYST) {
         await this.registerAnalyst(manager, request, savedUser);
       } else {
-        await this.registerTrader(manager, request, savedUser);
+        await this.registerTrader(manager, request, savedUser, tier!);
       }
 
       return savedUser;
@@ -70,12 +73,13 @@ export class RegistrationService {
   /**
    * Persists the TRADER-only extension tables for a newly created user:
    * identity/contact profile, financial onboarding profile, and a trading
-   * account.
+   * account at the server-assigned tier.
    */
   private async registerTrader(
     manager: EntityManager,
     request: RegisterRequestDto,
     user: User,
+    tier: TierAssignment,
   ): Promise<void> {
     this.validateAdult(request.dateOfBirth!);
 
@@ -121,8 +125,8 @@ export class RegistrationService {
       accountNumber: this.generateAccountNumber(),
       accountName: request.accountName!.trim(),
       accountType: request.accountType!,
-      traderLevel: request.traderLevel!,
-      minBalanceRequirement: this.minBalanceFor(request.traderLevel!),
+      traderLevel: tier.traderLevel,
+      minBalanceRequirement: tier.minBalanceRequirement,
     });
     await manager.save(account);
   }
@@ -184,10 +188,5 @@ export class RegistrationService {
   /** Generates a deterministic-length account number with an NT prefix. */
   private generateAccountNumber(): string {
     return 'NT' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase();
-  }
-
-  /** Returns minimum balance by trader level. */
-  private minBalanceFor(traderLevel: TraderLevel): string {
-    return traderLevel === TraderLevel.ADVANCED ? '100000.00' : '5000.00';
   }
 }
