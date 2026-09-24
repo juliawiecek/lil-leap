@@ -2,6 +2,7 @@ package com.neueda.leap;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Entry point for the Lil Leap NextTrade Insights backend application.
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * the backend services.</p>
  */
 @SpringBootApplication
+@EnableScheduling
 public class Main {
 
     /**

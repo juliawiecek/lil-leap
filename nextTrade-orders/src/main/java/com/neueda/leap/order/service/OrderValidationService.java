@@ -6,8 +6,13 @@ import org.springframework.stereotype.Service;
 /**
  * Service responsible for validating {@link Order} objects.
  *
- * <p>This service checks that an order contains a non-blank product name,
- * a quantity greater than zero, and a non-negative price.</p>
+ * <p>This service checks that an order contains valid market order data:
+ * - Order ID is not null
+ * - Account and Instrument are set
+ * - Side is BUY or SELL
+ * - Quantity is greater than zero
+ * - Order type is MARKET
+ * - Status is SUBMITTED or ACCEPTED</p>
  */
 @Service
 public class OrderValidationService {
@@ -16,19 +21,39 @@ public class OrderValidationService {
      * Validates the provided order.
      *
      * @param order the order to validate
-     * @throws IllegalArgumentException if the product name is blank, the quantity
-     *                                  is less than or equal to zero, or the price
-     *                                  is negative
+     * @throws IllegalArgumentException if any required field is invalid
      */
     public void validate(Order order) {
-        if (order.productName() == null || order.productName().isBlank()) {
-            throw new IllegalArgumentException("Product name must not be blank");
+        if (order == null) {
+            throw new IllegalArgumentException("Order must not be null");
         }
-        if (order.quantity() <= 0) {
+        if (order.getOrderId() == null) {
+            throw new IllegalArgumentException("Order ID must not be null");
+        }
+        if (order.getAccount() == null) {
+            throw new IllegalArgumentException("Account must not be null");
+        }
+        if (order.getInstrument() == null) {
+            throw new IllegalArgumentException("Instrument must not be null");
+        }
+        if (order.getSide() == null || order.getSide().isBlank()) {
+            throw new IllegalArgumentException("Side must not be blank (BUY or SELL)");
+        }
+        if (!("BUY".equalsIgnoreCase(order.getSide()) || "SELL".equalsIgnoreCase(order.getSide()))) {
+            throw new IllegalArgumentException("Side must be BUY or SELL");
+        }
+        if (order.getQuantity() == null || order.getQuantity() <= 0) {
             throw new IllegalArgumentException("Quantity must be greater than zero");
         }
-        if (order.price() < 0) {
-            throw new IllegalArgumentException("Price must not be negative");
+        if (order.getOrderType() == null || order.getOrderType().isBlank()) {
+            throw new IllegalArgumentException("Order type must not be blank");
+        }
+        if (!"MARKET".equalsIgnoreCase(order.getOrderType())) {
+            throw new IllegalArgumentException("Order type must be MARKET");
+        }
+        if (order.getStatus() == null || order.getStatus().isBlank()) {
+            throw new IllegalArgumentException("Status must not be blank");
         }
     }
 }
+
