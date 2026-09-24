@@ -1,10 +1,10 @@
 # 📚 Documentation Organization Guide
 
-Your instructor can easily find everything they need here!
+Quick reference for the project structure and documentation.
 
 ---
 
-## 🎯 For Your Instructor
+## 🎯 Quick Reference
 
 ### Test Coverage (Quick Access)
 **Path**: `docs/COVERAGE_REPORTS.md` or `coverage-reports/` folder
@@ -77,7 +77,7 @@ repository-root/
 
 ---
 
-## 🚀 How Your Instructor Should Proceed
+## 🚀 Getting Started
 
 ### Step 1: Review Coverage
 1. Open `coverage-reports/python/index.html`
@@ -91,7 +91,7 @@ repository-root/
 3. Run `docker-compose up -d` to start the database
 4. Verify each service is running on its port
 
-### Step 3: Run Tests Yourself (Optional)
+### Step 3: Running Tests (Optional)
 ```bash
 # Python tests
 cd data-pipeline

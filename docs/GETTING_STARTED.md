@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the lil-leap (NextTrade Platform) project! This guide will help you get up and running quickly.
+This guide provides setup instructions for the lil-leap (NextTrade Platform) project.
 
 ## 📋 Prerequisites
 
@@ -124,7 +124,7 @@ lil-leap/
 ├── auth/                    # Authentication service (NestJS)
 ├── data-pipeline/           # Python data ingestion service
 ├── db/                      # Database schemas & migrations
-├── docs/                    # Documentation (you are here)
+├── docs/                    # Documentation (current location)
 ├── frontend/                # Angular UI
 ├── insights/                # Java Spring Boot backend
 ├── coverage-reports/        # Test coverage reports

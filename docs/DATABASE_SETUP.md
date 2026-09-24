@@ -26,7 +26,7 @@ This will:
 docker-compose ps
 ```
 
-You should see the PostgreSQL container in the list.
+The PostgreSQL container appears in the list.
 
 ### Check Logs
 

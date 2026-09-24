@@ -84,7 +84,7 @@ Navigate the lil-leap project documentation using the links below.
 
 | Folder | Purpose |
 |--------|---------|
-| **docs/** | Documentation (you are here) |
+| **docs/** | Documentation (current location) |
 | **coverage-reports/** | Test coverage reports & metrics |
 | **auth/** | NestJS Identity Service |
 | **insights/** | Spring Boot reporting & backend |

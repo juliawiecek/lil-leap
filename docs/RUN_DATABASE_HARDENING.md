@@ -22,7 +22,7 @@ Create `.env` from the checked-in `.env.example`:
 
 ```bash
 cp env.example .env
-# Edit .env with your local values:
+# Edit .env with local values:
 # - DB_ADMIN_PASSWORD (required, not committed)
 # - DB_APP_PASSWORD (required, not committed)
 # - SSN_ENCRYPTION_KEY (required, not committed)
@@ -106,7 +106,7 @@ docker compose up -d db
 # Monitor database startup (wait for "ready to accept connections")
 docker compose logs -f db
 
-# When you see "database system is ready to accept connections", Ctrl+C to exit logs
+# When the output shows "database system is ready to accept connections", Ctrl+C to exit logs
 ```
 
 ---
@@ -139,7 +139,7 @@ docker compose exec -T db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -f db/tests
 
 Expected output: `PASS: Schema verification successful...`
 
-If you see failures, check:
+If failures occur, verify:
 - `customer_profiles.ssn_encrypted BYTEA` exists (not TEXT)
 - No `users.ssn` column (plaintext SSN removed)
 - `quotes.source` and `quotes.is_synthetic` exist
@@ -292,7 +292,7 @@ docker compose exec -T db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "
 
 ## 11. Test Destructive Reset
 
-**WARNING**: This deletes all database data. Use only when you want a completely fresh database.
+**WARNING**: This deletes all database data. Use only when a completely fresh database is required.
 
 ```bash
 # Delete volume (destructive!)
@@ -430,7 +430,7 @@ docker compose exec -T db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "
 ## Important Notes
 
 1. **Do not commit `.env`**: It contains real passwords. Only commit `.env.example`.
-2. **Do not run `docker compose down -v` unless you want to reset**: It deletes the database volume.
+2. **Do not run `docker compose down -v` when database preservation is needed**: It deletes the database volume.
 3. **Environment variables are required**: Must set `DB_ADMIN_PASSWORD`, `DB_APP_PASSWORD`, `SSN_ENCRYPTION_KEY` before running.
 4. **Database initialization is one-time**: Init scripts run only on empty volumes. To re-apply manually:
    ```bash
