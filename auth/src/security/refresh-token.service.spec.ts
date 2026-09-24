@@ -12,6 +12,7 @@ describe('RefreshTokenService', () => {
   let service: RefreshTokenService;
 
   beforeEach(() => {
+    delete process.env.SESSION_INACTIVITY_MINUTES;
     repository = {
       create: jest.fn((fields) => fields),
       save: jest.fn(async (session) => session),
@@ -27,6 +28,25 @@ describe('RefreshTokenService', () => {
     const saved = repository.save.mock.calls[0][0] as Session;
     expect(saved.tokenHash).toBe(hashOf(raw));
     expect(saved.tokenHash).not.toContain(raw);
+  });
+
+  it('issue expires the session after the 10-minute inactivity window (BR-03)', async () => {
+    const before = Date.now();
+    await service.issue(user);
+
+    const saved = repository.save.mock.calls[0][0] as Session;
+    expect(saved.expiresAt.getTime() - before).toBeGreaterThanOrEqual(10 * 60 * 1000);
+    expect(saved.expiresAt.getTime() - before).toBeLessThan(10 * 60 * 1000 + 5000);
+  });
+
+  it('honours SESSION_INACTIVITY_MINUTES', async () => {
+    process.env.SESSION_INACTIVITY_MINUTES = '3';
+    service = new RefreshTokenService(repository as unknown as Repository<Session>);
+    const before = Date.now();
+    await service.issue(user);
+
+    const saved = repository.save.mock.calls[0][0] as Session;
+    expect(saved.expiresAt.getTime() - before).toBeLessThan(3 * 60 * 1000 + 5000);
   });
 
   it('rotate revokes the old session and issues a new token', async () => {

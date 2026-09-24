@@ -22,10 +22,13 @@ sequenceDiagram
     FE->>Auth: POST /auth/logout (revokes the session)
 ```
 
-- **Access token:** JWT (HS256) with `sub`, `email`, `client_id`; 15 minutes.
-  Backends verify it themselves and never call this service.
+- **Access token:** JWT (HS256) with `sub`, `email`, `client_id`; at most 10
+  minutes. Backends verify it themselves and never call this service.
 - **Refresh token:** random value, stored only as a SHA-256 hash in `sessions`;
-  30 days, single use (each refresh replaces it).
+  single use (each refresh replaces it).
+- **10-minute inactivity timeout (BR-03):** a session expires 10 minutes after
+  its last refresh (`SESSION_INACTIVITY_MINUTES`). The frontend refreshes in the
+  background while the user is active and signs them out after 10 idle minutes.
 - Browsers reach the service only through the frontends' nginx at `/auth/*`
   (same origin, so no CORS; no public port in docker-compose).
 
@@ -42,7 +45,7 @@ sequenceDiagram
 **Logout** revokes only the session behind that refresh token; other devices
 stay signed in. It returns `204` even for an unknown or already-revoked token,
 so it can't be used to test whether a token is valid. The access token keeps
-working until it expires, so clients should discard it on logout.
+working until it expires (at most 10 minutes), so clients should discard it on logout.
 
 Errors are JSON with a fixed code (`INVALID_CREDENTIALS`, `USER_ALREADY_EXISTS`,
 `INVALID_REFRESH_TOKEN`, `INVALID_REQUEST`, `INTERNAL_ERROR`); raw messages are
@@ -70,7 +73,8 @@ See `.env.example`. The main settings:
 |---|---|
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_APP_USERNAME`, `DB_APP_PASSWORD` | Postgres connection (restricted `app_user` role) |
 | `APP_JWT_SECRET` | Shared with the backends; required in production, 32+ bytes |
-| `APP_JWT_EXPIRATION_MINUTES` / `APP_REFRESH_EXPIRATION_DAYS` | Token lifetimes (15 / 30) |
+| `SESSION_INACTIVITY_MINUTES` | Idle time before a session ends (default 10) |
+| `APP_JWT_EXPIRATION_MINUTES` | Access token lifetime; can only be shorter than the inactivity window |
 | `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Must match the key the backends use |
 | `TLS_KEYSTORE`, `TLS_KEYSTORE_PASSWORD` | Optional: serve HTTPS directly (unset behind nginx) |
 | `PORT` | Default 3000 |
@@ -101,8 +105,8 @@ Open `coverage/lcov-report/index.html` in a browser (Windows:
 `start coverage\lcov-report\index.html`). Click a file to see untested lines in
 red. The report is generated locally and is not committed.
 
-Unit-test coverage as of September 2026: **86% statements, 86% lines, 76%
-branches** (46 tests).
+Unit-test coverage as of September 2026: **87% statements, 86% lines, 77%
+branches** (50 tests).
 
 ### End-to-end tests
 

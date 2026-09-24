@@ -15,6 +15,7 @@ import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
+import { SESSION_INACTIVITY_MINUTES, SessionKeeper } from './session-keeper';
 import { StockDashboard, Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup';
@@ -50,6 +51,7 @@ export class App implements AfterViewInit, OnDestroy {
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
+  private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly candleStep = 30;
   private readonly riseColor = '#78a85f';
@@ -79,6 +81,7 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   signOut(): void {
+    this.session.stop();
     void this.auth.logout();
     this.dashboardOpen.set(false);
     this.applicantName.set('');
@@ -222,6 +225,7 @@ export class App implements AfterViewInit, OnDestroy {
     this.formStatus.set('');
     try {
       await this.auth.login(this.email.nativeElement.value, this.password.nativeElement.value);
+      this.session.start();
       this.openDashboard('NOVICE', false);
     } catch (error) {
       this.formStatus.set(this.messageFor(error));
@@ -240,12 +244,27 @@ export class App implements AfterViewInit, OnDestroy {
     try {
       await this.auth.register(toTraderRegistration(answers, email, password));
       await this.auth.login(email, password);
+      this.session.start();
       this.openDashboard(answers['trader_level'] === 'ADVANCED' ? 'ADVANCED' : 'NOVICE');
     } catch (error) {
       this.registrationError.set(this.messageFor(error));
     } finally {
       this.registering.set(false);
     }
+  }
+
+  /** Any input while signed in counts as activity for the inactivity timeout. */
+  @HostListener('document:pointerdown')
+  @HostListener('document:keydown')
+  @HostListener('document:wheel')
+  @HostListener('document:touchstart')
+  onUserActivity(): void {
+    this.session.recordActivity();
+  }
+
+  private onSessionExpired(): void {
+    this.signOut();
+    this.formStatus.set(`You were signed out after ${SESSION_INACTIVITY_MINUTES} minutes of inactivity.`);
   }
 
   private messageFor(error: unknown): string {
