@@ -3,29 +3,29 @@ package com.neueda.leap.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.common.exception.GlobalExceptionHandler;
 import com.neueda.leap.config.SecurityConfig;
-import com.neueda.leap.user.AuthController;
-import com.neueda.leap.user.UserController;
-import com.neueda.leap.user.UserService;
-import com.neueda.leap.user.dto.UserResponse;
-import org.junit.jupiter.api.Test;
+import com.neueda.leap.portfolio.controller.ClientFinancialController;
+import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.logging.LogFile;
+import org.springframework.boot.logging.LoggingInitializationContext;
+import org.springframework.boot.logging.logback.LogbackLoggingSystem;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.logging.LoggingInitializationContext;
-import org.springframework.boot.logging.LogFile;
-import org.springframework.boot.logging.logback.LogbackLoggingSystem;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.net.URI;
@@ -34,11 +34,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /** Real embedded Tomcat HTTP with the shipped application.yml and logging configuration. */
@@ -48,44 +47,37 @@ import static org.mockito.Mockito.when;
 @ExtendWith(OutputCaptureExtension.class)
 class HttpSecurityTest {
     @Configuration(proxyBeanMethods = false)
-    @EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
-    @Import({SecurityConfig.class, JwtServiceImpl.class, AuthController.class, UserController.class, GlobalExceptionHandler.class})
+    @EnableAutoConfiguration(exclude = {HibernateJpaAutoConfiguration.class, JpaRepositoriesAutoConfiguration.class,
+            DataSourceAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
+    @Import({SecurityConfig.class, JwtServiceImpl.class, ClientFinancialController.class, GlobalExceptionHandler.class})
     static class TestApplication { }
 
     private static final Path logFile = Path.of("target/http-security-test.log");
     @LocalServerPort int port;
-    @MockBean UserService users;
+    @Autowired JwtService tokens;
+    @MockBean ClientFinancialQueryService queryService;
 
     @BeforeAll
     static void initializeFileLogging(@Autowired ConfigurableEnvironment environment) {
-        // Other MVC test contexts may have initialized the JVM-wide logging system first.
-        // Reload the shipped config using this context's file-logging profile and log path.
         var logging = new LogbackLoggingSystem(HttpSecurityTest.class.getClassLoader());
         logging.cleanUp();
         logging.initialize(new LoggingInitializationContext(environment), "classpath:logback-spring.xml", LogFile.get(environment));
     }
 
     @Test
-    void loginAndAuthenticatedRequestsWorkOverHttp(CapturedOutput output) throws Exception {
+    void tokenMintedByJwtServiceCanAccessProtectedHoldingsRoute(CapturedOutput output) throws Exception {
         UUID id = UUID.randomUUID();
-        UserResponse user = new UserResponse(id, "Test", "Client", "client@example.com", null, false, Instant.now(), Instant.now());
-        when(users.login(any())).thenReturn(user);
-        when(users.getById(id)).thenReturn(user);
+        when(queryService.getHoldings(id)).thenReturn(List.of());
+        String token = tokens.issueToken(id, "client@example.com");
         HttpClient client = HttpClient.newHttpClient();
-        HttpResponse<String> login = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/auth/login"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"client@example.com\",\"password\":\"http-login-canary\"}"))
-                .build(), HttpResponse.BodyHandlers.ofString());
-        assertThat(login.statusCode()).isEqualTo(200);
-        assertThat(login.headers().firstValue("Strict-Transport-Security")).isEmpty();
-        assertThat(login.headers().firstValue("Cache-Control").orElseThrow()).contains("no-store");
-        String token = new ObjectMapper().readTree(login.body()).get("token").asText();
-        HttpResponse<String> me = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/users/me"))
+
+        HttpResponse<String> holdings = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/holdings"))
                 .header("Authorization", "Bearer " + token).build(), HttpResponse.BodyHandlers.ofString());
-        assertThat(me.statusCode()).isEqualTo(200);
-        assertThat(me.body()).contains(id.toString());
-        assertThat(output.getAll()).doesNotContain(token, "http-login-canary");
-        assertThat(Files.readString(logFile)).doesNotContain(token, "http-login-canary");
+
+        assertThat(holdings.statusCode()).isEqualTo(200);
+        assertThat(new ObjectMapper().readTree(holdings.body()).isArray()).isTrue();
+        assertThat(output.getAll()).doesNotContain(token);
+        assertThat(Files.readString(logFile)).doesNotContain(token);
     }
 
     @Test

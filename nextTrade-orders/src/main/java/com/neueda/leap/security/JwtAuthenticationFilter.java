@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -75,7 +76,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(principal.get(), null, List.of()));
+                new UsernamePasswordAuthenticationToken(
+                        principal.get(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + principal.get().role()))));
 
         filterChain.doFilter(request, response);
     }

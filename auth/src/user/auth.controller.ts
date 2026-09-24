@@ -33,7 +33,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await this.userService.login(request);
-    const accessToken = this.jwtService.issueToken(user.userId, user.email);
+    const accessToken = this.jwtService.issueToken(user.userId, user.email, user.userRole);
     const refreshToken = await this.refreshTokenService.issue(user);
 
     return new LoginResponseDto(accessToken, refreshToken, UserResponseDto.from(user));
@@ -44,7 +44,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() request: RefreshRequestDto): Promise<RefreshResponseDto> {
     const rotation = await this.refreshTokenService.rotate(request.refreshToken);
-    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email);
+    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, rotation.user.userRole);
 
     return new RefreshResponseDto(accessToken, rotation.newRawRefreshToken);
   }

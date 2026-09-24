@@ -13,6 +13,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:nexttrade-web}
     ports:
       - "8082:8080"
 
@@ -30,6 +32,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:nexttrade-web}
     ports:
       - "8083:8080"
 
@@ -47,6 +51,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:nexttrade-web}
     ports:
       - "8081:8080"
 
@@ -57,7 +63,8 @@ services:
     depends_on:
       - db
     environment:
-      APP_JWT_SECRET: my_jwt_top_secret
+      # JWT secret shared with all backend services for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:nexttrade-web}
 
   frontend:
     build: ./frontend

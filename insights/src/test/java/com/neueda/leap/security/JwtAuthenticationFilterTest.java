@@ -60,6 +60,7 @@ class JwtAuthenticationFilterTest {
         JwtPrincipal principal = (JwtPrincipal) authentication.getPrincipal();
         assertEquals(userId, principal.userId());
         assertEquals("julia@example.com", principal.email());
+        assertEquals("TRADER", principal.role());
     }
 
     @Test

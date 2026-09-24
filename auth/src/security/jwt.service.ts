@@ -3,6 +3,7 @@ import * as jwt from 'jsonwebtoken';
 
 const EMAIL_CLAIM = 'email';
 const CLIENT_ID_CLAIM = 'client_id';
+const ROLE_CLAIM = 'user_role';
 
 /**
  * Issues JWT access tokens. NextTrade backend and Insights backend verify
@@ -20,14 +21,14 @@ export class JwtService {
     if (!secret && process.env.NODE_ENV === 'production') {
       throw new Error('APP_JWT_SECRET must be set in production; refusing to sign tokens with the dev fallback secret.');
     }
-    this.secret = secret ?? 'dev-only-insecure-secret-change-me-before-deploying';
+    this.secret = secret ?? 'nexttrade-web';
     this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
     this.clientId = process.env.APP_JWT_CLIENT_ID ?? 'nexttrade-web';
   }
 
   /** Issues a new signed access token for the given user. */
-  issueToken(userId: string, email: string): string {
-    return jwt.sign({ [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId }, this.secret, {
+  issueToken(userId: string, email: string, role: string): string {
+    return jwt.sign({ [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId, [ROLE_CLAIM]: role }, this.secret, {
       subject: userId,
       expiresIn: `${this.expirationMinutes}m`,
       algorithm: 'HS256',

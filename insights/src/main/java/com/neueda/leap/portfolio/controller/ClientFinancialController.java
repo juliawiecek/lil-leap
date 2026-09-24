@@ -7,6 +7,7 @@ import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import com.neueda.leap.security.JwtPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,7 @@ import java.util.List;
 /** Client-scoped read endpoints for holdings, cash, and order history. */
 @RestController
 @RequestMapping
+@PreAuthorize("hasAnyRole('TRADER', 'ANALYST')")
 public class ClientFinancialController {
 
     private final ClientFinancialQueryService queryService;
