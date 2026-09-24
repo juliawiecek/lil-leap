@@ -3,7 +3,7 @@ import { NetWorthBracket } from './enums/net-worth-bracket.enum';
 import { TraderLevel } from './enums/trader-level.enum';
 import { InsufficientInvestableAssetsException } from './exceptions/insufficient-investable-assets.exception';
 
-describe('tier rules (TS-06.4)', () => {
+describe('tier rules (NEXT-152)', () => {
   // The story's test-case table: net worth, income -> capacity -> tier.
   it.each([
     [NetWorthBracket.ZERO_TO_5K, '50,000', 5_000, TraderLevel.NOVICE],

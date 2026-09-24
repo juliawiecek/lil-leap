@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 /**
  * Response DTO returned after a successful token refresh.
  *
@@ -5,8 +7,14 @@
  * replaces the one the caller sent, which is invalidated immediately.
  */
 export class RefreshResponseDto {
-  constructor(
-    public accessToken: string,
-    public refreshToken: string,
-  ) {}
+  @ApiProperty({ description: 'New access token, with the same claims as at login.' })
+  accessToken: string;
+
+  @ApiProperty({ description: 'Replacement refresh token; the one sent is now invalid.' })
+  refreshToken: string;
+
+  constructor(accessToken: string, refreshToken: string) {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+  }
 }

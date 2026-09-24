@@ -32,7 +32,7 @@ export function investableCapacity(netWorthBracket: NetWorthBracket, annualIncom
 }
 
 /**
- * Assigns the trader tier from declared finances (TS-06.4). The client never
+ * Assigns the trader tier from declared finances (NEXT-152). The client never
  * chooses its own tier; below the NOVICE threshold registration is refused.
  */
 export function assignTier(netWorthBracket: NetWorthBracket, annualIncome?: string | null): TierAssignment {

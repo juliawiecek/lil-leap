@@ -48,7 +48,7 @@ describe('JwtService', () => {
     expect(() => jwt.verify(token, 'a-completely-different-secret-000000000')).toThrow();
   });
 
-  it('adds a trader_level claim when the user has an account (TS-06.4)', () => {
+  it('adds a trader_level claim when the user has an account (NEXT-152)', () => {
     const token = new JwtService().issueToken('11111111-1111-1111-1111-111111111111', 'trader@example.com', TraderLevel.ADVANCED);
 
     expect((jwt.decode(token) as jwt.JwtPayload).trader_level).toBe('ADVANCED');

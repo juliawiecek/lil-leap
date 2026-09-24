@@ -1,0 +1,698 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "summary": "Register a TRADER or ANALYST",
+        "description": "Issues no tokens -- call /auth/login next. For a TRADER the server assigns trader_level from declared finances: capacity = net_worth_bracket lower bound + 10% of annual_income; ADVANCED at >= $100,000, NOVICE at >= $5,000. Any trader_level sent by the client is ignored.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: missing or invalid fields, or a TRADER under 21.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USER_ALREADY_EXISTS: the email is already registered (case-insensitive).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INSUFFICIENT_INVESTABLE_ASSETS: TRADER capacity below $5,000. No user or account is created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "summary": "Sign in and get an access + refresh token pair",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: email or password missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS: same response for an unknown email and a wrong password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "summary": "Rotate the refresh token and get a new access token",
+        "description": "The refresh token sent is invalidated either way. Sessions expire after the inactivity window.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: refreshToken missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_REFRESH_TOKEN: unknown, revoked, reused or idle-expired token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "summary": "Revoke a refresh token",
+        "description": "Always 204, even for an unknown or already-revoked token. Issued access tokens stay valid until they expire.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Signed out."
+          },
+          "400": {
+            "description": "INVALID_REQUEST: refreshToken missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/rules/tier-eligibility": {
+      "get": {
+        "operationId": "RulesController_tierEligibility",
+        "summary": "The caller's trader tier, balance against its minimum, and gap to the next tier",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TierEligibilityResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND: the user has no trading account (e.g. an ANALYST).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "rules"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "summary": "Liveness probe (no database check)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "example": "ok"
+                    },
+                    "service": {
+                      "example": "auth"
+                    },
+                    "timestamp": {
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "NextTrade Identity Service",
+    "description": "Registration, login, token refresh/logout, and trader-tier eligibility. Request bodies for /auth/register use snake_case; every error body is { error, message }.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Access token from /auth/login."
+      }
+    },
+    "schemas": {
+      "RegisterRequestDto": {
+        "type": "object",
+        "properties": {
+          "user_role": {
+            "type": "string",
+            "enum": [
+              "TRADER",
+              "ANALYST"
+            ],
+            "description": "Decides which of the other fields are required."
+          },
+          "email": {
+            "type": "string",
+            "example": "ada@example.com",
+            "maxLength": 320
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "format": "password"
+          },
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-12-10",
+            "description": "Required when user_role is TRADER. The trader must be at least 21."
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30,
+            "description": "Required when user_role is TRADER."
+          },
+          "street_address": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when user_role is TRADER."
+          },
+          "apartment": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "state_province": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Required when user_role is TRADER."
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "citizenship_status": {
+            "type": "string",
+            "enum": [
+              "CITIZEN",
+              "PERMANENT_RESIDENT",
+              "OTHER"
+            ],
+            "description": "Required when user_role is TRADER."
+          },
+          "ssn": {
+            "type": "string",
+            "pattern": "^(\\d{9}|\\d{3}-\\d{2}-\\d{4})?$",
+            "example": "123-45-6789",
+            "description": "Required when user_role is TRADER. Stored encrypted."
+          },
+          "employment_status": {
+            "type": "string",
+            "enum": [
+              "EMPLOYED",
+              "SELF_EMPLOYED",
+              "RETIRED",
+              "STUDENT",
+              "UNEMPLOYED"
+            ],
+            "description": "Required when user_role is TRADER."
+          },
+          "employer_name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when employment_status is EMPLOYED or SELF_EMPLOYED."
+          },
+          "occupation": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when employment_status is EMPLOYED or SELF_EMPLOYED."
+          },
+          "annual_income": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "50,000",
+            "description": "Required when user_role is TRADER. Dollars; commas allowed. Counts 10% towards tier capacity."
+          },
+          "net_worth_bracket": {
+            "type": "string",
+            "enum": [
+              "$0-5k",
+              "$5k-25k",
+              "$25k-100k",
+              "$100k-500k",
+              "$500k+"
+            ],
+            "description": "Required when user_role is TRADER. Its lower bound is the base of tier capacity."
+          },
+          "risk_profile": {
+            "type": "string",
+            "enum": [
+              "CONSERVATIVE",
+              "MODERATE",
+              "AGGRESSIVE"
+            ],
+            "description": "Required when user_role is TRADER."
+          },
+          "liquidity_position": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "10,000",
+            "description": "Required when user_role is TRADER. Dollars; commas allowed."
+          },
+          "accredited_investor": {
+            "type": "boolean",
+            "description": "Required when user_role is TRADER."
+          },
+          "account_name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Required when user_role is TRADER."
+          },
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "INDIVIDUAL_CASH"
+            ],
+            "description": "Required when user_role is TRADER."
+          },
+          "is_politically_exposed_person": {
+            "type": "boolean",
+            "description": "Required when user_role is TRADER."
+          },
+          "broker_affiliation": {
+            "type": "boolean"
+          },
+          "broker_firm_name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when broker_affiliation is true."
+          },
+          "broker_affiliation_details": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when broker_affiliation is true."
+          },
+          "control_person": {
+            "type": "boolean"
+          },
+          "control_company_name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when control_person is true."
+          },
+          "control_company_role": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when control_person is true."
+          },
+          "other_beneficial_owner": {
+            "type": "boolean"
+          },
+          "beneficial_owner_name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when other_beneficial_owner is true."
+          },
+          "beneficial_owner_relationship": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Required when other_beneficial_owner is true."
+          },
+          "employee_id": {
+            "type": "string",
+            "maxLength": 30,
+            "description": "Required when user_role is ANALYST."
+          },
+          "department": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "user_role",
+          "email",
+          "password"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "ada@example.com"
+          },
+          "userRole": {
+            "type": "string",
+            "enum": [
+              "TRADER",
+              "ANALYST"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "userRole",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "INVALID_REQUEST",
+            "description": "Stable machine-readable code."
+          },
+          "message": {
+            "type": "string",
+            "example": "The request contains invalid or missing fields.",
+            "description": "Generic, user-safe message."
+          }
+        },
+        "required": [
+          "error",
+          "message"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ada@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "HS256 JWT. Claims: sub (user id), email, client_id, and trader_level (NOVICE | ADVANCED) for users with a trading account."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Opaque refresh token; send it to /auth/refresh or /auth/logout."
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponseDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "user"
+        ]
+      },
+      "RefreshRequestDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "The opaque refresh token from the last login or refresh."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "RefreshResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "New access token, with the same claims as at login."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Replacement refresh token; the one sent is now invalid."
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ]
+      },
+      "TierEligibilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "trader_level": {
+            "type": "string",
+            "enum": [
+              "NOVICE",
+              "ADVANCED"
+            ],
+            "description": "Assigned by the server at registration."
+          },
+          "min_balance_requirement": {
+            "type": "number",
+            "example": 5000,
+            "description": "Minimum cash balance for this tier, in dollars."
+          },
+          "current_balance": {
+            "type": "number",
+            "example": 7250.5,
+            "description": "Sum of the account cash ledger, in dollars."
+          },
+          "tier_status": {
+            "type": "string",
+            "enum": [
+              "ELIGIBLE",
+              "INELIGIBLE"
+            ],
+            "description": "ELIGIBLE once current_balance >= min_balance_requirement."
+          },
+          "next_tier": {
+            "type": "string",
+            "enum": [
+              "NOVICE",
+              "ADVANCED"
+            ],
+            "nullable": true,
+            "description": "null for ADVANCED, the top tier."
+          },
+          "gap_to_next_tier": {
+            "type": "number",
+            "nullable": true,
+            "example": 92749.5,
+            "description": "Cash still needed to reach next_tier's minimum balance; 0 once met, null for ADVANCED."
+          }
+        },
+        "required": [
+          "trader_level",
+          "min_balance_requirement",
+          "current_balance",
+          "tier_status",
+          "next_tier",
+          "gap_to_next_tier"
+        ]
+      }
+    }
+  }
+}

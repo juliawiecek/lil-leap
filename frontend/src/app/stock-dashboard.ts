@@ -12,7 +12,7 @@ export type Experience = 'NOVICE' | 'ADVANCED';
 })
 export class StockDashboard {
   readonly name = input('');
-  /** The server-assigned tier from the access token; users can't switch tiers themselves (TS-06.4). */
+  /** The server-assigned tier from the access token; users can't switch tiers themselves (NEXT-152). */
   readonly level = input<Experience>('NOVICE');
   readonly newAccount = input(false);
   readonly signOut = output<void>();
