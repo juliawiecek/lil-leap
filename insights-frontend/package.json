@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "test": "node --test tests/*.test.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development"
   },
@@ -15,7 +16,6 @@
     "@angular/core": "^22.1.0",
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
-    "@angular/router": "^22.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
