@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { sessionInactivityMinutes } from './session-policy';
 
 const EMAIL_CLAIM = 'email';
 const CLIENT_ID_CLAIM = 'client_id';
@@ -23,6 +24,10 @@ export class JwtService {
     }
     this.secret = secret ?? 'nexttrade-web';
     this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
+    // Never outlive the inactivity window: downstream services verify access tokens
+    // statelessly, so an idle user's token must expire no later than their session.
+    const inactivityMinutes = sessionInactivityMinutes();
+    this.expirationMinutes = Math.min(Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? inactivityMinutes), inactivityMinutes);
     this.clientId = process.env.APP_JWT_CLIENT_ID ?? 'nexttrade-web';
   }
 

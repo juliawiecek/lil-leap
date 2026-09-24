@@ -22,35 +22,35 @@ export class FinancialProfile {
 
   // Stored as the dollar-range string ("$0-5k") directly, matching the DB's
   // chk_net_worth_bracket constraint -- not an enum-name column.
-  @Column({ name: 'net_worth_bracket', length: 30, nullable: true })
+  @Column({ name: 'net_worth_bracket', type: 'varchar', length: 30, nullable: true })
   netWorthBracket: NetWorthBracket | null;
 
-  @Column({ name: 'risk_profile', length: 30, nullable: true })
+  @Column({ name: 'risk_profile', type: 'varchar', length: 30, nullable: true })
   riskProfile: RiskProfile | null;
 
-  @Column({ name: 'employment_status', length: 50, nullable: true })
+  @Column({ name: 'employment_status', type: 'varchar', length: 50, nullable: true })
   employmentStatus: EmploymentStatus | null;
 
-  @Column({ name: 'employer_name', length: 255, nullable: true })
+  @Column({ name: 'employer_name', type: 'varchar', length: 255, nullable: true })
   employerName: string | null;
 
-  @Column({ name: 'occupation', length: 100, nullable: true })
+  @Column({ name: 'occupation', type: 'varchar', length: 100, nullable: true })
   occupation: string | null;
 
   @Column({ name: 'annual_income', type: 'numeric', precision: 18, scale: 2, nullable: true })
   annualIncome: string | null;
 
-  @Column({ name: 'liquidity_position', length: 100, nullable: true })
+  @Column({ name: 'liquidity_position', type: 'varchar', length: 100, nullable: true })
   liquidityPosition: string | null;
 
   @Column({ name: 'is_politically_exposed_person', default: false })
   politicallyExposedPerson: boolean;
 
   @Column({ name: 'regulatory_disclosures', type: 'jsonb', nullable: true })
-  regulatoryDisclosures: string | null;
+  regulatoryDisclosures: Record<string, unknown> | null;
 
   @Column({ name: 'beneficial_owner_info', type: 'jsonb', nullable: true })
-  beneficialOwnerInfo: string | null;
+  beneficialOwnerInfo: Record<string, unknown> | null;
 
   @Column({ name: 'funds_source_verified', default: false })
   fundsSourceVerified: boolean;

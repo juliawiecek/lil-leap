@@ -30,7 +30,7 @@ describe('AuthController', () => {
         { provide: UserService, useValue: { login: jest.fn() } },
         { provide: RegistrationService, useValue: { register: jest.fn() } },
         { provide: JwtService, useValue: { issueToken: jest.fn() } },
-        { provide: RefreshTokenService, useValue: { issue: jest.fn(), rotate: jest.fn() } },
+        { provide: RefreshTokenService, useValue: { issue: jest.fn(), rotate: jest.fn(), revoke: jest.fn() } },
       ],
     }).compile();
 
@@ -85,5 +85,13 @@ describe('AuthController', () => {
     expect(refreshTokenService.rotate).toHaveBeenCalledWith('old-raw-token');
     expect(result.accessToken).toBe('new.access.token');
     expect(result.refreshToken).toBe('new-raw-token');
+  });
+
+  it('logout revokes the given refresh token', async () => {
+    refreshTokenService.revoke.mockResolvedValue(undefined);
+
+    await expect(controller.logout({ refreshToken: 'raw-refresh-token' } as any)).resolves.toBeUndefined();
+
+    expect(refreshTokenService.revoke).toHaveBeenCalledWith('raw-refresh-token');
   });
 });

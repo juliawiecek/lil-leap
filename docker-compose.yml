@@ -5,7 +5,8 @@ services:
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `orders` unless a ports: entry is added.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
       # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
@@ -24,7 +25,8 @@ services:
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `holdings` unless a ports: entry is added.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
       # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
@@ -43,7 +45,8 @@ services:
     # host. It can reach `db` by the service name "db" (Docker bridge DNS),
     # but nothing outside Docker can reach `insights` unless a ports: entry is added.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
       # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
@@ -58,19 +61,32 @@ services:
 
   auth:
     build: ./auth
-    ports:
-      - "3000:3000"
+    # No ports: mapping -- browsers reach auth only through the frontends' nginx
+    # (/auth/ -> http://auth:3000), so requests stay same-origin and need no CORS.
+    # TLS terminates at nginx, so TLS_KEYSTORE is unset and auth serves plaintext
+    # on the internal network.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       # JWT secret shared with all backend services for token validation
       APP_JWT_SECRET: ${APP_JWT_SECRET:nexttrade-web}
+      DB_HOST: db
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: my_app_password
+      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
+      # The Java services need at least 32 bytes.
+
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
+      # BR-03: sessions end after this many idle minutes; access tokens never last longer.
+      SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
 
   frontend:
     build: ./frontend
     depends_on:
       - orders
       - holdings
+      - auth
     ports:
       - "4200:80"
     environment:
@@ -80,6 +96,7 @@ services:
     build: ./insights-frontend
     depends_on:
       - insights
+      - auth
     ports:
       - "4201:80"
     environment:
@@ -94,7 +111,9 @@ services:
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: my_app_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      # TCP on purpose: during first-run init Postgres listens only on a local socket,
+      # so this stays unhealthy until the schema and app role are in place.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5

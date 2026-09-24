@@ -15,7 +15,7 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}
     password: ${DB_APP_PASSWORD:my_app_password}
-    
+
     # Connection pool configuration
     hikari:
       maximum-pool-size: 10
@@ -69,6 +69,11 @@ server:
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
-  servlet:
-    context-path: /api/v1
 
+
+orders:
+  execution:
+    # BR-08: Quote staleness threshold in seconds
+    # Quotes older than this are considered stale and trigger a retry
+    # Synthetic quote service generates quotes every 5 seconds; 60s = ~12 quote cycles
+    max-quote-age-seconds: 60

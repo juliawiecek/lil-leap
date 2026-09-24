@@ -24,7 +24,7 @@ export class CustomerProfile {
   @Column({ name: 'address' })
   address: string;
 
-  @Column({ name: 'country', length: 100, nullable: true })
+  @Column({ name: 'country', type: 'varchar', length: 100, nullable: true })
   country: string | null;
 
   @Column({ name: 'date_of_birth', type: 'date' })
@@ -33,7 +33,7 @@ export class CustomerProfile {
   @Column({ name: 'ssn_encrypted', type: 'bytea' })
   ssnEncrypted: Buffer;
 
-  @Column({ name: 'citizenship_status', length: 50, nullable: true })
+  @Column({ name: 'citizenship_status', type: 'varchar', length: 50, nullable: true })
   citizenshipStatus: CitizenshipStatus | null;
 
   @CreateDateColumn({ name: 'created_at' })

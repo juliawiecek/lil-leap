@@ -26,9 +26,4 @@ export class Session {
 
   @Column({ name: 'revoked_at', type: 'timestamptz', nullable: true })
   revokedAt: Date | null;
-
-  /** Whether this session can still be redeemed for a new access token. */
-  isActive(): boolean {
-    return this.revokedAt == null && this.expiresAt.getTime() > Date.now();
-  }
 }

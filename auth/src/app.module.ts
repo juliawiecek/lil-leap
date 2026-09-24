@@ -15,6 +15,7 @@ import { RefreshTokenService } from './security/refresh-token.service';
 import { SsnEncryptionService } from './security/ssn-encryption.service';
 import { PasswordEncoderService } from './security/password-encoder.service';
 import { SecureTransportMiddleware } from './security/secure-transport.middleware';
+import { tlsKeystorePath } from './security/tls';
 
 @Module({
   imports: [
@@ -35,7 +36,10 @@ import { SecureTransportMiddleware } from './security/secure-transport.middlewar
   providers: [UserService, RegistrationService, JwtService, RefreshTokenService, SsnEncryptionService, PasswordEncoderService],
 })
 export class AppModule implements NestModule {
+  // Only when this service terminates TLS itself; behind nginx it receives plaintext on the internal network.
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(SecureTransportMiddleware).forRoutes('*');
+    if (tlsKeystorePath()) {
+      consumer.apply(SecureTransportMiddleware).forRoutes('*');
+    }
   }
 }
