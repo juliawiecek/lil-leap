@@ -13,7 +13,7 @@ import com.neueda.leap.onboarding.enums.NetWorthBracket;
 import com.neueda.leap.onboarding.enums.RiskProfile;
 import com.neueda.leap.onboarding.enums.TraderLevel;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
-import com.neueda.leap.onboarding.repository.AccountRepository;
+import com.neueda.leap.onboarding.repository.OnboardingAccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
 import com.neueda.leap.user.repository.UserRepository;
@@ -57,7 +57,7 @@ class RegistrationServiceTest {
     private FinancialProfileRepository financialProfileRepository;
 
     @Mock
-    private AccountRepository accountRepository;
+    private OnboardingAccountRepository accountRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;

@@ -8,7 +8,7 @@ import com.neueda.leap.onboarding.entity.FinancialProfile;
 import com.neueda.leap.user.entity.User;
 import com.neueda.leap.onboarding.enums.TraderLevel;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
-import com.neueda.leap.onboarding.repository.AccountRepository;
+import com.neueda.leap.onboarding.repository.OnboardingAccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
 import com.neueda.leap.user.repository.UserRepository;
@@ -35,7 +35,7 @@ public class RegistrationService {
     private final UserRepository userRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final FinancialProfileRepository financialProfileRepository;
-    private final AccountRepository accountRepository;
+    private final OnboardingAccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -51,7 +51,7 @@ public class RegistrationService {
             UserRepository userRepository,
             CustomerProfileRepository customerProfileRepository,
             FinancialProfileRepository financialProfileRepository,
-            AccountRepository accountRepository,
+            OnboardingAccountRepository accountRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
