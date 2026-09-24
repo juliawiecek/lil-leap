@@ -22,76 +22,62 @@ sequenceDiagram
     FE->>Auth: POST /auth/logout (revokes the session)
 ```
 
-- **Access token:** JWT (HS256) with `sub`, `email`, `client_id`; 15 minutes.
-  Backends verify it themselves and never call this service.
+- **Access token:** JWT (HS256) with `sub`, `email`, `client_id`; at most 10
+  minutes. Backends verify it themselves and never call this service.
 - **Refresh token:** random value, stored only as a SHA-256 hash in `sessions`;
-  30 days, single use (each refresh replaces it).
+  single use (each refresh replaces it).
+- **10-minute inactivity timeout (BR-03):** a session expires 10 minutes after
+  its last refresh (`SESSION_INACTIVITY_MINUTES`). The frontend refreshes in the
+  background while the user is active and signs them out after 10 idle minutes.
 - Browsers reach the service only through the frontends' nginx at `/auth/*`
   (same origin, so no CORS; no public port in docker-compose).
 
 ## Endpoints
 
-| Method | Path             | Auth required | Notes                                 |
-|--------|------------------|----------------|-----------------------------------------|
-| POST   | `/auth/register` | none           | Creates the account, no tokens issued   |
-| POST   | `/auth/login`    | none           | Returns access + refresh tokens         |
-| POST   | `/auth/refresh`  | refresh token  | Rotates the refresh token on every use  |
-| POST   | `/auth/logout`   | refresh token  | Revokes that session; always 204        |
-| GET    | `/health`        | none           | Unprefixed, no DB dependency            |
+| Method | Path | Body | Success | Errors |
+|---|---|---|---|---|
+| POST | `/auth/register` | role, email, password, profile fields | `201` user (no tokens) | `400`, `409` email exists |
+| POST | `/auth/login` | `email`, `password` | `200` tokens + user | `401` |
+| POST | `/auth/refresh` | `refreshToken` | `200` new tokens | `401` |
+| POST | `/auth/logout` | `refreshToken` | `204` | `400` missing token |
+| GET | `/health` | — | `200` | — |
 
-## Design notes
+**Logout** revokes only the session behind that refresh token; other devices
+stay signed in. It returns `204` even for an unknown or already-revoked token,
+so it can't be used to test whether a token is valid. The access token keeps
+working until it expires (at most 10 minutes), so clients should discard it on logout.
 
-- **Database**: shares the `nexttrade` database's `users`, `sessions`,
-  `customer_profiles`, `financial_profiles`, `accounts`, and
-  `analyst_profiles` tables. `synchronize: false` always — this service never
-  creates or alters schema.
-- **Password hashes**: written with a `{bcrypt}` id prefix
-  (`PasswordEncoderService`), matching NextTrade backend, so a hash from
-  either service verifies on both.
-- **Refresh tokens**: opaque random values, SHA-256-hashed before storage.
-  Reuse of an already-rotated token is treated as a compromise signal.
-  Revocation is a single conditional `UPDATE ... WHERE revoked_at IS NULL AND
-  expires_at > now()`, shared by refresh and logout, so two concurrent uses of
-  one token can't both succeed.
-- **Logout**: revokes only the session behind the given refresh token (other
-  devices stay signed in). Returns 204 even for an unknown or already-revoked
-  token, so it can't be used to probe token validity. Access tokens already
-  issued stay valid until they expire (at most `SESSION_INACTIVITY_MINUTES`)
-  because downstream services verify them statelessly — the frontend
-  should drop its access token on logout.
-- **Inactivity timeout (BR-03)**: a session expires `SESSION_INACTIVITY_MINUTES`
-  (default 10) after it is issued, and every refresh issues a new one, so an
-  active client slides its session forward while an idle one is signed out
-  once the window passes (refresh then returns 401). Access tokens default to
-  the same window and are capped at it (`APP_JWT_EXPIRATION_MINUTES` can only
-  shorten them). The frontend refreshes shortly before expiry while the user
-  is active and signs out after 10 idle minutes (`frontend/src/app/session-keeper.ts`).
-- **SSN encryption**: done in Postgres via pgcrypto
-  (`pgp_sym_encrypt`/`pgp_sym_decrypt`) — plaintext never touches application
-  memory or logs.
-- **Errors**: expected failures extend `AuthException`, which carries the
-  HTTP status and code; fixed codes and generic messages (`USER_ALREADY_EXISTS`,
-  `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN`, `INVALID_REQUEST`,
-  `INTERNAL_ERROR`) — request payloads can carry passwords/SSNs, so raw
-  messages are never echoed back.
-- **Transport**: in docker-compose, TLS terminates at the frontends' nginx,
-  which proxies `/auth/` to `http://auth:3000` over the internal network, so
-  this service runs plaintext (`TLS_KEYSTORE` unset). Set `TLS_KEYSTORE` to
-  have it terminate TLS itself; it then serves HTTPS only and rejects
-  plaintext with `403 HTTPS_REQUIRED` (`X-Forwarded-*` ignored). Standard
-  security headers (HSTS/CSP/frame-deny/no-referrer/permissions-policy) either way.
-- **No CORS**: browsers reach this service only through nginx on the page's
-  own origin (`/auth/...`), and it has no `ports:` mapping in
-  `docker-compose.yml`. Frontends must call relative `/auth/...` paths; a
-  hardcoded `http://auth:3000` or `localhost:3000` URL would be cross-origin.
+Errors are JSON with a fixed code (`INVALID_CREDENTIALS`, `USER_ALREADY_EXISTS`,
+`INVALID_REFRESH_TOKEN`, `INVALID_REQUEST`, `INTERNAL_ERROR`); raw messages are
+never returned, since requests can carry passwords and SSNs.
 
-## Environment variables
+## Project structure
 
-See `.env.example`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_APP_USERNAME`,
-`DB_APP_PASSWORD`, `APP_JWT_SECRET`, `APP_JWT_EXPIRATION_MINUTES`,
-`APP_JWT_CLIENT_ID`, `SESSION_INACTIVITY_MINUTES`,
-`NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY`, `TLS_KEYSTORE`,
-`TLS_KEYSTORE_PASSWORD`, `PORT` (defaults to 3000).
+| Folder | What's in it |
+|---|---|
+| `src/main.ts`, `app.setup.ts`, `app.module.ts` | Startup: `/auth` prefix, security headers, validation, DB connection |
+| `src/user/` | `auth.controller.ts` (the endpoints), `user.service.ts` (login), DTOs, exceptions |
+| `src/onboarding/` | `registration.service.ts`: one transaction writing `users` plus the role's profile tables |
+| `src/security/` | JWT signing, refresh tokens/sessions, bcrypt, SSN encryption (pgcrypto), optional TLS |
+| `src/common/filters/` | Turns every error into a JSON response with a fixed code |
+| `test/` | End-to-end suites against a real Postgres |
+
+Entities map one-to-one to tables in `db/finalized-schema.sql`; the service
+never creates or changes tables. Unit tests (`*.spec.ts`) sit next to the code.
+
+## Configuration
+
+See `.env.example`. The main settings:
+
+| Variable | Purpose |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_APP_USERNAME`, `DB_APP_PASSWORD` | Postgres connection (restricted `app_user` role) |
+| `APP_JWT_SECRET` | Shared with the backends; required in production, 32+ bytes |
+| `SESSION_INACTIVITY_MINUTES` | Idle time before a session ends (default 10) |
+| `APP_JWT_EXPIRATION_MINUTES` | Access token lifetime; can only be shorter than the inactivity window |
+| `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Must match the key the backends use |
+| `TLS_KEYSTORE`, `TLS_KEYSTORE_PASSWORD` | Optional: serve HTTPS directly (unset behind nginx) |
+| `PORT` | Default 3000 |
 
 ## Running it
 
@@ -119,8 +105,8 @@ Open `coverage/lcov-report/index.html` in a browser (Windows:
 `start coverage\lcov-report\index.html`). Click a file to see untested lines in
 red. The report is generated locally and is not committed.
 
-Unit-test coverage as of September 2026: **86% statements, 86% lines, 76%
-branches** (46 tests).
+Unit-test coverage as of September 2026: **87% statements, 86% lines, 77%
+branches** (50 tests).
 
 ### End-to-end tests
 
