@@ -1,0 +1,74 @@
+# NextTrade Orders Service Configuration
+# Database and security settings are externalized via environment variables
+
+spring:
+  application:
+    name: nexttrade-orders
+
+  mvc:
+    log-request-details: false
+
+  datasource:
+    # PostgreSQL JDBC connection
+    # URL format: jdbc:postgresql://[host]:[port]/[database]
+    # Local development defaults
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+    
+    # Connection pool configuration
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  jpa:
+    hibernate:
+      # ddl-auto: validate - do not create/update schema; admin role handles migrations
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+
+  # Suppress sensitive datasource information in logs
+  jpa.show-sql: false
+
+logging:
+  level:
+    root: INFO
+    # Never enable HTTP payload, security debug, or SQL bind-value logging.
+    org.springframework.security: INFO
+    org.springframework.web: WARN
+    org.springframework.web.filter.CommonsRequestLoggingFilter: OFF
+    org.hibernate: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.extract: OFF
+    org.hibernate.type.descriptor.sql: OFF
+    # Database error details can include rejected row values (including password hashes).
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+
+# JWT Configuration
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:dev-only-insecure-secret-change-me-before-deploying}
+    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:60}
+    client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
+
+server:
+  port: 8080
+  tomcat:
+    accesslog:
+      enabled: false
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  servlet:
+    context-path: /api/v1
+
