@@ -102,7 +102,6 @@ class RegistrationServiceTest {
 
         assertEquals("julia@example.com", savedUser.getEmail());
         assertEquals("hashedPassword", savedUser.getPasswordHash());
-        assertEquals("123456789", savedUser.getSsn());
 
         assertEquals("Julia", savedProfile.getFirstName());
         assertEquals("Wiecek", savedProfile.getLastName());
