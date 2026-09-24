@@ -227,7 +227,9 @@ h2 {
   align-items: center;
   gap: 27px;
 }
-.header-actions select {
+.header-actions .tier-badge {
+  display: inline-flex;
+  align-items: center;
   width: 143px;
   height: 33px;
   padding: 0 11px;
@@ -1218,7 +1220,7 @@ kbd {
     width: 100%;
     justify-content: flex-end;
   }
-  .header-actions select {
+  .header-actions .tier-badge {
     margin-right: auto;
   }
   .pro-content {

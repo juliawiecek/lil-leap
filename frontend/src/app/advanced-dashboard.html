@@ -56,14 +56,7 @@
         }
       </div>
       <div class="header-actions">
-        <select
-          aria-label="Workspace"
-          [value]="mode()"
-          (change)="$any($event.target).value === 'NOVICE' && novice.emit()"
-        >
-          <option value="ADVANCED">Advanced · Pro</option>
-          <option value="NOVICE">Novice · Guided</option>
-        </select>
+        <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Advanced · Pro</span>
         <div class="notification-wrap">
           <button
             class="notification-button icon-button"
@@ -567,10 +560,7 @@
               <span>Account</span><strong>{{ name() || 'Your account' }}</strong>
             </div>
             <div>
-              <span>Workspace</span
-              ><button class="secondary-button" type="button" (click)="novice.emit()">
-                Switch to Novice · Guided
-              </button>
+              <span>Trader tier</span><strong title="Assigned from the net worth and income you declared">Advanced · Pro</strong>
             </div>
             <div>
               <span>Sidebar</span

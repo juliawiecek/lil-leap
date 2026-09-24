@@ -27,7 +27,7 @@
             <legend class="sr-only">{{ section.title }}</legend>
             <div class="fields" [class.disclosure-fields]="i === 2">
               @for (field of section.fields; track field.id) {
-                <div class="profile-field" [class.disclosure-question]="i === 2 && field.options && field.id !== 'account_type' && field.id !== 'trader_level'" [class.disclosure-detail]="i === 2 && !!field.when" [hidden]="!visible(field)">
+                <div class="profile-field" [class.disclosure-question]="i === 2 && field.options && field.id !== 'account_type'" [class.disclosure-detail]="i === 2 && !!field.when" [hidden]="!visible(field)">
                   <label [for]="'profile-' + field.id">{{ field.label }}</label>
                   @if (field.id === 'account_type') {
                     <input [id]="'profile-' + field.id" [value]="display(field)" readonly aria-readonly="true" [attr.aria-describedby]="field.id + '-hint'" />

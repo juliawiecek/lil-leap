@@ -49,7 +49,6 @@ interface NewsItem {
 export class AdvancedDashboard {
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
-  readonly novice = output<void>();
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');
   readonly nav = [

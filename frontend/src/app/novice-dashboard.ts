@@ -32,7 +32,6 @@ export class NoviceDashboard {
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
-  readonly advanced = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   readonly activeTab = signal('Overview');
   readonly navigation = [

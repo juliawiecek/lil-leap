@@ -3,12 +3,10 @@
   [name]="name()"
   [mode]="mode()"
   (signOut)="signOut.emit()"
-  (advanced)="setMode('ADVANCED')"
 />
 <app-advanced-dashboard
   [hidden]="mode() !== 'ADVANCED'"
   [name]="name()"
   [mode]="mode()"
   (signOut)="signOut.emit()"
-  (novice)="setMode('NOVICE')"
 />

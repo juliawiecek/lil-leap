@@ -272,7 +272,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   },
   {
     "title": "Account & disclosures",
-    "description": "Name your individual cash account and complete the disclosures.",
+    "description": "Name your individual cash account and complete the disclosures. Your trader tier is assigned from the net worth and income you declared.",
     "fields": [
       {
         "id": "account_name",
@@ -289,21 +289,6 @@ export class InvestorProfile implements OnInit, AfterViewInit {
           }
         ],
         "hint": "Invest using available cash."
-      },
-      {
-        "id": "trader_level",
-        "label": "Trader level",
-        "options": [
-          {
-            "value": "NOVICE",
-            "label": "Novice — $5,000 minimum balance"
-          },
-          {
-            "value": "ADVANCED",
-            "label": "Advanced — $100,000 minimum balance"
-          }
-        ],
-        "hint": "Minimum balance required before trading."
       },
       {
         "id": "is_politically_exposed_person",

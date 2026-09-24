@@ -4,6 +4,9 @@
  * Tokens live only in memory -- never localStorage -- so a reload signs the user out.
  */
 
+/** Tier the server assigned from the user's declared finances (JWT `trader_level` claim). */
+export type TraderLevel = 'NOVICE' | 'ADVANCED';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -28,6 +31,8 @@ const MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: 'Invalid email or password.',
   INVALID_REFRESH_TOKEN: SIGNED_OUT_MESSAGE,
   USER_ALREADY_EXISTS: 'An account with this email already exists. Go back to sign up with a different email, or sign in.',
+  INSUFFICIENT_INVESTABLE_ASSETS:
+    'A minimum of $5,000 in investable assets is required to open an account. Please review your net worth and income.',
   INVALID_REQUEST: 'Some details were not accepted. Please review your information and try again.',
 };
 const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
@@ -39,6 +44,7 @@ export class AuthClient {
   #accessToken: string | null = null;
   #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;
+  #traderLevel: TraderLevel | null = null;
 
   constructor(fetchImpl: typeof fetch = (input, init) => fetch(input, init), baseUrl = '/auth') {
     this.#fetch = fetchImpl;
@@ -53,6 +59,11 @@ export class AuthClient {
   /** When the access token stops being accepted, on this device's clock (ms since epoch); null when signed out. */
   get accessTokenExpiresAt(): number | null {
     return this.#accessTokenExpiresAt;
+  }
+
+  /** The signed-in user's tier from the access token; null when signed out or for a user without an account. */
+  get traderLevel(): TraderLevel | null {
+    return this.#traderLevel;
   }
 
   /** Creates the account. Issues no tokens -- call login afterwards. */
@@ -108,11 +119,17 @@ export class AuthClient {
     this.#accessToken = accessToken;
     this.#refreshToken = refreshToken;
     this.#accessTokenExpiresAt = null;
+    this.#traderLevel = null;
     const payload = accessToken?.split('.')[1];
     if (!payload) return;
     try {
-      const { exp, iat } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: unknown; iat?: unknown };
+      const { exp, iat, trader_level } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+        exp?: unknown;
+        iat?: unknown;
+        trader_level?: unknown;
+      };
       if (typeof exp === 'number' && typeof iat === 'number') this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') this.#traderLevel = trader_level;
     } catch {
       // Unreadable token: leave expiry unknown, which makes the session keeper refresh on next activity.
     }

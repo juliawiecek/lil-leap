@@ -226,7 +226,7 @@ export class App implements AfterViewInit, OnDestroy {
     try {
       await this.auth.login(this.email.nativeElement.value, this.password.nativeElement.value);
       this.session.start();
-      this.openDashboard('NOVICE', false);
+      this.openDashboard(this.auth.traderLevel ?? 'NOVICE', false);
     } catch (error) {
       this.formStatus.set(this.messageFor(error));
     } finally {
@@ -245,7 +245,8 @@ export class App implements AfterViewInit, OnDestroy {
       await this.auth.register(toTraderRegistration(answers, email, password));
       await this.auth.login(email, password);
       this.session.start();
-      this.openDashboard(answers['trader_level'] === 'ADVANCED' ? 'ADVANCED' : 'NOVICE');
+      // The tier is assigned by the server; the token is the source of truth.
+      this.openDashboard(this.auth.traderLevel ?? 'NOVICE');
     } catch (error) {
       this.registrationError.set(this.messageFor(error));
     } finally {
