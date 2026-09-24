@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FinancialProfile.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.onboarding.entity</a> &gt; <span class="el_source">FinancialProfile.java</span></div><h1>FinancialProfile.java</h1><pre class="source lang-java linenums">package com.neueda.leap.onboarding.entity;
+
+import com.neueda.leap.onboarding.enums.EmploymentStatus;
+import com.neueda.leap.onboarding.enums.NetWorthBracket;
+import com.neueda.leap.onboarding.enums.NetWorthBracketConverter;
+import com.neueda.leap.onboarding.enums.RiskProfile;
+import com.neueda.leap.user.entity.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * Financial and regulatory onboarding profile for a user.
+ */
+@Entity
+@Table(name = &quot;financial_profiles&quot;)
+public class FinancialProfile {
+
+    /** Creates an empty financial profile for onboarding or JPA hydration. */
+<span class="fc" id="L36">    public FinancialProfile() {</span>
+<span class="fc" id="L37">    }</span>
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = &quot;financial_profile_id&quot;)
+    private UUID financialProfileId;
+
+    @OneToOne(optional = false)
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+    private User user;
+
+<span class="fc" id="L48">    @Column(name = &quot;kyc_status&quot;, nullable = false, length = 30)</span>
+    private String kycStatus = &quot;PENDING&quot;;
+
+    @Column(name = &quot;accredited_investor&quot;, nullable = false)
+    private boolean accreditedInvestor;
+
+    @Convert(converter = NetWorthBracketConverter.class)
+    @Column(name = &quot;net_worth_bracket&quot;, length = 30)
+    private NetWorthBracket netWorthBracket;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;risk_profile&quot;, length = 30)
+    private RiskProfile riskProfile;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;employment_status&quot;, length = 50)
+    private EmploymentStatus employmentStatus;
+
+    @Column(name = &quot;employer_name&quot;, length = 255)
+    private String employerName;
+
+    @Column(name = &quot;occupation&quot;, length = 100)
+    private String occupation;
+
+    @Column(name = &quot;annual_income&quot;, precision = 18, scale = 2)
+    private BigDecimal annualIncome;
+
+    @Column(name = &quot;liquidity_position&quot;, length = 100)
+    private String liquidityPosition;
+
+    @Column(name = &quot;is_politically_exposed_person&quot;, nullable = false)
+    private boolean politicallyExposedPerson;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = &quot;regulatory_disclosures&quot;, columnDefinition = &quot;jsonb&quot;)
+    private String regulatoryDisclosures;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = &quot;beneficial_owner_info&quot;, columnDefinition = &quot;jsonb&quot;)
+    private String beneficialOwnerInfo;
+
+    @Column(name = &quot;funds_source_verified&quot;, nullable = false)
+    private boolean fundsSourceVerified;
+
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = &quot;updated_at&quot;, nullable = false)
+    private Instant updatedAt;
+
+    /** Initializes creation and update timestamps before the first insert. */
+    @PrePersist
+    protected void onCreate() {
+<span class="nc" id="L101">        this.createdAt = Instant.now();</span>
+<span class="nc" id="L102">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L103">    }</span>
+
+    /** Refreshes the update timestamp before an entity update. */
+    @PreUpdate
+    protected void onUpdate() {
+<span class="nc" id="L108">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L109">    }</span>
+
+    /**
+     * Returns persistent financial profile identifier.
+     * @return persistent financial profile identifier
+     */
+    public UUID getFinancialProfileId() {
+<span class="nc" id="L116">        return financialProfileId;</span>
+    }
+
+    /**
+     * Sets persistent financial profile identifier.
+     * @param financialProfileId persistent financial profile identifier
+     */
+    public void setFinancialProfileId(UUID financialProfileId) {
+<span class="nc" id="L124">        this.financialProfileId = financialProfileId;</span>
+<span class="nc" id="L125">    }</span>
+
+    /**
+     * Returns associated authentication user.
+     * @return associated authentication user
+     */
+    public User getUser() {
+<span class="nc" id="L132">        return user;</span>
+    }
+
+    /**
+     * Sets associated authentication user.
+     * @param user associated authentication user
+     */
+    public void setUser(User user) {
+<span class="fc" id="L140">        this.user = user;</span>
+<span class="fc" id="L141">    }</span>
+
+    /**
+     * Returns know-your-customer review status.
+     * @return know-your-customer review status
+     */
+    public String getKycStatus() {
+<span class="nc" id="L148">        return kycStatus;</span>
+    }
+
+    /**
+     * Sets know-your-customer review status.
+     * @param kycStatus know-your-customer review status
+     */
+    public void setKycStatus(String kycStatus) {
+<span class="nc" id="L156">        this.kycStatus = kycStatus;</span>
+<span class="nc" id="L157">    }</span>
+
+    /**
+     * Returns whether the customer declares accredited investor status.
+     * @return whether the customer declares accredited investor status
+     */
+    public boolean isAccreditedInvestor() {
+<span class="fc" id="L164">        return accreditedInvestor;</span>
+    }
+
+    /**
+     * Sets whether the customer declares accredited investor status.
+     * @param accreditedInvestor whether the customer declares accredited investor status
+     */
+    public void setAccreditedInvestor(boolean accreditedInvestor) {
+<span class="fc" id="L172">        this.accreditedInvestor = accreditedInvestor;</span>
+<span class="fc" id="L173">    }</span>
+
+    /**
+     * Returns declared net worth bracket.
+     * @return declared net worth bracket
+     */
+    public NetWorthBracket getNetWorthBracket() {
+<span class="fc" id="L180">        return netWorthBracket;</span>
+    }
+
+    /**
+     * Sets declared net worth bracket.
+     * @param netWorthBracket declared net worth bracket
+     */
+    public void setNetWorthBracket(NetWorthBracket netWorthBracket) {
+<span class="fc" id="L188">        this.netWorthBracket = netWorthBracket;</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Returns declared investment risk profile.
+     * @return declared investment risk profile
+     */
+    public RiskProfile getRiskProfile() {
+<span class="fc" id="L196">        return riskProfile;</span>
+    }
+
+    /**
+     * Sets declared investment risk profile.
+     * @param riskProfile declared investment risk profile
+     */
+    public void setRiskProfile(RiskProfile riskProfile) {
+<span class="fc" id="L204">        this.riskProfile = riskProfile;</span>
+<span class="fc" id="L205">    }</span>
+
+    /**
+     * Returns declared employment status.
+     * @return declared employment status
+     */
+    public EmploymentStatus getEmploymentStatus() {
+<span class="fc" id="L212">        return employmentStatus;</span>
+    }
+
+    /**
+     * Sets declared employment status.
+     * @param employmentStatus declared employment status
+     */
+    public void setEmploymentStatus(EmploymentStatus employmentStatus) {
+<span class="fc" id="L220">        this.employmentStatus = employmentStatus;</span>
+<span class="fc" id="L221">    }</span>
+
+    /**
+     * Returns employer name.
+     * @return employer name
+     */
+    public String getEmployerName() {
+<span class="fc" id="L228">        return employerName;</span>
+    }
+
+    /**
+     * Sets employer name.
+     * @param employerName employer name
+     */
+    public void setEmployerName(String employerName) {
+<span class="fc" id="L236">        this.employerName = employerName;</span>
+<span class="fc" id="L237">    }</span>
+
+    /**
+     * Returns declared occupation.
+     * @return declared occupation
+     */
+    public String getOccupation() {
+<span class="fc" id="L244">        return occupation;</span>
+    }
+
+    /**
+     * Sets declared occupation.
+     * @param occupation declared occupation
+     */
+    public void setOccupation(String occupation) {
+<span class="fc" id="L252">        this.occupation = occupation;</span>
+<span class="fc" id="L253">    }</span>
+
+    /**
+     * Returns declared annual income.
+     * @return declared annual income
+     */
+    public BigDecimal getAnnualIncome() {
+<span class="fc" id="L260">        return annualIncome;</span>
+    }
+
+    /**
+     * Sets declared annual income.
+     * @param annualIncome declared annual income
+     */
+    public void setAnnualIncome(BigDecimal annualIncome) {
+<span class="fc" id="L268">        this.annualIncome = annualIncome;</span>
+<span class="fc" id="L269">    }</span>
+
+    /**
+     * Returns declared liquidity position.
+     * @return declared liquidity position
+     */
+    public String getLiquidityPosition() {
+<span class="fc" id="L276">        return liquidityPosition;</span>
+    }
+
+    /**
+     * Sets declared liquidity position.
+     * @param liquidityPosition declared liquidity position
+     */
+    public void setLiquidityPosition(String liquidityPosition) {
+<span class="fc" id="L284">        this.liquidityPosition = liquidityPosition;</span>
+<span class="fc" id="L285">    }</span>
+
+    /**
+     * Returns whether the customer is politically exposed.
+     * @return whether the customer is politically exposed
+     */
+    public boolean isPoliticallyExposedPerson() {
+<span class="fc" id="L292">        return politicallyExposedPerson;</span>
+    }
+
+    /**
+     * Sets whether the customer is politically exposed.
+     * @param politicallyExposedPerson whether the customer is politically exposed
+     */
+    public void setPoliticallyExposedPerson(boolean politicallyExposedPerson) {
+<span class="fc" id="L300">        this.politicallyExposedPerson = politicallyExposedPerson;</span>
+<span class="fc" id="L301">    }</span>
+
+    /**
+     * Returns regulatory disclosures encoded as JSON for JSONB persistence.
+     * @return regulatory disclosures encoded as JSON for JSONB persistence
+     */
+    public String getRegulatoryDisclosures() {
+<span class="fc" id="L308">        return regulatoryDisclosures;</span>
+    }
+
+    /**
+     * Sets regulatory disclosures encoded as JSON for JSONB persistence.
+     * @param regulatoryDisclosures regulatory disclosures encoded as JSON for JSONB persistence
+     */
+    public void setRegulatoryDisclosures(String regulatoryDisclosures) {
+<span class="fc" id="L316">        this.regulatoryDisclosures = regulatoryDisclosures;</span>
+<span class="fc" id="L317">    }</span>
+
+    /**
+     * Returns beneficial owner information encoded as JSON for JSONB persistence.
+     * @return beneficial owner information encoded as JSON for JSONB persistence
+     */
+    public String getBeneficialOwnerInfo() {
+<span class="fc" id="L324">        return beneficialOwnerInfo;</span>
+    }
+
+    /**
+     * Sets beneficial owner information encoded as JSON for JSONB persistence.
+     * @param beneficialOwnerInfo beneficial owner information encoded as JSON for JSONB persistence
+     */
+    public void setBeneficialOwnerInfo(String beneficialOwnerInfo) {
+<span class="fc" id="L332">        this.beneficialOwnerInfo = beneficialOwnerInfo;</span>
+<span class="fc" id="L333">    }</span>
+
+    /**
+     * Returns whether the source of funds has been verified.
+     * @return whether the source of funds has been verified
+     */
+    public boolean isFundsSourceVerified() {
+<span class="nc" id="L340">        return fundsSourceVerified;</span>
+    }
+
+    /**
+     * Sets whether the source of funds has been verified.
+     * @param fundsSourceVerified whether the source of funds has been verified
+     */
+    public void setFundsSourceVerified(boolean fundsSourceVerified) {
+<span class="fc" id="L348">        this.fundsSourceVerified = fundsSourceVerified;</span>
+<span class="fc" id="L349">    }</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

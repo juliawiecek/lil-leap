@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Account.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.onboarding.entity</a> &gt; <span class="el_source">Account.java</span></div><h1>Account.java</h1><pre class="source lang-java linenums">package com.neueda.leap.onboarding.entity;
+
+import com.neueda.leap.onboarding.enums.AccountType;
+import com.neueda.leap.onboarding.enums.TraderLevel;
+import com.neueda.leap.user.entity.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * Trading account metadata created during onboarding.
+ */
+@Entity
+@Table(name = &quot;accounts&quot;)
+public class Account {
+
+    /** Creates an empty account for onboarding or JPA hydration. */
+<span class="fc" id="L31">    public Account() {</span>
+<span class="fc" id="L32">    }</span>
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = &quot;account_id&quot;)
+    private UUID accountId;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+    private User user;
+
+    @Column(name = &quot;account_number&quot;, nullable = false, length = 30)
+    private String accountNumber;
+
+    @Column(name = &quot;account_name&quot;, nullable = false, length = 100)
+    private String accountName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;account_type&quot;, nullable = false, length = 30)
+    private AccountType accountType;
+
+<span class="fc" id="L53">    @Column(name = &quot;account_status&quot;, nullable = false, length = 20)</span>
+    private String accountStatus = &quot;PENDING&quot;;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;trader_level&quot;, nullable = false, length = 20)
+    private TraderLevel traderLevel;
+
+    @Column(name = &quot;min_balance_requirement&quot;, nullable = false, precision = 18, scale = 2)
+    private BigDecimal minBalanceRequirement;
+
+<span class="fc" id="L63">    @Column(name = &quot;trading_enabled&quot;, nullable = false)</span>
+    private boolean tradingEnabled = false;
+
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = &quot;updated_at&quot;, nullable = false)
+    private Instant updatedAt;
+
+    /** Initializes creation and update timestamps before the first insert. */
+    @PrePersist
+    protected void onCreate() {
+<span class="nc" id="L75">        this.createdAt = Instant.now();</span>
+<span class="nc" id="L76">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L77">    }</span>
+
+    /** Refreshes the update timestamp before an entity update. */
+    @PreUpdate
+    protected void onUpdate() {
+<span class="nc" id="L82">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L83">    }</span>
+
+    /**
+     * Returns persistent account identifier.
+     * @return persistent account identifier
+     */
+    public UUID getAccountId() {
+<span class="nc" id="L90">        return accountId;</span>
+    }
+
+    /**
+     * Sets persistent account identifier.
+     * @param accountId persistent account identifier
+     */
+    public void setAccountId(UUID accountId) {
+<span class="nc" id="L98">        this.accountId = accountId;</span>
+<span class="nc" id="L99">    }</span>
+
+    /**
+     * Returns associated authentication user.
+     * @return associated authentication user
+     */
+    public User getUser() {
+<span class="nc" id="L106">        return user;</span>
+    }
+
+    /**
+     * Sets associated authentication user.
+     * @param user associated authentication user
+     */
+    public void setUser(User user) {
+<span class="fc" id="L114">        this.user = user;</span>
+<span class="fc" id="L115">    }</span>
+
+    /**
+     * Returns brokerage account number.
+     * @return brokerage account number
+     */
+    public String getAccountNumber() {
+<span class="fc" id="L122">        return accountNumber;</span>
+    }
+
+    /**
+     * Sets brokerage account number.
+     * @param accountNumber brokerage account number
+     */
+    public void setAccountNumber(String accountNumber) {
+<span class="fc" id="L130">        this.accountNumber = accountNumber;</span>
+<span class="fc" id="L131">    }</span>
+
+    /**
+     * Returns account display name.
+     * @return account display name
+     */
+    public String getAccountName() {
+<span class="fc" id="L138">        return accountName;</span>
+    }
+
+    /**
+     * Sets account display name.
+     * @param accountName account display name
+     */
+    public void setAccountName(String accountName) {
+<span class="fc" id="L146">        this.accountName = accountName;</span>
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Returns brokerage account type.
+     * @return brokerage account type
+     */
+    public AccountType getAccountType() {
+<span class="fc" id="L154">        return accountType;</span>
+    }
+
+    /**
+     * Sets brokerage account type.
+     * @param accountType brokerage account type
+     */
+    public void setAccountType(AccountType accountType) {
+<span class="fc" id="L162">        this.accountType = accountType;</span>
+<span class="fc" id="L163">    }</span>
+
+    /**
+     * Returns account lifecycle status.
+     * @return account lifecycle status
+     */
+    public String getAccountStatus() {
+<span class="nc" id="L170">        return accountStatus;</span>
+    }
+
+    /**
+     * Sets account lifecycle status.
+     * @param accountStatus account lifecycle status
+     */
+    public void setAccountStatus(String accountStatus) {
+<span class="nc" id="L178">        this.accountStatus = accountStatus;</span>
+<span class="nc" id="L179">    }</span>
+
+    /**
+     * Returns trader tier assigned to the account.
+     * @return trader tier assigned to the account
+     */
+    public TraderLevel getTraderLevel() {
+<span class="fc" id="L186">        return traderLevel;</span>
+    }
+
+    /**
+     * Sets trader tier assigned to the account.
+     * @param traderLevel trader tier assigned to the account
+     */
+    public void setTraderLevel(TraderLevel traderLevel) {
+<span class="fc" id="L194">        this.traderLevel = traderLevel;</span>
+<span class="fc" id="L195">    }</span>
+
+    /**
+     * Returns minimum required account balance.
+     * @return minimum required account balance
+     */
+    public BigDecimal getMinBalanceRequirement() {
+<span class="fc" id="L202">        return minBalanceRequirement;</span>
+    }
+
+    /**
+     * Sets minimum required account balance.
+     * @param minBalanceRequirement minimum required account balance
+     */
+    public void setMinBalanceRequirement(BigDecimal minBalanceRequirement) {
+<span class="fc" id="L210">        this.minBalanceRequirement = minBalanceRequirement;</span>
+<span class="fc" id="L211">    }</span>
+
+    /**
+     * Returns whether trading is enabled for the account.
+     * @return whether trading is enabled for the account
+     */
+    public boolean isTradingEnabled() {
+<span class="nc" id="L218">        return tradingEnabled;</span>
+    }
+
+    /**
+     * Sets whether trading is enabled for the account.
+     * @param tradingEnabled whether trading is enabled for the account
+     */
+    public void setTradingEnabled(boolean tradingEnabled) {
+<span class="nc" id="L226">        this.tradingEnabled = tradingEnabled;</span>
+<span class="nc" id="L227">    }</span>
+
+    /**
+     * Returns creation timestamp assigned before initial persistence.
+     * @return creation timestamp assigned before initial persistence
+     */
+    public Instant getCreatedAt() {
+<span class="nc" id="L234">        return createdAt;</span>
+    }
+
+    /**
+     * Returns timestamp assigned before the latest persistence update.
+     * @return timestamp assigned before the latest persistence update
+     */
+    public Instant getUpdatedAt() {
+<span class="nc" id="L242">        return updatedAt;</span>
+    }
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

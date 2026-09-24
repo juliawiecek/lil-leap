@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderRuleException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.rules</a> &gt; <span class="el_source">OrderRuleException.java</span></div><h1>OrderRuleException.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.rules;
+
+/** Fixed, client-safe rejection for a pre-acceptance trading rule. */
+public class OrderRuleException extends RuntimeException {
+<span class="fc" id="L5">    public enum Reason {</span>
+<span class="fc" id="L6">        ACCOUNT_NOT_ACTIVE(&quot;The account is not active for trading.&quot;),</span>
+<span class="fc" id="L7">        TRADING_NOT_ENABLED(&quot;Trading is not enabled for this account.&quot;),</span>
+<span class="fc" id="L8">        ACCOUNT_NOT_SUITABLE(&quot;The account does not meet its trader-tier requirement.&quot;),</span>
+<span class="fc" id="L9">        INSTRUMENT_UNSUPPORTED(&quot;The requested instrument is not supported.&quot;),</span>
+<span class="fc" id="L10">        INSTRUMENT_DISABLED(&quot;The requested instrument is disabled.&quot;),</span>
+<span class="fc" id="L11">        INSTRUMENT_NOT_TRADABLE(&quot;The requested instrument is halted or restricted.&quot;);</span>
+        private final String message;
+<span class="fc" id="L13">        Reason(String message) { this.message = message; }</span>
+<span class="fc" id="L14">        public String message() { return message; }</span>
+    }
+    private final Reason reason;
+<span class="fc" id="L17">    public OrderRuleException(Reason reason) { super(reason.message()); this.reason = reason; }</span>
+<span class="fc" id="L18">    public Reason reason() { return reason; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

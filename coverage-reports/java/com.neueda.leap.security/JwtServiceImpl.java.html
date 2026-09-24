@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.security</a> &gt; <span class="el_source">JwtServiceImpl.java</span></div><h1>JwtServiceImpl.java</h1><pre class="source lang-java linenums">package com.neueda.leap.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Service responsible for issuing and validating JWT session tokens.
+ *
+ * &lt;p&gt;Tokens are signed with HMAC-SHA using a shared secret. The subject claim
+ * carries the user's ID, with the user's email and a {@code client_id} claim
+ * included for downstream consumers.&lt;/p&gt;
+ */
+@Service
+public class JwtServiceImpl implements JwtService {
+
+    /**
+     * Claim name identifying which client application requested the token.
+     */
+    private static final String CLIENT_ID_CLAIM = &quot;client_id&quot;;
+
+    /**
+     * Claim name carrying the authenticated user's email address.
+     */
+    private static final String EMAIL_CLAIM = &quot;email&quot;;
+
+    /**
+     * Key used to sign and verify tokens, derived from the configured secret.
+     */
+    private final SecretKey key;
+
+    /**
+     * How long an issued token remains valid.
+     */
+    private final Duration expiration;
+
+    /**
+     * Identifier for the client application embedded in issued tokens.
+     */
+    private final String clientId;
+
+    /**
+     * Creates a new JWT service from configuration.
+     *
+     * &lt;p&gt;{@code app.jwt.secret} should be set via the {@code APP_JWT_SECRET}
+     * environment variable in any real environment; the default here is
+     * dev-only and is not secure for production use.&lt;/p&gt;
+     *
+     * @param secret the HMAC signing secret, at least 32 bytes long
+     * @param expirationMinutes how many minutes an issued token remains valid
+     * @param clientId identifier for the client application embedded in issued tokens
+     */
+    public JwtServiceImpl(
+            @Value(&quot;${app.jwt.secret:dev-only-insecure-secret-change-me-before-deploying}&quot;) String secret,
+            @Value(&quot;${app.jwt.expiration-minutes:60}&quot;) long expirationMinutes,
+            @Value(&quot;${app.jwt.client-id:nexttrade-web}&quot;) String clientId
+<span class="fc" id="L68">    ) {</span>
+<span class="fc" id="L69">        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L70">        this.expiration = Duration.ofMinutes(expirationMinutes);</span>
+<span class="fc" id="L71">        this.clientId = clientId;</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @return a signed, compact JWT string
+     */
+    @Override
+    public String issueToken(UUID userId, String email) {
+<span class="fc" id="L83">        Instant now = Instant.now();</span>
+
+<span class="fc" id="L85">        return Jwts.builder()</span>
+<span class="fc" id="L86">                .subject(userId.toString())</span>
+<span class="fc" id="L87">                .claim(EMAIL_CLAIM, email)</span>
+<span class="fc" id="L88">                .claim(CLIENT_ID_CLAIM, clientId)</span>
+<span class="fc" id="L89">                .issuedAt(Date.from(now))</span>
+<span class="fc" id="L90">                .expiration(Date.from(now.plus(expiration)))</span>
+<span class="fc" id="L91">                .signWith(key)</span>
+<span class="fc" id="L92">                .compact();</span>
+    }
+
+    /**
+     * Validates a bearer token and extracts the caller's identity.
+     *
+     * &lt;p&gt;Returns an empty {@link Optional} for any invalid token: a bad
+     * signature, malformed structure, or an expired token.&lt;/p&gt;
+     *
+     * @param token the raw JWT string, without the {@code &quot;Bearer &quot;} prefix
+     * @return the extracted principal if the token is valid, otherwise empty
+     */
+    @Override
+    public Optional&lt;JwtPrincipal&gt; validate(String token) {
+        try {
+<span class="fc" id="L107">            Claims claims = Jwts.parser()</span>
+<span class="fc" id="L108">                    .verifyWith(key)</span>
+<span class="fc" id="L109">                    .build()</span>
+<span class="fc" id="L110">                    .parseSignedClaims(token)</span>
+<span class="fc" id="L111">                    .getPayload();</span>
+
+<span class="fc" id="L113">            UUID userId = UUID.fromString(claims.getSubject());</span>
+<span class="fc" id="L114">            String email = claims.get(EMAIL_CLAIM, String.class);</span>
+
+<span class="fc" id="L116">            return Optional.of(new JwtPrincipal(userId, email));</span>
+<span class="fc" id="L117">        } catch (JwtException | IllegalArgumentException e) {</span>
+<span class="fc" id="L118">            return Optional.empty();</span>
+        }
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

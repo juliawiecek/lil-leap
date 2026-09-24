@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientFinancialQueryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.service</a> &gt; <span class="el_source">ClientFinancialQueryService.java</span></div><h1>ClientFinancialQueryService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.service;
+
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.dto.HoldingResponse;
+import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.UUID;
+import java.time.Instant;
+
+/**
+ * Reads holdings, cash, and orders for the authenticated client only.
+ *
+ * &lt;p&gt;Every query derives ownership by joining through accounts.user_id. The
+ * caller never supplies a client id, so an object identifier cannot override
+ * the identity established by the validated JWT.&lt;/p&gt;
+ */
+@Service
+@Transactional(readOnly = true)
+public class ClientFinancialQueryService {
+
+    private static final String HOLDINGS_SQL = &quot;&quot;&quot;
+            SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                   h.quantity, h.avg_cost, h.updated_at
+            FROM holdings h
+            JOIN accounts a ON a.account_id = h.account_id
+            JOIN instruments i ON i.instrument_id = h.instrument_id
+            WHERE a.user_id = ?
+            ORDER BY i.symbol, h.account_id
+            &quot;&quot;&quot;;
+
+    private static final String CASH_SQL = &quot;&quot;&quot;
+            SELECT cb.account_id, cb.currency, cb.balance, cb.updated_at
+            FROM cash_balances cb
+            JOIN accounts a ON a.account_id = cb.account_id
+            WHERE a.user_id = ?
+            ORDER BY cb.account_id
+            &quot;&quot;&quot;;
+
+    private static final String ORDERS_SQL = &quot;&quot;&quot;
+            SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,
+                   o.client_reference, o.side, o.quantity, o.order_type, o.status,
+                   o.submitted_at, o.accepted_at, o.updated_at, o.buffer_percent
+            FROM orders o
+            JOIN accounts a ON a.account_id = o.account_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            WHERE a.user_id = ?
+            ORDER BY o.submitted_at DESC, o.order_id
+            &quot;&quot;&quot;;
+
+    private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * Creates the client-scoped query service.
+     * @param jdbcTemplate database access for account ownership joins
+     */
+<span class="fc" id="L61">    public ClientFinancialQueryService(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L62">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L63">    }</span>
+
+    /**
+     * Reads holdings across the user's accounts, sorted by symbol and account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned holdings, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;HoldingResponse&gt; getHoldings(UUID authenticatedUserId) {
+<span class="fc" id="L72">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L73">        return jdbcTemplate.query(HOLDINGS_SQL, (rs, rowNum) -&gt; new HoldingResponse(</span>
+<span class="fc" id="L74">                rs.getObject(&quot;account_id&quot;, UUID.class),</span>
+<span class="fc" id="L75">                rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="fc" id="L76">                rs.getString(&quot;symbol&quot;),</span>
+<span class="fc" id="L77">                rs.getString(&quot;instrument_name&quot;),</span>
+<span class="fc" id="L78">                rs.getLong(&quot;quantity&quot;),</span>
+<span class="fc" id="L79">                rs.getBigDecimal(&quot;avg_cost&quot;),</span>
+<span class="fc" id="L80">                rs.getTimestamp(&quot;updated_at&quot;).toInstant()</span>
+        ), authenticatedUserId);
+    }
+
+    /**
+     * Reads cash balances across the user's accounts, sorted by account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;CashBalanceResponse&gt; getCashBalances(UUID authenticatedUserId) {
+<span class="fc" id="L91">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L92">        return jdbcTemplate.query(CASH_SQL, (rs, rowNum) -&gt; new CashBalanceResponse(</span>
+<span class="fc" id="L93">                rs.getObject(&quot;account_id&quot;, UUID.class),</span>
+<span class="fc" id="L94">                rs.getString(&quot;currency&quot;),</span>
+<span class="fc" id="L95">                rs.getBigDecimal(&quot;balance&quot;),</span>
+<span class="fc" id="L96">                rs.getTimestamp(&quot;updated_at&quot;).toInstant()</span>
+        ), authenticatedUserId);
+    }
+
+    /**
+     * Reads the user's orders, newest submissions first with order ID as a tie-breaker.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned orders, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;OrderSummaryResponse&gt; getOrders(UUID authenticatedUserId) {
+<span class="fc" id="L107">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L108">        return jdbcTemplate.query(ORDERS_SQL, (rs, rowNum) -&gt; new OrderSummaryResponse(</span>
+<span class="fc" id="L109">                rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L110">                rs.getObject(&quot;account_id&quot;, UUID.class),</span>
+<span class="fc" id="L111">                rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="fc" id="L112">                rs.getString(&quot;symbol&quot;),</span>
+<span class="fc" id="L113">                rs.getObject(&quot;client_reference&quot;, UUID.class),</span>
+<span class="fc" id="L114">                rs.getString(&quot;side&quot;),</span>
+<span class="fc" id="L115">                rs.getLong(&quot;quantity&quot;),</span>
+<span class="fc" id="L116">                rs.getString(&quot;order_type&quot;),</span>
+<span class="fc" id="L117">                rs.getString(&quot;status&quot;),</span>
+<span class="fc" id="L118">                rs.getTimestamp(&quot;submitted_at&quot;).toInstant(),</span>
+<span class="fc" id="L119">                nullableInstant(rs.getTimestamp(&quot;accepted_at&quot;)),</span>
+<span class="fc" id="L120">                rs.getTimestamp(&quot;updated_at&quot;).toInstant(),</span>
+<span class="fc" id="L121">                rs.getBigDecimal(&quot;buffer_percent&quot;)</span>
+        ), authenticatedUserId);
+    }
+
+    private static Instant nullableInstant(Timestamp value) {
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">        return value == null ? null : value.toInstant();</span>
+    }
+
+    private static void requireAuthenticatedUser(UUID userId) {
+<span class="fc bfc" id="L130" title="All 2 branches covered.">        if (userId == null) {</span>
+<span class="fc" id="L131">            throw new IllegalArgumentException(&quot;Authenticated user id is required&quot;);</span>
+        }
+<span class="fc" id="L133">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

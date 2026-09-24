@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcInstrumentRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.instrument.repository</a> &gt; <span class="el_source">JdbcInstrumentRepository.java</span></div><h1>JdbcInstrumentRepository.java</h1><pre class="source lang-java linenums">package com.neueda.leap.instrument.repository;
+
+import com.neueda.leap.instrument.dto.InstrumentResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/** PostgreSQL-backed read model for instruments. */
+@Repository
+public class JdbcInstrumentRepository implements InstrumentRepository {
+    private static final String SELECT_COLUMNS = &quot;&quot;&quot;
+            SELECT instrument_id, symbol, instrument_name, asset_class,
+                   market_code, currency, sector, enabled, tradable
+            FROM instruments
+            &quot;&quot;&quot;;
+
+    private static final String LIST_ORDER = &quot; ORDER BY market_code, symbol&quot;;
+
+    private final JdbcTemplate jdbcTemplate;
+<span class="fc" id="L24">    private final RowMapper&lt;InstrumentResponse&gt; rowMapper = (resultSet, rowNumber) -&gt;</span>
+<span class="nc" id="L25">            new InstrumentResponse(</span>
+<span class="nc" id="L26">                    resultSet.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="nc" id="L27">                    resultSet.getString(&quot;symbol&quot;),</span>
+<span class="nc" id="L28">                    resultSet.getString(&quot;instrument_name&quot;),</span>
+<span class="nc" id="L29">                    resultSet.getString(&quot;asset_class&quot;),</span>
+<span class="nc" id="L30">                    resultSet.getString(&quot;market_code&quot;),</span>
+<span class="nc" id="L31">                    resultSet.getString(&quot;currency&quot;).trim(),</span>
+<span class="nc" id="L32">                    resultSet.getString(&quot;sector&quot;),</span>
+<span class="nc" id="L33">                    resultSet.getBoolean(&quot;enabled&quot;),</span>
+<span class="nc" id="L34">                    resultSet.getBoolean(&quot;tradable&quot;)</span>
+            );
+
+<span class="fc" id="L37">    public JdbcInstrumentRepository(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L38">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L39">    }</span>
+
+    @Override
+    public List&lt;InstrumentResponse&gt; findAll() {
+<span class="fc" id="L43">        return jdbcTemplate.query(SELECT_COLUMNS + LIST_ORDER, rowMapper);</span>
+    }
+
+    @Override
+    public Optional&lt;InstrumentResponse&gt; findById(UUID instrumentId) {
+<span class="fc" id="L48">        return jdbcTemplate.query(</span>
+                SELECT_COLUMNS + &quot; WHERE instrument_id = ?&quot;,
+                rowMapper,
+                instrumentId
+<span class="fc" id="L52">        ).stream().findFirst();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

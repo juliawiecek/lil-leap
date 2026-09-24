@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderExecutionConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution</a> &gt; <span class="el_source">OrderExecutionConfiguration.java</span></div><h1>OrderExecutionConfiguration.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.PlatformTransactionManager;
+
+@Configuration
+@EnableScheduling
+@ConditionalOnProperty(name = &quot;orders.execution.enabled&quot;, havingValue = &quot;true&quot;, matchIfMissing = true)
+<span class="nc" id="L18">public class OrderExecutionConfiguration {</span>
+    @Bean
+    OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+            ObjectProvider&lt;OrderExecutor&gt; executor,
+            @Value(&quot;${orders.execution.retry-seconds:30}&quot;) int retrySeconds) {
+<span class="nc" id="L23">        return new OrderExecutionWorker(jdbc, manager,</span>
+<span class="nc" id="L24">                executor.getIfAvailable(() -&gt; orderId -&gt; OrderExecutor.Outcome.PENDING), retrySeconds);</span>
+    }
+
+    @Bean
+    Poller orderExecutionPoller(OrderExecutionWorker worker,
+            @Value(&quot;${orders.execution.batch-size:100}&quot;) int batchSize) {
+<span class="nc" id="L30">        return new Poller(worker, batchSize);</span>
+    }
+
+    /** First poll on startup and subsequent polls always reload work from the database. */
+    static class Poller {
+<span class="nc" id="L35">        private static final Logger log = LoggerFactory.getLogger(Poller.class);</span>
+        private final OrderExecutionWorker worker;
+        private final int batchSize;
+
+<span class="nc" id="L39">        Poller(OrderExecutionWorker worker, int batchSize) {</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">            if (batchSize &lt; 1) throw new IllegalArgumentException(&quot;Batch size must be positive&quot;);</span>
+<span class="nc" id="L41">            this.worker = worker;</span>
+<span class="nc" id="L42">            this.batchSize = batchSize;</span>
+<span class="nc" id="L43">        }</span>
+
+        @Scheduled(fixedDelayString = &quot;${orders.execution.poll-ms:1000}&quot;)
+        public void poll() {
+            try {
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                for (int i = 0; i &lt; batchSize; i++) {</span>
+<span class="nc" id="L49">                    var claim = worker.claimNext();</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                    if (claim == null) return;</span>
+<span class="nc" id="L51">                    worker.execute(claim);</span>
+                }
+<span class="nc" id="L53">            } catch (RuntimeException failure) {</span>
+                // Avoid logging exception text that could contain client order details.
+<span class="nc" id="L55">                log.warn(&quot;Order processing interrupted; persisted work will be retried ({})&quot;,</span>
+<span class="nc" id="L56">                        failure.getClass().getSimpleName());</span>
+<span class="nc" id="L57">            }</span>
+<span class="nc" id="L58">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
