@@ -19,7 +19,6 @@ import { CitizenshipStatus } from '../../onboarding/enums/citizenship-status.enu
 import { EmploymentStatus } from '../../onboarding/enums/employment-status.enum';
 import { NetWorthBracket } from '../../onboarding/enums/net-worth-bracket.enum';
 import { RiskProfile } from '../../onboarding/enums/risk-profile.enum';
-import { TraderLevel } from '../../onboarding/enums/trader-level.enum';
 import { UserRole } from '../user-role.enum';
 
 function notBlank(value?: string | null): boolean {
@@ -70,8 +69,8 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
         return false;
       }
 
-      if (!(notBlank(r.accountName) && r.accountType != null && r.traderLevel != null)) {
-        this.failureMessage = 'accountName, accountType and traderLevel are required for TRADER registration';
+      if (!(notBlank(r.accountName) && r.accountType != null)) {
+        this.failureMessage = 'accountName and accountType are required for TRADER registration';
         return false;
       }
 
@@ -246,10 +245,8 @@ export class RegisterRequestDto {
   @IsEnum(AccountType)
   accountType?: AccountType;
 
-  @Expose({ name: 'trader_level' })
-  @IsOptional()
-  @IsEnum(TraderLevel)
-  traderLevel?: TraderLevel;
+  // No trader_level: the tier is assigned by the server (TS-06.4). The global
+  // ValidationPipe whitelists, so a client-sent trader_level is silently dropped.
 
   @Expose({ name: 'is_politically_exposed_person' })
   @IsOptional()

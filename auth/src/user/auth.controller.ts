@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { RegistrationService } from '../onboarding/registration.service';
+import { TierService } from '../onboarding/tier.service';
 import { UserService } from './user.service';
 import { JwtService } from '../security/jwt.service';
 import { RefreshTokenService } from '../security/refresh-token.service';
@@ -18,6 +19,7 @@ export class AuthController {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly tierService: TierService,
   ) {}
 
   /** Creates the account; does not issue tokens -- signing in is a separate step. */
@@ -28,12 +30,16 @@ export class AuthController {
     return UserResponseDto.from(user);
   }
 
-  /** Issues an access + refresh token pair. Bad credentials get a generic 401 -- see GlobalExceptionFilter. */
+  /**
+   * Issues an access + refresh token pair. The access token carries the account's trader_level,
+   * read from the accounts table. Bad credentials get a generic 401 -- see GlobalExceptionFilter.
+   */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await this.userService.login(request);
-    const accessToken = this.jwtService.issueToken(user.userId, user.email);
+    const traderLevel = await this.tierService.findTraderLevel(user.userId);
+    const accessToken = this.jwtService.issueToken(user.userId, user.email, traderLevel);
     const refreshToken = await this.refreshTokenService.issue(user);
 
     return new LoginResponseDto(accessToken, refreshToken, UserResponseDto.from(user));
@@ -44,7 +50,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() request: RefreshRequestDto): Promise<RefreshResponseDto> {
     const rotation = await this.refreshTokenService.rotate(request.refreshToken);
-    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email);
+    // Re-read rather than copied from the old token, so a tier change shows up on the next refresh.
+    const traderLevel = await this.tierService.findTraderLevel(rotation.user.userId);
+    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, traderLevel);
 
     return new RefreshResponseDto(accessToken, rotation.newRawRefreshToken);
   }
