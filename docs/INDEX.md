@@ -22,10 +22,11 @@ Navigate the lil-leap project documentation using the links below.
 
 **View test execution reports:**
 
-- **[Coverage Reports](../coverage-reports/)** - Interactive HTML reports
+- **[Coverage Reports](COVERAGE_REPORTS.md)** - Interactive HTML reports
   - Python coverage: 79.67% (72 tests)
   - Java coverage: 77.79% (320 tests)
   - Per-module/class breakdown with uncovered lines
+  - Reports located in `coverage-reports/` folder
 
 ---
 
@@ -40,7 +41,7 @@ Navigate the lil-leap project documentation using the links below.
   - Access methods (psql, connection strings)
   - Troubleshooting
 
-- **[../RUN_DATABASE_HARDENING.md](../RUN_DATABASE_HARDENING.md)** - Production hardening
+- **[RUN_DATABASE_HARDENING.md](RUN_DATABASE_HARDENING.md)** - Production hardening procedures
 
 ---
 
@@ -58,7 +59,18 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 📋 Sprint Planning & Stories
+## � Release & Deployment
+
+**Runner scripts and release documentation:**
+
+- **[RUN_NEXT_88.md](RUN_NEXT_88.md)** - NEXT 88 deployment guide
+- **[RUN_NEXT_97.md](RUN_NEXT_97.md)** - NEXT 97 deployment guide
+- **[README_NEXT_97.md](README_NEXT_97.md)** - NEXT 97 technical details
+- **[README_BUNDLE.md](README_BUNDLE.md)** - Build bundle documentation
+
+---
+
+## �📋 Sprint Planning & Stories
 
 **Sprint boards and story tracking:**
 

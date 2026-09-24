@@ -6,18 +6,20 @@ View interactive code coverage reports for Python and Java components.
 
 | Language | Coverage | Tests | Report |
 |----------|----------|-------|--------|
-| **Python** | 79.67% | 72 passing ✓ | [`python/index.html`](python/index.html) |
-| **Java** | 77.79% | 320 passing ✓ | [`java/index.html`](java/index.html) |
+| **Python** | 79.67% | 72 passing ✓ | [`coverage-reports/python/index.html`](../coverage-reports/python/index.html) |
+| **Java** | 77.79% | 320 passing ✓ | [`coverage-reports/java/index.html`](../coverage-reports/java/index.html) |
 
 ---
 
 ## 🔍 How to View
 
 **Option 1: Direct (Easiest)**
+- Navigate to `coverage-reports/` folder
 - Double-click `python/index.html` or `java/index.html`
 
 **Option 2: PowerShell**
 ```powershell
+cd coverage-reports
 Start-Process ./python/index.html
 Start-Process ./java/index.html
 ```
@@ -31,4 +33,13 @@ Start-Process ./java/index.html
 - **Total**: 392 tests, all passing
 - Reports include per-module/class breakdowns and uncovered line details
 
-See [SUMMARY.txt](SUMMARY.txt) for detailed metrics.
+See [`coverage-reports/SUMMARY.txt`](../coverage-reports/SUMMARY.txt) for detailed metrics.
+
+---
+
+## 📁 Files in coverage-reports/
+
+- **python/** - Pytest HTML coverage report
+- **java/** - JaCoCo HTML coverage report
+- **SUMMARY.txt** - Quick metrics reference
+- **pytest_output.txt** - Python test execution log

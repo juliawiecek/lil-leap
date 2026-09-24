@@ -7,7 +7,7 @@ Your instructor can easily find everything they need here!
 ## 🎯 For Your Instructor
 
 ### Test Coverage (Quick Access)
-**Path**: `coverage-reports/`
+**Path**: `docs/COVERAGE_REPORTS.md` or `coverage-reports/` folder
 
 Simply open these HTML files in any browser:
 - **Python Tests**: `coverage-reports/python/index.html`
@@ -19,6 +19,7 @@ Simply open these HTML files in any browser:
   - 320 tests (all passing ✓)
 
 **Alternative**: View `coverage-reports/SUMMARY.txt` for quick metrics
+**Read more**: [docs/COVERAGE_REPORTS.md](COVERAGE_REPORTS.md)
 
 ---
 

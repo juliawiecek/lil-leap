@@ -20,7 +20,7 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
 2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
-3. **[Test Coverage Reports](coverage-reports/)** - View 79.67% Python & 77.79% Java coverage
+3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - View 79.67% Python & 77.79% Java coverage
 
 **All systems running?** Access the apps:
 - Frontend: http://localhost:4200
