@@ -1,8 +1,12 @@
 node_modules
+.npm-cache
+.preview-browser
+.preview-artifacts
 .angular
 .git
 .gitignore
 dist
+out-tsc
 coverage
 .idea
 .vscode

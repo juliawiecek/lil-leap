@@ -1,58 +1,49 @@
- b# NextTrade Angular
+﻿# NextTrade Internal Insights
 
-Angular conversion of the approved NextTrade animated landing and authentication experience.
+Internal reporting and operations UI for Priya and David. Reporting layouts follow the supplied renderings. Branding matches the main dashboard: the NextTrade wordmark with green Trade and the NT symbol, Inter headings and UI text, charcoal backgrounds, 8px panels, neutral borders and the same green primary buttons. A small Insights / Internal label and reporting-specific layout distinguish the internal workspace. IBM Plex Mono is reserved for identifiers and compact metadata.
 
-## Included
+## Run
 
-- Animated candlestick intro rendered with the Canvas API
-- Moving market ticker and ambient volume animation
-- NextTrade brand reveal and transition into the access screen
-- Sign In and Create Account modes
-- Password visibility, form validation, and a password recovery placeholder
-- Responsive desktop and mobile styling
-- Reduced-motion support
+Use Node 24.15+:
 
-## Technology
-
-- Angular 22 standalone component
-- TypeScript
-- SCSS
-- Angular signals for interface state
-- Native Canvas API for the chart animation
-
-## Run locally
-
-```bash
-npm install
-npm start
+```powershell
+npm ci
+npm start -- --port 4201
 ```
 
-Then open `http://localhost:4200`.
+Open http://localhost:4201. Production: `npm run build`. Data checks: `node --test tests/insights-data.test.mjs`.
 
-## Production build
+## Implemented preview
 
-```bash
-npm run build
-```
+- Overview: reconciled sample volume, orders, active clients, asset mix and instrument ranking.
+- Trading Activity: date, asset, market and portfolio-segment filters, daily/weekly/monthly/yearly chart grouping and status counts.
+- Client Activity: segment comparisons, new clients, active/occasional/dormant counts and definitions.
+- Clients: searchable fictional directory, profile snapshot and order history.
+- Reports: real client-side sample CSV generation/download and session export history.
+- Trade Investigation: operations persona preview, search, status filtering and order detail. Missing audit events are explicitly identified rather than invented.
+- Compliance: read-only source requirements and unconnected case-service state.
+- Settings: preview persona and compact-table preference.
 
-The compiled site is written to `dist/nexttrade-angular/browser`.
+## Boundaries
 
-## Run with Docker
+This is a design preview with product-facing UI copy, not an authenticated internal production app. The persona switch only previews UI; it must be replaced by server-enforced roles before use with real records. No real client data or credentials are requested.
 
-The repository `docker-compose.yml` already defines a `frontend` service that builds from `./frontend`
-and publishes the container on `http://localhost:4200`.
+Fixtures in `src/app/insights-data.ts` contain August/September 2026 sample orders and a September 22 snapshot. Reports and volume charts derive from those orders. Client balance snapshots are separate illustrative values, not reconstructed from that limited order sample. Volume is filled notional in USD. Activity definitions and USD segment thresholds are provisional; the current definitions are displayed in the UI.
 
-```bash
-ecause docker compose up --build insights-frontend
-```
+Backend integration is still needed for reporting snapshots/freshness, identity and permissions, authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
 
-The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4201`.
-Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `insights` service on the internal Docker Compose network, so the Angular app can use relative paths instead of calling `http://insights:8080` directly from the browser.
+The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Unused router dependency, icon paths and font weights/families have been removed; RxJS remains an Angular peer dependency. Local browser previews and npm caches are excluded from both Git and Docker builds.
 
-## Main files
+## Visual consistency
 
-- `src/app/app.html`: Angular template
-- `src/app/app.scss`: visual design and animations
-- `src/app/app.ts`: Angular state, interactions, and chart rendering
+Core palette and panel tokens are in `src/styles.scss`, matched to `frontend/src/app/novice-dashboard.scss`. The NT symbol reuses the main app's brand SVG. When changing the main brand, keep these values aligned; the apps remain independently buildable without importing source outside their build contexts. The internal app uses a wider sidebar to accommodate operations navigation and blue-gray metadata as its secondary accent.
 
-The current authentication controls are front-end placeholders. They do not send credentials or connect to a brokerage backend yet.
+## Validation
+
+The data tests check aggregate reconciliation across chart groupings and asset classes, intersecting/inclusive filters, empty results, fixture chronology and CSV escaping/formula protection. A production build checks Angular template and type integration. Daily refresh and report-generation service performance require later integration tests.
+
+Verified for this implementation: production build passed; all four data tests passed. Headless Chrome checks covered all eight sections at desktop and 390px widths, client/order selection, asset filtering, invalid dates and the report-generation UI. No application runtime exceptions were observed. Production authentication, backend APIs and scheduled jobs were not tested because they are not connected.
+
+## Local development files
+
+Generated JavaScript belongs in `out-tsc/`, not `src/`. For a check without emitting files, run `npx ngc -p tsconfig.app.json --noEmit`. Dependencies in `node_modules/` are retained for local development; build output and caches can be regenerated.
