@@ -14,7 +14,7 @@ import { TierEligibilityResponseDto } from './dto/tier-eligibility-response.dto'
 export class RulesController {
   constructor(private readonly tierService: TierService) {}
 
-  /** The caller's tier, its minimum balance, and how far the account is from the next tier (TS-06.4). */
+  /** The caller's tier, its minimum balance, and how far the account is from the next tier (NEXT-152). */
   @Get('tier-eligibility')
   @ApiOperation({ summary: "The caller's trader tier, balance against its minimum, and gap to the next tier" })
   @ApiOkResponse({ type: TierEligibilityResponseDto })

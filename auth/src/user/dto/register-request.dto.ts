@@ -271,7 +271,7 @@ export class RegisterRequestDto {
   @IsEnum(AccountType)
   accountType?: AccountType;
 
-  // No trader_level: the tier is assigned by the server (TS-06.4). The global
+  // No trader_level: the tier is assigned by the server (NEXT-152). The global
   // ValidationPipe whitelists, so a client-sent trader_level is silently dropped.
 
   @ApiPropertyOptional({ name: 'is_politically_exposed_person', description: 'Required when user_role is TRADER.' })

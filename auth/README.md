@@ -53,7 +53,7 @@ After changing an endpoint or DTO, run `npm run docs:openapi` to regenerate
 | GET | `/rules/tier-eligibility` | — (Bearer token) | `200` tier, balance, gap to next tier | `401`, `404` no account |
 | GET | `/health` | — | `200` | — |
 
-**Trader tier (TS-06.4):** the server assigns `trader_level` at registration
+**Trader tier (NEXT-152):** the server assigns `trader_level` at registration
 from declared finances -- capacity = net-worth bracket lower bound + 10% of
 annual income; `ADVANCED` at $100,000, `NOVICE` at $5,000, otherwise `422`.
 

@@ -46,7 +46,7 @@ describe('OpenAPI docs (NEXT-152)', () => {
     expect(register.properties).toHaveProperty('user_role');
     expect(register.properties).toHaveProperty('net_worth_bracket');
     expect(register.properties).toHaveProperty('annual_income');
-    expect(register.properties).not.toHaveProperty('trader_level'); // assigned by the server (TS-06.4)
+    expect(register.properties).not.toHaveProperty('trader_level'); // assigned by the server (NEXT-152)
     expect(register.properties).not.toHaveProperty('firstName');
     expect(register.properties).not.toHaveProperty('_businessRules');
     expect(register.required?.sort()).toEqual(['email', 'password', 'user_role']);
