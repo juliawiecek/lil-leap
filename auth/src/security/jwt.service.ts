@@ -22,7 +22,7 @@ export class JwtService {
     if (!secret && process.env.NODE_ENV === 'production') {
       throw new Error('APP_JWT_SECRET must be set in production; refusing to sign tokens with the dev fallback secret.');
     }
-    this.secret = secret ?? 'nexttrade-web';
+    this.secret = secret ?? 'nexttrade-shared-dev-secret-32bytes-min';
     this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
     // Never outlive the inactivity window: downstream services verify access tokens
     // statelessly, so an idle user's token must expire no later than their session.
@@ -32,7 +32,7 @@ export class JwtService {
   }
 
   /** Issues a new signed access token for the given user. */
-  issueToken(userId: string, email: string, role: string): string {
+  issueToken(userId: string, email: string, role = 'TRADER'): string {
     return jwt.sign({ [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId, [ROLE_CLAIM]: role }, this.secret, {
       subject: userId,
       expiresIn: `${this.expirationMinutes}m`,

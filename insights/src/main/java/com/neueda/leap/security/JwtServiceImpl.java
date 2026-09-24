@@ -67,7 +67,7 @@ public class JwtServiceImpl implements JwtService {
      * @param clientId identifier for the client application embedded in issued tokens
      */
     public JwtServiceImpl(
-            @Value("${app.jwt.secret:nexttrade-web}") String secret,
+            @Value("${app.jwt.secret:nexttrade-shared-dev-secret-32bytes-min}") String secret,
             @Value("${app.jwt.expiration-minutes:60}") long expirationMinutes,
             @Value("${app.jwt.client-id:nexttrade-web}") String clientId
     ) {

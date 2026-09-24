@@ -55,7 +55,7 @@ logging:
 # JWT Configuration
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:dev-only-insecure-secret-change-me-before-deploying}
+    secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
     expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:60}
     client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
 

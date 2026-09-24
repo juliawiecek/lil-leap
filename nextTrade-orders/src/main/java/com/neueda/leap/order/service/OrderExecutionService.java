@@ -3,7 +3,8 @@ package com.neueda.leap.order.service;
 import com.neueda.leap.order.model.*;
 import com.neueda.leap.order.repository.*;
 import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,9 +28,10 @@ import java.util.UUID;
  * 6. If invalid: Increment attempts, optionally reject if max attempts exceeded
  * 7. Record all status changes in order_status_history
  */
-@Slf4j
 @Service
 public class OrderExecutionService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderExecutionService.class);
     
     private final OrderRepository orderRepository;
     private final QuoteRepository quoteRepository;

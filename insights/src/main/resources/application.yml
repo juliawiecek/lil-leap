@@ -12,7 +12,7 @@ spring:
     # PostgreSQL JDBC connection
     # URL format: jdbc:postgresql://[host]:[port]/[database]
     # Development datasource defaults.
-    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}
     password: ${DB_APP_PASSWORD:my_app_password}
     
@@ -64,6 +64,12 @@ nexttrade:
   session:
     # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
     inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
+    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:60}
+    client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
 
 server:
   port: 8080
