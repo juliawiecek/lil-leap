@@ -17,7 +17,7 @@ export class AnalystProfile {
   @Column({ name: 'employee_id', length: 30 })
   employeeId: string;
 
-  @Column({ name: 'department', length: 100, nullable: true })
+  @Column({ name: 'department', type: 'varchar', length: 100, nullable: true })
   department: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
