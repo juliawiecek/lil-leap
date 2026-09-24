@@ -101,9 +101,8 @@ Open `coverage/lcov-report/index.html` in a browser (Windows:
 `start coverage\lcov-report\index.html`). Click a file to see untested lines in
 red. The report is generated locally and is not committed.
 
-Unit-test coverage as of September 2026: **68% statements, 66% lines**.
-Registration, login and SSN encryption are also covered by the end-to-end
-tests, which the report doesn't count.
+Unit-test coverage as of September 2026: **86% statements, 86% lines, 76%
+branches** (46 tests).
 
 ### End-to-end tests
 
