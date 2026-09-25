@@ -24,6 +24,7 @@
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
+    "happy-dom": "^20.14.5",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2"
   }

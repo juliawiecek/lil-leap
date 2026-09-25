@@ -1,12 +1,20 @@
 import '@angular/compiler';
 import { createEnvironmentInjector, Injector, runInInjectionContext } from '@angular/core';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { registerHooks } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { angularJitApplicationTransform } from '@angular/compiler-cli';
 
-// Node's type stripping cannot compile Angular decorators. Compile only app TS,
-// retaining the real Angular signals, inputs, outputs, and component methods.
+// Use Angular's JIT transform for real input/output/query metadata.
+// Compile in memory; production source files are never changed.
 const appRoot = new URL('../src/', import.meta.url).href;
+const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['.ts']), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  experimentalDecorators: true,
+  skipLibCheck: true,
+});
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier.startsWith('.') && context.parentURL?.startsWith(appRoot)) {
@@ -16,24 +24,26 @@ registerHooks({
     return nextResolve(specifier, context);
   },
   load(url, context, nextLoad) {
-    if (url.startsWith(appRoot) && url.endsWith('.ts')) {
+    if (url.startsWith(appRoot) && new URL(url).pathname.endsWith('.ts')) {
+      const sourceFile = program.getSourceFile(fileURLToPath(url));
+      // Keep plain TypeScript on Node's native loader in every suite.
+      if (!/from ['"]@angular\//.test(sourceFile.text)) return nextLoad(url, context);
+      let source;
+      program.emit(sourceFile, (name, text) => {
+        if (name.endsWith('.js')) source = text;
+      }, undefined, false, { before: [angularJitApplicationTransform(program)] });
+      if (!source) throw new Error(`Could not compile ${url}`);
       return {
         format: 'module', shortCircuit: true,
-        source: ts.transpileModule(readFileSync(new URL(url), 'utf8'), {
-          compilerOptions: {
-            target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
-            experimentalDecorators: true,
-          },
-          fileName: new URL(url).pathname,
-        }).outputText,
+        source,
       };
     }
     return nextLoad(url, context);
   },
 });
 
-export function component(t, Type) {
-  const injector = createEnvironmentInjector([], Injector.NULL);
+export function component(t, Type, providers = []) {
+  const injector = createEnvironmentInjector(providers, Injector.NULL);
   t.after(() => injector.destroy());
   return runInInjectionContext(injector, () => new Type());
 }
