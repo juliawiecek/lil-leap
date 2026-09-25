@@ -19,6 +19,9 @@ public interface QuoteRepository extends JpaRepository<Quote, UUID> {
     /**
      * Find the latest quote for an instrument.
      * Orders by quoted_at DESC to get the most recent quote.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @return latest quote, or empty when no quote exists
      */
     @Query(value = "SELECT * FROM quotes WHERE instrument_id = :instrumentId " +
            "ORDER BY quoted_at DESC LIMIT 1", nativeQuery = true)

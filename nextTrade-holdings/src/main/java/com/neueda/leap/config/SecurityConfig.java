@@ -24,6 +24,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
 
+    /** Creates the HTTP security configuration. */
+    public SecurityConfig() {
+    }
+
     /**
      * Creates and returns a delegating password encoder.
      *

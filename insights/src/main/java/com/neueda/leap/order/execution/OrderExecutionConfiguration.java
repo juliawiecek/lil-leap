@@ -12,10 +12,18 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.PlatformTransactionManager;
 
+/**
+ * Configures database-backed execution polling when {@code orders.execution.enabled} is true or absent.
+ * The fallback executor returns PENDING until an execution implementation is supplied.
+ */
 @Configuration
 @EnableScheduling
 @ConditionalOnProperty(name = "orders.execution.enabled", havingValue = "true", matchIfMissing = true)
 public class OrderExecutionConfiguration {
+
+    /** Creates the Spring configuration for this component. */
+    public OrderExecutionConfiguration() {
+    }
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             ObjectProvider<OrderExecutor> executor,
@@ -42,6 +50,9 @@ public class OrderExecutionConfiguration {
             this.batchSize = batchSize;
         }
 
+        /**
+         * Claims and executes up to the configured batch size, stopping when no due order remains.
+         */
         @Scheduled(fixedDelayString = "${orders.execution.poll-ms:1000}")
         public void poll() {
             try {

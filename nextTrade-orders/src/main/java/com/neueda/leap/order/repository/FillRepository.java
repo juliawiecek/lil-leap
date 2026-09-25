@@ -16,6 +16,9 @@ public interface FillRepository extends JpaRepository<Fill, UUID> {
     
     /**
      * Find a fill by order ID.
+     *
+     * @param orderId persistent order identifier
+     * @return fill for the order, or empty if none exists
      */
     Optional<Fill> findByOrderOrderId(UUID orderId);
 }

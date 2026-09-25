@@ -14,6 +14,15 @@ public class OrderExecutionWorker {
     private final OrderExecutor executor;
     private final int retrySeconds;
 
+    /**
+     * Creates a {@code OrderExecutionWorker} with the supplied dependencies.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @throws IllegalArgumentException if the retry delay is less than one second
+     */
     public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
                                 OrderExecutor executor, int retrySeconds) {
         if (retrySeconds < 1) throw new IllegalArgumentException("Retry delay must be positive");
@@ -24,7 +33,11 @@ public class OrderExecutionWorker {
         transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    /** Claims one committed order; SKIP LOCKED permits multiple application instances. */
+    /**
+     * Claims one committed order; SKIP LOCKED permits multiple application instances.
+     *
+     * @return persisted claim, or null when no due unlocked order exists
+     */
     public Claim claimNext() {
         return transaction.execute(tx -> jdbc.query("""
                 WITH candidate AS (
@@ -43,7 +56,14 @@ public class OrderExecutionWorker {
                 rs.getLong("execution_attempts")), retrySeconds).stream().findFirst().orElse(null));
     }
 
-    /** A stale claim cannot execute after another worker has reclaimed the order. */
+    /**
+     * Executes a matching, locked claim in a new transaction; stale or locked claims are skipped.
+     * FILLED requires exactly one persisted fill. REJECTED requires a rejection audit entry
+     * and relies on the executor to set terminal status. PENDING rolls back trade effects.
+     * Failures and pending outcomes schedule a later attempt in a separate transaction.
+     *
+     * @param claim persisted claim and attempt number
+     */
     public void execute(Claim claim) {
         boolean pending;
         try {
@@ -93,5 +113,11 @@ public class OrderExecutionWorker {
                 """, retrySeconds, reason, claim.orderId(), claim.attempt()));
     }
 
+    /**
+     * Persisted order claim whose attempt number prevents execution by a stale worker.
+     *
+     * @param orderId persistent order identifier
+     * @param attempt attempt number used to fence stale worker claims
+     */
     public record Claim(UUID orderId, long attempt) { }
 }

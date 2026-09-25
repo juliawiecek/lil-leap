@@ -18,6 +18,10 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** Creates the REST exception handler. */
+    public GlobalExceptionHandler() {
+    }
+
     /**
      * Handles attempts to register a user with an email address
      * that already exists in the system.

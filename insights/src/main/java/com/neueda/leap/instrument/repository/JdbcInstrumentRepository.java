@@ -34,6 +34,11 @@ public class JdbcInstrumentRepository implements InstrumentRepository {
                     resultSet.getBoolean("tradable")
             );
 
+    /**
+     * Creates a {@code JdbcInstrumentRepository} with the supplied dependencies.
+     *
+     * @param jdbcTemplate JDBC operations participating in Spring transactions
+     */
     public JdbcInstrumentRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }

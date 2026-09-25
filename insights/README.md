@@ -82,7 +82,10 @@ The response body is defined in `com.neueda.leap.onboarding.dto.UserResponse`.
 
 ## Javadocs
 
-Generate and validate the production Java API documentation from `backend`:
+Browse the [generated Insights Javadocs](../docs/javadoc/insights/index.html).
+See the root [Javadocs guide](../README.md#javadocs) for snapshot provenance and regeneration.
+
+Generate and validate the production Java API documentation from `insights`:
 
 ```powershell
 mvn javadoc:javadoc

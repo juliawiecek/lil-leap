@@ -49,6 +49,8 @@ public class PasswordResetService {
 
     /**
      * Starts the password reset process for the supplied email address.
+     * Unknown addresses are silently ignored. For an existing user, previous tokens
+     * are replaced with a hashed token expiring in 20 minutes and the raw token is delivered.
      *
      * @param email the email address associated with the account
      */
@@ -77,6 +79,8 @@ public class PasswordResetService {
 
     /**
      * Completes a password reset using a valid reset token.
+     * Locks the stored token, replaces the password hash and deletes the token in
+     * one transaction so a successful token cannot be reused.
      *
      * @param rawToken the raw password reset token supplied by the user
      * @param newPassword the user's new password

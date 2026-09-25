@@ -52,3 +52,8 @@ Registration endpoint:
 The request body is defined in `com.neueda.leap.onboarding.dto.RegisterUserRequest`.
 The response body is defined in `com.neueda.leap.onboarding.dto.UserResponse`.
 
+
+## Javadocs
+
+Browse the [generated API documentation](../docs/javadoc/nextTrade-holdings/index.html).
+See the root [Javadocs guide](../README.md#javadocs) to regenerate all service sites.

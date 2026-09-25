@@ -12,20 +12,16 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * OrderExecutionService handles the fill-or-reject execution engine.
- * BR-08: Orders are priced against current market quotes at execution time.
- * AC1: Orders complete with a clear outcome (FILLED or REJECTED).
- * AC2: Filled orders record execution details in the fills table.
- * AC3: Rejected orders record rejection reasons in order_status_history.
+ * Processes due orders using current bid/ask quotes and a midpoint tolerance.
+ * BUY orders use ask; other sides use bid. The order buffer overrides the account buffer.
+ * Missing quotes retry after ten seconds and stale quotes after five, without increasing
+ * the tolerance-failure count. Out-of-tolerance prices retry with capped exponential
+ * backoff and reject on the tenth tolerance failure. A fill writes cash and holdings
+ * ledger entries and a status-history record.
  *
- * Execution Flow:
- * 1. Find orders due for execution (ACCEPTED status, next_execution_at <= now)
- * 2. Get latest quote for instrument
- * 3. Validate quote freshness (not stale)
- * 4. Validate price within tolerance buffer
- * 5. If valid: Create Fill, settlement ledger entries (HoldingMovement, CashTransaction), update status to FILLED
- * 6. If invalid: Increment attempts, optionally reject if max attempts exceeded
- * 7. Record all status changes in order_status_history
+ * <p>The batch method calls execution methods on this instance. Their transactional
+ * annotations require invocation through a transaction interceptor; internal calls alone
+ * do not create a Spring proxy transaction.</p>
  */
 @Slf4j
 @Service
@@ -44,6 +40,16 @@ public class OrderExecutionService {
     
     private static final long MAX_EXECUTION_ATTEMPTS = 10;
 
+    /**
+     * Creates a {@code OrderExecutionService} with the supplied dependencies.
+     *
+     * @param orderRepository order repository
+     * @param quoteRepository quote repository
+     * @param fillRepository fill repository
+     * @param statusHistoryRepository status history repository
+     * @param holdingMovementRepository holding movement repository
+     * @param cashTransactionRepository cash transaction repository
+     */
     public OrderExecutionService(OrderRepository orderRepository,
                                 QuoteRepository quoteRepository,
                                 FillRepository fillRepository,
@@ -76,8 +82,11 @@ public class OrderExecutionService {
     }
     
     /**
-     * Execute a single order.
-     * AC1: Order completes with clear outcome (FILLED or REJECTED).
+     * Attempts to fill an order using the latest quote.
+     * A missing or stale quote defers execution; an out-of-tolerance price retries or rejects.
+     * A successful attempt persists a fill, settlement ledger entries and FILLED status.
+     *
+     * @param order order with populated account, instrument, side, quantity and attempt count
      */
     @Transactional
     public void executeOrder(Order order) {
@@ -114,6 +123,10 @@ public class OrderExecutionService {
     /**
      * Execute a fill for an order.
      * AC2: Filled orders record execution details.
+     *
+     * @param order order being executed
+     * @param quote selected quote, or null when unavailable
+     * @param executionPrice execution price per unit
      */
     @Transactional
     protected void executeFill(Order order, Quote quote, BigDecimal executionPrice) {
@@ -149,6 +162,9 @@ public class OrderExecutionService {
     /**
      * Create a holding movement for the fill.
      * BR-09: Every fill creates an immutable holding movement (ledger entry).
+     *
+     * @param order order being executed
+     * @param fill fill associated with this ledger entry
      */
     protected void createHoldingMovement(Order order, Fill fill) {
         long quantityChange;
@@ -179,6 +195,10 @@ public class OrderExecutionService {
      * Create cash transaction for the fill.
      * BR-09: Every fill creates an immutable cash transaction (ledger entry).
      * Negative amount for BUY (outflow), positive for SELL (inflow).
+     *
+     * @param order order being executed
+     * @param fill fill associated with this ledger entry
+     * @param executionPrice execution price per unit
      */
     protected void createCashTransaction(Order order, Fill fill, BigDecimal executionPrice) {
         BigDecimal totalCost = executionPrice.multiply(new BigDecimal(order.getQuantity()));
@@ -208,6 +228,8 @@ public class OrderExecutionService {
     /**
      * Handle case where no quote is available.
      * Schedule retry without incrementing final attempt count.
+     *
+     * @param order order being executed
      */
     protected void handleNoQuoteAvailable(Order order) {
         log.warn("No quote available for order {}, scheduling retry", order.getOrderId());
@@ -218,9 +240,11 @@ public class OrderExecutionService {
     }
     
     /**
-     * Handle case where quote is stale.
-     * Quote is stale if older than QUOTE_MAX_AGE_SECONDS.
-     * Schedule retry without rejection.
+     * Schedules a retry after five seconds without increasing the tolerance-failure count.
+     * Freshness uses {@code orders.execution.max-quote-age-seconds}, defaulting to 60.
+     *
+     * @param order order to reschedule
+     * @param quote stale quote used for diagnostics
      */
     protected void handleStaleQuote(Order order, Quote quote) {
         log.warn("Stale quote for order {} (quote age: {} seconds)", 
@@ -235,6 +259,10 @@ public class OrderExecutionService {
     /**
      * Handle case where price is outside tolerance buffer.
      * Increment attempt counter and reject if max attempts exceeded.
+     *
+     * @param order order being executed
+     * @param quote selected quote, or null when unavailable
+     * @param executionPrice execution price per unit
      */
     protected void handlePriceOutOfTolerance(Order order, Quote quote, BigDecimal executionPrice) {
         log.warn("Price out of tolerance for order {}: quote={}, execution={}", 
@@ -266,6 +294,10 @@ public class OrderExecutionService {
      * Determine execution price based on order side and quote.
      * For BUY: use ASK price (seller's price)
      * For SELL: use BID price (buyer's price)
+     *
+     * @param order order being executed
+     * @param quote selected quote, or null when unavailable
+     * @return ask for BUY, otherwise bid
      */
     protected BigDecimal getExecutionPrice(Order order, Quote quote) {
         if ("BUY".equalsIgnoreCase(order.getSide())) {
@@ -278,10 +310,15 @@ public class OrderExecutionService {
     /**
      * Validate price is within tolerance buffer.
      * BR-08: Execution price must be within tolerance of the midpoint.
-     * 
+     *
      * Tolerance = account's execution_buffer_percent (or order's buffer_percent if set).
-     * For BUY orders:  ask <= midpoint × (1 + buffer% / 100)
+     * For BUY orders:  ask &lt;= midpoint × (1 + buffer% / 100)
      * For SELL orders: bid >= midpoint × (1 - buffer% / 100)
+     *
+     * @param order order being executed
+     * @param quote selected quote, or null when unavailable
+     * @param executionPrice execution price per unit
+     * @return whether the side-specific execution price is within the midpoint tolerance
      */
     protected boolean isPriceWithinTolerance(Order order, Quote quote, BigDecimal executionPrice) {
         BigDecimal tolerance = order.getBufferPercent() != null 
@@ -304,6 +341,9 @@ public class OrderExecutionService {
     
     /**
      * Check if quote is stale (older than maxQuoteAgeSeconds configuration).
+     *
+     * @param quote selected quote, or null when unavailable
+     * @return true when quote age exceeds the configured maximum age
      */
     protected boolean isQuoteStale(Quote quote) {
         return getQuoteAgeSeconds(quote) > maxQuoteAgeSeconds;
@@ -311,6 +351,9 @@ public class OrderExecutionService {
     
     /**
      * Get age of quote in seconds using database quoted_at timestamp.
+     *
+     * @param quote selected quote, or null when unavailable
+     * @return whole seconds from the quote timestamp to the current instant
      */
     protected long getQuoteAgeSeconds(Quote quote) {
         // Use server/database UTC time comparison
@@ -320,6 +363,11 @@ public class OrderExecutionService {
     /**
      * Record status change in order_status_history (audit trail).
      * AC3: Rejected orders record rejection reasons.
+     *
+     * @param order order being executed
+     * @param status persisted order lifecycle status
+     * @param reasonCode machine-readable outcome code
+     * @param reasonText human-readable outcome explanation
      */
     protected void recordStatusHistory(Order order, String status, String reasonCode, String reasonText) {
         OrderStatusHistory history = new OrderStatusHistory(

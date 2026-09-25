@@ -14,6 +14,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class Main {
 
+    /** Creates the Spring Boot application configuration. */
+    public Main() {
+    }
+
     /**
      * Starts the Spring Boot application.
      *

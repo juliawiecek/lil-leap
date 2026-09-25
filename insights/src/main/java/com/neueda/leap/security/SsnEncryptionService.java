@@ -16,7 +16,8 @@ import jakarta.persistence.Query;
  *
  * <p>All encryption/decryption happens at the database level via native SQL queries
  * to PostgreSQL's pgp_sym_encrypt() and pgp_sym_decrypt() functions.
- * The application never stores plaintext SSN in memory or logs.
+ * Plaintext is present in the method arguments and decrypted return value; callers
+ * must avoid logging it or retaining it longer than needed.
  */
 @Service
 public class SsnEncryptionService {

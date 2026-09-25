@@ -10,9 +10,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * PostgreSQL implementation of account ownership checks and idempotent order submission.
+ */
 @Repository
 public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository {
     private final JdbcTemplate jdbcTemplate;
+    /**
+     * Creates a {@code JdbcOrderSubmissionRepository} with the supplied dependencies.
+     *
+     * @param jdbcTemplate JDBC operations participating in Spring transactions
+     */
     public JdbcOrderSubmissionRepository(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
 
     @Override

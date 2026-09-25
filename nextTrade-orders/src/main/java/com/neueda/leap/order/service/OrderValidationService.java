@@ -12,10 +12,14 @@ import org.springframework.stereotype.Service;
  * - Side is BUY or SELL
  * - Quantity is greater than zero
  * - Order type is MARKET
- * - Status is SUBMITTED or ACCEPTED</p>
+ * - Status is nonblank</p>
  */
 @Service
 public class OrderValidationService {
+
+    /** Creates the order field validator. */
+    public OrderValidationService() {
+    }
 
     /**
      * Validates the provided order.

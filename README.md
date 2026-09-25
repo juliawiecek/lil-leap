@@ -28,7 +28,7 @@ lil-leap/
 |- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
 |- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
 |- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
-|- docs/                 # architecture/ (ADRs) and stories/
+|- docs/                 # architecture/ (ADRs), stories/, generated javadoc/
 |- InitialSetup/         # Jenkins setup guide
 |- docker-compose.yml    # Runs the whole stack locally
 |- Jenkinsfile           # CI: compose validation, tests, coverage, image build
@@ -354,17 +354,42 @@ reports and the `data-pipeline` coverage output as build artifacts (see
 [Jenkins Pipeline (CI)](#jenkins-pipeline-ci)); `insights` and `auth`
 coverage are local-only today.
 
-## JavaDocs
+## Javadocs
 
-Generated HTML docs are not committed to this repository. Generate them locally:
+Browse the [Java API documentation](docs/javadoc/index.html), including the generated
+HTML and its search/navigation assets:
 
-```bat
-cd nextTrade-orders
-mvn javadoc:javadoc
+- [Insights](docs/javadoc/insights/index.html)
+- [Orders](docs/javadoc/nextTrade-orders/index.html)
+- [Holdings](docs/javadoc/nextTrade-holdings/index.html)
+
+These sites document production Java APIs, including package overviews, parameters,
+return values, exceptions, ownership checks and execution/retry contracts. The
+TypeScript and Python applications are outside Javadoc's scope.
+
+See the [documentation landing page](docs/javadoc/index.html) for snapshot provenance
+and any source issues that must be resolved before regeneration.
+
+To regenerate all three snapshots from the repository root, use **JDK 21**, Maven
+and Python 3:
+
+```sh
+python scripts/generate_javadocs.py
 ```
 
-Then open `nextTrade-orders/target/site/apidocs/index.html` (same command
-from `nextTrade-holdings` generates that service's docs).
+The script runs strict Javadoc validation for every service and refreshes
+`docs/javadoc/` only after all builds succeed. For one service, run
+`mvn -f insights/pom.xml javadoc:javadoc` (substitute the service directory as needed);
+its local report is `insights/target/site/apidocs/index.html`.
+
+Open `docs/javadoc/index.html` locally in a browser, or serve the complete site:
+
+```sh
+python -m http.server 8000 --directory docs/javadoc
+```
+
+Then visit <http://localhost:8000/>. GitHub's repository viewer displays HTML source;
+use a local browser or static web server to browse the rendered documentation.
 
 ## Data Pipeline
 
