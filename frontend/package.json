@@ -1,10 +1,12 @@
 {
   "name": "nexttrade-angular",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "test": "node --test tests/*.test.mjs",
+    "test:coverage": "c8 node --enable-source-maps --test tests/*.test.mjs",
     "pretest:ci": "node -e \"require('node:fs').mkdirSync('test-results', { recursive: true })\"",
     "test:ci": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
     "build": "ng build",
@@ -23,6 +25,8 @@
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
+    "c8": "^12.0.0",
+    "happy-dom": "^20.14.5",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2"
   },
