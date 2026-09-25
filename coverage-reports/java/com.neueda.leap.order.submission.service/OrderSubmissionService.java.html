@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderSubmissionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.submission.service</a> &gt; <span class="el_source">OrderSubmissionService.java</span></div><h1>OrderSubmissionService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.submission.service;
+
+import com.neueda.leap.order.rules.OrderRuleException;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.repository.AccountTradingProfile;
+import com.neueda.leap.order.submission.repository.InstrumentTradingProfile;
+import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
+import com.neueda.leap.order.service.OrderSufficiencyService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.UUID;
+import static com.neueda.leap.order.rules.OrderRuleException.Reason.*;
+
+@Service
+public class OrderSubmissionService {
+    private final OrderSubmissionRepository repository;
+    private final OrderSufficiencyService sufficiency;
+<span class="fc" id="L20">    public OrderSubmissionService(OrderSubmissionRepository repository, OrderSufficiencyService sufficiency) {</span>
+<span class="fc" id="L21">        this.repository = repository; this.sufficiency = sufficiency;</span>
+<span class="fc" id="L22">    }</span>
+
+    @Transactional
+    public OrderSubmissionResult submit(UUID authenticatedUserId, SubmitOrderRequest request) {
+<span class="pc bpc" id="L26" title="1 of 2 branches missed.">        if (authenticatedUserId == null) {</span>
+<span class="nc" id="L27">            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, &quot;Authentication required&quot;);</span>
+        }
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        if (!repository.accountBelongsToUser(request.accountId(), authenticatedUserId)) {</span>
+<span class="fc" id="L30">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Account not found&quot;);</span>
+        }
+<span class="fc" id="L32">        var existing = repository.findByAccountAndClientReference(request.accountId(), request.clientReference());</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (existing.isPresent()) return new OrderSubmissionResult(existing.get(), false);</span>
+
+<span class="fc" id="L35">        validateAccount(repository.findAccountTradingProfile(request.accountId())</span>
+<span class="pc" id="L36">                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Account not found&quot;)));</span>
+
+<span class="fc" id="L38">        String symbol = request.normalizedSymbol();</span>
+<span class="fc" id="L39">        InstrumentTradingProfile instrument = repository.findInstrumentTradingProfileBySymbol(symbol)</span>
+<span class="fc" id="L40">                .orElseThrow(() -&gt; new OrderRuleException(INSTRUMENT_UNSUPPORTED));</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (!instrument.enabled()) throw new OrderRuleException(INSTRUMENT_DISABLED);</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        if (!instrument.tradable()) throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);</span>
+
+<span class="fc" id="L44">        sufficiency.validate(request, instrument.instrumentId());</span>
+<span class="fc" id="L45">        var saved = repository.insert(request.accountId(), instrument.instrumentId(), symbol,</span>
+<span class="fc" id="L46">                request.clientReference(), request.normalizedSide(), request.quantity(),</span>
+<span class="fc" id="L47">                request.normalizedOrderType(), request.bufferPercent());</span>
+<span class="fc" id="L48">        return saved.map(order -&gt; new OrderSubmissionResult(order, true))</span>
+<span class="pc" id="L49">                .orElseGet(() -&gt; repository.findByAccountAndClientReference(</span>
+<span class="nc" id="L50">                                request.accountId(), request.clientReference())</span>
+<span class="nc" id="L51">                        .map(order -&gt; new OrderSubmissionResult(order, false))</span>
+<span class="nc" id="L52">                        .orElseThrow(() -&gt; new IllegalStateException(&quot;Conflicting order is unavailable&quot;)));</span>
+    }
+
+    private static void validateAccount(AccountTradingProfile account) {
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (!&quot;ACTIVE&quot;.equals(account.accountStatus())) throw new OrderRuleException(ACCOUNT_NOT_ACTIVE);</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (!account.tradingEnabled()) throw new OrderRuleException(TRADING_NOT_ENABLED);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (account.currentBalance().compareTo(account.minimumBalanceRequirement()) &lt; 0) {</span>
+<span class="fc" id="L59">            throw new OrderRuleException(ACCOUNT_NOT_SUITABLE);</span>
+        }
+<span class="fc" id="L61">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

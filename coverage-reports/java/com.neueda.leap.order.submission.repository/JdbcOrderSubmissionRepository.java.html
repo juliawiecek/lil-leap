@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcOrderSubmissionRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.submission.repository</a> &gt; <span class="el_source">JdbcOrderSubmissionRepository.java</span></div><h1>JdbcOrderSubmissionRepository.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.submission.repository;
+
+import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository {
+    private final JdbcTemplate jdbcTemplate;
+<span class="nc" id="L16">    public JdbcOrderSubmissionRepository(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }</span>
+
+    @Override
+    public boolean accountBelongsToUser(UUID accountId, UUID userId) {
+<span class="nc" id="L20">        Integer count = jdbcTemplate.queryForObject(</span>
+                &quot;SELECT COUNT(*) FROM accounts WHERE account_id = ? AND user_id = ?&quot;,
+                Integer.class, accountId, userId);
+<span class="nc bnc" id="L23" title="All 4 branches missed.">        return count != null &amp;&amp; count == 1;</span>
+    }
+
+    @Override
+    public Optional&lt;AccountTradingProfile&gt; findAccountTradingProfile(UUID accountId) {
+<span class="nc" id="L28">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT a.account_status, a.trading_enabled, a.trader_level,
+                       a.min_balance_requirement, COALESCE(cb.balance, 0) AS current_balance
+                FROM accounts a
+                LEFT JOIN cash_balances cb ON cb.account_id = a.account_id AND cb.currency = 'USD'
+                WHERE a.account_id = ?
+<span class="nc" id="L34">                &quot;&quot;&quot;, (rs, row) -&gt; new AccountTradingProfile(</span>
+<span class="nc" id="L35">                rs.getString(&quot;account_status&quot;), rs.getBoolean(&quot;trading_enabled&quot;),</span>
+<span class="nc" id="L36">                rs.getString(&quot;trader_level&quot;), rs.getBigDecimal(&quot;min_balance_requirement&quot;),</span>
+<span class="nc" id="L37">                rs.getBigDecimal(&quot;current_balance&quot;)), accountId).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;InstrumentTradingProfile&gt; findInstrumentTradingProfileBySymbol(String symbol) {
+<span class="nc" id="L42">        List&lt;InstrumentTradingProfile&gt; rows = jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT instrument_id, enabled, tradable
+                FROM instruments
+                WHERE UPPER(symbol) = ?
+                ORDER BY market_code, instrument_id
+                LIMIT 1
+<span class="nc" id="L48">                &quot;&quot;&quot;, (rs, row) -&gt; new InstrumentTradingProfile(</span>
+<span class="nc" id="L49">                rs.getObject(&quot;instrument_id&quot;, UUID.class), rs.getBoolean(&quot;enabled&quot;),</span>
+<span class="nc" id="L50">                rs.getBoolean(&quot;tradable&quot;)), symbol);</span>
+<span class="nc" id="L51">        return rows.stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;OrderSubmissionResponse&gt; findByAccountAndClientReference(UUID accountId, UUID clientReference) {
+<span class="nc" id="L56">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,
+                       o.client_reference, o.side, o.quantity, o.order_type,
+                       o.status, o.submitted_at, o.buffer_percent
+                FROM orders o JOIN instruments i ON i.instrument_id = o.instrument_id
+                WHERE o.account_id = ? AND o.client_reference = ?
+<span class="nc" id="L62">                &quot;&quot;&quot;, this::mapOrder, accountId, clientReference).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;OrderSubmissionResponse&gt; insert(UUID accountId, UUID instrumentId, String symbol,
+            UUID clientReference, String side, long quantity, String orderType, BigDecimal bufferPercent) {
+<span class="nc" id="L68">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                INSERT INTO orders(account_id, instrument_id, client_reference, side,
+                                   quantity, order_type, status, buffer_percent)
+                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?)
+                ON CONFLICT (account_id, client_reference) DO NOTHING
+                RETURNING order_id, account_id, instrument_id, client_reference, side,
+                          quantity, order_type, status, submitted_at, buffer_percent
+<span class="nc" id="L75">                &quot;&quot;&quot;, (rs, row) -&gt; new OrderSubmissionResponse(</span>
+<span class="nc" id="L76">                rs.getObject(&quot;order_id&quot;, UUID.class), rs.getObject(&quot;account_id&quot;, UUID.class),</span>
+<span class="nc" id="L77">                rs.getObject(&quot;instrument_id&quot;, UUID.class), symbol,</span>
+<span class="nc" id="L78">                rs.getObject(&quot;client_reference&quot;, UUID.class), rs.getString(&quot;side&quot;),</span>
+<span class="nc" id="L79">                rs.getLong(&quot;quantity&quot;), rs.getString(&quot;order_type&quot;), rs.getString(&quot;status&quot;),</span>
+<span class="nc" id="L80">                rs.getTimestamp(&quot;submitted_at&quot;).toInstant(), rs.getBigDecimal(&quot;buffer_percent&quot;)),</span>
+<span class="nc" id="L81">                accountId, instrumentId, clientReference, side, quantity, orderType, bufferPercent)</span>
+<span class="nc" id="L82">                .stream().findFirst();</span>
+    }
+
+    private OrderSubmissionResponse mapOrder(ResultSet rs, int rowNum) throws SQLException {
+<span class="nc" id="L86">        return new OrderSubmissionResponse(rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="nc" id="L87">                rs.getObject(&quot;account_id&quot;, UUID.class), rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="nc" id="L88">                rs.getString(&quot;symbol&quot;), rs.getObject(&quot;client_reference&quot;, UUID.class),</span>
+<span class="nc" id="L89">                rs.getString(&quot;side&quot;), rs.getLong(&quot;quantity&quot;), rs.getString(&quot;order_type&quot;),</span>
+<span class="nc" id="L90">                rs.getString(&quot;status&quot;), rs.getTimestamp(&quot;submitted_at&quot;).toInstant(),</span>
+<span class="nc" id="L91">                rs.getBigDecimal(&quot;buffer_percent&quot;));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

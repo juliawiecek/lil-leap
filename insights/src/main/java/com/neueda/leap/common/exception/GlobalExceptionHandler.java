@@ -1,6 +1,5 @@
 package com.neueda.leap.common.exception;
 
-import com.neueda.leap.passwordreset.InvalidPasswordResetTokenException;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
@@ -121,21 +120,4 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    /**
-     * Handles invalid or expired password reset tokens.
-     *
-     * @param exception the exception describing the invalid reset token
-     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
-     *         a body containing an error code and descriptive message
-     */
-    @ExceptionHandler(InvalidPasswordResetTokenException.class)
-    public ResponseEntity<Map<String, String>>
-    handleInvalidPasswordResetTokenException(
-            InvalidPasswordResetTokenException exception
-    ) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                "error", "INVALID_PASSWORD_RESET_TOKEN",
-                "message", exception.getMessage()
-        ));
-    }
 }

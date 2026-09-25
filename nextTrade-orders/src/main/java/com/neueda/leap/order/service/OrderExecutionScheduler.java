@@ -1,6 +1,7 @@
 package com.neueda.leap.order.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -9,9 +10,10 @@ import org.springframework.stereotype.Component;
  * Runs every second to check for orders that need execution.
  * TS-09.3: Scheduled task for fill-or-reject execution engine.
  */
-@Slf4j
 @Component
 public class OrderExecutionScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderExecutionScheduler.class);
     
     private final OrderExecutionService orderExecutionService;
 

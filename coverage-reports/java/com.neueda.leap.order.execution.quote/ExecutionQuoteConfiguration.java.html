@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExecutionQuoteConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution.quote</a> &gt; <span class="el_source">ExecutionQuoteConfiguration.java</span></div><h1>ExecutionQuoteConfiguration.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution.quote;
+import com.neueda.leap.marketdata.QuoteRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import java.time.Clock;
+import java.time.Duration;
+@Configuration
+<span class="nc" id="L9">public class ExecutionQuoteConfiguration {</span>
+<span class="nc" id="L10"> @Bean Clock executionClock(){return Clock.systemUTC();}</span>
+<span class="nc" id="L11"> @Bean QuoteFreshnessPolicy executionQuoteFreshnessPolicy(@Value(&quot;${orders.execution.max-quote-age-seconds:60}&quot;) long age,@Value(&quot;${orders.execution.allowed-future-skew-seconds:2}&quot;) long skew){return new QuoteFreshnessPolicy(Duration.ofSeconds(age),Duration.ofSeconds(skew));}</span>
+<span class="nc" id="L12"> @Bean ExecutionQuoteService executionQuoteService(ExecutionOrderContextRepository orders,QuoteRepository quotes,QuoteFreshnessPolicy policy,Clock executionClock,@Value(&quot;${orders.execution.max-quote-attempts:10}&quot;) long attempts){return new ExecutionQuoteService(orders,quotes,policy,executionClock,attempts);}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

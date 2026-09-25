@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.onboarding.dto</a> &gt; <span class="el_source">UserResponse.java</span></div><h1>UserResponse.java</h1><pre class="source lang-java linenums">package com.neueda.leap.onboarding.dto;
+
+import com.neueda.leap.onboarding.entity.Account;
+import com.neueda.leap.onboarding.entity.CustomerProfile;
+import com.neueda.leap.user.entity.User;
+import com.neueda.leap.onboarding.enums.AccountType;
+import com.neueda.leap.onboarding.enums.TraderLevel;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+/**
+ * Response DTO representing the public user data returned by the API.
+ *
+ * @param id the unique identifier of the user
+ * @param firstName the user's first name
+ * @param lastName the user's last name
+ * @param dateOfBirth the user's date of birth
+ * @param email the user's email address
+ * @param phone the user's phone number
+ * @param accountType the selected account type
+ * @param traderLevel the selected trader level
+ * @param emailVerified whether the user's email address has been verified
+ * @param createdAt the timestamp when the user was created
+ * @param updatedAt the timestamp when the user was last updated
+ */
+<span class="fc" id="L28">public record UserResponse(</span>
+        UUID id,
+        String firstName,
+        String lastName,
+        LocalDate dateOfBirth,
+        String email,
+        String phone,
+        AccountType accountType,
+        TraderLevel traderLevel,
+        boolean emailVerified,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    /**
+     * Creates a {@link UserResponse} from normalized user, profile, and account entities.
+     *
+     * @param user user authentication entity
+     * @param profile user identity profile entity
+     * @param account user account entity
+     * @return a response DTO containing the user's public registration data
+     */
+    public static UserResponse from(User user, CustomerProfile profile, Account account) {
+<span class="fc" id="L51">        return new UserResponse(</span>
+<span class="fc" id="L52">                user.getUserId(),</span>
+<span class="fc" id="L53">                profile.getFirstName(),</span>
+<span class="fc" id="L54">                profile.getLastName(),</span>
+<span class="fc" id="L55">                profile.getDateOfBirth(),</span>
+<span class="fc" id="L56">                user.getEmail(),</span>
+<span class="fc" id="L57">                profile.getPhone(),</span>
+<span class="fc" id="L58">                account.getAccountType(),</span>
+<span class="fc" id="L59">                account.getTraderLevel(),</span>
+                false,
+<span class="fc" id="L61">                user.getCreatedAt(),</span>
+<span class="fc" id="L62">                user.getUpdatedAt()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

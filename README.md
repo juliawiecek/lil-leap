@@ -14,6 +14,19 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 | Tanush Kaushik   | Developer, Data Engineer           |
 | Julia Wiecek     | Developer, Spring Boot             |
 
+## 🚀 Quick Start
+
+**New to the project?** Start here:
+
+1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
+2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
+3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - View 79.67% Python & 77.79% Java coverage
+
+**All systems running?** Access the apps:
+- Frontend: http://localhost:4200
+- Backend: http://localhost:8080
+- Reporting: http://localhost:4201
+
 ## Project Structure
 
 ```text

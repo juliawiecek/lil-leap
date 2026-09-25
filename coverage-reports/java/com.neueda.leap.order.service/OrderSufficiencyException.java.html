@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderSufficiencyException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.service</a> &gt; <span class="el_source">OrderSufficiencyException.java</span></div><h1>OrderSufficiencyException.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.service;
+
+/** A fixed, safe rejection reason for an order that cannot pass sufficiency checks. */
+public class OrderSufficiencyException extends RuntimeException {
+    /** Supported rejections; messages never include account balances or identifiers. */
+<span class="fc" id="L6">    public enum Reason {</span>
+        /** The account cannot cover the buffered purchase cost. */
+<span class="fc" id="L8">        INSUFFICIENT_CASH,</span>
+        /** The account does not own enough units of the instrument. */
+<span class="fc" id="L10">        INSUFFICIENT_HOLDINGS,</span>
+        /** Buying power cannot be calculated without a usable ask price. */
+<span class="fc" id="L12">        QUOTE_UNAVAILABLE</span>
+    }
+
+    private final Reason reason;
+
+    /**
+     * Creates a rule rejection.
+     * @param reason safe reason code
+     */
+    public OrderSufficiencyException(Reason reason) {
+<span class="fc bfc" id="L22" title="All 3 branches covered.">        super(switch (reason) {</span>
+<span class="fc" id="L23">            case INSUFFICIENT_CASH -&gt; &quot;Insufficient cash for this order.&quot;;</span>
+<span class="fc" id="L24">            case INSUFFICIENT_HOLDINGS -&gt; &quot;Insufficient holdings for this order.&quot;;</span>
+<span class="fc" id="L25">            case QUOTE_UNAVAILABLE -&gt; &quot;A valid quote is required to check buying power.&quot;;</span>
+        });
+<span class="fc" id="L27">        this.reason = reason;</span>
+<span class="fc" id="L28">    }</span>
+
+    /** @return the safe rejection code */
+    public Reason reason() {
+<span class="fc" id="L32">        return reason;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

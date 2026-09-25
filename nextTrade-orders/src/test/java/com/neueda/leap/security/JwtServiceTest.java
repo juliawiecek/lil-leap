@@ -23,6 +23,7 @@ class JwtServiceTest {
         assertTrue(principal.isPresent());
         assertEquals(userId, principal.get().userId());
         assertEquals("julia@example.com", principal.get().email());
+        assertEquals("TRADER", principal.get().role());
     }
 
     @Test

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientFinancialController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.controller</a> &gt; <span class="el_source">ClientFinancialController.java</span></div><h1>ClientFinancialController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.controller;
+
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.dto.HoldingResponse;
+import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
+import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
+import com.neueda.leap.security.JwtPrincipal;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/** Client-scoped read endpoints for holdings, cash, and order history. */
+@RestController
+@RequestMapping
+public class ClientFinancialController {
+
+    private final ClientFinancialQueryService queryService;
+
+    /**
+     * Creates the portfolio endpoints.
+     * @param queryService queries restricted to the authenticated user's accounts
+     */
+<span class="fc" id="L27">    public ClientFinancialController(ClientFinancialQueryService queryService) {</span>
+<span class="fc" id="L28">        this.queryService = queryService;</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * Lists holdings owned by the authenticated caller.
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned holdings, including an empty list when absent
+     */
+    @GetMapping(&quot;/holdings&quot;)
+    public ResponseEntity&lt;List&lt;HoldingResponse&gt;&gt; holdings(
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L39">        return ResponseEntity.ok(queryService.getHoldings(principal.userId()));</span>
+    }
+
+    /**
+     * Lists cash balances owned by the authenticated caller.
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned balances, including an empty list when absent
+     */
+    @GetMapping(&quot;/cash&quot;)
+    public ResponseEntity&lt;List&lt;CashBalanceResponse&gt;&gt; cash(
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L50">        return ResponseEntity.ok(queryService.getCashBalances(principal.userId()));</span>
+    }
+
+    /**
+     * Lists order history owned by the authenticated caller.
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned orders, including an empty list when absent
+     */
+    @GetMapping(&quot;/orders&quot;)
+    public ResponseEntity&lt;List&lt;OrderSummaryResponse&gt;&gt; orders(
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L61">        return ResponseEntity.ok(queryService.getOrders(principal.userId()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

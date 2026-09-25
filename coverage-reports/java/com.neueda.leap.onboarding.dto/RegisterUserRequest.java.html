@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RegisterUserRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.onboarding.dto</a> &gt; <span class="el_source">RegisterUserRequest.java</span></div><h1>RegisterUserRequest.java</h1><pre class="source lang-java linenums">package com.neueda.leap.onboarding.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.neueda.leap.onboarding.enums.AccountType;
+import com.neueda.leap.onboarding.enums.CitizenshipStatus;
+import com.neueda.leap.onboarding.enums.EmploymentStatus;
+import com.neueda.leap.onboarding.enums.NetWorthBracket;
+import com.neueda.leap.onboarding.enums.RiskProfile;
+import com.neueda.leap.onboarding.enums.TraderLevel;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import java.time.LocalDate;
+
+/**
+ * Request DTO used to register a new user and complete investor onboarding fields.
+ *
+ * @param firstName the user's first name
+ * @param lastName the user's last name
+ * @param dateOfBirth the user's birth date; applicant must be at least 21
+ * @param email the user's email address
+ * @param phone the user's phone number
+ * @param password the raw password provided during registration
+ * @param streetAddress the first address line
+ * @param apartment the second address line (optional)
+ * @param city the user's city
+ * @param stateProvince the user's state or province
+ * @param postalCode the user's postal/ZIP code
+ * @param country the user's country of residence
+ * @param citizenshipStatus the user's citizenship or residency status
+ * @param ssn the user's social security number in 9-digit or 123-45-6789 format
+ * @param employmentStatus the user's employment status
+ * @param employerName the employer or business name when employed/self-employed
+ * @param occupation the occupation when employed/self-employed
+ * @param annualIncome the annual income amount as a string value
+ * @param netWorthBracket the selected net worth bracket
+ * @param riskProfile the selected risk profile
+ * @param liquidityPosition the liquid assets amount as a string value
+ * @param accreditedInvestor whether the user self-identifies as accredited
+ * @param accountName the display name for the account
+ * @param accountType the account type value
+ * @param traderLevel the selected trader level
+ * @param politicallyExposedPerson whether the user is a politically exposed person
+ * @param brokerAffiliation whether the user is affiliated with a broker-dealer
+ * @param brokerFirmName affiliated broker firm name when broker affiliation is true
+ * @param brokerAffiliationDetails affiliation details when broker affiliation is true
+ * @param controlPerson whether the user is a control person of a public company
+ * @param controlCompanyName company name when control person is true
+ * @param controlCompanyRole role at the company when control person is true
+ * @param otherBeneficialOwner whether someone else is the beneficial owner
+ * @param beneficialOwnerName beneficial owner's name when another owner exists
+ * @param beneficialOwnerRelationship beneficial owner's relationship when another owner exists
+ */
+<span class="fc" id="L58">public record RegisterUserRequest (</span>
+
+        @JsonProperty(&quot;first_name&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String firstName,
+
+        @JsonProperty(&quot;last_name&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String lastName,
+
+        @JsonProperty(&quot;date_of_birth&quot;)
+        @NotNull
+        LocalDate dateOfBirth,
+
+        @JsonProperty(&quot;email&quot;)
+        @NotBlank
+        @Email
+        @Size(max = 255)
+        String email,
+
+        @JsonProperty(&quot;phone&quot;)
+        @NotBlank
+        @Size(max = 20)
+        String phone,
+
+        @JsonProperty(&quot;password&quot;)
+        @NotBlank
+        @Size(min = 8, max = 128)
+        String password,
+
+        @JsonProperty(&quot;street_address&quot;)
+        @NotBlank
+        @Size(max = 255)
+        String streetAddress,
+
+        @JsonProperty(&quot;apartment&quot;)
+        @Size(max = 255)
+        String apartment,
+
+        @JsonProperty(&quot;city&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String city,
+
+        @JsonProperty(&quot;state_province&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String stateProvince,
+
+        @JsonProperty(&quot;postal_code&quot;)
+        @NotBlank
+        @Size(max = 20)
+        String postalCode,
+
+        @JsonProperty(&quot;country&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String country,
+
+        @JsonProperty(&quot;citizenship_status&quot;)
+        @NotNull
+        CitizenshipStatus citizenshipStatus,
+
+        @JsonProperty(&quot;ssn&quot;)
+        @NotBlank
+        @Pattern(
+                regexp = &quot;^(\\d{9}|\\d{3}-\\d{2}-\\d{4})$&quot;,
+                message = &quot;SSN must be 9 digits or 123-45-6789&quot;
+        )
+        String ssn,
+
+        @JsonProperty(&quot;employment_status&quot;)
+        @NotNull
+        EmploymentStatus employmentStatus,
+
+        @JsonProperty(&quot;employer_name&quot;)
+        @Size(max = 255)
+        String employerName,
+
+        @JsonProperty(&quot;occupation&quot;)
+        @Size(max = 100)
+        String occupation,
+
+        @JsonProperty(&quot;annual_income&quot;)
+        @NotBlank
+        @Size(max = 32)
+        String annualIncome,
+
+        @JsonProperty(&quot;net_worth_bracket&quot;)
+        @NotNull
+        NetWorthBracket netWorthBracket,
+
+        @JsonProperty(&quot;risk_profile&quot;)
+        @NotNull
+        RiskProfile riskProfile,
+
+        @JsonProperty(&quot;liquidity_position&quot;)
+        @NotBlank
+        @Size(max = 32)
+        String liquidityPosition,
+
+        @JsonProperty(&quot;accredited_investor&quot;)
+        @NotNull
+        Boolean accreditedInvestor,
+
+        @JsonProperty(&quot;account_name&quot;)
+        @NotBlank
+        @Size(max = 100)
+        String accountName,
+
+        @JsonProperty(&quot;account_type&quot;)
+        @NotNull
+        AccountType accountType,
+
+        @JsonProperty(&quot;trader_level&quot;)
+        @NotNull
+        TraderLevel traderLevel,
+
+        @JsonProperty(&quot;is_politically_exposed_person&quot;)
+        @NotNull
+        Boolean politicallyExposedPerson,
+
+        @JsonProperty(&quot;broker_affiliation&quot;)
+        @NotNull
+        Boolean brokerAffiliation,
+
+        @JsonProperty(&quot;broker_firm_name&quot;)
+        @Size(max = 255)
+        String brokerFirmName,
+
+        @JsonProperty(&quot;broker_affiliation_details&quot;)
+        @Size(max = 255)
+        String brokerAffiliationDetails,
+
+        @JsonProperty(&quot;control_person&quot;)
+        @NotNull
+        Boolean controlPerson,
+
+        @JsonProperty(&quot;control_company_name&quot;)
+        @Size(max = 255)
+        String controlCompanyName,
+
+        @JsonProperty(&quot;control_company_role&quot;)
+        @Size(max = 255)
+        String controlCompanyRole,
+
+        @JsonProperty(&quot;other_beneficial_owner&quot;)
+        @NotNull
+        Boolean otherBeneficialOwner,
+
+        @JsonProperty(&quot;beneficial_owner_name&quot;)
+        @Size(max = 255)
+        String beneficialOwnerName,
+
+        @JsonProperty(&quot;beneficial_owner_relationship&quot;)
+        @Size(max = 255)
+        String beneficialOwnerRelationship
+
+) {
+
+    @Override
+    public String toString() {
+<span class="fc" id="L222">        return &quot;RegisterUserRequest[personalData=[REDACTED], password=[REDACTED], ssn=[REDACTED]]&quot;;</span>
+    }
+
+    /**
+     * Ensures conditional broker fields are provided when broker affiliation is true.
+     *
+     * @return true when the broker details are valid for the chosen affiliation flag
+     */
+    @AssertTrue(message = &quot;Broker firm name and affiliation details are required when broker affiliation is true&quot;)
+    public boolean isBrokerDisclosureValid() {
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        return !Boolean.TRUE.equals(brokerAffiliation)</span>
+<span class="pc bnc" id="L233" title="All 4 branches missed.">                || (notBlank(brokerFirmName) &amp;&amp; notBlank(brokerAffiliationDetails));</span>
+    }
+
+    /**
+     * Ensures conditional control person fields are provided when control person is true.
+     *
+     * @return true when the control person details are valid for the chosen flag
+     */
+    @AssertTrue(message = &quot;Control company name and role are required when control person is true&quot;)
+    public boolean isControlPersonDisclosureValid() {
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">        return !Boolean.TRUE.equals(controlPerson)</span>
+<span class="pc bnc" id="L244" title="All 4 branches missed.">                || (notBlank(controlCompanyName) &amp;&amp; notBlank(controlCompanyRole));</span>
+    }
+
+    /**
+     * Ensures beneficial owner fields are provided when another beneficial owner is declared.
+     *
+     * @return true when beneficial owner details are valid for the chosen flag
+     */
+    @AssertTrue(message = &quot;Beneficial owner name and relationship are required when other beneficial owner is true&quot;)
+    public boolean isBeneficialOwnerDisclosureValid() {
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">        return !Boolean.TRUE.equals(otherBeneficialOwner)</span>
+<span class="pc bnc" id="L255" title="All 4 branches missed.">                || (notBlank(beneficialOwnerName) &amp;&amp; notBlank(beneficialOwnerRelationship));</span>
+    }
+
+    /**
+     * Ensures employer fields are provided when employed or self-employed is selected.
+     *
+     * @return true when employment detail requirements are satisfied
+     */
+    @AssertTrue(message = &quot;Employer name and occupation are required for employed or self-employed status&quot;)
+    public boolean isEmploymentDetailsValid() {
+<span class="pc bpc" id="L265" title="1 of 4 branches missed.">        boolean needsDetails = employmentStatus == EmploymentStatus.EMPLOYED</span>
+                || employmentStatus == EmploymentStatus.SELF_EMPLOYED;
+<span class="pc bpc" id="L267" title="2 of 6 branches missed.">        return !needsDetails || (notBlank(employerName) &amp;&amp; notBlank(occupation));</span>
+    }
+
+    private static boolean notBlank(String value) {
+<span class="pc bpc" id="L271" title="2 of 4 branches missed.">        return value != null &amp;&amp; !value.trim().isEmpty();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

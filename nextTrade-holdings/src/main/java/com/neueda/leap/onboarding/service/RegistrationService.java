@@ -81,7 +81,6 @@ public class RegistrationService {
         User user = new User();
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setSsn(normalizeSsn(request.ssn()));
         User savedUser = userRepository.save(user);
 
         CustomerProfile profile = new CustomerProfile();
@@ -179,16 +178,6 @@ public class RegistrationService {
                 "}";
     }
 
-    /**
-     * Removes all non-digit SSN separators.
-     *
-     * @param value SSN value from request
-     * @return normalized digits-only SSN or {@code null}
-     */
-    private String normalizeSsn(String value) {
-        String trimmed = trimToNull(value);
-        return trimmed == null ? null : trimmed.replaceAll("\\D", "");
-    }
 
     /**
      * Removes currency separators from numeric text values.

@@ -31,9 +31,6 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "ssn")
-    private String ssn;
-
     @Column(name = "user_role", nullable = false, length = 20)
     private String userRole = "TRADER";
 
@@ -130,23 +127,6 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
-    /**
-     * Returns stored social security number.
-     *
-     * @return stored social security number
-     */
-    public String getSsn() {
-        return ssn;
-    }
-
-    /**
-     * Sets stored social security number.
-     *
-     * @param ssn stored social security number
-     */
-    public void setSsn(String ssn) {
-        this.ssn = ssn;
-    }
 
     /**
     * Returns stored application role.

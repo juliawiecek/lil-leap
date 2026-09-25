@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
 import org.junit.jupiter.api.AfterEach;
@@ -69,6 +70,8 @@ class ClientFinancialControllerTest {
 
     private static UsernamePasswordAuthenticationToken authentication(UUID userId) {
         return new UsernamePasswordAuthenticationToken(
-                new JwtPrincipal(userId, "synthetic.user@example.test"), null, List.of());
+                new JwtPrincipal(userId, "synthetic.user@example.test", "TRADER"),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_TRADER")));
     }
 }

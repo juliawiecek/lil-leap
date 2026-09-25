@@ -13,6 +13,7 @@ import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -27,6 +28,7 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
  * authentication on every route except registration and login.</p>
  */
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     /** Creates the Spring configuration for this component. */
@@ -84,27 +86,6 @@ public class SecurityConfig {
                         .permissionsPolicy(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()")))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                    "/users",
-                                "/auth/login",
-                                "/auth/password-reset/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                        // These collections accept no caller-selected scope. Identity comes from JWT.
-                        .requestMatchers(HttpMethod.GET, "/holdings", "/cash", "/orders")
-                        .access(AuthorizationManagers.allOf(
-                                AuthenticatedAuthorizationManager.authenticated(),
-                                (authentication, context) -> new AuthorizationDecision(
-                                        context.getRequest().getParameterMap().isEmpty())))
-                        // Submission authorizes the body account against the JWT in the service.
-                        .requestMatchers(HttpMethod.POST, "/orders")
-                        .access(AuthorizationManagers.allOf(
-                                AuthenticatedAuthorizationManager.authenticated(),
-                                (authentication, context) -> new AuthorizationDecision(
-                                        context.getRequest().getParameterMap().isEmpty())))
-                        // Other financial writes and object-ID routes are not implemented yet.
-                        .requestMatchers("/holdings", "/holdings/**", "/cash", "/cash/**", "/orders", "/orders/**")
-                        .denyAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .accessDeniedHandler((request, response, exception) -> {

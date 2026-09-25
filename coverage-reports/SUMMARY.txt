@@ -1,0 +1,117 @@
+================================================================================
+                      TEST COVERAGE SUMMARY
+                          lil-leap Project
+================================================================================
+
+📊 OVERALL METRICS
+================================================================================
+
+Python (data-pipeline)
+  Overall Coverage: 79.67%
+  Tests:           72 (all passing ✓)
+  Modules at 85%+: 8 out of 10
+  Status:          5.33% away from 85% goal
+
+Java (insights)
+  Overall Coverage: 77.79% (line coverage)
+  Tests:           320 (all passing ✓)
+  Classes at 85%+: 66 out of 99
+  Status:          7.21% away from 85% goal
+
+================================================================================
+🎯 COVERAGE BY LANGUAGE
+================================================================================
+
+PYTHON - Top Performing Modules:
+  ✅ database.py                      100.0%
+  ✅ instrument_repository.py         100.0%
+  ✅ quote_repository.py              100.0%
+  ✅ instrument_catalog.py             90.0%
+  ✅ generate_quotes.py                85.0%
+  ✅ app.py                            85.71%
+  ✅ quote_provider.py                 85.95%
+  ⚠️  quote_ingestor.py                56.96%
+  ⚠️  service_runner.py                20.59%
+
+JAVA - Coverage Snapshot:
+  ✅ 66 classes at 85%+ coverage
+  ⚠️  Order model class:               100.0% (fully tested)
+  ⚠️  OrderExecutionWorker:             19.51% (partial - constructor tested)
+  ⚠️  Total line coverage:              77.79% (704/905 lines)
+
+================================================================================
+📂 HOW TO VIEW REPORTS
+================================================================================
+
+1. Python Coverage Report (Pytest):
+   → Double-click: python/index.html
+   → Shows statement coverage, missing lines, per-module metrics
+
+2. Java Coverage Report (JaCoCo):
+   → Double-click: java/index.html
+   → Shows line coverage, branch coverage, per-class metrics
+
+3. Detailed Summary:
+   → Read: README.md (in this directory)
+
+================================================================================
+✅ TEST STATUS
+================================================================================
+
+Python Tests:  72/72 PASSING
+  - Located: data-pipeline/tests/
+  - Framework: pytest
+  - Coverage tool: pytest-cov
+
+Java Tests:    320/320 PASSING
+  - Located: insights/src/test/
+  - Framework: JUnit 5 + Mockito
+  - Coverage tool: JaCoCo
+
+Total:         392 tests, ZERO FAILURES
+
+================================================================================
+🔄 HOW TO REGENERATE REPORTS
+================================================================================
+
+Python (from repository root):
+  cd data-pipeline
+  python -m pip install -r requirements-coverage.txt
+  python -m pytest -v --cov=src --cov-report=html:htmlcov
+  # Reports: htmlcov/index.html
+
+Java (from repository root):
+  cd insights
+  mvn clean test
+  # Reports: target/site/jacoco/index.html
+
+================================================================================
+📝 KEY FINDINGS
+================================================================================
+
+✓ Comprehensive Test Suite:
+  - 392 total tests across both languages
+  - All tests passing
+  - Ready for CI/CD integration
+
+✓ Strong Coverage Foundation:
+  - 8/10 Python modules at 85%+ coverage
+  - 66/99 Java classes at 85%+ coverage
+  - Most core business logic is well-tested
+
+⚠️  Areas for Improvement:
+  - Python: quote_ingestor.py and service_runner.py (process-related code)
+  - Java: Order execution configuration and some business services
+  - Both within reach of 85% with ~20-30 additional targeted tests
+
+✓ Industry Best Practices:
+  - JaCoCo configured for Java (Maven integration)
+  - pytest-cov configured for Python
+  - Both generate HTML and XML reports
+  - XML reports support CI/CD tools (Jenkins, GitLab, etc.)
+
+================================================================================
+Generated: 2026-09-24
+Project: NextTrade Platform (lil-leap)
+Assessed By: Automated Coverage Analysis
+================================================================================
