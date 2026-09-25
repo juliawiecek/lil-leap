@@ -3,6 +3,16 @@
 From `frontend/`, run `npm ci` once, then `npm test`. Use Node 24 LTS.
 `npm run test:ci` runs the same tests and writes a JUnit report.
 
+Run `npm run test:coverage` for per-file and overall line, statement, function,
+and branch percentages. Open `coverage/index.html` for highlighted source, or
+use `coverage/lcov.info` and `coverage/coverage-summary.json` in reporting tools.
+The c8 configuration includes all `src/**/*.ts` files, including untested files
+at zero coverage, and excludes declaration files. Tests and dependencies are
+outside that scope. Inline source maps map compiled components back to TypeScript.
+Reports are generated locally and ignored by Git. Each file must reach at least
+1% in every metric so completely untested files fail the coverage command. This
+is a guard against zero coverage, not a claim that 1% is adequate coverage.
+
 - `novice-dashboard.test.mjs`: search, watchlists, order validation, buying power,
   fills, holdings, weighted cost, and revalidation at confirmation.
 - `advanced-dashboard.test.mjs`: screeners, ticket pricing, validation, bracket
@@ -23,7 +33,7 @@ From `frontend/`, run `npm ci` once, then `npm test`. Use Node 24 LTS.
 `component-helper.mjs` compiles Angular components in memory with the Angular
 compiler's JIT transform and TypeScript, preserving signal input/output/query
 metadata. Plain TypeScript uses Node's native loader consistently across suites
-to retain its native module behavior. The helper also creates component
+so coverage offsets can be merged correctly. The helper also creates component
 instances in injection contexts, destroyed after each test.
 
 `dom-helper.mjs` uses Angular TestBed with Happy DOM to render actual templates
@@ -32,4 +42,4 @@ are controlled test doubles. Styles are omitted; these tests do not verify layou
 pixels, real-browser compatibility, or live backend integration. The profile test
 compensates for Happy DOM's disabled-fieldset validation limitation while retaining
 validation of active controls. Startup tests bootstrap the real application with
-its configured providers. Tests run with Node.
+its configured providers. Tests run with Node; c8 provides coverage reporting.

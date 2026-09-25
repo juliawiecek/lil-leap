@@ -6,13 +6,13 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { angularJitApplicationTransform } from '@angular/compiler-cli';
 
-// Use Angular's JIT transform for real input/output/query metadata.
-// Compile in memory; production source files are never changed.
+// Use Angular's JIT transform for real input/output/query metadata and TypeScript
+// source maps. Compile in memory; production source files are never changed.
 const appRoot = new URL('../src/', import.meta.url).href;
 const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['.ts']), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
-  experimentalDecorators: true,
+  experimentalDecorators: true, inlineSourceMap: true, inlineSources: true,
   skipLibCheck: true,
 });
 registerHooks({
@@ -26,7 +26,8 @@ registerHooks({
   load(url, context, nextLoad) {
     if (url.startsWith(appRoot) && new URL(url).pathname.endsWith('.ts')) {
       const sourceFile = program.getSourceFile(fileURLToPath(url));
-      // Keep plain TypeScript on Node's native loader in every suite.
+      // Keep plain TS on Node's native loader in every suite. Mixing stripped
+      // and transpiled versions of one URL would merge incompatible coverage offsets.
       if (!/from ['"]@angular\//.test(sourceFile.text)) return nextLoad(url, context);
       let source;
       program.emit(sourceFile, (name, text) => {

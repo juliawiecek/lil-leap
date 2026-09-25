@@ -79,6 +79,8 @@ yarn-error.log*
 .vscode
 node_modules/
 auth/coverage/
+frontend/coverage/
+insights-frontend/coverage/
 frontend/test-results/
 dist/
 build/
