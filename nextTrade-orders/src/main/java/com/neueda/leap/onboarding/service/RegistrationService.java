@@ -8,7 +8,7 @@ import com.neueda.leap.onboarding.entity.FinancialProfile;
 import com.neueda.leap.user.entity.User;
 import com.neueda.leap.onboarding.enums.TraderLevel;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
-import com.neueda.leap.onboarding.repository.AccountRepository;
+import com.neueda.leap.onboarding.repository.OnboardingAccountRepository;
 import com.neueda.leap.onboarding.repository.CustomerProfileRepository;
 import com.neueda.leap.onboarding.repository.FinancialProfileRepository;
 import com.neueda.leap.user.repository.UserRepository;
@@ -35,7 +35,7 @@ public class RegistrationService {
     private final UserRepository userRepository;
     private final CustomerProfileRepository customerProfileRepository;
     private final FinancialProfileRepository financialProfileRepository;
-    private final AccountRepository accountRepository;
+    private final OnboardingAccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -51,7 +51,7 @@ public class RegistrationService {
             UserRepository userRepository,
             CustomerProfileRepository customerProfileRepository,
             FinancialProfileRepository financialProfileRepository,
-            AccountRepository accountRepository,
+            OnboardingAccountRepository accountRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
@@ -81,7 +81,6 @@ public class RegistrationService {
         User user = new User();
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setSsn(normalizeSsn(request.ssn()));
         User savedUser = userRepository.save(user);
 
         CustomerProfile profile = new CustomerProfile();
@@ -179,16 +178,6 @@ public class RegistrationService {
                 "}";
     }
 
-    /**
-     * Removes all non-digit SSN separators.
-     *
-     * @param value SSN value from request
-     * @return normalized digits-only SSN or {@code null}
-     */
-    private String normalizeSsn(String value) {
-        String trimmed = trimToNull(value);
-        return trimmed == null ? null : trimmed.replaceAll("\\D", "");
-    }
 
     /**
      * Removes currency separators from numeric text values.

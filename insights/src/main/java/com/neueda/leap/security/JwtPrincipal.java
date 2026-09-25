@@ -10,6 +10,11 @@ import java.util.UUID;
  *
  * @param userId the authenticated user's unique identifier, from the token's subject claim
  * @param email the authenticated user's email address, as embedded in the token
+ * @param role the authenticated user's role, as embedded in the token's {@code user_role} claim
  */
-public record JwtPrincipal(UUID userId, String email) {
+public record JwtPrincipal(UUID userId, String email, String role) {
+
+	public JwtPrincipal(UUID userId, String email) {
+		this(userId, email, "TRADER");
+	}
 }

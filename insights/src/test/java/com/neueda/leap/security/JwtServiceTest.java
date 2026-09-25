@@ -2,7 +2,6 @@ package com.neueda.leap.security;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,6 +23,7 @@ class JwtServiceTest {
         assertTrue(principal.isPresent());
         assertEquals(userId, principal.get().userId());
         assertEquals("julia@example.com", principal.get().email());
+        assertEquals("TRADER", principal.get().role());
     }
 
     @Test

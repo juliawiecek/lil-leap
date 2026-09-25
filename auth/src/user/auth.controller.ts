@@ -69,8 +69,9 @@ export class AuthController {
   @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email and a wrong password.' })
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await this.userService.login(request);
+
     const traderLevel = await this.tierService.findTraderLevel(user.userId);
-    const accessToken = this.jwtService.issueToken(user.userId, user.email, traderLevel);
+    const accessToken = this.jwtService.issueToken(user.userId, user.email, traderLevel, user.userRole);
     const refreshToken = await this.refreshTokenService.issue(user);
 
     return new LoginResponseDto(accessToken, refreshToken, UserResponseDto.from(user));
@@ -88,9 +89,10 @@ export class AuthController {
   @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_REFRESH_TOKEN: unknown, revoked, reused or idle-expired token.' })
   async refresh(@Body() request: RefreshRequestDto): Promise<RefreshResponseDto> {
     const rotation = await this.refreshTokenService.rotate(request.refreshToken);
+
     // Re-read rather than copied from the old token, so a tier change shows up on the next refresh.
     const traderLevel = await this.tierService.findTraderLevel(rotation.user.userId);
-    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, traderLevel);
+    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, traderLevel, rotation.user.userRole);
 
     return new RefreshResponseDto(accessToken, rotation.newRawRefreshToken);
   }

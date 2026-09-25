@@ -6,7 +6,10 @@ import { InvalidAccessTokenException } from '../user/exceptions/invalid-access-t
 
 const EMAIL_CLAIM = 'email';
 const CLIENT_ID_CLAIM = 'client_id';
+
+const ROLE_CLAIM = 'user_role';
 const TRADER_LEVEL_CLAIM = 'trader_level';
+
 
 /**
  * Issues JWT access tokens. NextTrade backend and Insights backend verify
@@ -24,7 +27,8 @@ export class JwtService {
     if (!secret && process.env.NODE_ENV === 'production') {
       throw new Error('APP_JWT_SECRET must be set in production; refusing to sign tokens with the dev fallback secret.');
     }
-    this.secret = secret ?? 'dev-only-insecure-secret-change-me-before-deploying';
+    this.secret = secret ?? 'nexttrade-shared-dev-secret-32bytes-min';
+    this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
     // Never outlive the inactivity window: downstream services verify access tokens
     // statelessly, so an idle user's token must expire no later than their session.
     const inactivityMinutes = sessionInactivityMinutes();
@@ -33,8 +37,8 @@ export class JwtService {
   }
 
   /** Issues a new signed access token for the given user. Users without an account (analysts) get no trader_level claim. */
-  issueToken(userId: string, email: string, traderLevel?: TraderLevel | null): string {
-    const claims: Record<string, string> = { [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId };
+  issueToken(userId: string, email: string, traderLevel?: TraderLevel | null, role = 'TRADER'): string {
+    const claims: Record<string, string> = { [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId, [ROLE_CLAIM]: role };
     if (traderLevel) {
       claims[TRADER_LEVEL_CLAIM] = traderLevel;
     }

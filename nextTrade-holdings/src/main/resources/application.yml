@@ -1,9 +1,9 @@
-# NextTrade Spring Boot Application Configuration
+# NextTrade Holdings Service Configuration
 # Database and security settings are externalized via environment variables
 
 spring:
   application:
-    name: nexttrade-backend
+    name: nexttrade-holdings
 
   mvc:
     log-request-details: false
@@ -11,7 +11,7 @@ spring:
   datasource:
     # PostgreSQL JDBC connection
     # URL format: jdbc:postgresql://[host]:[port]/[database]
-    # Development datasource defaults.
+    # Local development defaults
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}
     password: ${DB_APP_PASSWORD:my_app_password}
@@ -52,19 +52,7 @@ logging:
     # Database error details can include rejected row values (including password hashes).
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
 
-# NextTrade custom application configuration
-# Externalized security and session settings
-nexttrade:
-  security:
-    # SSN encryption key (pgcrypto symmetric encryption)
-    # IMPORTANT: Never log or print this value
-    # Must be configured in environment: NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY
-    ssn-encryption-key: ${SSN_ENCRYPTION_KEY:replace_me}
-  
-  session:
-    # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
-    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
-
+# JWT Configuration
 app:
   jwt:
     secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
@@ -83,3 +71,4 @@ server:
     include-exception: false
   servlet:
     context-path: /api/v1
+

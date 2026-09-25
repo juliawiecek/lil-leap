@@ -36,6 +36,11 @@ public class JwtServiceImpl implements JwtService {
     private static final String EMAIL_CLAIM = "email";
 
     /**
+     * Claim name carrying the authenticated user's role.
+     */
+    private static final String ROLE_CLAIM = "user_role";
+
+    /**
      * Key used to sign and verify tokens, derived from the configured secret.
      */
     private final SecretKey key;
@@ -62,7 +67,7 @@ public class JwtServiceImpl implements JwtService {
      * @param clientId identifier for the client application embedded in issued tokens
      */
     public JwtServiceImpl(
-            @Value("${app.jwt.secret:dev-only-insecure-secret-change-me-before-deploying}") String secret,
+            @Value("${app.jwt.secret:nexttrade-shared-dev-secret-32bytes-min}") String secret,
             @Value("${app.jwt.expiration-minutes:60}") long expirationMinutes,
             @Value("${app.jwt.client-id:nexttrade-web}") String clientId
     ) {
@@ -80,12 +85,25 @@ public class JwtServiceImpl implements JwtService {
      */
     @Override
     public String issueToken(UUID userId, String email) {
+        return issueToken(userId, email, "TRADER");
+    }
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @param role the authenticated user's role
+     * @return a signed, compact JWT string
+     */
+    public String issueToken(UUID userId, String email, String role) {
         Instant now = Instant.now();
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim(EMAIL_CLAIM, email)
                 .claim(CLIENT_ID_CLAIM, clientId)
+                .claim(ROLE_CLAIM, role)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
@@ -112,8 +130,9 @@ public class JwtServiceImpl implements JwtService {
 
             UUID userId = UUID.fromString(claims.getSubject());
             String email = claims.get(EMAIL_CLAIM, String.class);
+            String role = claims.get(ROLE_CLAIM, String.class);
 
-            return Optional.of(new JwtPrincipal(userId, email));
+            return Optional.of(new JwtPrincipal(userId, email, role == null || role.isBlank() ? "TRADER" : role));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

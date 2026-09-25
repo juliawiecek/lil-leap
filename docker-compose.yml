@@ -14,9 +14,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
-      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
-      # The Java services need at least 32 bytes.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
     ports:
       - "8082:8080"
 
@@ -35,9 +34,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
-      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
-      # The Java services need at least 32 bytes.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
     ports:
       - "8083:8080"
 
@@ -56,9 +54,8 @@ services:
       # and runs migrations.
       SPRING_DATASOURCE_USERNAME: app_user
       SPRING_DATASOURCE_PASSWORD: my_app_password
-      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
-      # The Java services need at least 32 bytes.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
+      # JWT secret shared with auth service for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
     ports:
       - "8081:8080"
 
@@ -72,13 +69,14 @@ services:
       db:
         condition: service_healthy
     environment:
+      # JWT secret shared with all backend services for token validation
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
       DB_HOST: db
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: my_app_password
       # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
       # The Java services need at least 32 bytes.
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-dev-only-insecure-secret-change-me-before-deploying}
-      # Must match the key insights uses, since both read the encrypted SSN column.
+
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
       # BR-03: sessions end after this many idle minutes; access tokens never last longer.
       SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
