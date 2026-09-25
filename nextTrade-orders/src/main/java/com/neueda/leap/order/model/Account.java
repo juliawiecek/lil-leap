@@ -62,9 +62,25 @@ public class Account {
     private Instant updatedAt;
 
     // Constructors
+    /**
+     * Creates an empty entity for JPA hydration or application initialization.
+     */
     public Account() {
     }
 
+    /**
+     * Creates a {@code Account} with the supplied initial values.
+     *
+     * @param accountId persistent account identifier
+     * @param userId persistent user identifier
+     * @param accountNumber display account number
+     * @param accountName display account name
+     * @param accountType account ownership type
+     * @param accountStatus account lifecycle status
+     * @param traderLevel assigned trader tier
+     * @param minBalanceRequirement minimum cash balance required for the trader tier
+     * @param executionBufferPercent account execution tolerance percentage
+     */
     public Account(UUID accountId, UUID userId, String accountNumber, String accountName, 
                    String accountType, String accountStatus, String traderLevel,
                    BigDecimal minBalanceRequirement, BigDecimal executionBufferPercent) {
@@ -83,114 +99,254 @@ public class Account {
     }
 
     // Getters and Setters
+    /**
+     * Returns persistent account identifier.
+     *
+     * @return persistent account identifier
+     */
     public UUID getAccountId() {
         return accountId;
     }
 
+    /**
+     * Sets persistent account identifier.
+     *
+     * @param accountId persistent account identifier
+     */
     public void setAccountId(UUID accountId) {
         this.accountId = accountId;
     }
 
+    /**
+     * Returns persistent user identifier.
+     *
+     * @return persistent user identifier
+     */
     public UUID getUserId() {
         return userId;
     }
 
+    /**
+     * Sets persistent user identifier.
+     *
+     * @param userId persistent user identifier
+     */
     public void setUserId(UUID userId) {
         this.userId = userId;
     }
 
+    /**
+     * Returns display account number.
+     *
+     * @return display account number
+     */
     public String getAccountNumber() {
         return accountNumber;
     }
 
+    /**
+     * Sets display account number.
+     *
+     * @param accountNumber display account number
+     */
     public void setAccountNumber(String accountNumber) {
         this.accountNumber = accountNumber;
     }
 
+    /**
+     * Returns display account name.
+     *
+     * @return display account name
+     */
     public String getAccountName() {
         return accountName;
     }
 
+    /**
+     * Sets display account name.
+     *
+     * @param accountName display account name
+     */
     public void setAccountName(String accountName) {
         this.accountName = accountName;
     }
 
+    /**
+     * Returns account ownership type.
+     *
+     * @return account ownership type
+     */
     public String getAccountType() {
         return accountType;
     }
 
+    /**
+     * Sets account ownership type.
+     *
+     * @param accountType account ownership type
+     */
     public void setAccountType(String accountType) {
         this.accountType = accountType;
     }
 
+    /**
+     * Returns account lifecycle status.
+     *
+     * @return account lifecycle status
+     */
     public String getAccountStatus() {
         return accountStatus;
     }
 
+    /**
+     * Sets account lifecycle status.
+     *
+     * @param accountStatus account lifecycle status
+     */
     public void setAccountStatus(String accountStatus) {
         this.accountStatus = accountStatus;
     }
 
+    /**
+     * Returns assigned trader tier.
+     *
+     * @return assigned trader tier
+     */
     public String getTraderLevel() {
         return traderLevel;
     }
 
+    /**
+     * Sets assigned trader tier.
+     *
+     * @param traderLevel assigned trader tier
+     */
     public void setTraderLevel(String traderLevel) {
         this.traderLevel = traderLevel;
     }
 
+    /**
+     * Returns minimum cash balance required for the trader tier.
+     *
+     * @return minimum cash balance required for the trader tier
+     */
     public BigDecimal getMinBalanceRequirement() {
         return minBalanceRequirement;
     }
 
+    /**
+     * Sets minimum cash balance required for the trader tier.
+     *
+     * @param minBalanceRequirement minimum cash balance required for the trader tier
+     */
     public void setMinBalanceRequirement(BigDecimal minBalanceRequirement) {
         this.minBalanceRequirement = minBalanceRequirement;
     }
 
+    /**
+     * Returns account execution tolerance percentage.
+     *
+     * @return account execution tolerance percentage
+     */
     public BigDecimal getExecutionBufferPercent() {
         return executionBufferPercent;
     }
 
+    /**
+     * Sets account execution tolerance percentage.
+     *
+     * @param executionBufferPercent account execution tolerance percentage
+     */
     public void setExecutionBufferPercent(BigDecimal executionBufferPercent) {
         this.executionBufferPercent = executionBufferPercent;
     }
 
+    /**
+     * Returns margin approved.
+     *
+     * @return margin approved
+     */
     public Boolean getMarginApproved() {
         return marginApproved;
     }
 
+    /**
+     * Sets margin approved.
+     *
+     * @param marginApproved margin approved
+     */
     public void setMarginApproved(Boolean marginApproved) {
         this.marginApproved = marginApproved;
     }
 
+    /**
+     * Returns options approved.
+     *
+     * @return options approved
+     */
     public Boolean getOptionsApproved() {
         return optionsApproved;
     }
 
+    /**
+     * Sets options approved.
+     *
+     * @param optionsApproved options approved
+     */
     public void setOptionsApproved(Boolean optionsApproved) {
         this.optionsApproved = optionsApproved;
     }
 
+    /**
+     * Returns whether trading is enabled for the account.
+     *
+     * @return whether trading is enabled for the account
+     */
     public Boolean getTradingEnabled() {
         return tradingEnabled;
     }
 
+    /**
+     * Sets whether trading is enabled for the account.
+     *
+     * @param tradingEnabled whether trading is enabled for the account
+     */
     public void setTradingEnabled(Boolean tradingEnabled) {
         this.tradingEnabled = tradingEnabled;
     }
 
+    /**
+     * Returns row creation timestamp.
+     *
+     * @return row creation timestamp
+     */
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    /**
+     * Sets row creation timestamp.
+     *
+     * @param createdAt row creation timestamp
+     */
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
+    /**
+     * Returns last update timestamp.
+     *
+     * @return last update timestamp
+     */
     public Instant getUpdatedAt() {
         return updatedAt;
     }
 
+    /**
+     * Sets last update timestamp.
+     *
+     * @param updatedAt last update timestamp
+     */
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }

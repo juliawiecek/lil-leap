@@ -26,6 +26,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Creates the HTTP security configuration. */
+    public SecurityConfig() {
+    }
+
     /**
      * Creates and returns a delegating password encoder.
      *

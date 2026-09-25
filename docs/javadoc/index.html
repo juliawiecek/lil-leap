@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NextTrade Java API documentation</title>
+  <style>
+    body { font: 17px/1.6 system-ui, sans-serif; max-width: 850px; margin: 4rem auto; padding: 0 1.5rem; color: #172b40; background: #f8fafc; }
+    h1 { line-height: 1.2; }
+    a { color: #075a9c; }
+    li { margin: 1rem 0; }
+    code { background: #e8eef4; padding: .15rem .35rem; border-radius: 4px; }
+    aside { border-left: 4px solid #b56a13; padding: .5rem 1rem; background: #fff6e9; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>NextTrade Java API documentation</h1>
+    <p>Generated Javadoc for the production Java APIs. Each service has its own site
+      because the services share some package and class names.</p>
+    <ul>
+      <li><a href="insights/index.html">Insights</a> — portfolio queries, order submission,
+        execution queue and quote policies, instruments, authentication and password reset.</li>
+      <li><a href="nextTrade-orders/index.html">Orders</a> — scheduled execution, quotes,
+        fills, settlement ledger entities and shared onboarding APIs.</li>
+      <li><a href="nextTrade-holdings/index.html">Holdings</a> — shared starter APIs;
+        dedicated holdings business logic is not implemented in this service.</li>
+    </ul>
+    <!-- snapshot-note:start -->
+    <aside>
+      <strong>Insights snapshot:</strong> the working tree currently deletes
+      <code>OrderSufficiencyException.java</code> while production code still references it.
+      The Insights HTML was generated in a temporary source copy with that class from HEAD.
+      Regeneration from the working tree requires resolving that missing type.
+    </aside>
+    <!-- snapshot-note:end -->
+    <p>From the repository root, regenerate with JDK 21, Maven and Python 3:</p>
+    <pre><code>python scripts/generate_javadocs.py</code></pre>
+    <p>The script validates all three services before replacing these HTML snapshots.
+      To browse over HTTP, run <code>python -m http.server 8000 --directory docs/javadoc</code>
+      and open <a href="http://localhost:8000/">localhost:8000</a>.</p>
+  </main>
+</body>
+</html>

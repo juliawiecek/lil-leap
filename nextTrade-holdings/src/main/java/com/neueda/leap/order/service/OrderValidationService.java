@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderValidationService {
 
+    /** Creates the order field validator. */
+    public OrderValidationService() {
+    }
+
     /**
      * Validates the provided order.
      *

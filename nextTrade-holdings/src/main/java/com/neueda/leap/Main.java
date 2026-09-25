@@ -12,6 +12,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class Main {
 
+    /** Creates the Spring Boot application configuration. */
+    public Main() {
+    }
+
     /**
      * Starts the Spring Boot application.
      *

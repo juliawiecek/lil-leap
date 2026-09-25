@@ -17,6 +17,11 @@ public class OrderExecutionScheduler {
     
     private final OrderExecutionService orderExecutionService;
 
+    /**
+     * Creates a {@code OrderExecutionScheduler} with the supplied dependencies.
+     *
+     * @param orderExecutionService service that processes due orders
+     */
     public OrderExecutionScheduler(OrderExecutionService orderExecutionService) {
         this.orderExecutionService = orderExecutionService;
     }

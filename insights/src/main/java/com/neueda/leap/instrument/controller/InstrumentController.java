@@ -21,20 +21,43 @@ import java.util.UUID;
 public class InstrumentController {
     private final InstrumentService service;
 
+    /**
+     * Creates a {@code InstrumentController} with the supplied dependencies.
+     *
+     * @param service instrument query service
+     */
     public InstrumentController(InstrumentService service) {
         this.service = service;
     }
 
+    /**
+     * Lists the instrument catalog, including disabled and nontradable entries.
+     *
+     * @return instruments ordered by market code and symbol
+     */
     @GetMapping
     public List<InstrumentResponse> getInstruments() {
         return service.getInstruments();
     }
 
+    /**
+     * Retrieves one instrument by its persistent identifier.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @return matching instrument
+     * @throws InstrumentNotFoundException if the identifier does not exist
+     */
     @GetMapping("/{instrumentId}")
     public InstrumentResponse getInstrument(@PathVariable UUID instrumentId) {
         return service.getInstrument(instrumentId);
     }
 
+    /**
+     * Maps a missing instrument to an HTTP 404 response.
+     *
+     * @param exception exception
+     * @return response containing INSTRUMENT_NOT_FOUND and the exception message
+     */
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<Map<String, String>> instrumentNotFound(InstrumentNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(

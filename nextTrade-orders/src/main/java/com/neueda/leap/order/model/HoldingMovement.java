@@ -54,9 +54,23 @@ public class HoldingMovement {
     private Instant createdAt;
 
     // Constructors
+    /**
+     * Creates an empty entity for JPA hydration or application initialization.
+     */
     public HoldingMovement() {
     }
 
+    /**
+     * Creates a {@code HoldingMovement} with the supplied initial values.
+     *
+     * @param movementId movement id
+     * @param account account owning the trade
+     * @param instrument instrument being traded
+     * @param fill fill associated with this ledger entry
+     * @param quantityChange signed unit change; positive for buys and negative for sells
+     * @param costBasis cost basis per unit
+     * @param movementType holdings ledger event type
+     */
     public HoldingMovement(UUID movementId, Account account, Instrument instrument, Fill fill,
                           Long quantityChange, BigDecimal costBasis, String movementType) {
         this.movementId = movementId;
@@ -69,66 +83,145 @@ public class HoldingMovement {
     }
 
     // Getters and Setters
+    /**
+     * Returns movement id.
+     *
+     * @return movement id
+     */
     public UUID getMovementId() {
         return movementId;
     }
 
+    /**
+     * Sets movement id.
+     *
+     * @param movementId movement id
+     */
     public void setMovementId(UUID movementId) {
         this.movementId = movementId;
     }
 
+    /**
+     * Returns account owning the trade.
+     *
+     * @return account owning the trade
+     */
     public Account getAccount() {
         return account;
     }
 
+    /**
+     * Sets account owning the trade.
+     *
+     * @param account account owning the trade
+     */
     public void setAccount(Account account) {
         this.account = account;
     }
 
+    /**
+     * Returns the instrument associated with this entity.
+     * @return associated instrument
+     */
     public Instrument getInstrument() {
         return instrument;
     }
 
+    /**
+     * Sets instrument being traded.
+     *
+     * @param instrument instrument being traded
+     */
     public void setInstrument(Instrument instrument) {
         this.instrument = instrument;
     }
 
+    /**
+     * Returns fill associated with this ledger entry.
+     *
+     * @return fill associated with this ledger entry
+     */
     public Fill getFill() {
         return fill;
     }
 
+    /**
+     * Sets fill associated with this ledger entry.
+     *
+     * @param fill fill associated with this ledger entry
+     */
     public void setFill(Fill fill) {
         this.fill = fill;
     }
 
+    /**
+     * Returns signed unit change; positive for buys and negative for sells.
+     *
+     * @return signed unit change; positive for buys and negative for sells
+     */
     public Long getQuantityChange() {
         return quantityChange;
     }
 
+    /**
+     * Sets signed unit change; positive for buys and negative for sells.
+     *
+     * @param quantityChange signed unit change; positive for buys and negative for sells
+     */
     public void setQuantityChange(Long quantityChange) {
         this.quantityChange = quantityChange;
     }
 
+    /**
+     * Returns cost basis per unit.
+     *
+     * @return cost basis per unit
+     */
     public BigDecimal getCostBasis() {
         return costBasis;
     }
 
+    /**
+     * Sets cost basis per unit.
+     *
+     * @param costBasis cost basis per unit
+     */
     public void setCostBasis(BigDecimal costBasis) {
         this.costBasis = costBasis;
     }
 
+    /**
+     * Returns holdings ledger event type.
+     *
+     * @return holdings ledger event type
+     */
     public String getMovementType() {
         return movementType;
     }
 
+    /**
+     * Sets holdings ledger event type.
+     *
+     * @param movementType holdings ledger event type
+     */
     public void setMovementType(String movementType) {
         this.movementType = movementType;
     }
 
+    /**
+     * Returns row creation timestamp.
+     *
+     * @return row creation timestamp
+     */
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    /**
+     * Sets row creation timestamp.
+     *
+     * @param createdAt row creation timestamp
+     */
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }

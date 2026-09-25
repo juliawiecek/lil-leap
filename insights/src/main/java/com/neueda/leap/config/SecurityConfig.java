@@ -31,6 +31,10 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Creates the Spring configuration for this component. */
+    public SecurityConfig() {
+    }
+
     /**
      * Creates and returns a delegating password encoder.
      *
