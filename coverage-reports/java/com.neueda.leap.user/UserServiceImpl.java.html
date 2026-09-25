@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.user</a> &gt; <span class="el_source">UserServiceImpl.java</span></div><h1>UserServiceImpl.java</h1><pre class="source lang-java linenums">package com.neueda.leap.user;
+
+import com.neueda.leap.user.dto.LoginRequest;
+import com.neueda.leap.user.dto.UserResponse;
+import com.neueda.leap.user.entity.User;
+import com.neueda.leap.user.exception.InvalidCredentialsException;
+import com.neueda.leap.user.repository.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Locale;
+import java.util.UUID;
+
+/**
+ * Service responsible for authentication-oriented user operations.
+ *
+ * &lt;p&gt;Registration is handled by the onboarding domain. This service is used
+ * for login credential validation and current-user lookups.&lt;/p&gt;
+ */
+@Service
+public class UserServiceImpl implements UserService {
+
+    /**
+     * Repository used to query and persist user entities.
+     */
+    private final UserRepository userRepository;
+
+    /**
+     * Encoder used to hash user passwords before storage.
+     */
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Creates a new user service with the required dependencies.
+     *
+     * @param userRepository the repository used for user persistence
+     * @param passwordEncoder the password encoder used to hash raw passwords
+     */
+<span class="fc" id="L41">    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {</span>
+<span class="fc" id="L42">        this.userRepository = userRepository;</span>
+<span class="fc" id="L43">        this.passwordEncoder = passwordEncoder;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Authenticates a user using the supplied email address and password.
+     *
+     * &lt;p&gt;The stored password hash is compared against the raw password using the
+     * configured {@link PasswordEncoder}. To avoid revealing whether a given email
+     * is registered, an unknown email and an incorrect password both result in the
+     * same {@link InvalidCredentialsException}.&lt;/p&gt;
+     *
+     * @param request the login request containing email and raw password
+     * @return a {@link UserResponse} representing the authenticated user
+     * @throws InvalidCredentialsException if no user matches the email, or the password is incorrect
+     */
+    @Override
+    public UserResponse login(LoginRequest request) {
+
+<span class="fc" id="L61">        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);</span>
+
+<span class="fc" id="L63">        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)</span>
+<span class="fc" id="L64">                .orElseThrow(() -&gt; new InvalidCredentialsException(&quot;Invalid email or password.&quot;));</span>
+
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {</span>
+<span class="fc" id="L67">            throw new InvalidCredentialsException(&quot;Invalid email or password.&quot;);</span>
+        }
+
+<span class="fc" id="L70">        return UserResponse.from(user);</span>
+    }
+
+    /**
+     * Looks up a user by their unique identifier, for use by authenticated,
+     * token-identified callers (e.g. a &quot;current user&quot; endpoint).
+     *
+     * &lt;p&gt;A missing user is reported as an HTTP 401 rather than a 404: it means
+     * the token's subject no longer corresponds to a real account (for example,
+     * the account was deleted after the token was issued), which is an
+     * authentication failure from the caller's perspective.&lt;/p&gt;
+     *
+     * @param id the user's unique identifier, as extracted from a validated JWT
+     * @return a {@link UserResponse} representing the user
+     * @throws ResponseStatusException with status 401 if no user has the given id
+     */
+    @Override
+    public UserResponse getById(UUID id) {
+<span class="fc" id="L88">        User user = userRepository.findById(id)</span>
+<span class="fc" id="L89">                .orElseThrow(() -&gt; new ResponseStatusException(</span>
+                        HttpStatus.UNAUTHORIZED, &quot;Invalid or expired token.&quot;));
+
+<span class="fc" id="L92">        return UserResponse.from(user);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

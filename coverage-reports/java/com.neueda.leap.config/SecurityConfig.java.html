@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.config</a> &gt; <span class="el_source">SecurityConfig.java</span></div><h1>SecurityConfig.java</h1><pre class="source lang-java linenums">package com.neueda.leap.config;
+
+import com.neueda.leap.security.JwtAuthenticationFilter;
+import com.neueda.leap.security.JwtService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManagers;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
+/**
+ * Configuration class for application security-related beans.
+ *
+ * &lt;p&gt;Provides the password encoder used to securely hash user passwords,
+ * and the HTTP security filter chain that enforces stateless JWT-based
+ * authentication on every route except registration and login.&lt;/p&gt;
+ */
+@Configuration
+<span class="fc" id="L30">public class SecurityConfig {</span>
+
+    /**
+     * Creates and returns a delegating password encoder.
+     *
+     * &lt;p&gt;The delegating password encoder supports multiple encoding formats
+     * and uses a default secure encoding algorithm.&lt;/p&gt;
+     *
+     * @return a configured {@link PasswordEncoder} instance
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+<span class="fc" id="L42">        return PasswordEncoderFactories.createDelegatingPasswordEncoder();</span>
+    }
+
+    /**
+     * Configures the HTTP security filter chain.
+     *
+     * &lt;p&gt;Sessions are stateless (auth state lives entirely in the JWT), CSRF
+     * protection is disabled since there are no cookie-based sessions to
+     * protect, registration and login are open to anonymous callers, and the
+     * {@link JwtAuthenticationFilter} runs ahead of Spring's own username/password
+     * filter so a valid bearer token is recognized before any other authentication
+     * mechanism is considered.&lt;/p&gt;
+     *
+     * &lt;p&gt;The authentication entry point is set explicitly to always return 401:
+     * without it, Spring Security's default for an app with no login form or
+     * HTTP Basic configured is a 403, which is the wrong signal for a missing
+     * or absent bearer token on a token-only API (403 means &quot;authenticated but
+     * not allowed&quot;; 401 means &quot;not authenticated at all&quot;, which is what a
+     * missing token actually is).&lt;/p&gt;
+     *
+     * @param http the {@link HttpSecurity} builder to configure
+     * @param jwtService the service used to validate incoming bearer tokens
+     * @return the configured {@link SecurityFilterChain}
+     * @throws Exception if the security configuration cannot be built
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
+<span class="fc" id="L69">        http</span>
+<span class="fc" id="L70">                .csrf(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L71">                .formLogin(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L72">                .httpBasic(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L73">                .logout(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L74">                .requestCache(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L75">                .headers(headers -&gt; headers</span>
+<span class="fc" id="L76">                        .httpStrictTransportSecurity(hsts -&gt; hsts.maxAgeInSeconds(31536000).includeSubDomains(true))</span>
+<span class="fc" id="L77">                        .frameOptions(frame -&gt; frame.deny())</span>
+<span class="fc" id="L78">                        .contentSecurityPolicy(csp -&gt; csp.policyDirectives(&quot;default-src 'none'; frame-ancestors 'none'; base-uri 'none'&quot;))</span>
+<span class="fc" id="L79">                        .referrerPolicy(referrer -&gt; referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))</span>
+<span class="fc" id="L80">                        .permissionsPolicy(permissions -&gt; permissions.policy(&quot;camera=(), microphone=(), geolocation=()&quot;)))</span>
+<span class="fc" id="L81">                .sessionManagement(session -&gt; session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L82">                .authorizeHttpRequests(auth -&gt; auth</span>
+<span class="fc" id="L83">                        .requestMatchers(</span>
+                    &quot;/users&quot;,
+                                &quot;/auth/login&quot;,
+                                &quot;/auth/password-reset/**&quot;
+<span class="fc" id="L87">                        ).permitAll()</span>
+<span class="fc" id="L88">                        .requestMatchers(HttpMethod.POST, &quot;/users&quot;).permitAll()</span>
+                        // These collections accept no caller-selected scope. Identity comes from JWT.
+<span class="fc" id="L90">                        .requestMatchers(HttpMethod.GET, &quot;/holdings&quot;, &quot;/cash&quot;, &quot;/orders&quot;)</span>
+<span class="fc" id="L91">                        .access(AuthorizationManagers.allOf(</span>
+<span class="fc" id="L92">                                AuthenticatedAuthorizationManager.authenticated(),</span>
+<span class="fc" id="L93">                                (authentication, context) -&gt; new AuthorizationDecision(</span>
+<span class="fc" id="L94">                                        context.getRequest().getParameterMap().isEmpty())))</span>
+                        // Submission authorizes the body account against the JWT in the service.
+<span class="fc" id="L96">                        .requestMatchers(HttpMethod.POST, &quot;/orders&quot;)</span>
+<span class="fc" id="L97">                        .access(AuthorizationManagers.allOf(</span>
+<span class="fc" id="L98">                                AuthenticatedAuthorizationManager.authenticated(),</span>
+<span class="fc" id="L99">                                (authentication, context) -&gt; new AuthorizationDecision(</span>
+<span class="fc" id="L100">                                        context.getRequest().getParameterMap().isEmpty())))</span>
+                        // Other financial writes and object-ID routes are not implemented yet.
+<span class="fc" id="L102">                        .requestMatchers(&quot;/holdings&quot;, &quot;/holdings/**&quot;, &quot;/cash&quot;, &quot;/cash/**&quot;, &quot;/orders&quot;, &quot;/orders/**&quot;)</span>
+<span class="fc" id="L103">                        .denyAll()</span>
+<span class="fc" id="L104">                        .anyRequest().authenticated())</span>
+<span class="fc" id="L105">                .exceptionHandling(exceptionHandling -&gt; exceptionHandling</span>
+<span class="fc" id="L106">                        .accessDeniedHandler((request, response, exception) -&gt; {</span>
+<span class="fc" id="L107">                            response.setStatus(HttpStatus.FORBIDDEN.value());</span>
+<span class="fc" id="L108">                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);</span>
+<span class="fc" id="L109">                            response.getWriter().write(</span>
+                                    &quot;{\&quot;error\&quot;:\&quot;ACCESS_DENIED\&quot;,\&quot;message\&quot;:\&quot;Access is denied.\&quot;}&quot;);
+<span class="fc" id="L111">                        })</span>
+<span class="fc" id="L112">                        .authenticationEntryPoint(</span>
+                        (request, response, authException) -&gt; {
+<span class="fc" id="L114">                            response.setStatus(HttpStatus.UNAUTHORIZED.value());</span>
+<span class="fc" id="L115">                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);</span>
+<span class="fc" id="L116">                            response.getWriter().write(</span>
+                                    &quot;{\&quot;error\&quot;:\&quot;UNAUTHENTICATED\&quot;,\&quot;message\&quot;:\&quot;Authentication is required.\&quot;}&quot;);
+<span class="fc" id="L118">                        }))</span>
+<span class="fc" id="L119">                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);</span>
+
+<span class="fc" id="L121">        return http.build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

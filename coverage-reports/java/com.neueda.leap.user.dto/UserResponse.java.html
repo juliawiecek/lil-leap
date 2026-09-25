@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.user.dto</a> &gt; <span class="el_source">UserResponse.java</span></div><h1>UserResponse.java</h1><pre class="source lang-java linenums">package com.neueda.leap.user.dto;
+
+import com.neueda.leap.user.entity.User;
+
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * Authentication-focused user payload returned by auth and /me endpoints.
+ *
+ * @param id unique user identifier
+ * @param firstName optional first name (not stored on auth user entity)
+ * @param lastName optional last name (not stored on auth user entity)
+ * @param email user email
+ * @param phone optional phone number (not stored on auth user entity)
+ * @param emailVerified email verification flag
+ * @param createdAt creation timestamp
+ * @param updatedAt last update timestamp
+ */
+<span class="fc" id="L20">public record UserResponse(</span>
+        UUID id,
+        String firstName,
+        String lastName,
+        String email,
+        String phone,
+        boolean emailVerified,
+        Instant createdAt,
+        Instant updatedAt
+) {
+
+    /**
+     * Builds a response from the authentication user entity.
+     *
+     * &lt;p&gt;Identity/contact details live in onboarding profile tables and are not
+     * available on the auth entity, so those fields are returned as {@code null}.
+     * Email verification is not yet modeled on the auth entity and defaults to false.&lt;/p&gt;
+     *
+     * @param user persisted auth user
+     * @return response payload for auth endpoints
+     */
+    public static UserResponse from(User user) {
+<span class="fc" id="L42">        return new UserResponse(</span>
+<span class="fc" id="L43">                user.getUserId(),</span>
+                null,
+                null,
+<span class="fc" id="L46">                user.getEmail(),</span>
+                null,
+                false,
+<span class="fc" id="L49">                user.getCreatedAt(),</span>
+<span class="fc" id="L50">                user.getUpdatedAt()</span>
+        );
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
