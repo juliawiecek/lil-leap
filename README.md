@@ -18,131 +18,102 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 ```text
 lil-leap/
-|- auth/                   # NestJS Identity Service (registration, login, refresh tokens)
-|- nextTrade-orders/       # Spring Boot: order & trade flow (Order Service)
-|- nextTrade-holdings/     # Spring Boot: holdings & account flow (Holdings Service)
-|- insights/               # Spring Boot: reporting service, currently also serving portfolio,
-|                          #   order submission, and password-reset endpoints (see Architecture below)
-|- frontend/               # Angular app for NextTrade (trading UI)
-|- insights-frontend/      # Angular app for Insights (reporting UI)
-|- db/                     # PostgreSQL schema, role/bootstrap scripts, seed data
-|- data-pipeline/          # Python synthetic quote generator + ingestion service
-|- docs/                   # Architecture notes and sprint planning docs
-|- docker-compose.yml      # Local container orchestration for all services
-|- Jenkinsfile             # CI pipeline (compose validation, tests, coverage, image build)
-`- README.md
+|- auth/                 # NestJS Identity Service: register, login, refresh/logout,
+|                        #   server-assigned trader tier, OpenAPI spec (openapi.json)
+|- nextTrade-orders/     # Spring Boot: fill-or-reject order execution engine
+|- nextTrade-holdings/   # Spring Boot: holdings service (still the shared starter codebase)
+|- insights/             # Spring Boot: portfolio, order submission, instruments,
+|                        #   market data, password reset
+|- frontend/             # Angular: NextTrade trading app (nginx, :4200)
+|- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
+|- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
+|- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
+|- docs/                 # architecture/ (ADRs) and stories/
+|- InitialSetup/         # Jenkins setup guide
+|- docker-compose.yml    # Runs the whole stack locally
+|- Jenkinsfile           # CI: compose validation, tests, coverage, image build
+|- env.example           # Environment variables to copy into .env
+`- RUN_*.md, README_*.md # Run notes for individual tickets
 ```
 
 ## Architecture
 
-### Current State
+```mermaid
+flowchart LR
+    browser([Browser])
 
-```text
-Web Applications (Angular)
-  frontend/ (Client App)              insights-frontend/ (Reporting App)
-        |                                          |
-        | HTTP (see note below)                    | HTTP
-        v                                          v
-Backend Services (Spring Boot)
-  nextTrade-orders/    nextTrade-holdings/    insights/
-  onboarding, auth,    identical to orders    onboarding, auth, password reset,
-  order validation     today, not yet split   portfolio queries, order submission,
-                        into holdings logic    instrument lookups
-        |                     |                       |
-        +---------------------+---- JDBC -------------+
-                                v
-                       PostgreSQL Database
-              (users, accounts, holdings, orders, instruments, ...)
+    subgraph web["Angular apps behind nginx"]
+        fe["frontend<br/>NextTrade · :4200"]
+        ife["insights-frontend<br/>Insights · :4201"]
+    end
 
-Identity Service (auth/, NestJS)
-  registration / login / refresh-token rotation, reachable independently
-  on port 3000, sharing the same PostgreSQL database as the services above.
+    subgraph services["Services"]
+        auth["auth<br/>NestJS Identity Service"]
+        orders["orders<br/>Spring Boot · :8082"]
+        holdings["holdings<br/>Spring Boot · :8083"]
+        insights["insights<br/>Spring Boot · :8081"]
+        quotes["quote-service<br/>Python / Flask · :8084"]
+    end
+
+    db[("PostgreSQL 16<br/>nexttrade · :5432")]
+    mail["mailpit<br/>SMTP :1025 · inbox :8025"]
+
+    browser --> fe & ife
+    fe -- "/auth/*, /rules/*" --> auth
+    fe -- "/api/orders/*, /api/*" --> orders
+    fe -- "/api/holdings/*" --> holdings
+    ife -- "/auth/*" --> auth
+    ife -- "/api/*" --> insights
+    auth & orders & holdings & insights & quotes --> db
+    insights -. "password-reset email" .-> mail
 ```
 
-The platform is mid-split, so responsibilities currently overlap:
+Browsers only talk to the two nginx frontends; each proxies API paths to the
+right service on the Docker network, so every call is same-origin (no CORS).
+`auth` has no host port at all. Every service connects to Postgres as the
+restricted `app_user` role; the schema is owned by the admin role.
 
-- `nextTrade-orders/` and `nextTrade-holdings/` are identical Spring Boot
-  services today (same packages: `onboarding`, `user`, `security`, `order`,
-  `config`, `common`) — only the artifact name and compose port differ.
-  Neither has been trimmed down to its namesake responsibility yet.
-- `frontend/` only calls `nextTrade-orders/` (`API_BASE_URL` in
-  `docker-compose.yml`); `nextTrade-holdings/` is built and started by
-  Compose but nothing calls it yet.
-- `insights/` is the intended home for reporting only, but currently also
-  carries the same onboarding/auth/password-reset/portfolio/order-submission
-  endpoints as the other two services, plus a newer `instrument` package for
-  instrument lookups.
+| Service | Tech | Host port | What it does today |
+|---|---|---|---|
+| `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
+| `orders` | Spring Boot 3.3.4 | 8082 | Scheduled fill-or-reject execution of due orders. |
+| `holdings` | Spring Boot 3.3.4 | 8083 | Placeholder: same starter codebase as `orders`, no holdings logic yet. |
+| `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data, password reset (email via mailpit). |
+| `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
+| `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
+| `mailpit` | mailpit | 1025, 8025 | Captures outgoing email in development. |
 
-See each service's own README for its exact current package layout:
-[nextTrade-orders/README.md](nextTrade-orders/README.md),
-[nextTrade-holdings/README.md](nextTrade-holdings/README.md),
-[insights/README.md](insights/README.md).
+The three Spring Boot services still carry the original monolith's
+registration and login endpoints (`/api/v1/users`, `/auth/login`). They're
+unreachable from the browser -- nginx sends `/auth/*` to the NestJS service --
+and are due to be removed.
 
-### Request Flow (Spring Boot services)
+### Authentication Flow
 
-```text
-+----------------------------+         HTTP          +-------------------------------------+
-| Frontend (Angular 22)      | -------------------> | Backend service (Spring Boot 3.3.4)  |
-| - UI + client-side state   |                      | - REST controllers                   |
-| - Login/Register screens   | <------------------- | - Security (JWT filter + authz)      |
-+----------------------------+      JSON responses   | - Services + validation              |
-                                                     +-------------------+-----------------+
-                                                                         |
-                                                                         | JDBC
-                                                                         v
-                                                     +-------------------------------------+
-                                                     | PostgreSQL 16                        |
-                                                     | - db/finalized-schema.sql            |
-                                                     | - app_user restricted privileges      |
-                                                     | - persistent db_data volume           |
-                                                     +-------------------------------------+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as auth (NestJS)
+    participant S as orders / holdings / insights
+
+    B->>A: POST /auth/register (no tokens issued)
+    B->>A: POST /auth/login
+    A-->>B: access token (JWT, 10 min) + refresh token
+    B->>S: API call with Authorization: Bearer <access token>
+    Note over S: verified locally with the shared APP_JWT_SECRET
+    B->>A: POST /auth/refresh (while the user is active)
+    B->>A: POST /auth/logout (revokes the session)
 ```
 
-### Container Topology (Docker Compose)
-
-```text
-Host Machine
-  |-- 3000 -> auth                (built from ./auth)
-  |-- 4200 -> frontend            (built from ./frontend)
-  |-- 4201 -> insights-frontend   (built from ./insights-frontend)
-  |-- 5432 -> db                  (postgres:16-alpine, healthcheck-gated)
-  |-- 8081 -> insights            (built from ./insights)
-  |-- 8082 -> orders              (built from ./nextTrade-orders)
-  |-- 8083 -> holdings            (built from ./nextTrade-holdings)
-  |-- 8084 -> quote-service       (built from ./data-pipeline, override with QUOTE_SERVICE_PORT)
-  `-- 1025/8025 -> mailpit        (axllent/mailpit, SMTP capture + web inbox)
-
-Docker internal network
-  orders, holdings, insights, auth, quote-service --jdbc/psql--> db (nexttrade database, app_user role)
-  frontend --HTTP--> orders            (holdings has no caller yet)
-  insights-frontend --HTTP--> insights
-```
-
-`orders`, `holdings`, `insights`, and `auth` all publish a host port, so all
-four are reachable directly from the host as well as from other containers.
-
-### Authentication Flow (nextTrade-orders / nextTrade-holdings / insights)
-
-```text
-1) Client -> POST /auth/login (email/password)
-2) AuthController -> UserService validates credentials
-3) JwtService issues signed token
-4) Client stores token and sends: Authorization: Bearer <token>
-5) JwtAuthenticationFilter validates token on protected routes
-6) GET /api/v1/users/me returns authenticated user data
-```
-
-The standalone `auth/` Identity Service implements this same flow
-independently (with refresh-token rotation) and is the direction the
-platform is moving in — see the [auth service's class diagram](auth/README.md#class-diagram)
-and [sequence diagram](auth/README.md#flow) for its current registration,
-login, and refresh behavior.
+The access token carries `sub`, `email`, `client_id` and, for traders,
+`trader_level`, which the frontend uses to pick the Novice or Advanced
+dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 
 ## Technology Stack
 
 | Layer          | Technology                              | Notes                                          |
 | -------------- | ---------------------------------------- | ----------------------------------------------- |
-| Backend        | Spring Boot 3.3.4 (Java 21)             | REST APIs, validation, service layer            |
+| Backend        | Spring Boot 3.3.4 (Java 17/21)          | REST APIs, validation, service layer            |
 | Identity Service | NestJS 10 + TypeORM                   | Standalone auth service, shares the Postgres DB |
 | Security       | Spring Security + JJWT / bcryptjs + JWT | Password hashing + Bearer JWT auth              |
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
@@ -150,28 +121,25 @@ login, and refresh behavior.
 | Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
-## Backend API (nextTrade-orders / nextTrade-holdings, current)
+## Backend API
 
-Identical in both services today, since neither has diverged from the
-original monolith yet:
+| Service | Endpoints (as the browser reaches them) |
+|---|---|
+| `auth` | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`; `GET /rules/tier-eligibility`; `GET /health`. Full spec: [auth/openapi.json](auth/openapi.json). |
+| `insights` | Client financials/portfolio, order submission, instrument lookup, password reset under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
+| `orders` | No business endpoints yet; runs the order execution engine on a schedule. |
+| `holdings` | No business endpoints yet. |
 
-- `POST /api/v1/users` - Register user (onboarding flow)
-- `POST /auth/login` - Authenticate and return JWT
-- `GET /api/v1/users/me` - Get current user profile (requires `Authorization: Bearer <token>`)
+The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
+`POST /auth/login` and `GET /api/v1/users/me`; see [Architecture](#architecture).
 
-Primary packages under `nextTrade-orders/src/main/java/com/neueda/leap` and
-`nextTrade-holdings/src/main/java/com/neueda/leap`:
+## API Documentation (Swagger / OpenAPI)
 
-- `onboarding/` - Registration controller/service/DTO/entity layers
-- `user/` - Authentication and authenticated user endpoints
-- `security/` - JWT service and request filter
-- `config/` - Security filter chain and password encoder
-- `order/` - Order model and validation service (no controller yet)
-- `common/` - Cross-cutting exception handling
+- **auth:** [auth/openapi.json](auth/openapi.json) (generated from the code by
+  [auth/src/docs/](auth/src/docs/); open it in [editor.swagger.io](https://editor.swagger.io)).
+  With the stack running, Swagger UI is at `http://localhost:4200/auth/docs`.
 
-`insights/` currently exposes an overlapping set of endpoints plus
-portfolio, order-submission, password-reset, and instrument-lookup routes —
-see [insights/README.md](insights/README.md) for its current package layout.
+The Spring Boot and Python services don't publish OpenAPI specs yet.
 
 ## Database
 
@@ -198,17 +166,17 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines eight services:
+`docker-compose.yml` defines nine services:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
 | `db`                 | `postgres:16-alpine`| `5432`                        | Runs schema/seed scripts once, on an empty volume; has a `pg_isready` healthcheck |
-| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Order service; the only backend `frontend/` currently calls |
-| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service; identical code to `orders` today, no caller yet |
+| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Order execution engine; `frontend` proxies `/api/orders/*` and `/api/*` here |
+| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service (starter code only); `frontend` proxies `/api/holdings/*` here |
 | `insights`           | `./insights`       | `8081` -> `8080`              | Reporting service (see [Architecture](#architecture)) |
-| `auth`               | `./auth`           | `3000`                        | Identity Service                         |
-| `frontend`           | `./frontend`       | `4200` -> `80`                | Talks to `orders` over the Docker network |
-| `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | Talks to `insights` over the Docker network |
+| `auth`               | `./auth`           | none (`3000` internal)        | Identity Service; reached only via the frontends' nginx (`/auth/*`, `/rules/*`) |
+| `frontend`           | `./frontend`       | `4200` -> `80`                | nginx: serves the NextTrade app, proxies to `auth`, `orders`, `holdings` |
+| `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | nginx: serves the Insights app, proxies to `auth`, `insights` |
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `mailpit`            | `axllent/mailpit`  | `1025` (SMTP), `8025` (web UI)| Captures password-reset emails in dev    |
 
@@ -372,8 +340,11 @@ pytest
 | `nextTrade-orders`    | `cd nextTrade-orders && mvn clean verify` | `nextTrade-orders/target/site/jacoco/index.html`    |
 | `nextTrade-holdings`  | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
 | `insights`            | see [insights/JACOCO_COVERAGE.md](insights/JACOCO_COVERAGE.md) | `insights/target/site/jacoco/index.html` |
-| `auth`                | `cd auth && npm run test:cov`             | `auth/coverage/lcov-report/index.html`              |
+| `auth`                | see [auth/README.md → Code coverage](auth/README.md#code-coverage) | `auth/coverage/lcov-report/index.html` |
 | `data-pipeline`       | see [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) | `data-pipeline/htmlcov/index.html` |
+
+**auth:** 90.2% lines, 79.7% branches (88 unit tests, 24 Sep 2026). Figures and how to
+open the report: [auth/README.md → Code coverage](auth/README.md#code-coverage).
 
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does

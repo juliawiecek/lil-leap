@@ -7,6 +7,7 @@ import { SsnEncryptionService } from '../security/ssn-encryption.service';
 import { UserAlreadyExistsException } from '../user/exceptions/user-already-exists.exception';
 import { RegisterRequestDto } from '../user/dto/register-request.dto';
 import { UserRole } from '../user/user-role.enum';
+import { InsufficientInvestableAssetsException } from './exceptions/insufficient-investable-assets.exception';
 
 /** A date of birth `years` ago today. */
 const yearsAgo = (years: number) => {
@@ -43,7 +44,6 @@ const trader = (overrides: Partial<RegisterRequestDto> = {}): RegisterRequestDto
     brokerFirmName: ' Firm ',
     accountName: ' Main ',
     accountType: 'INDIVIDUAL_CASH',
-    traderLevel: 'NOVICE',
     ...overrides,
   }) as unknown as RegisterRequestDto;
 
@@ -122,7 +122,8 @@ describe('RegistrationService', () => {
       regulatoryDisclosures: { brokerAffiliation: true, brokerFirmName: 'Firm', controlPerson: false, controlCompanyName: '' },
       beneficialOwnerInfo: { otherBeneficialOwner: false, beneficialOwnerName: '' },
     });
-    expect(savedAs('Account')).toMatchObject({ accountName: 'Main', minBalanceRequirement: '5000.00' });
+    // $25k-100k floor + 10% of 50,000 income = 30,000 capacity -> NOVICE
+    expect(savedAs('Account')).toMatchObject({ accountName: 'Main', traderLevel: 'NOVICE', minBalanceRequirement: '5000.00' });
     expect(savedAs('Account').accountNumber).toMatch(/^NT[0-9A-F]{12}$/);
   });
 
@@ -132,10 +133,24 @@ describe('RegistrationService', () => {
     expect(savedAs('CustomerProfile').address).toBe('1 Main St, 4B, Springfield, IL, 62701');
   });
 
-  it('sets the ADVANCED minimum balance', async () => {
-    await service.register(trader({ traderLevel: 'ADVANCED' } as Partial<RegisterRequestDto>));
+  it('assigns ADVANCED and its minimum balance from declared finances', async () => {
+    await service.register(trader({ netWorthBracket: '$100k-500k', annualIncome: undefined } as Partial<RegisterRequestDto>));
 
-    expect(savedAs('Account').minBalanceRequirement).toBe('100000.00');
+    expect(savedAs('Account')).toMatchObject({ traderLevel: 'ADVANCED', minBalanceRequirement: '100000.00' });
+  });
+
+  it('ignores a trader_level sent by the client', async () => {
+    await service.register(trader({ traderLevel: 'ADVANCED' } as unknown as Partial<RegisterRequestDto>));
+
+    expect(savedAs('Account').traderLevel).toBe('NOVICE');
+  });
+
+  it('rejects capacity below $5,000 before creating any rows', async () => {
+    const broke = trader({ netWorthBracket: '$0-5k', annualIncome: undefined } as Partial<RegisterRequestDto>);
+
+    await expect(service.register(broke)).rejects.toThrow(InsufficientInvestableAssetsException);
+    expect(saved).toHaveLength(0);
+    expect(ssn.encrypt).not.toHaveBeenCalled();
   });
 
   it('rejects a TRADER under 21', async () => {

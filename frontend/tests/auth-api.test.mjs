@@ -61,6 +61,7 @@ test('maps error codes to fixed messages and never echoes the server message', a
     [{ status: 401, body: { error: 'INVALID_CREDENTIALS', message: 'x' } }, 'Invalid email or password.'],
     [{ status: 409, body: { error: 'USER_ALREADY_EXISTS', message: 'x' } }, /already exists/],
     [{ status: 400, body: { error: 'INVALID_REQUEST', message: 'x' } }, /Some details were not accepted/],
+    [{ status: 422, body: { error: 'INSUFFICIENT_INVESTABLE_ASSETS', message: 'x' } }, /minimum of \$5,000 in investable assets/],
     [{ status: 500, body: { error: 'INTERNAL_ERROR', message: 'password=secret-canary' } }, 'Something went wrong. Please try again.'],
     [{ status: 502, body: undefined }, 'Something went wrong. Please try again.'],
   ];
@@ -96,6 +97,30 @@ test('times the access token from its lifetime, so a skewed device clock does no
 
   const remaining = client.accessTokenExpiresAt - before;
   assert.ok(remaining >= 600_000 && remaining < 605_000, `expected ~10 minutes left, got ${remaining} ms`);
+});
+
+test('reads the server-assigned tier from the access token, and forgets it on logout', async () => {
+  const { fetchImpl } = fakeFetch(
+    { ...loginResponse, body: { ...loginResponse.body, accessToken: tokenWith({ trader_level: 'ADVANCED' }) } },
+    { status: 204 },
+  );
+  const client = new AuthClient(fetchImpl);
+  assert.equal(client.traderLevel, null);
+
+  await client.login('a@example.com', 'pw');
+  assert.equal(client.traderLevel, 'ADVANCED');
+
+  await client.logout();
+  assert.equal(client.traderLevel, null);
+});
+
+test('ignores a missing or unknown trader_level claim', async () => {
+  for (const claims of [{}, { trader_level: 'EXPERT' }]) {
+    const { fetchImpl } = fakeFetch({ ...loginResponse, body: { ...loginResponse.body, accessToken: tokenWith(claims) } });
+    const client = new AuthClient(fetchImpl);
+    await client.login('a@example.com', 'pw');
+    assert.equal(client.traderLevel, null);
+  }
 });
 
 test('refresh swaps in the new token pair', async () => {

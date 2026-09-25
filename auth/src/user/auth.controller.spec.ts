@@ -4,6 +4,7 @@ import { UserService } from './user.service';
 import { RegistrationService } from '../onboarding/registration.service';
 import { JwtService } from '../security/jwt.service';
 import { RefreshTokenService } from '../security/refresh-token.service';
+import { TierService } from '../onboarding/tier.service';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { UserRole } from './user-role.enum';
 
@@ -13,6 +14,7 @@ describe('AuthController', () => {
   let registrationService: jest.Mocked<RegistrationService>;
   let jwtService: jest.Mocked<JwtService>;
   let refreshTokenService: jest.Mocked<RefreshTokenService>;
+  let tierService: jest.Mocked<TierService>;
 
   const user = {
     userId: '11111111-1111-1111-1111-111111111111',
@@ -31,6 +33,7 @@ describe('AuthController', () => {
         { provide: RegistrationService, useValue: { register: jest.fn() } },
         { provide: JwtService, useValue: { issueToken: jest.fn() } },
         { provide: RefreshTokenService, useValue: { issue: jest.fn(), rotate: jest.fn(), revoke: jest.fn() } },
+        { provide: TierService, useValue: { findTraderLevel: jest.fn().mockResolvedValue('ADVANCED') } },
       ],
     }).compile();
 
@@ -39,6 +42,7 @@ describe('AuthController', () => {
     registrationService = module.get(RegistrationService);
     jwtService = module.get(JwtService);
     refreshTokenService = module.get(RefreshTokenService);
+    tierService = module.get(TierService);
   });
 
   it('register returns the created user without any tokens', async () => {
@@ -68,6 +72,24 @@ describe('AuthController', () => {
     expect(result.user.email).toBe(user.email);
   });
 
+  it('login puts the account tier from the accounts table into the access token', async () => {
+    userService.login.mockResolvedValue(user as any);
+
+    await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
+
+    expect(tierService.findTraderLevel).toHaveBeenCalledWith(user.userId);
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED');
+  });
+
+  it('login issues a token without a tier for a user with no account', async () => {
+    userService.login.mockResolvedValue({ ...user, userRole: 'ANALYST' } as any);
+    tierService.findTraderLevel.mockResolvedValue(null);
+
+    await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
+
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, null);
+  });
+
   it('login propagates InvalidCredentialsException for bad credentials', async () => {
     userService.login.mockRejectedValue(new InvalidCredentialsException('Invalid email or password.'));
 
@@ -85,6 +107,7 @@ describe('AuthController', () => {
     expect(refreshTokenService.rotate).toHaveBeenCalledWith('old-raw-token');
     expect(result.accessToken).toBe('new.access.token');
     expect(result.refreshToken).toBe('new-raw-token');
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED');
   });
 
   it('logout revokes the given refresh token', async () => {

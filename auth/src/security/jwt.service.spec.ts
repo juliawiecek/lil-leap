@@ -1,5 +1,7 @@
 import * as jwt from 'jsonwebtoken';
 import { JwtService } from './jwt.service';
+import { TraderLevel } from '../onboarding/enums/trader-level.enum';
+import { InvalidAccessTokenException } from '../user/exceptions/invalid-access-token.exception';
 
 describe('JwtService', () => {
   beforeEach(() => {
@@ -44,5 +46,34 @@ describe('JwtService', () => {
     const token = service.issueToken('11111111-1111-1111-1111-111111111111', 'trader@example.com');
 
     expect(() => jwt.verify(token, 'a-completely-different-secret-000000000')).toThrow();
+  });
+
+  it('adds a trader_level claim when the user has an account (NEXT-152)', () => {
+    const token = new JwtService().issueToken('11111111-1111-1111-1111-111111111111', 'trader@example.com', TraderLevel.ADVANCED);
+
+    expect((jwt.decode(token) as jwt.JwtPayload).trader_level).toBe('ADVANCED');
+  });
+
+  it('omits trader_level for a user without an account', () => {
+    expect((jwt.decode(anyToken()) as jwt.JwtPayload).trader_level).toBeUndefined();
+  });
+
+  describe('verifyToken', () => {
+    const userId = '11111111-1111-1111-1111-111111111111';
+
+    it('returns the subject of a token it issued', () => {
+      const service = new JwtService();
+      expect(service.verifyToken(service.issueToken(userId, 'trader@example.com'))).toBe(userId);
+    });
+
+    it.each([
+      ['a garbage string', () => 'not-a-jwt'],
+      ['a token signed with another secret', () => jwt.sign({}, 'a-completely-different-secret-000000000', { subject: userId })],
+      ['an expired token', () => jwt.sign({}, process.env.APP_JWT_SECRET as string, { subject: userId, expiresIn: -1 })],
+      ['a token without a subject', () => jwt.sign({}, process.env.APP_JWT_SECRET as string)],
+      ['an unsigned token', () => jwt.sign({}, '', { subject: userId, algorithm: 'none' })],
+    ])('rejects %s', (_label, makeToken) => {
+      expect(() => new JwtService().verifyToken(makeToken())).toThrow(InvalidAccessTokenException);
+    });
   });
 });

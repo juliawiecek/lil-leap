@@ -6,29 +6,27 @@
   font-display: swap;
 }
 @font-face {
-  font-family: 'Space Grotesk';
-  src: url('/fonts/space-grotesk.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 300 700;
-  font-display: swap;
-}
-@font-face {
   font-family: 'IBM Plex Mono';
   src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
   font-style: normal;
   font-weight: 500;
   font-display: swap;
 }
-@font-face {
-  font-family: 'IBM Plex Mono';
-  src: url('/fonts/ibm-plex-mono-600.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-}
 :root {
   --font-ui: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --font-display: 'Playfair Display', 'Merriweather', serif;
+  --nt-background: #0c1011;
+  --nt-text: #f1f3f5;
+  --nt-muted: #b1bac8;
+  --nt-green: #7ede8b;
+  --nt-border: #20282c;
+  --nt-panel: linear-gradient(120deg, #101516, #10161770);
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  color-scheme: dark;
 }
-body { font-family: var(--font-ui); }
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0c1011;
+  font-family: var(--font-ui);
+}

@@ -1,166 +1,920 @@
-<div [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
-<div class="market-grid" aria-hidden="true"></div>
-  <div class="ambient-light" aria-hidden="true"></div>
-  <div class="market-tape" aria-hidden="true">
-    <div class="tape-track">
-      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
-      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
-      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
-      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
-      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
-      <span>EUR/USD 1.1062</span><span class="divider">/</span>
-      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
-      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
-      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
-      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
-      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
-      <span>EUR/USD 1.1062</span><span class="divider">/</span>
-    </div>
-  </div>
-  <div class="volume-field" aria-hidden="true">
-    @for (bar of volumeBars(); track $index) {
-      <span
-        class="volume-bar"
-        [class.accent]="bar.accent"
-        [style.--bar-height]="bar.height"
-        [style.--bar-speed]="bar.speed"
-        [style.--bar-delay]="bar.delay"
-      ></span>
-    }
-  </div>
-  <div class="market-scan" aria-hidden="true"></div>
-  <main class="chart-stage" aria-label="Animated stock market chart">
-    <canvas #marketChart id="market-chart" aria-hidden="true"></canvas>
-  </main>
-  <div class="edge-shade" aria-hidden="true"></div>
-
-  @if (pageReady() && !profileOpen()) {
-    <div class="signin-stock-background" aria-hidden="true">
-      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
-        <defs>
-          <linearGradient id="signin-chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#78a85f" stop-opacity="0.18" />
-            <stop offset="100%" stop-color="#78a85f" stop-opacity="0" />
-          </linearGradient>
-          <pattern id="signin-chart-grid" width="80" height="80" patternUnits="userSpaceOnUse">
-            <path d="M80 0H0V80" fill="none" stroke="#a6bd98" stroke-opacity="0.09" />
-          </pattern>
-        </defs>
-        <rect width="1440" height="900" fill="url(#signin-chart-grid)" />
-        <path d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51 V900 H-40Z" fill="url(#signin-chart-fill)" />
-        <path class="signin-stock-line" d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51" />
-      </svg>
-    </div>
-  }
-
-  <div class="transition-beam" aria-hidden="true"></div>
-
-  <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
-    <div class="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+﻿<a class="skip-link" href="#workspace">Skip to content</a>
+<div class="shell" [class.compact]="compact()">
+  <aside class="sidebar" [class.open]="mobileNav()">
+    <a class="brand" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+      ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
-        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
-      </svg>
+        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" /></svg
+      >Next<span>Trade</span></a
+    >
+    <div class="workspace-label">Insights <span>· Internal</span></div>
+    <nav aria-label="Main navigation">
+      @for (item of nav; track item.label) {
+        @if (item.label === 'Overview') {
+          <p class="nav-group">Analytics</p>
+        }
+        @if (item.label === 'Trade Investigation') {
+          <p class="nav-group">Operations</p>
+        }
+        @if (item.label === 'Settings') {
+          <div class="nav-divider"></div>
+        }
+        <button
+          [class.active]="page() === item.label"
+          [attr.aria-current]="page() === item.label ? 'page' : null"
+          (click)="navigate(item.label)"
+        >
+          <app-dashboard-icon [name]="item.icon" /><span>{{ item.label }}</span>
+        </button>
+      }
+    </nav>
+    <div class="sidebar-footer">
+      <span class="environment-dot"></span> Internal workspace
+      <p>Smarter information.<br />Stronger decisions.</p>
+      <small>NextTrade · Internal use</small>
     </div>
-    <div class="brand-copy">
-      <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
-    </div>
-  </div>
-  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
-    <header class="auth-header">
-      <div class="secure-status">Secure connection</div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <button
+        class="menu icon-button"
+        aria-label="Toggle navigation"
+        [attr.aria-expanded]="mobileNav()"
+        (click)="mobileNav.set(!mobileNav())"
+      >
+        <app-dashboard-icon name="orders" />
+      </button>
+      <form class="global-search" (submit)="$event.preventDefault(); search()">
+        <app-dashboard-icon name="search" /><input
+          aria-label="Search clients or trades"
+          placeholder="Search clients, instruments, or order IDs…"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          name="globalQuery"
+        /><button type="submit" aria-label="Run search">↵</button>
+      </form>
+      <div class="top-actions">
+        <button
+          class="icon-button"
+          aria-label="Notifications"
+          (click)="notice.set('No new notifications.')"
+        >
+          <app-dashboard-icon name="bell" />
+        </button>
+        <div class="avatar">{{ role() === 'Analyst' ? 'PS' : 'DC' }}</div>
+        <label class="identity"
+          ><strong>{{ role() === 'Analyst' ? 'Priya Shah' : 'David Chen' }}</strong
+          ><select aria-label="Workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
+            <option value="Analyst">Analyst</option>
+            <option value="Operations">Operations</option>
+          </select></label
+        >
+      </div>
     </header>
-
-    <div class="auth-content">
-      <section class="auth-copy" aria-labelledby="landing-title">
-        <div class="auth-eyebrow">Built for your next move</div>
-        <h1 id="landing-title"><span class="headline-trade">Trade</span> what’s <em>next<span class="headline-period">.</span></em></h1>
-        <p>One focused platform for real-time markets, clear decisions, and every stage of your investing journey.</p>
-
-      </section>
-
-      <section class="auth-panel" aria-labelledby="auth-title">
-        <h2 id="auth-title">{{ authMode() === 'signup' ? 'Create your account' : 'Welcome back' }}</h2>
-        <p class="auth-subtitle" id="auth-subtitle">
-          Your next move starts here.
-        </p>
-
-        <div class="auth-tabs" role="tablist" aria-label="Account access">
-          <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
-          <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
+    <main id="workspace" tabindex="-1" class="content">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">NEXTTRADE / {{ page() | uppercase }}</p>
+          <h1>{{ selectedClient() && page() === 'Clients' ? 'Client Profile' : page() }}</h1>
+          <p class="subtitle">{{ subtitle() }}</p>
         </div>
-
-        <form #authForm novalidate (submit)="onSubmit($event, authForm)">
-          
-<div class="auth-fields">
-          <div class="field-group" [hidden]="authMode() !== 'signup'">
-            <div class="field-row"><label for="full-name">Full name</label></div>
-            <input #fullName id="full-name" name="name" type="text" autocomplete="name" placeholder="Your full name" [required]="authMode() === 'signup'" />
+        <div class="date-tools">
+          <div class="freshness"><span></span>Data as of <b>22 Sep 2026</b></div>
+          <div class="date-range">
+            <app-dashboard-icon name="calendar" /><label
+              ><span class="sr-only">Start date</span
+              ><input
+                type="date"
+                aria-label="Start date"
+                [ngModel]="start()"
+                (ngModelChange)="start.set($event); selectedTrade.set(null)" /></label
+            ><span>—</span
+            ><label
+              ><span class="sr-only">End date</span
+              ><input
+                type="date"
+                aria-label="End date"
+                [ngModel]="end()"
+                (ngModelChange)="end.set($event); selectedTrade.set(null)"
+            /></label>
           </div>
-
-          <div class="field-group">
-            <div class="field-row"><label for="email">Email address</label></div>
-            <input #email id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
-          </div>
-
-          <div class="field-group">
-            <div class="field-row">
-              <label for="password">Password</label>
-              <a href="#" [style.visibility]="authMode() === 'signup' ? 'hidden' : 'visible'" (click)="showPasswordRecovery($event)">Forgot password?</a>
-            </div>
-            <div class="input-wrap">
-              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="authMode() === 'signup' ? 'new-password' : 'current-password'" [attr.minlength]="authMode() === 'signup' ? 12 : null" [attr.aria-describedby]="authMode() === 'signup' && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" required (input)="updatePassword($any($event.target).value)" />
-              <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
-            </div>
-          </div>
-
-          @if (authMode() === 'signup') {
-            <div class="field-group">
-              <div class="field-row"><label for="verify-password">Verify password</label></div>
-              <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" />
-            </div>
-          }
-
-          </div>
-          @if (authMode() === 'signup' && passwordStarted()) {
-            <div class="password-checklist" id="password-requirements" aria-live="polite" aria-atomic="true">
-              <p>Your password needs:</p>
-              <ul>
-                @for (rule of passwordRules; track rule.label) {
-                  <li [class.met]="rule.test(passwordDraft())"><span aria-hidden="true">{{ rule.test(passwordDraft()) ? '✓' : '○' }}</span><span class="sr-only">{{ rule.test(passwordDraft()) ? 'Met: ' : 'Still needed: ' }}</span>{{ rule.label }}</li>
+        </div>
+      </div>
+      @if (dateError()) {
+        <p class="error" role="alert">{{ dateError() }}</p>
+      }
+      @if (notice()) {
+        <div class="notice" role="status">
+          {{ notice() }}<button aria-label="Dismiss message" (click)="notice.set('')">×</button>
+        </div>
+      }
+      @if (page() === 'Overview' || page() === 'Trading Activity' || page() === 'Client Activity') {
+        <div class="filter-bar">
+          <label
+            >Portfolio segment<select [ngModel]="segment()" (ngModelChange)="segment.set($event)">
+              <option value="All">All segments</option>
+              @for (s of segments; track s) {
+                <option>{{ s }}</option>
+              }
+            </select></label
+          >
+          @if (page() !== 'Client Activity') {
+            <label
+              >Instrument class<select [ngModel]="asset()" (ngModelChange)="asset.set($event)">
+                <option value="All">All instruments</option>
+                @for (c of classes; track c) {
+                  <option>{{ c }}</option>
                 }
-                <li [class.met]="!!confirmationDraft() && confirmationDraft() === passwordDraft()"><span aria-hidden="true">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? '✓' : '○' }}</span><span class="sr-only">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? 'Met: ' : 'Still needed: ' }}</span>Passwords match</li>
-              </ul>
-            </div>
+              </select></label
+            ><label
+              >Market<select [ngModel]="market()" (ngModelChange)="market.set($event)">
+                <option value="All">All markets</option>
+                <option>US</option>
+                <option>Global</option>
+              </select></label
+            >
           }
-          <button class="primary-action" type="submit">{{ authMode() === 'signup' ? 'Create account' : 'Continue securely' }}</button>
-          
-          
-          <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
-        </form>
-      </section>
-    </div>
+          <button class="text-button" (click)="reset()">Reset filters</button
+          ><button class="text-button push-right" (click)="definitions.set(!definitions())">
+            Metric definitions <app-dashboard-icon name="info" />
+          </button>
+        </div>
+        @if (definitions()) {
+          <div class="notice">
+            Volume = filled quantity × execution price in USD. Active = at least one fill in the
+            selected period; occasional = earlier fill only; dormant = no recorded fill. New =
+            joined in this period.
+          </div>
+        }
+        <div class="kpi-grid">
+          <article class="kpi">
+            <span class="kpi-icon"
+              ><app-dashboard-icon [name]="page() === 'Client Activity' ? 'users' : 'coins'"
+            /></span>
+            <div>
+              <p>{{ page() === 'Client Activity' ? 'Active clients' : 'Total trading volume' }}</p>
+              <strong>{{
+                page() === 'Client Activity'
+                  ? (totals().active | number)
+                  : compactMoney(totals().volume)
+              }}</strong
+              ><small>{{
+                page() === 'Client Activity'
+                  ? 'Clients with filled orders'
+                  : 'Filled notional · USD'
+              }}</small>
+            </div>
+          </article>
+          <article class="kpi">
+            <span class="kpi-icon"><app-dashboard-icon name="chart" /></span>
+            <div>
+              <p>{{ page() === 'Client Activity' ? 'New clients' : 'Total orders' }}</p>
+              <strong>{{
+                (page() === 'Client Activity' ? newClients() : totals().orders) | number
+              }}</strong
+              ><small>In selected period</small>
+            </div>
+          </article>
+          <article class="kpi">
+            <span class="kpi-icon"><app-dashboard-icon name="users" /></span>
+            <div>
+              <p>{{ page() === 'Client Activity' ? 'Dormant clients' : 'Active clients' }}</p>
+              <strong>{{
+                (page() === 'Client Activity' ? dormant() : totals().active) | number
+              }}</strong
+              ><small>{{
+                page() === 'Client Activity' ? 'No recorded fills' : 'Distinct clients with fills'
+              }}</small>
+            </div>
+          </article>
+          <article class="kpi">
+            <span class="kpi-icon"><app-dashboard-icon name="file" /></span>
+            <div>
+              <p>{{ page() === 'Client Activity' ? 'Total clients' : 'Executed orders' }}</p>
+              <strong>{{
+                (page() === 'Client Activity' ? availableClients().length : totals().fills) | number
+              }}</strong
+              ><small>{{
+                page() === 'Client Activity' ? 'Registered by period end' : 'Filled orders only'
+              }}</small>
+            </div>
+          </article>
+        </div>
+      }
+      @if (page() === 'Overview' || page() === 'Trading Activity') {
+        <div class="chart-grid">
+          <section class="panel trend-panel">
+            <div class="panel-heading">
+              <h2>Trading volume over time</h2>
+              <select
+                aria-label="Chart grouping"
+                [ngModel]="cadence()"
+                (ngModelChange)="cadence.set($event)"
+              >
+                @for (p of ['Daily', 'Weekly', 'Monthly', 'Yearly']; track p) {
+                  <option>{{ p }}</option>
+                }
+              </select>
+            </div>
+            <app-insights-chart [points]="trend()" />
+            <div class="chart-foot">
+              <span class="legend-dot"></span> Filled trading volume
+              <span class="push-right">{{ cadence() }} · USD · UTC</span>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Volume by instrument class</h2>
+              <app-dashboard-icon name="chart" />
+            </div>
+            <div class="donut-layout">
+              <div
+                class="donut"
+                [style.background]="totals().volume ? donut() : 'var(--line)'"
+                role="img"
+                aria-label="Volume split shown in the adjacent legend"
+              >
+                <div>
+                  <strong>{{ compactMoney(totals().volume) }}</strong
+                  ><small>Total volume</small>
+                </div>
+              </div>
+              <div class="legend">
+                @for (m of mix(); track m.label) {
+                  <div>
+                    <i [style.background]="m.color"></i><span>{{ m.label }}</span
+                    ><strong>{{ percent(m.value, totals().volume) | number: '1.0-1' }}%</strong>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="two-columns">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Most active instruments</h2>
+              <button
+                class="text-button"
+                (click)="
+                  page() === 'Overview'
+                    ? navigate('Trading Activity')
+                    : exportReport('Trading Activity Report')
+                "
+              >
+                {{ page() === 'Overview' ? 'View details' : 'Export CSV' }} →
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Instrument</th>
+                    <th>Class</th>
+                    <th class="numeric">Volume</th>
+                    <th class="numeric">Fills</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (i of ranked(); track i.symbol) {
+                    <tr>
+                      <td>
+                        <strong>{{ i.symbol }}</strong
+                        ><small>{{ i.name }}</small>
+                      </td>
+                      <td>{{ i.asset }}</td>
+                      <td class="numeric">{{ compactMoney(i.volume) }}</td>
+                      <td class="numeric">{{ i.fills }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="empty">No trading activity matches these filters.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>{{ page() === 'Overview' ? 'Executive insights' : 'Order status mix' }}</h2>
+              <app-dashboard-icon name="learn" />
+            </div>
+            @if (page() === 'Overview') {
+              <div class="insight">
+                <b>01</b>
+                <div>
+                  <h3>
+                    {{ ranked()[0]?.symbol || 'No instrument' }}
+                    {{ ranked().length ? 'leads filled volume' : 'in this selection' }}
+                  </h3>
+                  <p>Ranked by executed notional across the selected reporting period.</p>
+                </div>
+              </div>
+              <div class="insight">
+                <b>02</b>
+                <div>
+                  <h3>{{ totals().active }} clients placed filled orders</h3>
+                  <p>Explore activity and portfolio segments to understand participation.</p>
+                </div>
+              </div>
+              <div class="insight">
+                <b>03</b>
+                <div>
+                  <h3>{{ newClients() }} new clients in this period</h3>
+                  <p>Registration growth based on the selected portfolio segment.</p>
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button (click)="navigate('Reports')">Generate a report →</button
+                ><button (click)="navigate('Client Activity')">Explore clients →</button>
+              </div>
+            } @else {
+              @for (s of statuses(); track s.label) {
+                <div class="status-row">
+                  <span>{{ s.label }}</span>
+                  <div class="track">
+                    <i [style.width.%]="percent(s.count, totals().orders)"></i>
+                  </div>
+                  <b>{{ s.count }}</b
+                  ><small>{{ percent(s.count, totals().orders) | number: '1.0-1' }}%</small>
+                </div>
+              }
+              <p class="footnote">
+                Each order contributes to one current status. Rejected orders are excluded from
+                filled volume.
+              </p>
+            }
+          </section>
+        </div>
+      }
+      @if (page() === 'Client Activity') {
+        <div class="two-columns">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Client activity by portfolio segment</h2>
+              <span class="muted">Client count</span>
+            </div>
+            <div class="bar-chart">
+              @for (s of segmentRows(); track s.label) {
+                <div class="bar-group">
+                  <div class="bars">
+                    <div [style.height.px]="s.active * 24 + 2" [attr.title]="'Active: ' + s.active">
+                      <span>{{ s.active }}</span>
+                    </div>
+                    <div
+                      [style.height.px]="s.occasional * 24 + 2"
+                      [attr.title]="'Occasional: ' + s.occasional"
+                    >
+                      <span>{{ s.occasional }}</span>
+                    </div>
+                    <div
+                      [style.height.px]="s.dormant * 24 + 2"
+                      [attr.title]="'Dormant: ' + s.dormant"
+                    >
+                      <span>{{ s.dormant }}</span>
+                    </div>
+                  </div>
+                  <small>{{ s.label }}</small>
+                </div>
+              }
+            </div>
+            <div class="chart-foot">
+              <i class="legend-dot"></i>Active <i class="legend-dot blue"></i>Occasional
+              <i class="legend-dot gray"></i>Dormant
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Analyst insights</h2>
+              <app-dashboard-icon name="learn" />
+            </div>
+            <div class="insight">
+              <b>01</b>
+              <div>
+                <h3>{{ newClients() }} newly registered clients</h3>
+                <p>New means registered within your selected date range.</p>
+              </div>
+            </div>
+            <div class="insight">
+              <b>02</b>
+              <div>
+                <h3>{{ dormant() }} clients without recorded fills</h3>
+                <p>Review the directory to explore client engagement.</p>
+              </div>
+            </div>
+            <button class="primary" (click)="navigate('Clients')">
+              Explore the client directory →
+            </button>
+          </section>
+        </div>
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Portfolio segment breakdown</h2>
+            <button class="text-button" (click)="exportReport('Client Activity Summary')">
+              Export CSV →
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Segment</th>
+                  <th>Total clients</th>
+                  <th>Active</th>
+                  <th>Occasional</th>
+                  <th>Dormant</th>
+                  <th>New</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of segmentRows(); track s.label) {
+                  <tr>
+                    <td>{{ s.label }}</td>
+                    <td>{{ s.total }}</td>
+                    <td>{{ s.active }}</td>
+                    <td>{{ s.occasional }}</td>
+                    <td>{{ s.dormant }}</td>
+                    <td>{{ s.newClients }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+      @if (page() === 'Clients') {
+        @if (selectedClient(); as c) {
+          <button class="text-button back" (click)="selectedClient.set(null)">
+            ← Back to clients
+          </button>
+          <section class="panel client-summary">
+            <div class="avatar large">{{ c.name.slice(0, 1) }}</div>
+            <div>
+              <h2>{{ c.name }}</h2>
+              <p>
+                {{ c.id }} <span class="badge">{{ clientActivity(c) }}</span>
+              </p>
+            </div>
+            <div>
+              <small>Portfolio value</small><strong>{{ c.value | currency }}</strong>
+            </div>
+            <div>
+              <small>Cash balance</small><strong>{{ c.cash | currency }}</strong>
+            </div>
+            <div>
+              <small>Client since</small
+              ><strong>{{ c.joined | date: 'mediumDate' : 'UTC' }}</strong>
+            </div>
+          </section>
+          <div class="tabs">
+            @for (tab of ['Overview', 'Orders', 'Documents']; track tab) {
+              <button [class.active]="detailTab() === tab" (click)="detailTab.set(tab)">
+                {{ tab }}
+              </button>
+            }
+          </div>
+          @if (detailTab() === 'Documents') {
+            <section class="panel empty">
+              <app-dashboard-icon name="shield" />
+              <h2>No documents available</h2>
+              <p>Client documents will appear here.</p>
+            </section>
+          } @else {
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>
+                  {{ detailTab() === 'Overview' ? 'Recent trading activity' : 'Client orders' }}
+                </h2>
+                <span class="muted">Selected reporting period</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Submitted (UTC)</th>
+                      <th>Instrument</th>
+                      <th>Side</th>
+                      <th>Quantity</th>
+                      <th>Status</th>
+                      <th>Order ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (t of clientOrders(); track t.id) {
+                      <tr>
+                        <td>{{ t.submitted | date: 'MMM d, HH:mm' : 'UTC' }}</td>
+                        <td>{{ t.symbol }}</td>
+                        <td>{{ t.side }}</td>
+                        <td>{{ t.quantity | number: '1.0-4' }}</td>
+                        <td>
+                          <span class="badge" [class.rejected]="t.status === 'Rejected'">{{
+                            t.status
+                          }}</span>
+                        </td>
+                        <td>
+                          @if (role() === 'Operations') {
+                            <button class="text-button" (click)="openTrade(t)">{{ t.id }}</button>
+                          } @else {
+                            {{ t.id }}
+                          }
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="6" class="empty">No orders in this period.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          }
+        } @else {
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>
+                Client directory <span class="muted">/ {{ clientRows().length }}</span>
+              </h2>
+              <label class="search-field"
+                ><app-dashboard-icon name="search" /><input
+                  aria-label="Filter clients"
+                  placeholder="Search by name or client ID"
+                  [ngModel]="query()"
+                  (ngModelChange)="query.set($event)"
+              /></label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Client ID</th>
+                    <th>Portfolio segment</th>
+                    <th>Activity</th>
+                    <th class="numeric">Portfolio value</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of clientRows(); track c.id) {
+                    <tr>
+                      <td>
+                        <button class="client-link" (click)="openClient(c)">
+                          <span class="avatar small">{{ c.name.slice(0, 1) }}</span
+                          >{{ c.name }}
+                        </button>
+                      </td>
+                      <td class="mono">{{ c.id }}</td>
+                      <td>{{ c.segment }}</td>
+                      <td>
+                        <span class="badge" [class.neutral]="clientActivity(c) !== 'Active'">{{
+                          clientActivity(c)
+                        }}</span>
+                      </td>
+                      <td class="numeric">{{ c.value | currency }}</td>
+                      <td>
+                        <button
+                          class="text-button"
+                          [attr.aria-label]="'View ' + c.name"
+                          (click)="openClient(c)"
+                        >
+                          →
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="empty">
+                        No matching clients. Try another name or period.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      }
+      @if (page() === 'Reports') {
+        <div class="tabs">
+          @for (tab of ['Standard Reports', 'Custom Reports', 'Scheduled Reports']; track tab) {
+            <button [class.active]="reportTab() === tab" (click)="reportTab.set(tab)">
+              {{ tab }}
+            </button>
+          }
+        </div>
+        @if (reportTab() === 'Scheduled Reports') {
+          <section class="panel empty">
+            <app-dashboard-icon name="calendar" />
+            <h2>No scheduled reports</h2>
+            <p>Your scheduled reports will appear here.</p>
+            <button (click)="reportTab.set('Standard Reports')">View available reports</button>
+          </section>
+        } @else {
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>
+                {{
+                  reportTab() === 'Standard Reports' ? 'Standard reports' : 'Custom report builder'
+                }}
+              </h2>
+              <span class="muted">CSV</span>
+            </div>
+            @if (reportTab() === 'Standard Reports') {
+              <div class="report-grid">
+                @for (r of reportTypes; track r; let i = $index) {
+                  <article class="report-card">
+                    <span class="kpi-icon"
+                      ><app-dashboard-icon [name]="i === 0 ? 'file' : i === 1 ? 'chart' : 'users'"
+                    /></span>
+                    <h3>{{ r }}</h3>
+                    <p>
+                      {{
+                        i === 0
+                          ? 'A concise summary of trading volume and client participation.'
+                          : i === 1
+                            ? 'Order-level activity across instruments and markets.'
+                            : 'Registration, portfolio segments, and client engagement.'
+                      }}
+                    </p>
+                    <button [disabled]="!!dateError()" (click)="exportReport(r)">
+                      Generate CSV →
+                    </button>
+                  </article>
+                }
+              </div>
+            } @else {
+              <div class="filter-bar">
+                <label
+                  >Report type<select
+                    [ngModel]="reportType()"
+                    (ngModelChange)="reportType.set($event)"
+                  >
+                    @for (r of reportTypes; track r) {
+                      <option>{{ r }}</option>
+                    }
+                  </select></label
+                ><label
+                  >Client segment<select
+                    [ngModel]="segment()"
+                    (ngModelChange)="segment.set($event)"
+                  >
+                    <option value="All">All segments</option>
+                    @for (s of segments; track s) {
+                      <option>{{ s }}</option>
+                    }
+                  </select></label
+                ><button class="primary" [disabled]="!!dateError()" (click)="exportReport()">
+                  Generate CSV
+                </button>
+              </div>
+            }
+            <p class="footnote">
+              Uses the date range above and current filters: {{ asset() }} instruments ·
+              {{ market() }} markets · {{ segment() }} segments.
+              <button class="text-button" (click)="reset()">Reset</button>
+            </p>
+          </section>
+        }
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Recent exports</h2>
+            <span class="muted">This session</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Report</th>
+                  <th>Generated</th>
+                  <th class="numeric">Rows</th>
+                  <th>Format</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of exports(); track $index) {
+                  <tr>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.at | date: 'medium' }}</td>
+                    <td class="numeric">{{ r.rows }}</td>
+                    <td>CSV</td>
+                    <td><button class="text-button" (click)="download(r)">Download ↓</button></td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="empty">Your generated reports will appear here.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+      @if (page() === 'Trade Investigation') {
+        @if (role() !== 'Operations') {
+          <section class="panel empty">
+            <app-dashboard-icon name="shield" />
+            <h2>Operations workspace</h2>
+            <p>Switch to the Operations workspace to investigate trade details.</p>
+            <button class="primary" (click)="useRole('Operations')">Open operations</button>
+          </section>
+        } @else {
+          <div class="filter-bar">
+            <label class="grow"
+              >Search orders<input
+                placeholder="Order ID, client, or instrument"
+                aria-label="Search orders"
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event); selectedTrade.set(null)" /></label
+            ><label
+              >Status<select
+                [ngModel]="status()"
+                (ngModelChange)="status.set($event); selectedTrade.set(null)"
+              >
+                <option>All</option>
+                @for (s of statuses(); track s.label) {
+                  <option>{{ s.label }}</option>
+                }
+              </select></label
+            ><button (click)="reset()">Reset</button>
+          </div>
+          <div class="investigation-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>
+                  Investigation results <span class="muted">/ {{ investigation().length }}</span>
+                </h2>
+              </div>
+              <div class="table-wrap results">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Order / client</th>
+                      <th>Instrument</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (t of investigation(); track t.id) {
+                      <tr [class.selected]="selectedTrade()?.id === t.id">
+                        <td>
+                          <button class="text-button" (click)="selectedTrade.set(t)">
+                            {{ t.id }}</button
+                          ><small>{{ clientName(t.clientId) }}</small>
+                        </td>
+                        <td>{{ t.symbol }}</td>
+                        <td>
+                          <span class="badge" [class.rejected]="t.status === 'Rejected'">{{
+                            t.status
+                          }}</span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="3" class="empty">No matching orders.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel">
+              @if (selectedTrade(); as t) {
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">ORDER</p>
+                    <h2>{{ t.id }}</h2>
+                  </div>
+                  <span class="badge" [class.rejected]="t.status === 'Rejected'">{{
+                    t.status
+                  }}</span>
+                </div>
+                <h3 class="instrument-heading">
+                  {{ t.symbol }}
+                  <small>{{ t.side }} · {{ t.quantity | number: '1.0-4' }} units · Market</small>
+                </h3>
+                <div class="tabs">
+                  @for (tab of ['Overview', 'Lifecycle', 'Audit Trail']; track tab) {
+                    <button [class.active]="detailTab() === tab" (click)="detailTab.set(tab)">
+                      {{ tab }}
+                    </button>
+                  }
+                </div>
+                @if (detailTab() === 'Overview') {
+                  <dl class="details">
+                    <dt>Client</dt>
+                    <dd>{{ clientName(t.clientId) }} · {{ t.clientId }}</dd>
+                    <dt>Submitted (UTC)</dt>
+                    <dd>{{ t.submitted | date: 'medium' : 'UTC' }}</dd>
+                    <dt>Instrument class</dt>
+                    <dd>{{ t.asset }}</dd>
+                    <dt>
+                      {{ t.status === 'Filled' ? 'Fill price' : 'Indicative price' }}
+                    </dt>
+                    <dd>{{ t.price | currency }}</dd>
+                    <dt>{{ t.status === 'Filled' ? 'Filled notional' : 'Indicative notional' }}</dt>
+                    <dd>{{ t.price * t.quantity | currency }}</dd>
+                  </dl>
+                } @else {
+                  <div class="timeline">
+                    <div>
+                      <span></span>
+                      <h3>Submitted</h3>
+                      <p>{{ t.submitted | date: 'medium' : 'UTC' }} UTC</p>
+                    </div>
+                    <div>
+                      <span></span>
+                      <h3>Current status: {{ t.status }}</h3>
+                      <p>No additional lifecycle events available.</p>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <div class="empty">
+                  <app-dashboard-icon name="search" />
+                  <h2>Every trade has a story.</h2>
+                  <p>Select an order to explore its available details.</p>
+                </div>
+              }
+            </section>
+          </div>
+        }
+      }
+      @if (page() === 'Compliance') {
+        <div class="two-columns">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Trading rules &amp; requirements</h2>
+              <app-dashboard-icon name="shield" />
+            </div>
+            @for (r of rules; track r.title; let i = $index) {
+              <div class="insight">
+                <b>{{ i + 1 }}</b>
+                <div>
+                  <h3>{{ r.title }}</h3>
+                  <p>{{ r.detail }}</p>
+                </div>
+              </div>
+            }
+          </section>
+          <div>
+            <section class="panel empty">
+              <app-dashboard-icon name="shield" />
+              <h2>Compliance case queue</h2>
+              <p>No cases to display.</p>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><h2>Audit readiness</h2></div>
+              <div class="insight">
+                <b>01</b>
+                <div>
+                  <h3>Permanent records</h3>
+                  <p>
+                    Trade records must be retained for at least seven years and remain unalterable.
+                  </p>
+                </div>
+              </div>
+              <div class="insight">
+                <b>02</b>
+                <div>
+                  <h3>Access by responsibility</h3>
+                  <p>
+                    Reporting and operations access must be limited to the responsibilities of each
+                    role.
+                  </p>
+                </div>
+              </div>
+              <button (click)="navigate('Trade Investigation')">Open trade investigation →</button>
+            </section>
+          </div>
+        </div>
+      }
+      @if (page() === 'Settings') {
+        <section class="panel settings">
+          <h2>Workspace preferences</h2>
+          <label
+            >Workspace<select [ngModel]="role()" (ngModelChange)="useRole($event)">
+              <option value="Analyst">Priya · Analyst</option>
+              <option value="Operations">David · Operations</option>
+            </select></label
+          ><label
+            >Compact tables<input
+              type="checkbox"
+              [checked]="compact()"
+              (change)="compact.set($any($event.target).checked)"
+          /></label>
 
-    <footer class="auth-footer">
-      <span>© 2026 NextTrade. All rights reserved.</span>
-      <nav aria-label="Legal">
-        <a href="#">Privacy</a>
-        <a href="#">Security</a>
-        <a href="#">Support</a>
-      </nav>
-    </footer>
-  </section>
-
-@if (profileOpen()) {
-  <app-investor-profile
-    [fullName]="applicantName()"
-    [email]="applicantEmail()"
-    (back)="returnToSignup()"
-    (completed)="openDashboard($event)"
-  />
-}
-
+          <div>
+            <strong>Reporting definitions</strong>
+            <p>Filled notional in USD. Portfolio segments: under $10K, $10K–$100K, over $100K.</p>
+          </div>
+        </section>
+      }
+      <footer>
+        <span>© 2026 NextTrade. Internal workspace.</span><span>Internal use only</span>
+      </footer>
+    </main>
+  </div>
 </div>
-@if (dashboardOpen()) {
-  <app-stock-dashboard [name]="applicantName()" [level]="traderLevel()" [newAccount]="newAccount()" (signOut)="signOut()" />
-}

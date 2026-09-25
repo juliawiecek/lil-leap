@@ -34,7 +34,6 @@ const trader = {
   is_politically_exposed_person: false,
   account_name: 'Main',
   account_type: 'INDIVIDUAL_CASH',
-  trader_level: 'NOVICE',
 };
 
 describe('RegisterRequestDto', () => {
@@ -59,7 +58,7 @@ describe('RegisterRequestDto', () => {
 
   it('requires the account fields for a TRADER', async () => {
     expect(await errorsFor({ ...trader, account_name: '' })).toContain(
-      'accountName, accountType and traderLevel are required for TRADER registration',
+      'accountName and accountType are required for TRADER registration',
     );
   });
 

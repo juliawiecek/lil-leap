@@ -10,11 +10,14 @@ import { AuthController } from './user/auth.controller';
 import { HealthController } from './health/health.controller';
 import { UserService } from './user/user.service';
 import { RegistrationService } from './onboarding/registration.service';
+import { TierService } from './onboarding/tier.service';
+import { RulesController } from './rules/rules.controller';
 import { JwtService } from './security/jwt.service';
 import { RefreshTokenService } from './security/refresh-token.service';
 import { SsnEncryptionService } from './security/ssn-encryption.service';
 import { PasswordEncoderService } from './security/password-encoder.service';
 import { SecureTransportMiddleware } from './security/secure-transport.middleware';
+import { AccessTokenGuard } from './security/access-token.guard';
 import { tlsKeystorePath } from './security/tls';
 
 @Module({
@@ -32,8 +35,17 @@ import { tlsKeystorePath } from './security/tls';
     }),
     TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile]),
   ],
-  controllers: [AuthController, HealthController],
-  providers: [UserService, RegistrationService, JwtService, RefreshTokenService, SsnEncryptionService, PasswordEncoderService],
+  controllers: [AuthController, RulesController, HealthController],
+  providers: [
+    UserService,
+    RegistrationService,
+    TierService,
+    JwtService,
+    RefreshTokenService,
+    SsnEncryptionService,
+    PasswordEncoderService,
+    AccessTokenGuard,
+  ],
 })
 export class AppModule implements NestModule {
   // Only when this service terminates TLS itself; behind nginx it receives plaintext on the internal network.

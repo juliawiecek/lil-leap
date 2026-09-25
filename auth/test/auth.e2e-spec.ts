@@ -24,6 +24,7 @@ describe('auth (e2e)', () => {
 
   const post = (path: string, body?: object) =>
     request(app.getHttpServer()).post(path).disableTLSCerts().send(body);
+  const get = (path: string) => request(app.getHttpServer()).get(path).disableTLSCerts();
 
   const login = async () => {
     const res = await post('/auth/login', { email: traderEmail, password }).expect(200);
@@ -62,7 +63,7 @@ describe('auth (e2e)', () => {
   });
 
   describe('register', () => {
-    it('creates a TRADER with profile, financial profile, and account -- no tokens', async () => {
+    it('creates a TRADER with profile, financial profile, and a server-assigned account tier -- no tokens', async () => {
       const res = await post('/auth/register', {
         user_role: 'TRADER',
         email: traderEmail.toUpperCase(),
@@ -91,14 +92,14 @@ describe('auth (e2e)', () => {
         broker_affiliation_details: 'line one\nline two',
         account_name: 'Main',
         account_type: 'INDIVIDUAL_CASH',
-        trader_level: 'NOVICE',
+        trader_level: 'ADVANCED', // ignored: $25k-100k + 10% of 50,000 = 30,000 capacity -> NOVICE
       }).expect(201);
 
       expect(res.body).toMatchObject({ email: traderEmail, userRole: 'TRADER' });
       expect(res.body.accessToken).toBeUndefined();
 
       const [row] = await dataSource.query(
-        `SELECT cp.address, jsonb_typeof(fp.regulatory_disclosures) AS disclosures_type, fp.regulatory_disclosures, fp.annual_income, a.min_balance_requirement
+        `SELECT cp.address, jsonb_typeof(fp.regulatory_disclosures) AS disclosures_type, fp.regulatory_disclosures, fp.annual_income, a.trader_level, a.min_balance_requirement
            FROM users u
            JOIN customer_profiles cp USING (user_id)
            JOIN financial_profiles fp USING (user_id)
@@ -114,7 +115,45 @@ describe('auth (e2e)', () => {
         brokerAffiliationDetails: 'line one\nline two',
       });
       expect(Number(row.annual_income)).toBe(50000);
+      expect(row.trader_level).toBe('NOVICE');
       expect(Number(row.min_balance_requirement)).toBe(5000);
+    });
+
+    it('rejects a TRADER below $5,000 capacity with 422 and creates nothing', async () => {
+      const brokeEmail = `e2e-broke-${runId}@example.com`;
+      const res = await post('/auth/register', {
+        user_role: 'TRADER',
+        email: brokeEmail,
+        password,
+        first_name: 'Bo',
+        last_name: 'Broke',
+        date_of_birth: '1990-12-10',
+        phone: '555-0101',
+        street_address: '2 Main St',
+        city: 'Springfield',
+        state_province: 'IL',
+        postal_code: '62701',
+        country: 'US',
+        citizenship_status: 'CITIZEN',
+        ssn: '123-45-6780',
+        employment_status: 'UNEMPLOYED',
+        annual_income: '0',
+        net_worth_bracket: '$0-5k',
+        risk_profile: 'CONSERVATIVE',
+        liquidity_position: '0',
+        accredited_investor: false,
+        is_politically_exposed_person: false,
+        account_name: 'Main',
+        account_type: 'INDIVIDUAL_CASH',
+        trader_level: 'ADVANCED',
+      }).expect(422);
+
+      expect(res.body).toEqual({
+        error: 'INSUFFICIENT_INVESTABLE_ASSETS',
+        message: 'A minimum of $5,000 in investable assets is required',
+      });
+      const [{ count }] = await dataSource.query('SELECT count(*)::int AS count FROM users WHERE email = $1', [brokeEmail]);
+      expect(count).toBe(0);
     });
 
     it('creates an ANALYST', async () => {
@@ -138,6 +177,7 @@ describe('auth (e2e)', () => {
 
       const claims = jwt.verify(accessToken, process.env.APP_JWT_SECRET as string) as jwt.JwtPayload;
       expect(claims.email).toBe(traderEmail);
+      expect(claims.trader_level).toBe('NOVICE');
       expect(refreshToken).toEqual(expect.any(String));
     });
 
@@ -147,6 +187,35 @@ describe('auth (e2e)', () => {
 
       expect(wrongPassword.body).toEqual({ error: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' });
       expect(unknownEmail.body).toEqual(wrongPassword.body);
+    });
+  });
+
+  describe('GET /rules/tier-eligibility', () => {
+    it('returns the tier, balance and gap to the next tier for the caller', async () => {
+      const { accessToken } = await login();
+
+      const res = await get('/rules/tier-eligibility').set('Authorization', `Bearer ${accessToken}`).expect(200);
+
+      expect(res.body).toEqual({
+        trader_level: 'NOVICE',
+        min_balance_requirement: 5000,
+        current_balance: 0,
+        tier_status: 'INELIGIBLE',
+        next_tier: 'ADVANCED',
+        gap_to_next_tier: 100000,
+      });
+    });
+
+    it('rejects a request without a valid access token', async () => {
+      await get('/rules/tier-eligibility').expect(401);
+      const res = await get('/rules/tier-eligibility').set('Authorization', 'Bearer not-a-jwt').expect(401);
+      expect(res.body.error).toBe('INVALID_ACCESS_TOKEN');
+    });
+
+    it('404s for a user without an account', async () => {
+      const res = await post('/auth/login', { email: analystEmail, password }).expect(200);
+
+      await get('/rules/tier-eligibility').set('Authorization', `Bearer ${res.body.accessToken}`).expect(404);
     });
   });
 
