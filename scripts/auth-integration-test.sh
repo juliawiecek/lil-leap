@@ -19,12 +19,12 @@ set -uo pipefail
 
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:4200}"   # nginx: /auth/* and /rules/* -> auth
 INSIGHTS_URL="${INSIGHTS_URL:-http://localhost:8081}"
-ORDERS_URL="${ORDERS_URL:-http://localhost:8082}"
-HOLDINGS_URL="${HOLDINGS_URL:-http://localhost:8083}"
 DB_USER="${DB_USER:-main}"
 DB_NAME="${DB_NAME:-nexttrade}"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
-SERVICES=(db auth orders holdings insights frontend)
+# orders and holdings have no endpoints yet, so they aren't tested; compose still
+# starts them because the frontend's nginx proxies to them.
+SERVICES=(db auth insights frontend)
 
 BUILD=--build
 STOP_AFTER=false
@@ -97,8 +97,6 @@ docker compose up -d $BUILD "${SERVICES[@]}" || { echo "docker compose up failed
 echo "== Waiting for services"
 wait_for "auth (via nginx)" "$FRONTEND_URL/auth/docs-json" 200 || exit 1
 wait_for insights "$INSIGHTS_URL/api/v1/holdings" 401 || exit 1
-wait_for orders "$ORDERS_URL/" 401 || exit 1
-wait_for holdings "$HOLDINGS_URL/" 401 || exit 1
 
 echo "== Register a trader through the Identity Service"
 REGISTER='{
@@ -139,8 +137,6 @@ echo "== AC1: protected endpoints reject missing or invalid tokens"
 check "insights GET /api/v1/holdings without a token -> 401" "$(status "$INSIGHTS_URL/api/v1/holdings")" 401
 check "insights with a tampered token -> 401" \
   "$(status -H "Authorization: Bearer ${TOKEN}x" "$INSIGHTS_URL/api/v1/holdings")" 401
-check "orders without a token -> 401" "$(status "$ORDERS_URL/")" 401
-check "holdings without a token -> 401" "$(status "$HOLDINGS_URL/")" 401
 check "auth GET /rules/tier-eligibility without a token -> 401" "$(status "$FRONTEND_URL/rules/tier-eligibility")" 401
 
 echo "== AC2: the real token is accepted"
@@ -149,8 +145,6 @@ check "insights GET /api/v1/holdings with the token -> 200" \
 check "insights returns the (empty) holdings list for the new trader" "$(tr -d ' \r\n' < "$BODY")" "[]"
 check "auth GET /rules/tier-eligibility with the token -> 200" \
   "$(status -H "Authorization: Bearer $TOKEN" "$FRONTEND_URL/rules/tier-eligibility")" 200
-# orders and holdings expose no endpoints yet, so there is nothing to call with the token;
-# add their checks here once they do.
 
 echo
 if (( FAILURES == 0 )); then
