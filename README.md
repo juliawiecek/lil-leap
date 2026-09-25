@@ -331,6 +331,21 @@ cd auth
 npm test
 ```
 
+### Auth integration test (Docker)
+
+[scripts/auth-integration-test.sh](scripts/auth-integration-test.sh) starts the real
+stack with `docker compose`, registers a trader through the Identity Service, checks the
+rows landed in Postgres, and confirms protected endpoints return `401` without a token
+and accept the real one. It cleans up its test user and exits non-zero on any failure.
+
+```bash
+scripts/auth-integration-test.sh             # build + start the stack, run the checks
+scripts/auth-integration-test.sh --no-build  # reuse existing images
+scripts/auth-integration-test.sh --down      # also stop the stack afterwards
+```
+
+Needs bash, curl and Docker (run it on Linux, macOS or WSL).
+
 ### Frontend build validation
 
 ```bat
