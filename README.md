@@ -322,7 +322,10 @@ npm test
 
 ```bat
 cd frontend
-npm run build
+npm test
+
+cd insights-frontend
+npm test
 ```
 
 ### Data Pipeline (Pytest)
