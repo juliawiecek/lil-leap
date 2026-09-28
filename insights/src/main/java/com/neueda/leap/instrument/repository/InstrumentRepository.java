@@ -22,4 +22,12 @@ public interface InstrumentRepository {
      * @return matching instrument, or empty when absent
      */
     Optional<InstrumentResponse> findById(UUID instrumentId);
+
+    /**
+     * Resolves a canonical uppercase symbol, including disabled and nontradable entries.
+     * Matches are ordered by market code and instrument ID, as in order submission.
+     * @param symbol uppercase instrument symbol
+     * @return matching instrument, or empty when absent
+     */
+    Optional<InstrumentResponse> findBySymbol(String symbol);
 }
