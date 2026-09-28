@@ -72,6 +72,8 @@ services:
       # JWT secret shared with all backend services for token validation
       APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
       DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: nexttrade
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: my_app_password
       # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
