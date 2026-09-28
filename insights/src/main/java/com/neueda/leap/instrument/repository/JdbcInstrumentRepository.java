@@ -56,4 +56,12 @@ public class JdbcInstrumentRepository implements InstrumentRepository {
                 instrumentId
         ).stream().findFirst();
     }
+
+    @Override
+    public Optional<InstrumentResponse> findBySymbol(String symbol) {
+        return jdbcTemplate.query(
+                SELECT_COLUMNS + " WHERE UPPER(symbol) = ? ORDER BY market_code, instrument_id LIMIT 1",
+                rowMapper, symbol
+        ).stream().findFirst();
+    }
 }

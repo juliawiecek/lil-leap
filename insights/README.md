@@ -175,7 +175,7 @@ clients' accounts both return 404. Query selectors remain forbidden. Other finan
 writes, object-ID routes and cancellation are denied by security configuration.
 All routes use the `/api/v1` context prefix.
 
-An initial submission returns 201 with `ACCEPTED` status after persisting its acceptance timestamp. Retrying the same account
+An initial submission returns 201 with `SUBMITTED` status. Retrying the same account
 and `clientReference` returns the existing order with 200, including concurrent retries.
 Submission creates no fill. PostgreSQL `ON CONFLICT DO NOTHING` handles the race without
 aborting the transaction; a subsequent read retrieves the winning order.
@@ -220,6 +220,51 @@ mvn -B -f insights/pom.xml '-Dtest=OrderSufficiencyServiceTest,OrderSubmissionSe
 The PostgreSQL contract suite also exercises real HTTP rejections, account isolation,
 missing positions/quotes, exact-balance success, latest-ask selection, unchanged
 balances after rejection, and retries after resources change.
+
+### Instrument tradability on submission (TS-06.6)
+
+`POST /api/v1/orders` checks the current `enabled` and `tradable` flags through
+`InstrumentService`, using the same catalog rows and mapping as `GET /instruments`.
+Both BUY and SELL orders must pass this check before sufficiency validation and
+insertion. A stale client-side catalog cannot override the current database flags.
+
+| Condition | HTTP status | `error` |
+| --- | --- | --- |
+| Instrument is disabled (including when both flags are false) | 422 | `INSTRUMENT_DISABLED` |
+| Instrument is enabled but not tradable | 422 | `INSTRUMENT_NOT_TRADABLE` |
+| Symbol does not exist | 422 | `INSTRUMENT_UNSUPPORTED` |
+
+Rejection creates no order or fill and leaves cash and holdings unchanged. Account
+ownership is checked first. An existing account/client-reference pair returns the
+original order with HTTP 200 even if the instrument has since been disabled; it
+does not create a new trade. A new reference always rechecks the current catalog.
+Authenticated TRADER users can submit; query parameters cannot override identity.
+
+The submission implementation was absent at `9af4e3c`, so this change restores the
+earlier submission components and their cash/holdings checks from `5b49da5` as the
+integration basis for the TS-05.6 dependency. It preserves the earlier `SUBMITTED`
+status and request contract. The check is part of submission, with no separate
+validation endpoint and no new instrument flag or schema migration.
+
+Run the complete backend suite using Java 21:
+
+```powershell
+mvn -B -f insights/pom.xml clean verify
+```
+
+`InstrumentTradabilitySubmissionTest` runs real HTTP security, services and JDBC
+against H2 by default. It covers current catalog changes, both sides, reason-code
+precedence, ownership, retries and unchanged balances. To also verify successful
+PostgreSQL inserts and retries for BUY and SELL, set `TEST_POSTGRES_URL`,
+`TEST_POSTGRES_USER` and `TEST_POSTGRES_PASSWORD` for a disposable test database:
+
+```powershell
+mvn -B -f insights/pom.xml '-Dtest=InstrumentTradabilitySubmissionTest' test
+```
+
+This suite creates and drops its own randomly named schema; its test role needs
+permission to create schemas. The fixture is a relational projection, without
+production execution or settlement triggers.
 
 ### PostgreSQL contract tests
 

@@ -5,6 +5,8 @@ import com.neueda.leap.instrument.repository.InstrumentRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 /** Application service for read-only instrument discovery. */
@@ -40,5 +42,14 @@ public class InstrumentService {
     public InstrumentResponse getInstrument(UUID instrumentId) {
         return repository.findById(instrumentId)
                 .orElseThrow(() -> new InstrumentNotFoundException(instrumentId));
+    }
+
+    /**
+     * Reads current catalog metadata for a submission, without filtering trading flags.
+     * @param symbol validated instrument symbol
+     * @return matching instrument, or empty when unsupported
+     */
+    public Optional<InstrumentResponse> findInstrumentBySymbol(String symbol) {
+        return repository.findBySymbol(symbol.trim().toUpperCase(Locale.ROOT));
     }
 }

@@ -1,6 +1,7 @@
 package com.neueda.leap.common.exception;
 
 import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,17 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler() {
     }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * Reports a pre-submission trading-rule rejection without exposing request data.
+     * @param exception account or instrument rule rejection
+     * @return HTTP 422 with the stable reason and fixed message
+     */
+    @ExceptionHandler(OrderRuleException.class)
+    public ResponseEntity<Map<String, String>> handleOrderRule(OrderRuleException exception) {
+        return ResponseEntity.unprocessableEntity().body(Map.of(
+                "error", exception.reason().name(), "message", exception.reason().message()));
+    }
 
     /**
      * Rejects an order with a fixed rule code without exposing financial data.

@@ -12,6 +12,7 @@ public class OrderSufficiencyException extends RuntimeException {
         QUOTE_UNAVAILABLE
     }
 
+    /** Stable rejection code. */
     private final Reason reason;
 
     /**
@@ -27,7 +28,10 @@ public class OrderSufficiencyException extends RuntimeException {
         this.reason = reason;
     }
 
-    /** @return the safe rejection code */
+    /**
+     * Returns the fixed sufficiency rejection code.
+     * @return the safe rejection code
+     */
     public Reason reason() {
         return reason;
     }
