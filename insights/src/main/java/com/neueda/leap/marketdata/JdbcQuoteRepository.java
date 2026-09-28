@@ -14,6 +14,7 @@ public class JdbcQuoteRepository implements QuoteRepository {
                 + " ON i.instrument_id=q.instrument_id ";
     private static final String ORDER =
             " ORDER BY q.quoted_at DESC,q.created_at DESC,q.quote_id DESC LIMIT 1";
+    private static final int MAX_HISTORY_LIMIT = 1000;
     private final JdbcTemplate jdbc;
 
     /**
@@ -70,5 +71,23 @@ public class JdbcQuoteRepository implements QuoteRepository {
                         symbol.trim().toUpperCase(Locale.ROOT))
                 .stream()
                 .findFirst();
+    }
+
+    /**
+     * Finds up to {@code limit} most recent quotes for an instrument, ordered newest first.
+     * The limit is clamped to a safe maximum to prevent unbounded database reads.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param limit maximum number of quotes to return (clamped to MAX_HISTORY_LIMIT)
+     * @return list of quotes, ordered by timestamp descending, or empty when no quote exists
+     */
+    @Override
+    public List<MarketQuote> findHistoryByInstrumentId(UUID instrumentId, int limit) {
+        int clampedLimit = Math.max(1, Math.min(limit, MAX_HISTORY_LIMIT));
+        String query = SELECT
+                + "WHERE i.instrument_id=?"
+                + " ORDER BY q.quoted_at DESC,q.created_at DESC,q.quote_id DESC"
+                + " LIMIT ?";
+        return jdbc.query(query, mapper, instrumentId, clampedLimit);
     }
 }

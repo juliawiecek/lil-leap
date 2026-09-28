@@ -1,11 +1,12 @@
 package com.neueda.leap.marketdata;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Read-only access to the latest stored market quotes. Retrieval alone does not establish
- * freshness.
+ * Read-only access to the latest stored market quotes and bounded history.
+ * Retrieval alone does not establish freshness.
  */
 public interface QuoteRepository {
     /**
@@ -25,4 +26,13 @@ public interface QuoteRepository {
      * @return latest matching quote, or empty when no eligible instrument or quote exists
      */
     Optional<MarketQuote> findLatestByMarketAndSymbol(String marketCode, String symbol);
+
+    /**
+     * Finds up to {@code limit} most recent quotes for an instrument, ordered newest first.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param limit maximum number of quotes to return (clamped to safe maximum)
+     * @return list of quotes, ordered by timestamp descending, or empty when no quote exists
+     */
+    List<MarketQuote> findHistoryByInstrumentId(UUID instrumentId, int limit);
 }
