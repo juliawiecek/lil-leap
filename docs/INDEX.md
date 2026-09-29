@@ -51,6 +51,7 @@ Navigate the lil-leap project documentation using the links below.
 
 - **[architecture/](architecture/)** - Architecture Decision Records
   - ADR: Quote storage and retrieval patterns
+  - [TS-10.1: Atomic settlement](architecture/ADR-TS-10.1-atomic-settlement.md) - Decision and seven-operation comparison
   - System design notes
 
 - **[../insights/README.md](../insights/README.md)** - Insights Service architecture
