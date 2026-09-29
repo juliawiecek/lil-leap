@@ -27,7 +27,7 @@ import java.util.UUID;
  * This can be changed to public (permitAll) in SecurityConfig if market data should be freely accessible.
  */
 @RestController
-@RequestMapping("/api/quotes")
+@RequestMapping("/quotes")
 public class QuoteController {
     private final QuoteRepository repository;
     private static final int DEFAULT_HISTORY_LIMIT = 100;
