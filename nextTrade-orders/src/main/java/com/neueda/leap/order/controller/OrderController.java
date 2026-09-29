@@ -7,6 +7,7 @@ import com.neueda.leap.security.JwtPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Exposes order submission at {@code POST /orders}.
+ * Only traders may place orders; analysts and other roles receive 403.
  */
 @RestController
 @RequestMapping("/orders")
+@PreAuthorize("hasRole('TRADER')")
 public class OrderController {
 
     private final OrderSubmissionService submissionService;
