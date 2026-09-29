@@ -37,7 +37,7 @@ class QuoteControllerTest {
         MarketQuote quote = sampleQuote("AAPL", "NASDAQ", now);
         when(repository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
 
-        mockMvc.perform(get("/api/quotes/latest/by-instrument/{instrumentId}", instrumentId))
+        mockMvc.perform(get("/quotes/latest/by-instrument/{instrumentId}", instrumentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.quoteId").value(quote.quoteId().toString()))
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
@@ -50,7 +50,7 @@ class QuoteControllerTest {
     void getLatestByInstrument_notFound() throws Exception {
         when(repository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/quotes/latest/by-instrument/{instrumentId}", instrumentId))
+        mockMvc.perform(get("/quotes/latest/by-instrument/{instrumentId}", instrumentId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("QUOTE_NOT_FOUND"));
     }
@@ -60,7 +60,7 @@ class QuoteControllerTest {
         MarketQuote quote = sampleQuote("AAPL", "NASDAQ", now);
         when(repository.findLatestByMarketAndSymbol("NASDAQ", "AAPL")).thenReturn(Optional.of(quote));
 
-        mockMvc.perform(get("/api/quotes/latest/by-market-symbol")
+        mockMvc.perform(get("/quotes/latest/by-market-symbol")
                 .param("market", "NASDAQ")
                 .param("symbol", "AAPL"))
                 .andExpect(status().isOk())
@@ -73,7 +73,7 @@ class QuoteControllerTest {
         MarketQuote quote = sampleQuote("AAPL", "NASDAQ", now);
         when(repository.findLatestByMarketAndSymbol("NASDAQ", "AAPL")).thenReturn(Optional.of(quote));
 
-        mockMvc.perform(get("/api/quotes/latest/by-market-symbol")
+        mockMvc.perform(get("/quotes/latest/by-market-symbol")
                 .param("market", " nasdaq ")
                 .param("symbol", " aapl "))
                 .andExpect(status().isOk())
@@ -82,14 +82,14 @@ class QuoteControllerTest {
 
     @Test
     void getLatestByMarketSymbol_missingMarket() throws Exception {
-        mockMvc.perform(get("/api/quotes/latest/by-market-symbol")
+        mockMvc.perform(get("/quotes/latest/by-market-symbol")
                 .param("symbol", "AAPL"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void getLatestByMarketSymbol_emptySymbol() throws Exception {
-        mockMvc.perform(get("/api/quotes/latest/by-market-symbol")
+        mockMvc.perform(get("/quotes/latest/by-market-symbol")
                 .param("market", "NASDAQ")
                 .param("symbol", ""))
                 .andExpect(status().isBadRequest());
@@ -99,7 +99,7 @@ class QuoteControllerTest {
     void getLatestByMarketSymbol_notFound() throws Exception {
         when(repository.findLatestByMarketAndSymbol("NASDAQ", "ZZZZ")).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/quotes/latest/by-market-symbol")
+        mockMvc.perform(get("/quotes/latest/by-market-symbol")
                 .param("market", "NASDAQ")
                 .param("symbol", "ZZZZ"))
                 .andExpect(status().isNotFound())
@@ -113,7 +113,7 @@ class QuoteControllerTest {
         when(repository.findHistoryByInstrumentId(instrumentId, 100))
                 .thenReturn(List.of(q1, q2));
 
-        mockMvc.perform(get("/api/quotes/history/{instrumentId}", instrumentId))
+        mockMvc.perform(get("/quotes/history/{instrumentId}", instrumentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
                 .andExpect(jsonPath("$[0].symbol").value("AAPL"))
@@ -126,7 +126,7 @@ class QuoteControllerTest {
         when(repository.findHistoryByInstrumentId(instrumentId, 50))
                 .thenReturn(List.of(q1));
 
-        mockMvc.perform(get("/api/quotes/history/{instrumentId}", instrumentId)
+        mockMvc.perform(get("/quotes/history/{instrumentId}", instrumentId)
                 .param("limit", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)));
@@ -134,7 +134,7 @@ class QuoteControllerTest {
 
     @Test
     void getHistory_invalidLimit() throws Exception {
-        mockMvc.perform(get("/api/quotes/history/{instrumentId}", instrumentId)
+        mockMvc.perform(get("/quotes/history/{instrumentId}", instrumentId)
                 .param("limit", "0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
@@ -145,7 +145,7 @@ class QuoteControllerTest {
         when(repository.findHistoryByInstrumentId(instrumentId, 100))
                 .thenReturn(List.of());
 
-        mockMvc.perform(get("/api/quotes/history/{instrumentId}", instrumentId))
+        mockMvc.perform(get("/quotes/history/{instrumentId}", instrumentId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("QUOTE_NOT_FOUND"));
     }
