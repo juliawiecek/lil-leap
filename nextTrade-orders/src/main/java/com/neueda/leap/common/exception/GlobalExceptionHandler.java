@@ -1,9 +1,13 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.order.exception.InvalidOrderException;
+import com.neueda.leap.order.exception.OrderAccountNotFoundException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
 import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -53,5 +57,51 @@ public class GlobalExceptionHandler {
     handleInvalidCredentialsException(InvalidCredentialsException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of
                 ("error", "INVALID_CREDENTIALS", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles request bodies that fail bean validation, such as a bad order
+     * side or a non-positive quantity.
+     *
+     * @param exception the exception describing the failed field constraints
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body naming the first invalid field
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>>
+    handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
+        FieldError fieldError = exception.getBindingResult().getFieldError();
+        String message = fieldError != null ? fieldError.getDefaultMessage() : "Request is invalid";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_REQUEST", "message", message));
+    }
+
+    /**
+     * Handles order submissions that refer to data that cannot be traded.
+     *
+     * @param exception the exception describing why the order was rejected
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(InvalidOrderException.class)
+    public ResponseEntity<Map<String, String>>
+    handleInvalidOrderException(InvalidOrderException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_ORDER", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles order submissions against an account that is absent or not the
+     * caller's. Both cases return the same 404 so account IDs cannot be probed.
+     *
+     * @param exception the exception describing the missing account
+     * @return a {@link ResponseEntity} with HTTP 404 Not Found status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(OrderAccountNotFoundException.class)
+    public ResponseEntity<Map<String, String>>
+    handleOrderAccountNotFoundException(OrderAccountNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
+                ("error", "ACCOUNT_NOT_FOUND", "message", exception.getMessage()));
     }
 }
