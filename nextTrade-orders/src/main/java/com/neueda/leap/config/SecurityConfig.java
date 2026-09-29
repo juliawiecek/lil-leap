@@ -60,6 +60,10 @@ public class SecurityConfig {
      * not allowed"; 401 means "not authenticated at all", which is what a
      * missing token actually is).</p>
      *
+     * <p>The access-denied handler returns the same JSON shape with 403 when a
+     * signed-in caller lacks the role an endpoint requires, such as an analyst
+     * calling {@code POST /orders}.</p>
+     *
      * @param http the {@link HttpSecurity} builder to configure
      * @param jwtService the service used to validate incoming bearer tokens
      * @return the configured {@link SecurityFilterChain}
@@ -71,12 +75,18 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
-                        (request, response, authException) -> {
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                             response.getWriter().write(
                                     "{\"error\":\"UNAUTHENTICATED\",\"message\":\"Authentication is required.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            response.getWriter().write(
+                                    "{\"error\":\"FORBIDDEN\",\"message\":\"You do not have permission to do this.\"}");
                         }))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
