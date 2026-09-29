@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -46,6 +47,16 @@ class ClientFinancialControllerTest {
         mockMvc.perform(get("/holdings").principal(authentication(userId)))
                 .andExpect(status().isOk());
         verify(queryService).getHoldings(userId);
+    }
+
+    @Test
+    void anotherClientsHoldingsAreDeniedBeforeQuerying() throws Exception {
+        UUID userId = UUID.randomUUID();
+        SecurityContextHolder.getContext().setAuthentication(authentication(userId));
+        mockMvc.perform(get("/clients/{id}/holdings", UUID.randomUUID())
+                        .principal(authentication(userId)))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(queryService);
     }
 
     @Test
