@@ -524,6 +524,46 @@ CREATE INDEX idx_movement_instrument ON holding_movements(instrument_id);
 CREATE INDEX idx_movement_created_at ON holding_movements(created_at DESC);
 CREATE INDEX idx_movement_fill ON holding_movements(fill_id);
 
+-- Keep the read projection in the same transaction as each settlement movement.
+-- The zero-row upsert and UPDATE serialize writers on (account_id, instrument_id),
+-- including concurrent first purchases. Negative balances fail the entire movement.
+CREATE OR REPLACE FUNCTION apply_holding_change(
+    p_account UUID, p_instrument UUID, p_quantity BIGINT,
+    p_cost NUMERIC, p_updated_at TIMESTAMPTZ
+) RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO holdings(account_id, instrument_id, quantity, avg_cost, updated_at)
+    VALUES (p_account, p_instrument, 0, 0, p_updated_at)
+    ON CONFLICT (account_id, instrument_id) DO NOTHING;
+
+    UPDATE holdings
+    SET avg_cost = CASE
+            WHEN quantity + p_quantity = 0 THEN 0
+            WHEN p_quantity > 0 THEN
+                (quantity::NUMERIC * avg_cost + p_quantity::NUMERIC * p_cost)
+                    / (quantity + p_quantity)
+            ELSE avg_cost
+        END,
+        quantity = quantity + p_quantity,
+        updated_at = GREATEST(updated_at, p_updated_at)
+    WHERE account_id = p_account AND instrument_id = p_instrument;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION project_holding_movement()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM apply_holding_change(NEW.account_id, NEW.instrument_id,
+        NEW.quantity_change, NEW.cost_basis, clock_timestamp());
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER tg_holding_movement_projection
+AFTER INSERT ON holding_movements
+FOR EACH ROW EXECUTE FUNCTION project_holding_movement();
+
+
 -- ==========================================================
 -- CASH_BALANCES (Cache layer only)
 -- Real source of truth: cash_transactions ledger
