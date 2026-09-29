@@ -6,13 +6,17 @@ import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
 import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import com.neueda.leap.security.JwtPrincipal;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 /** Client-scoped read endpoints for holdings, cash, and order history. */
 @RestController
@@ -38,6 +42,23 @@ public class ClientFinancialController {
     @GetMapping("/holdings")
     public ResponseEntity<List<HoldingResponse>> holdings(
             @AuthenticationPrincipal JwtPrincipal principal) {
+        return ResponseEntity.ok(queryService.getHoldings(principal.userId()));
+    }
+
+    /**
+     * Lists the caller's holdings through the client-addressed route.
+     * @param id client user identity, checked against the validated JWT
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned holdings
+     * @throws ResponseStatusException when the requested client is not the caller
+     */
+    @GetMapping("/clients/{id}/holdings")
+    public ResponseEntity<List<HoldingResponse>> clientHoldings(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+        if (!principal.userId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         return ResponseEntity.ok(queryService.getHoldings(principal.userId()));
     }
 
