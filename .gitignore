@@ -87,5 +87,9 @@ dist/
 build/
 *.pid
 
+# Quote Service (auto-generated/temporary)
+QUOTE_SERVICE_REPORT.md
+insights/src/main/java/com/neueda/leap/marketdata/controller/package-info.java
+insights/src/main/java/com/neueda/leap/marketdata/dto/package-info.java
 
 ! .env.example
