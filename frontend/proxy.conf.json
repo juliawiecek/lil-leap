@@ -2,5 +2,12 @@
   "/auth": {
     "target": "http://localhost:3000",
     "secure": false
+  },
+  "/api/orders": {
+    "target": "http://localhost:8082",
+    "secure": false,
+    "pathRewrite": {
+      "^/api/orders": "/api/v1"
+    }
   }
 }
