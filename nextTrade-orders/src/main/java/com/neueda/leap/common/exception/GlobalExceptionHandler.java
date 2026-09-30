@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 
@@ -75,6 +76,23 @@ public class GlobalExceptionHandler {
         String message = fieldError != null ? fieldError.getDefaultMessage() : "Request is invalid";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
                 ("error", "INVALID_REQUEST", "message", message));
+    }
+
+    /**
+     * Handles a path or query parameter that cannot be converted to its
+     * declared type, such as a non-UUID path segment. Without this handler
+     * the failure falls through to Spring Boot's default error body instead
+     * of this API's error shape.
+     *
+     * @param exception the exception describing the failed conversion
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>>
+    handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_REQUEST", "message", "Request is invalid"));
     }
 
     /**

@@ -37,12 +37,20 @@ public class CashBalanceQueryService {
      *
      * @param authenticatedUserId identity from the validated JWT, never a request selector
      * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
      */
     public List<CashBalanceResponse> getCashBalances(UUID authenticatedUserId) {
+        requireAuthenticatedUser(authenticatedUserId);
         return repository.findByAccount_UserId(authenticatedUserId).stream()
                 .map(CashBalanceQueryService::toResponse)
                 .sorted((a, b) -> a.accountId().compareTo(b.accountId()))
                 .toList();
+    }
+
+    private static void requireAuthenticatedUser(UUID userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Authenticated user id is required");
+        }
     }
 
     private static CashBalanceResponse toResponse(CashBalance cashBalance) {
