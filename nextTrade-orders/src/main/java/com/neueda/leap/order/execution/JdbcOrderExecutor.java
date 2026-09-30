@@ -33,6 +33,20 @@ public class JdbcOrderExecutor implements OrderExecutor {
         this.maxAttempts = maxAttempts;
     }
 
+    /** Refuses startup when the required transactional holdings projection is absent. */
+    @jakarta.annotation.PostConstruct
+    public void requireHoldingsProjection() {
+        Boolean ready = jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM pg_trigger
+                  WHERE tgrelid = to_regclass('holding_movements')
+                    AND tgname = 'tg_holding_movement_projection'
+                    AND tgenabled IN ('O', 'A'))
+                """, Boolean.class);
+        if (!Boolean.TRUE.equals(ready)) {
+            throw new IllegalStateException("Apply db/migrations/008_holdings_projection.sql before starting Orders");
+        }
+    }
+
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public Outcome execute(UUID orderId) {
@@ -94,17 +108,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 VALUES (?, ?, ?, ?, 'USD')
                 """, order.account(), fill, order.side(), cashChange);
 
-        long quantity = Math.addExact(position.quantity(), change);
-        BigDecimal average = quantity == 0 ? BigDecimal.ZERO : buy
-                ? position.cost().multiply(BigDecimal.valueOf(position.quantity()))
-                    .add(price.multiply(BigDecimal.valueOf(order.quantity())))
-                    .divide(BigDecimal.valueOf(quantity), 8, RoundingMode.HALF_UP)
-                : position.cost();
-        jdbc.update("""
-                INSERT INTO holdings(account_id, instrument_id, quantity, avg_cost) VALUES (?, ?, ?, ?)
-                ON CONFLICT (account_id, instrument_id) DO UPDATE SET quantity = EXCLUDED.quantity,
-                    avg_cost = EXCLUDED.avg_cost, updated_at = CURRENT_TIMESTAMP
-                """, order.account(), order.instrument(), quantity, average);
+        // holding_movements invokes the transactional holdings projection trigger.
         jdbc.update("""
                 INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)
                 ON CONFLICT (account_id) DO UPDATE SET balance = EXCLUDED.balance, updated_at = CURRENT_TIMESTAMP

@@ -1,4 +1,5 @@
--- Native PostgreSQL development setup, matching docker-compose.yml.
+-- Native primary-only development setup. This does not provision the reporting
+-- role/replica from Compose; see docs/DATABASE_SETUP.md for the complete topology.
 -- Run as the local PostgreSQL administrator, connected to the postgres database:
 -- psql -h localhost -p 5432 -U postgres -d postgres -f db/setup-local.sql
 \set ON_ERROR_STOP on

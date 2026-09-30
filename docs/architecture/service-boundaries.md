@@ -53,7 +53,8 @@ Orders has one durable worker and one concrete transactional executor. A submitt
 order is accepted in a committed transaction, claimed with `FOR UPDATE SKIP LOCKED`,
 then executed in a separate transaction with an attempt-number fence. All fills,
 cash/holding ledger entries, balance caches, terminal status and fill audit entries
-commit together. A per-account lock prevents concurrent trades from spending the
+commit together. The `holding_movements` trigger owns the holdings projection;
+the executor updates the cash cache. A per-account lock prevents concurrent trades from spending the
 same cash or shares. Acceptance does not reserve resources: execution rechecks
 resources and may reject an accepted order.
 
@@ -75,7 +76,9 @@ All service ports are internal to Compose. The client URLs remain
 | NextTrade | `POST /api/v1/orders` | Orders |
 | NextTrade | `GET /api/v1/orders` | Holdings |
 | NextTrade | `/api/v1/accounts`, `/holdings`, `/cash`, `/instruments` | Holdings (all use `/api/v1`) |
-| NextTrade | `/api/v1/quotes/*` | Quotes |
+| NextTrade | `/api/v1/quotes/{symbol}` | Quotes |
+| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*` | Holdings display reads |
+| NextTrade | `/api/v1/clients/{id}/holdings`, `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Holdings (caller-scoped) |
 | Insights | `/api/v1/reports/*` | Insights |
 
 The reporting listener does not forward trading endpoints. Services also enforce
@@ -93,18 +96,24 @@ docker compose up --build
 ```
 
 For an existing database, preserve the `db_data` volume. Init scripts do not rerun
-automatically. Apply the existing execution migration if necessary, then initialize
+automatically. Stop settlement writers first (`docker compose stop orders`). Apply
+the execution and holdings-projection migrations in order, then initialize
 reporting roles and the replication slot **before** starting the replica:
 
 ```sh
 docker compose up -d db
 docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1 < db/migrations/007_durable_order_execution.sql
+docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1 < db/migrations/008_holdings_projection.sql
 docker compose exec -T db bash /docker-entrypoint-initdb.d/04-reporting.sh
 docker compose up --build -d
 ```
 
 The input-redirection command is for a POSIX shell. In PowerShell use
-`Get-Content db/migrations/007_durable_order_execution.sql | docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1`.
+`Get-Content db/migrations/007_durable_order_execution.sql | docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1`,
+then repeat with `008_holdings_projection.sql`. Migration 008 rebuilds ledger-backed
+positions and requires complete ledger history for those positions. Review opening
+balances before applying it. Orders refuses startup without the enabled projection
+trigger, preventing trades from leaving stale holdings after an incomplete upgrade.
 
 Set `REPORTING_DB_PASSWORD` and `REPLICATION_PASSWORD` in `.env`. The reporting
 role can select explicitly allowed financial tables and cannot read users,
@@ -240,3 +249,44 @@ All three bootstrap regression checks passed. Bash syntax, base/TLS Compose
 configuration, and active Markdown local links/code fences were checked. Historical
 runbooks are labelled as superseded. The updated Docker integration script has
 been syntax-checked; its full container run still needs a Docker engine.
+
+## Rebase reconciliation (30 September 2026)
+
+Replayed commits had restored the pre-split Compose file, duplicate JPA submission
+classes and an Insights quote controller whose dependencies had moved. The
+reconciliation restores the gateway, reporting replica and restrictive service
+routes. Cash aliases and authenticated latest/history quote display reads now
+belong to Holdings; quote ingestion and the symbol feed remain in Python.
+
+Order submissions accept exactly one of `symbol` or `instrumentId` and require
+`clientReference`. Both use the same eligibility, sufficiency, idempotency and
+durable execution checks. Incoming `PENDING` insertion without those checks is
+not a second submission path. Initial accepted API responses remain SUBMITTED;
+the worker transitions them durably.
+
+The optional [Kafka override](../../docker-compose.kafka.yml) preserves the incoming
+broker scaffolding without making it a trading dependency. No application event
+producer or consumer is implemented. See [Kafka setup](../../kafka/README.md).
+
+### Verification after the rebase reconciliation
+
+- Orders: 104 tests passed, including eight real PostgreSQL lifecycle/upgrade checks;
+  Holdings: 55 passed, including five PostgreSQL projection/migration tests;
+  Insights: 26 passed. No Java tests skipped in these runs.
+- Java builds and strict Javadoc generation passed for all three services.
+- Identity: 88 tests and build passed. Trading UI: 78-test suite and build passed;
+  the subsequent quote-client regression test also passed (three focused tests).
+  Reporting UI: 24 tests and build passed. Python: all 72 tests passed.
+- Live native PostgreSQL 18 and Java APIs: ID-based submission, worker settlement,
+  holdings/cash reads, client cash aliases, quote latest/history reads, replicated
+  analyst reports and role/service restrictions passed.
+- NGINX: 21 routing/isolation checks passed. Replica bootstrap: three regression
+  checks passed. Base, TLS and optional Kafka Compose models parsed successfully.
+- Active Markdown links/fences and shell syntax passed. The atomic-settlement ADR
+  is labelled as a historical design snapshot rather than current implementation.
+
+Docker images, the Docker auth integration script, TLS handshakes, Kafka startup
+and the edited Jenkins pipeline were not executed: this workstation has no Docker
+engine. Native database checks use PostgreSQL 18; Compose/CI target PostgreSQL 16.
+Previous product gaps remain. Temporary verification services/databases are stopped
+when the checks finish. No commit or push is performed by this verification.

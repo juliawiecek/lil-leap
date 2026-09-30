@@ -33,8 +33,15 @@ class OrderLifecyclePostgresTest {
     private OrderExecutionWorker worker;
 
     @DynamicPropertySource
-    static void database(DynamicPropertyRegistry properties) {
+    static void database(DynamicPropertyRegistry properties) throws Exception {
         String url = System.getenv("TEST_POSTGRES_URL");
+        var admin = new JdbcTemplate(new DriverManagerDataSource(url,
+                System.getenv("TEST_POSTGRES_USER"), System.getenv("TEST_POSTGRES_PASSWORD")));
+        admin.execute("CREATE SCHEMA " + SCHEMA);
+        var schemaDb = new JdbcTemplate(new DriverManagerDataSource(
+                url + (url.contains("?") ? "&" : "?") + "currentSchema=" + SCHEMA + ",public",
+                System.getenv("TEST_POSTGRES_USER"), System.getenv("TEST_POSTGRES_PASSWORD")));
+        schemaDb.execute(Files.readString(Path.of("../db/finalized-schema.sql")));
         properties.add("spring.datasource.url", () -> url + (url.contains("?") ? "&" : "?") + "currentSchema=" + SCHEMA + ",public");
         properties.add("spring.datasource.username", () -> System.getenv("TEST_POSTGRES_USER"));
         properties.add("spring.datasource.password", () -> System.getenv("TEST_POSTGRES_PASSWORD"));
@@ -43,13 +50,6 @@ class OrderLifecyclePostgresTest {
     private JdbcTemplate admin() {
         return new JdbcTemplate(new DriverManagerDataSource(System.getenv("TEST_POSTGRES_URL"),
                 System.getenv("TEST_POSTGRES_USER"), System.getenv("TEST_POSTGRES_PASSWORD")));
-    }
-
-    @BeforeAll
-    void schema() throws Exception {
-        admin().execute("CREATE SCHEMA " + SCHEMA);
-        // PostgreSQL parses the full schema, including dollar-quoted functions.
-        jdbc.execute(Files.readString(Path.of("../db/finalized-schema.sql")));
     }
 
     @AfterAll
@@ -109,6 +109,19 @@ class OrderLifecyclePostgresTest {
     }
 
     @Test
+    void instrumentIdSubmissionUsesTheSameValidatedExactlyOnceSettlement() {
+        var request = new SubmitOrderRequest(account, null, UUID.randomUUID(), "BUY", 3, "MARKET", null, instrument);
+        var result = submissions.submit(user, request);
+        assertThat(result.order().symbol()).isEqualTo("AAPL");
+        assertThat(result.order().status()).isEqualTo("SUBMITTED");
+        worker.execute(worker.claimNext());
+        assertThat(submissions.submit(user, request).created()).isFalse();
+        assertThat(count("fills")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("9700");
+    }
+
+    @Test
     void concurrentOrdersCannotSpendTheSameCashTwice() throws Exception {
         UUID first = submit("BUY", 60), second = submit("BUY", 60);
         var a = worker.claimNext(); var b = worker.claimNext();
@@ -146,6 +159,19 @@ class OrderLifecyclePostgresTest {
         assertThat(worker.claimNext()).isNull();
         assertThat(status(id)).isEqualTo("SUBMITTED");
         assertThat(count("fills")).isZero();
+    }
+
+    @Test
+    void absentProjectionIsRejectedBeforeTheWorkerCanTrade() {
+        var verifier = new JdbcOrderExecutor(jdbc, null, 1);
+        verifier.requireHoldingsProjection();
+        jdbc.execute("ALTER TABLE holding_movements DISABLE TRIGGER tg_holding_movement_projection");
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(verifier::requireHoldingsProjection)
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("008_holdings_projection.sql");
+        } finally {
+            jdbc.execute("ALTER TABLE holding_movements ENABLE TRIGGER tg_holding_movement_projection");
+        }
     }
 
     @Test

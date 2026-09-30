@@ -22,6 +22,16 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Hides whether a requested client exists or belongs to another caller.
+     * @param exception missing or unowned client
+     * @return a fixed not-found response
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.ClientNotFoundException.class)
+    public ResponseEntity<Map<String, String>> clientNotFound(Exception exception) {
+        return ResponseEntity.status(404).body(Map.of("error", "CLIENT_NOT_FOUND", "message", "Client not found"));
+    }
+
     /** Creates the application-wide REST exception handler. */
     public GlobalExceptionHandler() {
     }
@@ -63,7 +73,7 @@ public class GlobalExceptionHandler {
      * @param exception validation or parsing failure that may contain credentials
      * @return HTTP 400 with a fixed INVALID_REQUEST response
      */
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class, org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
                 "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));

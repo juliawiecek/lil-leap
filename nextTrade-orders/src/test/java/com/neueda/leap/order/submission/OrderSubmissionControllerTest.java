@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrderSubmissionControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
-    @Autowired JwtService tokens;
+    @Autowired JwtServiceImpl tokens;
     @MockBean OrderSubmissionService service;
     private final UUID user = UUID.randomUUID();
 
@@ -65,5 +65,13 @@ class OrderSubmissionControllerTest {
 
     private SubmitOrderRequest request() {
         return new SubmitOrderRequest(UUID.randomUUID(), "AAPL", UUID.randomUUID(), "BUY", 10, "MARKET", null);
+    }
+
+    @Test
+    void analystCannotSubmitThroughTheCanonicalController() throws Exception {
+        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "analyst@example.test", "ANALYST"))
+                        .contentType("application/json").content(json.writeValueAsBytes(request())))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
     }
 }

@@ -2,3 +2,4 @@ ci/*.sh text eol=lf
 scripts/*.sh text eol=lf
 db/*.sh text eol=lf
 gateway/*.conf text eol=lf
+kafka/topics/*.sh text eol=lf

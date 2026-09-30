@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .contentSecurityPolicy(c -> c.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(a -> a
-                        .requestMatchers(HttpMethod.GET, "/accounts", "/holdings", "/cash", "/orders", "/instruments", "/instruments/*").hasAnyRole("TRADER", "ANALYST")
+                        .requestMatchers(HttpMethod.GET, "/accounts", "/holdings", "/cash", "/orders", "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*", "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*").hasAnyRole("TRADER", "ANALYST")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {

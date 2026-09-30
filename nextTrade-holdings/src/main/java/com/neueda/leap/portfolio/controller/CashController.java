@@ -1,8 +1,8 @@
-package com.neueda.leap.order.controller;
+package com.neueda.leap.portfolio.controller;
 
-import com.neueda.leap.order.dto.CashBalanceResponse;
-import com.neueda.leap.order.exception.ClientNotFoundException;
-import com.neueda.leap.order.service.CashBalanceQueryService;
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.service.ClientNotFoundException;
+import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import com.neueda.leap.security.JwtPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,14 +27,14 @@ import java.util.UUID;
 @PreAuthorize("hasAnyRole('TRADER', 'ANALYST')")
 public class CashController {
 
-    private final CashBalanceQueryService queryService;
+    private final ClientFinancialQueryService queryService;
 
     /**
      * Creates the cash balance controller.
      *
      * @param queryService service that reads client-scoped cash balances
      */
-    public CashController(CashBalanceQueryService queryService) {
+    public CashController(ClientFinancialQueryService queryService) {
         this.queryService = queryService;
     }
 

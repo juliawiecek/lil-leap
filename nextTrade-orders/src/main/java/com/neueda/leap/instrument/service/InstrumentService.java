@@ -52,4 +52,13 @@ public class InstrumentService {
     public Optional<InstrumentResponse> findInstrumentBySymbol(String symbol) {
         return repository.findBySymbol(symbol.trim().toUpperCase(Locale.ROOT));
     }
+
+    /**
+     * Reads current catalog metadata for an ID-based submission.
+     * @param id persistent instrument identifier
+     * @return matching instrument, or empty when unsupported
+     */
+    public Optional<InstrumentResponse> findInstrumentById(UUID id) {
+        return repository.findById(id);
+    }
 }

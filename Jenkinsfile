@@ -61,6 +61,8 @@ pipeline {
       steps {
         sh '''
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} -f docker-compose.kafka.yml config -q
+          bash scripts/test_reporting_replica.sh
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config
         '''
       }
@@ -82,7 +84,7 @@ pipeline {
       }
     }
 
-    stage('PostgreSQL Order Lifecycle') {
+    stage('PostgreSQL Settlement and Holdings') {
       steps {
         dir('nextTrade-orders') {
           sh '''
@@ -105,6 +107,11 @@ pipeline {
             export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
             export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
             mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest test
+            mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
+              -Dtest=HoldingsSettlementPostgresTest \
+              -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
+              -Dtest.holdings.postgres.user=orders_test \
+              -Dtest.holdings.postgres.password=ci-test-only test
           '''
         }
       }

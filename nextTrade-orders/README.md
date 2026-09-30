@@ -15,6 +15,9 @@ ownership, gateway routing, database setup, known gaps and verification.
 | --- | --- | --- |
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
 
+Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
+`symbol` or `instrumentId`. Reuse `clientReference` for retries.
+
 All endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
 
@@ -41,3 +44,8 @@ Set `TEST_POSTGRES_URL`, `TEST_POSTGRES_USER`, and `TEST_POSTGRES_PASSWORD` for 
 disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submission
 contracts. Run Maven from this directory so the production schema can be loaded.
 Without these variables, PostgreSQL-only tests are explicitly skipped.
+
+Apply migrations 007 and 008 before starting Orders on an existing database.
+The holdings projection trigger updates positions within the settlement transaction;
+Orders refuses startup if that trigger is missing or disabled. See the
+[upgrade instructions](../docs/architecture/service-boundaries.md#deployment-and-existing-databases).

@@ -25,6 +25,14 @@ class SubmitOrderRequestValidationTest {
     }
 
     @Test
+    void idSelectorIsSupportedButAmbiguousOrMissingSelectorsAreRejected() {
+        UUID account = UUID.randomUUID(), reference = UUID.randomUUID(), instrument = UUID.randomUUID();
+        assertTrue(validator.validate(new SubmitOrderRequest(account, null, reference, "BUY", 1, null, null, instrument)).isEmpty());
+        assertFalse(validator.validate(new SubmitOrderRequest(account, "AAPL", reference, "BUY", 1, null, null, instrument)).isEmpty());
+        assertFalse(validator.validate(new SubmitOrderRequest(account, null, reference, "BUY", 1, null, null, null)).isEmpty());
+    }
+
+    @Test
     void malformedRequestsAreRejected() {
         var request = new SubmitOrderRequest(null, "", null, "HOLD", 0, "LIMIT", null);
         assertFalse(validator.validate(request).isEmpty());

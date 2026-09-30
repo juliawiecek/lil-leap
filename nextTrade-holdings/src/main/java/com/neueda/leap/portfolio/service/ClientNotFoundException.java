@@ -1,4 +1,4 @@
-package com.neueda.leap.order.exception;
+package com.neueda.leap.portfolio.service;
 
 /**
  * Exception thrown when a request names a client id that does not exist or

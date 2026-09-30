@@ -1,63 +1,28 @@
-# Kafka Infrastructure
+# Optional Kafka development infrastructure
 
-This directory contains the Kafka broker setup for the lil-leap project.
+The broker is opt-in and is not on the trading or reporting request path. Current
+services do not publish or consume Kafka events; settlement remains a database
+transaction and Insights follows PostgreSQL replication.
 
-## Components
+From the repository root:
 
-- **Dockerfile**: Custom Kafka broker image built on Confluent's Kafka image
-- **broker-config/server.properties**: Broker configuration
-- **topics/create-topics.sh**: Script to auto-create topics on startup
-
-## Topics
-
-The following topics are automatically created when the Kafka infrastructure starts:
-
-- `orders-events`: Order-related events (producers: orders service)
-- `holdings-events`: Holdings-related events (producers: holdings service)
-- `insights-events`: Insights-related events (producers: insights service)
-
-## Running Kafka
-
-Kafka runs as part of the main Docker Compose stack:
-
-```bash
-docker compose up kafka zookeeper kafka-topics
+```sh
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d kafka kafka-topics
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml logs kafka-topics
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml exec kafka kafka-topics --list --bootstrap-server kafka:9092
 ```
 
-Or start the entire stack (including all services):
+The override adds ZooKeeper, the broker and an idempotent topic initialization job.
+It creates `orders-events`, `holdings-events` and `insights-events`, each with one
+partition and replication factor one. These names reserve future contracts;
+they do not imply working application integrations.
 
-```bash
-docker compose up
-```
+Containers connect to `kafka:9092`. Host tools use `localhost:29092`, bound only
+to loopback. The existing Confluent 7.5.0 base image is retained. Runtime settings
+come from the Dockerfile environment; `broker-config/server.properties` is an
+unused reference file, not an active override. See the
+[Confluent configuration reference](https://docs.confluent.io/platform/7.5/installation/docker/config-reference.html).
 
-## Kafka Broker Details
-
-- **Internal Network**: `kafka:9092`
-- **Host Access**: `localhost:29092`
-- **Zookeeper**: `zookeeper:2181` (internal only)
-
-Services within Docker can connect to Kafka using the hostname `kafka` on port `9092`.
-
-## Monitoring
-
-To check Kafka topics:
-
-```bash
-docker compose exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
-```
-
-To consume from a topic:
-
-```bash
-docker compose exec kafka kafka-console-consumer.sh \
-  --bootstrap-server localhost:9092 \
-  --topic orders-events \
-  --from-beginning
-```
-
-## Notes
-
-- `AUTO_CREATE_TOPICS_ENABLE` is set to `false` — topics must be created via the initialization script
-- Replication factor is 1 (suitable for development, not production)
-- Topics are created with 1 partition (can be adjusted in `create-topics.sh`)
-
+Topic initialization has a bounded readiness wait and fails on command errors.
+The Compose model and Bash syntax can be checked without running a broker; live
+broker startup still requires Docker. This configuration is for development.

@@ -65,9 +65,11 @@ public class OrderSubmissionService {
         validateAccount(repository.findAccountTradingProfile(request.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")));
 
-        String symbol = request.normalizedSymbol();
-        InstrumentResponse instrument = instruments.findInstrumentBySymbol(symbol)
+        InstrumentResponse instrument = (request.instrumentId() == null
+                ? instruments.findInstrumentBySymbol(request.normalizedSymbol())
+                : instruments.findInstrumentById(request.instrumentId()))
                 .orElseThrow(() -> new OrderRuleException(INSTRUMENT_UNSUPPORTED));
+        String symbol = instrument.symbol();
         if (!instrument.enabled()) throw new OrderRuleException(INSTRUMENT_DISABLED);
         if (!instrument.tradable()) throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);
 

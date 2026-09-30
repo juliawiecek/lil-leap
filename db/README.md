@@ -80,6 +80,9 @@ WAL; a prolonged outage can require a replica rebuild.
 
 - Customer SSNs are encrypted with pgcrypto; Identity owns encryption.
 - Customer age validation requires at least **21**.
+- Migration 008 installs the transactional holdings projection trigger and rebuilds
+  ledger-backed positions. Stop settlement writers and review complete ledger
+  history before upgrading. Orders checks for the trigger at startup.
 - Orders records idempotent submissions and settles fills, ledger entries, caches,
   status and audit data atomically under account-level locking.
 - `audit_log` is append-only for `app_user`.

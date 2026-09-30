@@ -140,6 +140,10 @@ public class QuoteController {
      * Exception thrown when a requested quote does not exist.
      */
     public static class QuoteNotFoundException extends RuntimeException {
+        /**
+         * Creates a missing quote response condition.
+         * @param message description of the missing quote
+         */
         public QuoteNotFoundException(String message) {
             super(message);
         }

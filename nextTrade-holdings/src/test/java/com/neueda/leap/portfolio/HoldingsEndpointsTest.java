@@ -28,7 +28,7 @@ import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(ClientFinancialController.class)
+@WebMvcTest({ClientFinancialController.class, com.neueda.leap.portfolio.controller.CashController.class})
 @Import({SecurityConfig.class, JwtServiceImpl.class, ClientFinancialQueryService.class,
         HoldingsEndpointsTest.DatabaseConfiguration.class})
 class HoldingsEndpointsTest {
@@ -68,6 +68,7 @@ class HoldingsEndpointsTest {
     @BeforeEach
     void seedClients() {
         jdbc.update("DELETE FROM holdings");
+        jdbc.update("DELETE FROM cash_balances");
         jdbc.update("DELETE FROM accounts");
         jdbc.update("DELETE FROM users");
         jdbc.update("DELETE FROM instruments");
@@ -84,6 +85,8 @@ class HoldingsEndpointsTest {
         jdbc.update("INSERT INTO accounts VALUES (?, ?)", otherAccount, stranger);
         jdbc.update("INSERT INTO instruments VALUES (?, ?, ?)", instrument, "TEST", "Test instrument");
         for (UUID id : new UUID[]{account, secondAccount, otherAccount}) {
+            jdbc.update("INSERT INTO cash_balances VALUES (?, ?, ?, ?)", id, "USD",
+                    id.equals(otherAccount) ? 999999 : 250, Timestamp.from(Instant.now()));
             jdbc.update("INSERT INTO holdings VALUES (?, ?, ?, ?, ?)", id, instrument,
                     id.equals(otherAccount) ? 999 : 10, 12.5,
                     Timestamp.from(Instant.parse("2026-01-01T00:00:00Z")));
@@ -156,5 +159,22 @@ class HoldingsEndpointsTest {
 
     private String[] routes() {
         return new String[]{"/holdings", "/clients/" + owner + "/holdings"};
+    }
+
+    @Test
+    void cashAliasesPreserveOwnershipAuthenticationAndBadIdHandling() throws Exception {
+        for (String pattern : new String[]{"/clients/%s/cash", "/cash/balance/%s"}) {
+            String own = pattern.formatted(owner);
+            mvc.perform(get(own)).andExpect(status().isUnauthorized());
+            mvc.perform(get(own).header("Authorization", bearer).param("userId", stranger.toString()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].balance").value(250));
+            for (UUID id : new UUID[]{stranger, UUID.randomUUID()}) {
+                mvc.perform(get(pattern.formatted(id)).header("Authorization", bearer))
+                        .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("CLIENT_NOT_FOUND"));
+            }
+            mvc.perform(get(pattern.formatted("bad-id")).header("Authorization", bearer))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
+        }
     }
 }
