@@ -166,7 +166,7 @@ These are separate product requirements; moving folders does not implement them:
   an authenticated data-loading flow and agreed reporting contracts. The aggregate
   summary endpoint is real, but it is not wired into the demo charts.
 - NextTrade's trading screens also simulate trading locally; their live network
-  integration currently covers authentication. Connect order tickets, quotes and
+  integration covers authentication and order history through Holdings. Connect order tickets, quotes and
   portfolio views to the gateway APIs in a dedicated frontend integration change.
 - Identity has no password-reset API. Implement token expiry, single-use reset,
   email delivery and session revocation in `auth`; do not restore Java auth clones.
@@ -311,3 +311,27 @@ Orders and Holdings strict Javadoc checks passed, as did all three Java builds,
 Kafka Compose parsing. Full Docker startup and Jenkins were not run locally.
 No frontend source changes were needed for this merge; the previously verified
 quote-client fixes were retained. The resolved merge is staged for commit/push.
+
+### PR #85 follow-up after main advanced
+
+The previous resolution was committed and pushed as `49c15dd`. Main then advanced
+to `1a2db95`, adding NEXT-118 history UI and another order-validation implementation.
+The follow-up merge preserves the existing JDBC submission, eligibility, sufficiency
+and execution path rather than restoring the retired JPA classes.
+
+Both trading dashboards now load real history through
+`GET /api/v1/clients/{id}/orders` on the gateway to Holdings. Status filters include
+SUBMITTED, ACCEPTED and DELAYED alongside the older statuses. Invalid date ranges
+clear the loading state and invalidate outstanding responses. Incoming security
+test cases exercise the canonical controller and production security configuration,
+including token reuse and idempotent retry responses.
+
+The incoming optional Jenkins coverage archive setting is retained; Surefire also
+preserves JaCoCo's agent arguments so coverage is still collected. Earlier deployment
+and schema reports are explicitly marked historical.
+
+Validation: Orders 108 tests and Holdings 72 tests passed without skips, including
+nine and six native PostgreSQL tests respectively. Trading UI: 89 tests and production
+build passed. Both Java builds, coverage generation, 23 NGINX routing/isolation
+checks, base Compose parsing and active Markdown links/fences passed. Docker startup
+and Jenkins execution remain unverified on this workstation.

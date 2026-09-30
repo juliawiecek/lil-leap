@@ -74,4 +74,43 @@ class OrderSubmissionControllerTest {
                 .andExpect(status().isForbidden());
         verifyNoInteractions(service);
     }
+
+    @Test
+    void invalidTokenCannotSubmit() throws Exception {
+        mvc.perform(post("/orders").header("Authorization", "Bearer invalid-token")
+                        .contentType("application/json").content(json.writeValueAsBytes(request())))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void malformedSubmissionDoesNotReachService() throws Exception {
+        var invalid = new SubmitOrderRequest(UUID.randomUUID(), "AAPL", UUID.randomUUID(),
+                "BUY", 0, "MARKET", null);
+        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .contentType("application/json").content(json.writeValueAsBytes(invalid)))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void traderCanReuseTokenForNewOrdersAndIdempotentRetries() throws Exception {
+        String bearer = "Bearer " + tokens.issueToken(user, "test@example.test", "TRADER");
+        var request = request();
+        var order = new com.neueda.leap.order.submission.dto.OrderSubmissionResponse(
+                UUID.randomUUID(), request.accountId(), UUID.randomUUID(), "AAPL", request.clientReference(),
+                "BUY", 10, "MARKET", "SUBMITTED", java.time.Instant.now(), null);
+        when(service.submit(user, request)).thenReturn(
+                new com.neueda.leap.order.submission.service.OrderSubmissionResult(order, true),
+                new com.neueda.leap.order.submission.service.OrderSubmissionResult(order, false));
+
+        for (int expectedStatus : new int[]{201, 200, 200}) {
+            mvc.perform(post("/orders").header("Authorization", bearer)
+                            .contentType("application/json").content(json.writeValueAsBytes(request)))
+                    .andExpect(status().is(expectedStatus))
+                    .andExpect(jsonPath("$.orderId").value(order.orderId().toString()))
+                    .andExpect(jsonPath("$.status").value("SUBMITTED"));
+        }
+        verify(service, times(3)).submit(user, request);
+    }
 }

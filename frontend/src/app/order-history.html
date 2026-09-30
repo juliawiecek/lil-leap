@@ -1,0 +1,65 @@
+<div class="history-filters" role="group" aria-label="Filter orders">
+  <label>
+    From
+    <input type="date" [value]="from()" (change)="setFrom($any($event.target).value)" />
+  </label>
+  <label>
+    To
+    <input type="date" [value]="to()" (change)="setTo($any($event.target).value)" />
+  </label>
+  <label>
+    Status
+    <select [value]="status()" (change)="setStatus($any($event.target).value)">
+      @for (option of statusOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </label>
+  @if (hasFilters()) {
+    <button type="button" class="clear-filters" (click)="clearFilters()">Clear filters</button>
+  }
+</div>
+
+@if (error()) {
+  <p class="history-message error" role="alert">{{ error() }}</p>
+} @else if (loading() && rows().length === 0) {
+  <p class="history-message" aria-live="polite">Loading your orders…</p>
+} @else if (rows().length === 0) {
+  <p class="history-message">
+    {{ hasFilters() ? 'No orders match these filters.' : 'You have no orders yet.' }}
+  </p>
+} @else {
+  <div class="history-table" [class.refreshing]="loading()" aria-live="polite">
+    <table>
+      <thead>
+        <tr>
+          <th>Submitted</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Fill price</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (order of rows(); track order.orderId) {
+          <tr>
+            <td>{{ order.submittedAt | date: 'MMM d, y, h:mm a' }}</td>
+            <td><strong>{{ order.symbol }}</strong></td>
+            <td>{{ statusLabel(order.side) }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>
+              <span
+                class="status"
+                [class.filled]="order.status === 'FILLED'"
+                [class.rejected]="order.status === 'REJECTED'"
+                >{{ statusLabel(order.status) }}</span
+              >
+            </td>
+            <td>{{ order.fillPrice === null ? '—' : (order.fillPrice | currency) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

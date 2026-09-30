@@ -86,7 +86,7 @@ See the [route table](../docs/architecture/service-boundaries.md#gateway-routes)
 - `src/app/app.scss`: visual design and animations
 - `src/app/app.ts`: Angular state, interactions, and chart rendering
 
-Registration, login, token refresh and logout use the real Identity service. Trading screens still use local sample data and simulated order interactions; live order, quote and portfolio integration remains separate work.
+Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load real order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order tickets and other trading views still use local sample data and simulated interactions; live submission, quote and portfolio integration remains separate work.
 
 ## Error logging
 
