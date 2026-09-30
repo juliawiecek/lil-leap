@@ -31,7 +31,7 @@ services:
       - "9092:9092"
       - "29092:29092"
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 5s
       timeout: 3s
       retries: 5
