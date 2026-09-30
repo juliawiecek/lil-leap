@@ -25,7 +25,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
      * @param now now
      * @return accepted or pending orders with acceptance timestamps, ordered by next execution time
      */
-    @Query("SELECT o FROM Order o WHERE (o.status = 'ACCEPTED' OR o.status = 'PENDING') " +
+    // JOIN FETCH: each order is executed in a later transaction, after this query's session has
+    // closed, so its lazy account and instrument must be loaded here or reading them fails.
+    @Query("SELECT o FROM Order o JOIN FETCH o.account JOIN FETCH o.instrument " +
+           "WHERE (o.status = 'ACCEPTED' OR o.status = 'PENDING') " +
            "AND o.acceptedAt IS NOT NULL AND o.nextExecutionAt <= :now " +
            "ORDER BY o.nextExecutionAt ASC")
     List<Order> findDueForExecution(@Param("now") Instant now);
