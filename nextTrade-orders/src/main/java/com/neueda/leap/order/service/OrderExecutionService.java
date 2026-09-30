@@ -44,7 +44,6 @@ public class OrderExecutionService {
     private final HoldingMovementRepository holdingMovementRepository;
     private final CashTransactionRepository cashTransactionRepository;
     private final OrderAccountRepository accountRepository;
-    private final HoldingRepository holdingRepository;
     private final CashBalanceRepository cashBalanceRepository;
 
     private OrderExecutionService self;
@@ -65,7 +64,6 @@ public class OrderExecutionService {
      * @param holdingMovementRepository holding movement repository
      * @param cashTransactionRepository cash transaction repository
      * @param accountRepository account repository, used to lock the account row before settlement
-     * @param holdingRepository holdings cache repository
      * @param cashBalanceRepository cash balance cache repository
      */
     public OrderExecutionService(OrderRepository orderRepository,
@@ -75,7 +73,6 @@ public class OrderExecutionService {
                                 HoldingMovementRepository holdingMovementRepository,
                                 CashTransactionRepository cashTransactionRepository,
                                 OrderAccountRepository accountRepository,
-                                HoldingRepository holdingRepository,
                                 CashBalanceRepository cashBalanceRepository) {
         this.orderRepository = orderRepository;
         this.quoteRepository = quoteRepository;
@@ -84,7 +81,6 @@ public class OrderExecutionService {
         this.holdingMovementRepository = holdingMovementRepository;
         this.cashTransactionRepository = cashTransactionRepository;
         this.accountRepository = accountRepository;
-        this.holdingRepository = holdingRepository;
         this.cashBalanceRepository = cashBalanceRepository;
         this.self = this;
     }
@@ -204,11 +200,11 @@ public class OrderExecutionService {
         createHoldingMovement(order, fill);
         createCashTransaction(order, fill, executionPrice);
 
-        // BR-09/BR-10: update the holdings and cash_balances caches in the
-        // same transaction as the ledger writes above, so a client-facing
-        // read (NEXT-115/199) can never observe a settled fill whose caches
-        // haven't caught up.
-        applyHoldingToCache(lockedAccount, order.getInstrument(), order.getSide(), order.getQuantity(), executionPrice);
+        // BR-09/BR-10: the holdings cache is maintained by the database trigger
+        // tg_holding_movement_projection (db/migrations/008), which runs inside the
+        // holding_movements INSERT above and so commits or rolls back with this
+        // transaction. Do not also write holdings here: a first purchase would
+        // insert a duplicate row. cash_balances has no trigger, so update it here.
         applyCashToCache(lockedAccount, computeCashAmount(order, executionPrice));
 
         // Update order status to FILLED
@@ -232,46 +228,6 @@ public class OrderExecutionService {
      */
     public Optional<Fill> getSettlement(UUID fillId) {
         return fillRepository.findById(fillId);
-    }
-
-    /**
-     * Updates the holdings cache for one account/instrument after a fill,
-     * using moving weighted-average cost (TS-10.1 ADR §4): a BUY blends the
-     * new units into the average cost; a SELL reduces quantity while leaving
-     * average cost unchanged, resetting it to zero only on full liquidation.
-     *
-     * @param account locked account the fill belongs to
-     * @param instrument instrument traded
-     * @param side BUY or SELL
-     * @param filledQuantity units filled
-     * @param executionPrice price per unit the fill executed at
-     */
-    protected void applyHoldingToCache(Account account, Instrument instrument, String side,
-                                        Long filledQuantity, BigDecimal executionPrice) {
-        Holding holding = holdingRepository
-                .findByAccountIdAndInstrumentId(account.getAccountId(), instrument.getInstrumentId())
-                .orElseGet(() -> new Holding(account.getAccountId(), instrument.getInstrumentId()));
-
-        long currentQuantity = holding.getQuantity();
-        BigDecimal currentAvgCost = holding.getAvgCost();
-
-        if ("BUY".equalsIgnoreCase(side)) {
-            long newQuantity = currentQuantity + filledQuantity;
-            BigDecimal existingCost = currentAvgCost.multiply(BigDecimal.valueOf(currentQuantity));
-            BigDecimal addedCost = executionPrice.multiply(BigDecimal.valueOf(filledQuantity));
-            BigDecimal newAvgCost = newQuantity == 0
-                    ? BigDecimal.ZERO
-                    : existingCost.add(addedCost).divide(BigDecimal.valueOf(newQuantity), 8, RoundingMode.HALF_UP);
-            holding.setQuantity(newQuantity);
-            holding.setAvgCost(newAvgCost);
-        } else {
-            long newQuantity = currentQuantity - filledQuantity;
-            holding.setQuantity(newQuantity);
-            holding.setAvgCost(newQuantity == 0 ? BigDecimal.ZERO : currentAvgCost);
-        }
-
-        holding.setUpdatedAt(Instant.now());
-        holdingRepository.save(holding);
     }
 
     /**
