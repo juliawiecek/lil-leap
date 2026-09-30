@@ -61,12 +61,34 @@ class OrderSubmissionServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Clear all tables
+        // Create tables that don't have JPA entities
+        // (Hibernate's create-drop only creates tables for entities)
+        jdbc.execute("DROP TABLE IF EXISTS holdings");
+        jdbc.execute("DROP TABLE IF EXISTS cash_balances");
+        
+        jdbc.execute("CREATE TABLE holdings (" +
+                "account_id UUID NOT NULL, " +
+                "instrument_id UUID NOT NULL, " +
+                "quantity BIGINT NOT NULL DEFAULT 0, " +
+                "avg_cost NUMERIC(18,8) NOT NULL DEFAULT 0, " +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, " +
+                "PRIMARY KEY (account_id, instrument_id)" +
+                ")");
+        
+        jdbc.execute("CREATE TABLE cash_balances (" +
+                "account_id UUID PRIMARY KEY, " +
+                "currency CHAR(3) NOT NULL DEFAULT 'USD', " +
+                "balance NUMERIC(18,2) NOT NULL DEFAULT 0.00, " +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                ")");
+        
+        // Clear all tables (in order of foreign key dependencies)
         jdbc.update("DELETE FROM order_status_history");
+        jdbc.update("DELETE FROM fills");
+        jdbc.update("DELETE FROM holding_movements");
+        jdbc.update("DELETE FROM cash_transactions");
         jdbc.update("DELETE FROM orders");
         jdbc.update("DELETE FROM quotes");
-        jdbc.update("DELETE FROM holdings");
-        jdbc.update("DELETE FROM cash_balances");
         jdbc.update("DELETE FROM accounts");
         jdbc.update("DELETE FROM instruments");
 
@@ -75,8 +97,8 @@ class OrderSubmissionServiceTest {
         instrumentId = UUID.fromString("550e8400-e29b-41d4-a716-446655440010");
 
         // Create active account with trading enabled
-        Account account = new Account(accountId, userId, "ACC001", "Test Account", "INDIVIDUAL",
-                "ACTIVE", "STANDARD", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
+        Account account = new Account(accountId, userId, "ACC001", "Test Account", "INDIVIDUAL_CASH",
+                "ACTIVE", "NOVICE", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
         account.setTradingEnabled(true);
         account.setMarginApproved(false);
         account.setOptionsApproved(false);
@@ -162,8 +184,8 @@ class OrderSubmissionServiceTest {
     void testInactiveAccountRejected() {
         // Arrange
         UUID inactiveAccountId = UUID.fromString("750e8400-e29b-41d4-a716-446655440002");
-        Account inactiveAccount = new Account(inactiveAccountId, userId, "ACC002", "Inactive", "INDIVIDUAL",
-                "INACTIVE", "STANDARD", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
+        Account inactiveAccount = new Account(inactiveAccountId, userId, "ACC002", "Inactive", "INDIVIDUAL_CASH",
+                "INACTIVE", "NOVICE", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
         inactiveAccount.setTradingEnabled(true);
         inactiveAccount.setMarginApproved(false);
         inactiveAccount.setOptionsApproved(false);
@@ -186,8 +208,8 @@ class OrderSubmissionServiceTest {
     void testTradingDisabledAccountRejected() {
         // Arrange
         UUID disabledTradingAccountId = UUID.fromString("850e8400-e29b-41d4-a716-446655440003");
-        Account disabledAccount = new Account(disabledTradingAccountId, userId, "ACC003", "Disabled", "INDIVIDUAL",
-                "ACTIVE", "STANDARD", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
+        Account disabledAccount = new Account(disabledTradingAccountId, userId, "ACC003", "Disabled", "INDIVIDUAL_CASH",
+                "ACTIVE", "NOVICE", BigDecimal.valueOf(1000), BigDecimal.valueOf(5.00));
         disabledAccount.setTradingEnabled(false);
         disabledAccount.setMarginApproved(false);
         disabledAccount.setOptionsApproved(false);
@@ -241,6 +263,27 @@ class OrderSubmissionServiceTest {
         OrderRuleException ex = assertThrows(OrderRuleException.class,
                 () -> orderSubmissionService.submit(userId, request));
         assertEquals(OrderRuleException.Reason.INSTRUMENT_DISABLED, ex.reason());
+
+        long orderCount = jdbc.queryForObject("SELECT COUNT(*) FROM orders", Long.class);
+        assertEquals(0L, orderCount);
+    }
+
+    @Test
+    void testNotTradableInstrumentRejected() {
+        // Arrange: Test instrument that is enabled but not tradable (e.g., halted/suspended)
+        UUID notTradableInstrumentId = UUID.fromString("660e8400-e29b-41d4-a716-446655440012");
+        Instrument notTradableInstrument = new Instrument(notTradableInstrumentId, "SUSPENDED", "Suspended Stock", "COMMON_STOCK",
+                "NYSE", "USD", true, false);  // enabled=true, tradable=false
+        instrumentRepository.save(notTradableInstrument);
+
+        SubmitOrderRequest request = new SubmitOrderRequest(
+                accountId, notTradableInstrumentId, "BUY", 10L, UUID.randomUUID()
+        );
+
+        // Act & Assert
+        OrderRuleException ex = assertThrows(OrderRuleException.class,
+                () -> orderSubmissionService.submit(userId, request));
+        assertEquals(OrderRuleException.Reason.INSTRUMENT_NOT_TRADABLE, ex.reason());
 
         long orderCount = jdbc.queryForObject("SELECT COUNT(*) FROM orders", Long.class);
         assertEquals(0L, orderCount);
