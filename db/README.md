@@ -1,62 +1,48 @@
-# NextTrade Database
+# NextTrade database
 
-## Overview
+## Deployment and roles
 
-Every developer runs an isolated PostgreSQL database using the same version-controlled schema and startup process. The database schema is shared through Git, while database connection values (host, port, credentials) are configurable per environment (local dev, Linux VM, CI/CD).
+Compose runs PostgreSQL 16 as primary `db` (volume `db_data`) and asynchronous
+physical standby `reporting-db` (volume `reporting_data`). Neither publishes a host
+port. Identity, Holdings, Orders and Quotes use the primary. Insights uses the
+standby with a separate reporting role.
 
-## Architecture
+| Role | Responsibility |
+| --- | --- |
+| `main` | Schema owner, initialization and migrations |
+| `app_user` | Primary application DML; append-only audit restrictions |
+| `reporting_user` | SELECT on an explicit financial-table allowlist; no identity/session data |
+| `replicator` | Physical replication only |
 
-### Schema and Versioning
+The primary services still share `app_user`; per-service roles and row-level
+security remain future work. Application queries enforce client ownership.
 
-- **Single Source of Truth**: [db/finalized-schema.sql](finalized-schema.sql) contains the complete 17-table relational model
-- **Owner Role**: `main` (or `DB_ADMIN_USERNAME`) creates and owns all schema objects
-- **Application Role**: `app_user` (or `DB_APP_USERNAME`) has restricted DML permissions only (SELECT, INSERT, UPDATE, DELETE) on runtime tables
-- **Migrations**: Future schema changes must be versioned (e.g., `03-migration-name.sql`) and applied by the `main` role
+## Configuration and initialization
 
-### Isolation and Persistence
+Copy [env.example](../env.example) to the repository root `.env`. Compose uses
+`POSTGRES_PASSWORD`, `DB_APP_PASSWORD`, `REPORTING_DB_PASSWORD` and
+`REPLICATION_PASSWORD` for the four roles above. The database and owner are fixed
+as `nexttrade` and `main` in Compose. `DB_ADMIN_USERNAME`/`DB_ADMIN_PASSWORD` are
+settings for standalone test scripts, not Compose owner overrides.
 
-- **Docker Volume**: Postgres data is stored in a named Docker volume (`db_data`)
-- **Persistence Across Restarts**: `docker compose down` preserves the volume; data persists across dev sessions
-- **Fresh Start**: `docker compose down -v` deletes the volume, forcing a clean schema load on the next `docker compose up`
-- **First-Run Only**: Init scripts (`01-schema.sql`, `02-app-role.sh`) run once against an empty volume
+On an empty primary volume, initialization runs in this order:
 
-## Configuration
+1. [finalized-schema.sql](finalized-schema.sql)
+2. [init-app-role.sh](init-app-role.sh)
+3. [US-equity seed](seeds/001_us_equity_instruments.sql)
+4. [init-reporting.sh](init-reporting.sh)
 
-All database connection values are environment-based. Set the required credentials in `.env` before starting Compose.
+The [replica entrypoint](start-reporting-replica.sh) runs `pg_basebackup`, writes
+standby configuration and starts recovery. Its private passfile holds replication
+credentials. The health check supplies the reporting password only to its `psql`
+process, so it cannot override replication authentication.
 
-### Environment Variables
+For an existing primary, follow the [migration guide](../docs/architecture/service-boundaries.md#deployment-and-existing-databases).
+Init scripts do not rerun on restart. The reporting setup creates roles, grants,
+replication authentication and a physical slot. The slot retains at most 1 GB of
+WAL; a prolonged outage can require a replica rebuild.
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `DB_HOST` | `localhost` | PostgreSQL server hostname (use `db` inside Docker Compose) |
-| `DB_PORT` | `5432` | PostgreSQL server port |
-| `DB_NAME` | `nexttrade` | Database name |
-| `DB_PUBLISHED_PORT` | `5432` | Port to publish from Docker to host |
-| `DB_ADMIN_USERNAME` | `main` | Schema owner role (runs migrations) |
-| `DB_ADMIN_PASSWORD` | _(required)_ | Admin role password (not committed to repo) |
-| `DB_APP_USERNAME` | `app_user` | Application role (restricted permissions) |
-| `DB_APP_PASSWORD` | _(required)_ | Application role password |
-| `SSN_ENCRYPTION_KEY` | _(required)_ | PGP symmetric encryption key for customer SSN |
-| `SESSION_INACTIVITY_MINUTES` | `10` | Session timeout in minutes (configurable) |
-
-### Loading Environment Variables
-
-Create `.env` from [.env.example](../env.example) at the repository root:
-
-```bash
-cp env.example .env
-# Edit .env with your local values
-source .env
-docker compose up
-```
-
-Or pass variables directly:
-
-```bash
-DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docker compose up
-```
-
-## Database Schema
+## Schema
 
 ### 17 Core Tables
 
@@ -68,7 +54,7 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 | `analyst_profiles` | Internal analyst identity |
 | `password_reset_tokens` | Hashed, expiring password-reset tokens |
 | `sessions` | Time-limited, revocable user sessions |
-| `instruments` | Tradable instruments (stocks, FX, crypto) with sector |
+| `instruments` | Instrument catalog with sector (current product: five US equities) |
 | `quotes` | Market prices (bid/ask, provenance tracking, synthetic flag) |
 | `accounts` | User trading accounts with tier and margin/options flags |
 | `orders` | Order submission with idempotency key (client_reference) |
@@ -85,155 +71,42 @@ DB_ADMIN_PASSWORD=mypass DB_APP_PASSWORD=apppass SSN_ENCRYPTION_KEY=key123 docke
 | View | Purpose |
 |------|---------|
 | `v_account_cash` | Current cash balance per account (computed from ledger) |
-| `v_account_holdings` | Current holdings per account with average cost (computed from ledger) |
+| `v_account_holdings` | Ledger-derived holdings; average cost after sells is a known limitation |
 | `v_latest_quotes` | Latest bid/ask/midpoint per instrument |
 | `v_active_sessions` | Count of active sessions per user |
 | `v_trader_tier_eligibility` | Account eligibility vs. trader tier minimum balance requirement |
 
-### Security & Compliance Features
+## Integrity and known limitations
 
-- **Encrypted SSN**: Customer SSN is reversibly encrypted with pgcrypto PGP symmetric encryption, stored as BYTEA in `customer_profiles.ssn_encrypted`
-- **Age Validation**: Trigger `tg_customer_profiles_age_validation` rejects customers under 18 (SQLSTATE 23514)
-- **Append-Only Audit**: `audit_log` allows application SELECT/INSERT only; UPDATE/DELETE/TRUNCATE are explicitly revoked
-- **Quote Provenance**: `quotes.source` and `quotes.is_synthetic` track data lineage and test data
-- **Ledger-Based Settlement**: Holdings and cash use dual ledger + cache model; ledger is source of truth
-- **Idempotent Orders**: `client_reference` UUID prevents duplicate fills on retry
+- Customer SSNs are encrypted with pgcrypto; Identity owns encryption.
+- Customer age validation requires at least **21**.
+- Orders records idempotent submissions and settles fills, ledger entries, caches,
+  status and audit data atomically under account-level locking.
+- `audit_log` is append-only for `app_user`.
+- Quote rows preserve timestamp, source and synthetic provenance.
+- `v_account_holdings` average cost is incorrect after sells at a different price.
+  The live Holdings API uses the maintained `holdings` cache. Ledger cost-basis
+  reporting requires a separate accounting migration.
+- Password-reset tables exist, but the Identity reset API is not implemented.
 
-## Running the Database
+## Operations and tests
 
-### Start Database
-
-```bash
-# Ensure .env is loaded
-source .env
-
-# Start database (and app, if configured)
-docker compose up -d db
-
-# Wait for health check to pass
-docker compose logs -f db
-```
-
-### Verify Initialization
-
-```bash
-# List all tables (17 expected)
-docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "\dt"
-
-# List all views (5 expected)
-docker compose exec db psql -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" -c "\dv"
-```
-
-### Run Schema Verification
-
-```bash
-# Verify schema completeness and hardening constraints
-docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" < db/tests/001_schema_verification.sql
-```
-
-### Run Role Integration Tests
-
-```bash
-# Test application role permissions
-DB_HOST=localhost DB_PORT=5432 DB_NAME="$DB_NAME" \
-  DB_ADMIN_USERNAME="$DB_ADMIN_USERNAME" DB_ADMIN_PASSWORD="$DB_ADMIN_PASSWORD" \
-  DB_APP_USERNAME="$DB_APP_USERNAME" DB_APP_PASSWORD="$DB_APP_PASSWORD" \
-  bash db/test-init-app-role.sh
-```
-
-### Run Positive/Negative Tests
-
-```bash
-# Test encryption, age validation, quote constraints
-DB_HOST=localhost DB_PORT=5432 DB_NAME="$DB_NAME" \
-  DB_ADMIN_USERNAME="$DB_ADMIN_USERNAME" DB_ADMIN_PASSWORD="$DB_ADMIN_PASSWORD" \
-  SSN_ENCRYPTION_KEY="$SSN_ENCRYPTION_KEY" \
-  bash db/tests/002_positive_negative_tests.sh
-```
-
-### Run Atomicity Tests
-
-```bash
-# Test transaction rollback and ledger integrity
-docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "$DB_ADMIN_USERNAME" -d "$DB_NAME" < db/tests/003_atomicity_test.sql
-```
-
-## Volume Persistence
-
-### Preserve Database (Normal Case)
-
-```bash
-# Stop containers but preserve db_data volume
+```sh
+docker compose up -d db reporting-db
+docker compose exec db psql -U main -d nexttrade
 docker compose down
-
-# Data persists; next `up` reuses it
-docker compose up
 ```
 
-### Destructive Reset
+The last command preserves both volumes. `docker compose down -v` deletes both
+and is only for an intentional disposable reset. Use migrations for schema changes.
+There is no supported `DB_PUBLISHED_PORT` setting in the current Compose file.
 
-```bash
-# Delete volume AND all data (use with caution!)
-docker compose down -v
+See [database setup](../docs/DATABASE_SETUP.md) for connection commands, replica
+checks, SQL test invocation and host-run test configuration. Tests live in
+[tests](tests/), including [reporting permissions](tests/008_reporting_read_only.sql).
+Run them against a disposable database. Standalone shell tests accept `DB_HOST`,
+`DB_PORT`, `DB_NAME`, `DB_ADMIN_USERNAME` and `DB_ADMIN_PASSWORD`; application-role
+tests also need the corresponding app credentials.
 
-# Next `up` will run init scripts again (fresh database)
-docker compose up
-```
-
-## Deployment Targets
-
-### Development (Local Docker)
-
-- Host: `db` (Docker bridge DNS) or `localhost` (from host)
-- Port: Published via `DB_PUBLISHED_PORT` (default 5432)
-- Volume: Named `db_data` (persists across restarts)
-
-### Linux VM or Remote
-
-- Host: VM IP or hostname (e.g., `192.168.1.100`)
-- Port: Same as VM PostgreSQL (e.g., 5432)
-- Credentials: Managed by VM administrator
-- Schema: Can be loaded manually or via init scripts
-
-### CI/CD (Jenkins, GitLab, etc.)
-
-- Disposable PostgreSQL instance (no persistence needed)
-- Credentials: Injected via secrets
-- Schema: Loaded on every test run (fresh database)
-
-## Database Reset for Development
-
-To reset the database to a clean state:
-
-```bash
-docker compose down -v  # Delete volume
-docker compose up -d db # Start fresh
-```
-
-To reapply only application-role permissions on an existing database (without resetting data):
-
-```bash
-docker compose exec -T db bash /docker-entrypoint-initdb.d/02-app-role.sh
-```
-
-The role script uses safely quoted identifiers and passwords. It removes public-schema
-CREATE permission and does not grant access to future tables automatically; grant new
-runtime tables explicitly after review. Schema changes on existing volumes require migrations.
-
-## Important Notes
-
-- **Plaintext SSN**: Never committed, logged, or printed. Always encrypt for storage and transit.
-- **Default Credentials**: `env.example` documents required credentials. Supply private values before startup.
-- **Volume Semantics**: `docker compose down -v` is **destructive**. Use only when you intend to reset.
-- **Init Scripts**: Run once per empty volume. Apply SQL files with `psql -f`; run shell scripts with `bash`. Do not pass shell scripts to `psql`.
-
-## See Also
-
-- [Durable order execution migration](migrations/007_durable_order_execution.sql) — Apply as the schema owner before deploying the worker to an existing database. Fresh databases use the updated finalized schema.
-
-- [db/DATABASE_DECISIONS.md](DATABASE_DECISIONS.md) — Architecture and design decisions
-- [db/finalized-schema.sql](finalized-schema.sql) — Complete schema with comments
-- [db/init-app-role.sh](init-app-role.sh) — Application role creation and permissions
-- [db/test-init-app-role.sh](test-init-app-role.sh) — Role integration tests
-- [db/tests/](tests/) — Schema verification and behavior tests
-- [RUN_DATABASE_HARDENING.md](../RUN_DATABASE_HARDENING.md) — Step-by-step runbook
+See [design decisions](DATABASE_DECISIONS.md) for ledger rationale and
+[service boundaries](../docs/architecture/service-boundaries.md) for current ownership.

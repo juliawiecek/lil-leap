@@ -14,6 +14,11 @@ import java.util.UUID;
  */
 public record JwtPrincipal(UUID userId, String email, String role) {
 
+    /**
+     * Creates an identity with the default trader role.
+     * @param userId authenticated user identifier
+     * @param email authenticated user's email address
+     */
 	public JwtPrincipal(UUID userId, String email) {
 		this(userId, email, "TRADER");
 	}

@@ -21,7 +21,7 @@ class JwtAuthenticationFilterTest {
 
     private static final String SECRET = "test-only-jwt-secret-at-least-32-bytes-long!!";
 
-    private final JwtService jwtService = new JwtService(SECRET, 60, "nexttrade-web");
+    private final JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
 
     @BeforeEach
