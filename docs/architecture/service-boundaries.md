@@ -79,6 +79,7 @@ All service ports are internal to Compose. The client URLs remain
 | NextTrade | `/api/v1/quotes/{symbol}` | Quotes |
 | NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*` | Holdings display reads |
 | NextTrade | `/api/v1/clients/{id}/holdings`, `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Holdings (caller-scoped) |
+| NextTrade | `/api/v1/clients/{id}/orders?from=YYYY-MM-DD&to=YYYY-MM-DD&status=FILLED` | Holdings (TRADER-only, caller-scoped history and fills) |
 | Insights | `/api/v1/reports/*` | Insights |
 
 The reporting listener does not forward trading endpoints. Services also enforce
@@ -290,3 +291,23 @@ and the edited Jenkins pipeline were not executed: this workstation has no Docke
 engine. Native database checks use PostgreSQL 18; Compose/CI target PostgreSQL 16.
 Previous product gaps remain. Temporary verification services/databases are stopped
 when the checks finish. No commit or push is performed by this verification.
+
+### PR #85 merge resolution
+
+Merged the fetched `origin/main` at `c37acb0` into `feat/instrument` locally.
+The 22 conflict paths mostly replayed the older JPA/Insights layout over the
+NEXT-193 replacements. Retained the shared gateway, reporting replica, current
+security rules and single JDBC execution path.
+
+Preserved NEXT-117 as `GET /api/v1/clients/{id}/orders` in Holdings, including
+combinable UTC date/status filters, fill details, trader-only access and caller
+ownership. The repository uses JDBC with bound parameters. Preserved the incoming
+cash-rounding/error-clearing behavior through the existing executor/worker and
+added a real PostgreSQL half-cent buy/sell regression test.
+
+Validation: Orders 105 tests, Holdings 72, Insights 26; all passed without skips.
+Orders and Holdings strict Javadoc checks passed, as did all three Java builds,
+23 NGINX route/isolation checks, active Markdown links/fences, and base/optional
+Kafka Compose parsing. Full Docker startup and Jenkins were not run locally.
+No frontend source changes were needed for this merge; the previously verified
+quote-client fixes were retained. The resolved merge is staged for commit/push.

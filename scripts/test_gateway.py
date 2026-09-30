@@ -68,6 +68,7 @@ def main():
             (18420, 'GET', '/api/v1/quotes/history/test?limit=5', 'holdings:8080'),
             (18420, 'GET', '/api/v1/clients/test/holdings', 'holdings:8080'),
             (18420, 'GET', '/api/v1/clients/test/cash', 'holdings:8080'),
+            (18420, 'GET', '/api/v1/clients/test/orders?from=2026-09-01&status=FILLED', 'holdings:8080'),
             (18420, 'GET', '/api/v1/cash/balance/test', 'holdings:8080'),
             (18420, 'POST', '/auth/login', 'auth:8081'),
             (18420, 'GET', '/rules/tier-eligibility', 'auth:8081'),
@@ -77,6 +78,7 @@ def main():
             (18421, 'POST', '/auth/login', 'auth:8081'),
             (18421, 'POST', '/api/v1/orders', None),
             (18421, 'GET', '/api/v1/quotes/history/test', None),
+            (18421, 'GET', '/api/v1/clients/test/orders', None),
             (18420, 'GET', '/api/v1/reports/summary', None),
             (18420, 'GET', '/api/orders/anything', None),
         ]

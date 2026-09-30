@@ -36,8 +36,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Opt-in PostgreSQL tests using an isolated schema in a disposable test database. */
 @EnabledIfSystemProperty(named = "test.holdings.postgres.url", matches = ".+")
-@WebMvcTest(ClientFinancialController.class)
+@WebMvcTest({ClientFinancialController.class, com.neueda.leap.portfolio.controller.OrderHistoryController.class})
 @Import({SecurityConfig.class, JwtServiceImpl.class, ClientFinancialQueryService.class,
+        com.neueda.leap.portfolio.service.OrderHistoryService.class,
+        com.neueda.leap.portfolio.repository.OrderHistoryRepository.class,
         HoldingsSettlementPostgresTest.DatabaseConfiguration.class})
 class HoldingsSettlementPostgresTest {
     private static final String SCHEMA = "holdings_test_" + UUID.randomUUID().toString().replace("-", "");
@@ -111,6 +113,23 @@ class HoldingsSettlementPostgresTest {
         assertRoutes(0, "0");
         settle(2, "25");
         assertRoutes(2, "25");
+    }
+
+    @Test
+    void orderHistoryFiltersAndFillDetailsUseTheProductionSchema() throws Exception {
+        settle(2, "12.34");
+        jdbc.update("UPDATE orders SET submitted_at='2026-09-30T23:59:59Z' WHERE account_id=?", account);
+        mvc.perform(get("/clients/{id}/orders", owner).header("Authorization", bearer)
+                        .param("from", "2026-09-30").param("to", "2026-09-30").param("status", "filled"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].fillPrice").value(12.34))
+                .andExpect(jsonPath("$[0].filledQuantity").value(2));
+        mvc.perform(get("/clients/{id}/orders", owner).header("Authorization", bearer).param("to", "2026-09-29"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/clients/{id}/orders", owner).header("Authorization", bearer).param("status", "PENDING"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/clients/{id}/orders", UUID.randomUUID()).header("Authorization", bearer))
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -23,6 +23,16 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     /**
+     * Rejects invalid history filters without echoing request values.
+     * @param exception invalid status or date range
+     * @return a fixed bad-request response
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.InvalidFilterException.class)
+    public ResponseEntity<Map<String, String>> invalidFilter(Exception exception) {
+        return ResponseEntity.badRequest().body(Map.of("error", "INVALID_FILTER", "message", "Invalid order history filter"));
+    }
+
+    /**
      * Hides whether a requested client exists or belongs to another caller.
      * @param exception missing or unowned client
      * @return a fixed not-found response

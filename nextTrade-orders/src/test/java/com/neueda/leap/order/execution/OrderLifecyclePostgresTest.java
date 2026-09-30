@@ -109,6 +109,25 @@ class OrderLifecyclePostgresTest {
     }
 
     @Test
+    void fractionalCentFillsKeepCashLedgerAndCacheEqualAndClearPreviousError() {
+        jdbc.update("UPDATE quotes SET bid=100.004, ask=100.005, quoted_at=CURRENT_TIMESTAMP");
+        UUID buy = submit("BUY", 1);
+        var claim = worker.claimNext();
+        jdbc.update("UPDATE orders SET last_execution_error='EXECUTION_PENDING' WHERE order_id=?", buy);
+        worker.execute(claim);
+        assertThat(status(buy)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("9899.99");
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("9899.99");
+        assertThat(jdbc.queryForObject("SELECT last_execution_error FROM orders WHERE order_id=?", String.class, buy)).isNull();
+        jdbc.update("UPDATE quotes SET bid=100.005, ask=100.006, quoted_at=CURRENT_TIMESTAMP");
+        UUID sell = submit("SELL", 1);
+        worker.execute(worker.claimNext());
+        assertThat(status(sell)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10000");
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("10000");
+    }
+
+    @Test
     void instrumentIdSubmissionUsesTheSameValidatedExactlyOnceSettlement() {
         var request = new SubmitOrderRequest(account, null, UUID.randomUUID(), "BUY", 3, "MARKET", null, instrument);
         var result = submissions.submit(user, request);

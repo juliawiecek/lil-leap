@@ -19,6 +19,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | GET | `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Cash when the ID matches the caller |
 | GET | `/api/v1/cash` | Caller-owned cash balances |
 | GET | `/api/v1/orders` | Caller-owned order history |
+| GET | `/api/v1/clients/{id}/orders` | Trader-owned history with optional `from`, `to`, `status` filters and fill details |
 | GET | `/api/v1/instruments` | Instrument catalog |
 | GET | `/api/v1/instruments/{id}` | Instrument details |
 | GET | `/api/v1/quotes/latest/by-instrument/{id}` | Latest stored quote |
@@ -27,6 +28,12 @@ ownership, gateway routing, database setup, known gaps and verification.
 
 All endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
+
+The client-addressed order-history endpoint (NEXT-117) accepts ISO calendar dates
+in UTC, including the entire `to` date, and a case-insensitive order status. Filters
+can be combined. Results are newest first and include nullable fill price, quantity
+and timestamp. It requires a TRADER token; another or unknown client ID returns
+404, malformed dates/UUIDs or invalid filters return 400, and analysts receive 403.
 
 ## Development
 
