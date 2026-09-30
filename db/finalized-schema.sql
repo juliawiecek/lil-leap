@@ -590,6 +590,7 @@ CREATE INDEX idx_cash_updated_at ON cash_balances(updated_at DESC);
 -- Source of truth: cash_balances is computed cache
 -- Signed amounts: negative for outflow (buy, fee, withdrawal), positive for inflow
 -- BR-15: Enables reconstruction of account history from ledger
+-- TS-11.3 AC2: Added settlement tracking for available vs settled cash distinction
 -- ==========================================================
 
 CREATE TABLE cash_transactions (
@@ -599,6 +600,8 @@ CREATE TABLE cash_transactions (
     transaction_type VARCHAR(20) NOT NULL,  -- 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION'
     amount NUMERIC(18,2) NOT NULL,  -- signed: negative for outflow, positive for inflow
     currency CHAR(3) NOT NULL DEFAULT 'USD',
+    settlement_status VARCHAR(20) NOT NULL DEFAULT 'SETTLED',  -- 'PENDING', 'SETTLED'
+    settled_at TIMESTAMPTZ,  -- NULL until settlement completes
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_transaction_account
@@ -608,13 +611,47 @@ CREATE TABLE cash_transactions (
     CONSTRAINT chk_transaction_type CHECK (
         transaction_type IN ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION')
     ),
-    CONSTRAINT chk_transaction_currency CHECK (currency = 'USD')
+    CONSTRAINT chk_transaction_currency CHECK (currency = 'USD'),
+    CONSTRAINT chk_settlement_status CHECK (settlement_status IN ('PENDING', 'SETTLED')),
+    CONSTRAINT chk_settled_at_logic CHECK (
+        (settlement_status = 'SETTLED' AND settled_at IS NOT NULL) OR
+        (settlement_status = 'PENDING' AND settled_at IS NULL)
+    )
 );
 
 CREATE INDEX idx_transaction_account ON cash_transactions(account_id);
 CREATE INDEX idx_transaction_created_at ON cash_transactions(created_at DESC);
 CREATE INDEX idx_transaction_type ON cash_transactions(transaction_type);
 CREATE INDEX idx_transaction_fill ON cash_transactions(fill_id);
+CREATE INDEX idx_transaction_settlement_status ON cash_transactions(settlement_status);
+
+-- ==========================================================
+-- CASH_HOLDS (TS-11.3: Track temporary holds for pending trades)
+-- Tracks cash held for pending orders, preventing over-commitment of capital
+-- When an order is placed, cash is held. When order fills/cancels, hold is released.
+-- ==========================================================
+
+CREATE TABLE cash_holds (
+    hold_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL,
+    order_id UUID NOT NULL,
+    held_amount NUMERIC(18,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    hold_reason VARCHAR(50) NOT NULL,  -- 'ORDER_PLACED', 'ORDER_PENDING', etc.
+    released_at TIMESTAMPTZ,  -- NULL until hold is released
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_hold_account
+        FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_hold_order
+        FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE RESTRICT,
+    CONSTRAINT chk_hold_amount CHECK (held_amount > 0),
+    CONSTRAINT chk_hold_currency CHECK (currency = 'USD')
+);
+
+CREATE INDEX idx_hold_account ON cash_holds(account_id);
+CREATE INDEX idx_hold_order ON cash_holds(order_id);
+CREATE INDEX idx_hold_released_at ON cash_holds(released_at) WHERE released_at IS NULL;
 
 -- ==========================================================
 -- AUDIT_LOG (BR-16, BR-17, BR-18: Compliance & insights)
@@ -655,11 +692,19 @@ CREATE INDEX idx_audit_event_type ON audit_log(event_type);
 -- ==========================================================
 
 -- BR-10: Current balance per account (computed from ledger)
+-- TS-11.3 AC2: Now returns settled, pending, and available balances
 CREATE OR REPLACE VIEW v_account_cash AS
     SELECT 
         account_id,
         'USD' as currency,
-        COALESCE(SUM(amount), 0) as balance
+        COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled_balance,
+        COALESCE(SUM(CASE WHEN settlement_status = 'PENDING' THEN amount ELSE 0 END), 0) as pending_balance,
+        COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) -
+        COALESCE(
+            (SELECT SUM(held_amount) FROM cash_holds WHERE cash_holds.account_id = cash_transactions.account_id AND released_at IS NULL),
+            0
+        ) as available_balance,
+        COALESCE(SUM(amount), 0) as total_balance
     FROM cash_transactions
     GROUP BY account_id;
 

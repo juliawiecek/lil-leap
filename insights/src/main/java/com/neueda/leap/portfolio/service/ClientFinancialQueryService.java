@@ -1,12 +1,15 @@
 package com.neueda.leap.portfolio.service;
 
+import com.neueda.leap.portfolio.dto.CashBalanceDetailResponse;
 import com.neueda.leap.portfolio.dto.CashBalanceResponse;
 import com.neueda.leap.portfolio.dto.HoldingResponse;
 import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
+import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +42,41 @@ public class ClientFinancialQueryService {
             JOIN accounts a ON a.account_id = cb.account_id
             WHERE a.user_id = ?
             ORDER BY cb.account_id
+            """;
+
+    private static final String CASH_DETAIL_SQL = """
+            SELECT 
+                account_id,
+                'USD' as currency,
+                COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled_balance,
+                COALESCE(SUM(CASE WHEN settlement_status = 'PENDING' THEN amount ELSE 0 END), 0) as pending_balance,
+                COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) -
+                COALESCE(
+                    (SELECT SUM(held_amount) FROM cash_holds 
+                     WHERE cash_holds.account_id = cash_transactions.account_id 
+                     AND released_at IS NULL),
+                    0
+                ) as available_balance,
+                COALESCE(SUM(amount), 0) as total_balance,
+                CURRENT_TIMESTAMP as updated_at
+            FROM cash_transactions
+            WHERE account_id IN (
+                SELECT account_id FROM accounts WHERE user_id = ?
+            )
+            GROUP BY account_id
+            ORDER BY account_id
+            """;
+
+    private static final String LATEST_QUOTE_SQL = """
+            SELECT 
+                instrument_id,
+                ROUND((bid + ask) / 2::NUMERIC, 8) as midpoint
+            FROM (
+                SELECT DISTINCT ON (instrument_id)
+                    instrument_id, bid, ask
+                FROM quotes
+                ORDER BY instrument_id, quoted_at DESC
+            ) latest
             """;
 
     private static final String ORDERS_SQL = """
@@ -95,6 +133,136 @@ public class ClientFinancialQueryService {
                 rs.getBigDecimal("balance"),
                 rs.getTimestamp("updated_at").toInstant()
         ), authenticatedUserId);
+    }
+
+    /**
+     * Reads detailed cash balances with settlement distinction.
+     * TS-11.3 AC2: Provides settled, pending, and available balance breakdown.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned cash balances with detail, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List<CashBalanceDetailResponse> getCashBalancesDetailed(UUID authenticatedUserId) {
+        requireAuthenticatedUser(authenticatedUserId);
+        return jdbcTemplate.query(CASH_DETAIL_SQL, (rs, rowNum) -> new CashBalanceDetailResponse(
+                rs.getObject("account_id", UUID.class),
+                rs.getString("currency"),
+                rs.getBigDecimal("settled_balance"),
+                rs.getBigDecimal("pending_balance"),
+                rs.getBigDecimal("available_balance"),
+                rs.getBigDecimal("total_balance"),
+                rs.getTimestamp("updated_at").toInstant()
+        ), authenticatedUserId);
+    }
+
+    /**
+     * Reads the portfolio summary for a specific account.
+     * TS-11.3 AC1: Combines holdings, cash, and calculates total portfolio value.
+     * 
+     * @param authenticatedUserId identity from the validated JWT
+     * @param accountId account to retrieve portfolio for (must belong to authenticated user)
+     * @return portfolio summary with holdings, cash detail, and total value
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public PortfolioSummaryResponse getPortfolioSummary(UUID authenticatedUserId, UUID accountId) {
+        requireAuthenticatedUser(authenticatedUserId);
+        if (accountId == null) {
+            throw new IllegalArgumentException("Account id is required");
+        }
+        
+        // Get holdings for this account
+        String holdingsSql = """
+                SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                       h.quantity, h.avg_cost, h.updated_at
+                FROM holdings h
+                JOIN accounts a ON a.account_id = h.account_id
+                JOIN instruments i ON i.instrument_id = h.instrument_id
+                WHERE a.user_id = ? AND h.account_id = ?
+                ORDER BY i.symbol
+                """;
+        
+        List<HoldingResponse> holdings = jdbcTemplate.query(holdingsSql, (rs, rowNum) -> 
+            new HoldingResponse(
+                rs.getObject("account_id", UUID.class),
+                rs.getObject("instrument_id", UUID.class),
+                rs.getString("symbol"),
+                rs.getString("instrument_name"),
+                rs.getLong("quantity"),
+                rs.getBigDecimal("avg_cost"),
+                rs.getTimestamp("updated_at").toInstant()
+            ), authenticatedUserId, accountId);
+        
+        // Get cash detail for this account
+        String cashDetailSql = """
+                SELECT 
+                    account_id,
+                    'USD' as currency,
+                    COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled_balance,
+                    COALESCE(SUM(CASE WHEN settlement_status = 'PENDING' THEN amount ELSE 0 END), 0) as pending_balance,
+                    COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) -
+                    COALESCE(
+                        (SELECT SUM(held_amount) FROM cash_holds 
+                         WHERE cash_holds.account_id = ? AND released_at IS NULL),
+                        0
+                    ) as available_balance,
+                    COALESCE(SUM(amount), 0) as total_balance,
+                    CURRENT_TIMESTAMP as updated_at
+                FROM cash_transactions
+                WHERE account_id = ?
+                GROUP BY account_id
+                """;
+        
+        List<CashBalanceDetailResponse> cashList = jdbcTemplate.query(cashDetailSql, (rs, rowNum) ->
+            new CashBalanceDetailResponse(
+                rs.getObject("account_id", UUID.class),
+                rs.getString("currency"),
+                rs.getBigDecimal("settled_balance"),
+                rs.getBigDecimal("pending_balance"),
+                rs.getBigDecimal("available_balance"),
+                rs.getBigDecimal("total_balance"),
+                rs.getTimestamp("updated_at").toInstant()
+            ), accountId, accountId);
+        
+        CashBalanceDetailResponse cash = cashList.isEmpty() ? 
+            new CashBalanceDetailResponse(accountId, "USD", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, Instant.now()) :
+            cashList.get(0);
+        
+        // Get latest quotes for valuation
+        String quotesSql = """
+                SELECT 
+                    instrument_id,
+                    ROUND((bid + ask) / 2::NUMERIC, 8) as midpoint
+                FROM (
+                    SELECT DISTINCT ON (instrument_id)
+                        instrument_id, bid, ask
+                    FROM quotes
+                    ORDER BY instrument_id, quoted_at DESC
+                ) latest
+                """;
+        
+        java.util.Map<UUID, BigDecimal> priceMap = new java.util.HashMap<>();
+        jdbcTemplate.query(quotesSql, (rs, rowNum) -> {
+            priceMap.put(rs.getObject("instrument_id", UUID.class), rs.getBigDecimal("midpoint"));
+            return null;
+        });
+        
+        // Calculate total portfolio value: sum of (holdings value) + available cash
+        BigDecimal holdingsValue = holdings.stream()
+            .map(holding -> {
+                BigDecimal price = priceMap.getOrDefault(holding.instrumentId(), BigDecimal.ZERO);
+                return price.multiply(BigDecimal.valueOf(holding.quantity()));
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalPortfolioValue = holdingsValue.add(cash.availableBalance());
+        
+        return new PortfolioSummaryResponse(
+            accountId,
+            holdings,
+            cash,
+            totalPortfolioValue,
+            Instant.now()
+        );
     }
 
     /**

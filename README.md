@@ -148,11 +148,37 @@ The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
 
 ## API Documentation (Swagger / OpenAPI)
 
-- **auth:** [auth/openapi.json](auth/openapi.json) (generated from the code by
-  [auth/src/docs/](auth/src/docs/); open it in [editor.swagger.io](https://editor.swagger.io)).
-  With the stack running, Swagger UI is at `http://localhost:4200/auth/docs`.
+### Running Services Locally (Direct Ports)
 
-The Spring Boot and Python services don't publish OpenAPI specs yet.
+Start the services directly for development and access Swagger UI:
+
+**Auth Service (NestJS + NestJS Swagger):**
+- Port: `3000` (or `PORT` env var)
+- Swagger UI: `http://localhost:3000/auth/docs`
+- OpenAPI JSON: `http://localhost:3000/auth/docs-json`
+- Spec file: [auth/openapi.json](auth/openapi.json)
+
+**Insights Service (Spring Boot + Springdoc OpenAPI):**
+- Port: `8888` (configured to avoid conflicts)
+- Swagger UI: `http://localhost:8888/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8888/v3/api-docs`
+- Endpoints documented by tab:
+  - **Holdings** — GET `/holdings`, GET `/clients/{id}/holdings`
+  - **Cash** — GET `/cash`
+  - **Orders** — Order submission endpoints
+  - **Portfolio** — GET `/clients/{clientId}/portfolio-summary` *(TS-11.3)*
+
+### Via Docker Compose (Production-like Setup)
+
+With `docker-compose.yml`, services run behind nginx on fixed ports. Access Swagger through the frontend proxy:
+
+- **Auth Swagger:** `http://localhost:4200/auth/docs` (proxied via frontend nginx)
+- **Insights/Spring Boot services:** Not exposed through compose setup yet
+
+### OpenAPI Specs
+
+- **auth:** Spec auto-generated at `[auth/openapi.json](auth/openapi.json)` from decorators in [auth/src/docs/](auth/src/docs/)
+- **insights:** Spec auto-generated at `/v3/api-docs` from `@Tag`, `@Operation`, `@ApiResponse` annotations
 
 ## Database
 

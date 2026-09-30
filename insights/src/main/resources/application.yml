@@ -37,6 +37,22 @@ spring:
   # Suppress sensitive datasource information in logs
   jpa.show-sql: false
 
+# Springdoc OpenAPI configuration (Swagger UI)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    show-extensions: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: list
+  show-actuator: false
+  use-management-port: false
+  # Handle context path properly
+  swagger-ui.use-root-path: true
+
 logging:
   level:
     root: INFO
@@ -72,7 +88,7 @@ app:
     client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
 
 server:
-  port: 8080
+  port: 8888
   tomcat:
     accesslog:
       enabled: false
@@ -81,5 +97,3 @@ server:
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
-  servlet:
-    context-path: /api/v1
