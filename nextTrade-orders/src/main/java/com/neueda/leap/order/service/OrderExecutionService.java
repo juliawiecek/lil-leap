@@ -5,11 +5,15 @@ import com.neueda.leap.order.repository.*;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -18,28 +22,36 @@ import java.util.UUID;
  * Missing quotes retry after ten seconds and stale quotes after five, without increasing
  * the tolerance-failure count. Out-of-tolerance prices retry with capped exponential
  * backoff and reject on the tenth tolerance failure. A fill writes cash and holdings
- * ledger entries and a status-history record.
+ * ledger entries, updates the holdings/cash_balances caches, and a status-history
+ * record, all in the same transaction (BR-09, per the TS-10.1 ADR).
  *
- * <p>The batch method calls execution methods on this instance. Their transactional
- * annotations require invocation through a transaction interceptor; internal calls alone
- * do not create a Spring proxy transaction.</p>
+ * <p>The batch method invokes {@link #executeOrder(Order)} through {@link #self},
+ * a proxy reference injected by Spring after construction, rather than directly
+ * on this instance: a same-instance ("self-invocation") call bypasses Spring's
+ * transactional proxy entirely, so {@code @Transactional} would silently not
+ * apply. {@link #self} defaults to {@code this} so unit tests that construct
+ * this class directly (with no Spring proxy in play) are unaffected.</p>
  */
 @Service
 public class OrderExecutionService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderExecutionService.class);
-    
+
     private final OrderRepository orderRepository;
     private final QuoteRepository quoteRepository;
     private final FillRepository fillRepository;
     private final OrderStatusHistoryRepository statusHistoryRepository;
     private final HoldingMovementRepository holdingMovementRepository;
     private final CashTransactionRepository cashTransactionRepository;
-    
+    private final OrderAccountRepository accountRepository;
+    private final CashBalanceRepository cashBalanceRepository;
+
+    private OrderExecutionService self;
+
     // Configuration (injected from application.yml)
     @Value("${orders.execution.max-quote-age-seconds:60}")
     private long maxQuoteAgeSeconds;
-    
+
     private static final long MAX_EXECUTION_ATTEMPTS = 10;
 
     /**
@@ -51,21 +63,41 @@ public class OrderExecutionService {
      * @param statusHistoryRepository status history repository
      * @param holdingMovementRepository holding movement repository
      * @param cashTransactionRepository cash transaction repository
+     * @param accountRepository account repository, used to lock the account row before settlement
+     * @param cashBalanceRepository cash balance cache repository
      */
     public OrderExecutionService(OrderRepository orderRepository,
                                 QuoteRepository quoteRepository,
                                 FillRepository fillRepository,
                                 OrderStatusHistoryRepository statusHistoryRepository,
                                 HoldingMovementRepository holdingMovementRepository,
-                                CashTransactionRepository cashTransactionRepository) {
+                                CashTransactionRepository cashTransactionRepository,
+                                OrderAccountRepository accountRepository,
+                                CashBalanceRepository cashBalanceRepository) {
         this.orderRepository = orderRepository;
         this.quoteRepository = quoteRepository;
         this.fillRepository = fillRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.holdingMovementRepository = holdingMovementRepository;
         this.cashTransactionRepository = cashTransactionRepository;
+        this.accountRepository = accountRepository;
+        this.cashBalanceRepository = cashBalanceRepository;
+        this.self = this;
     }
-    
+
+    /**
+     * Replaces the self-reference with Spring's transactional proxy for this
+     * bean, so calls from {@link #executeAllDueOrders()} participate in
+     * {@code @Transactional} correctly. {@code @Lazy} breaks the circular
+     * dependency this would otherwise create at startup.
+     *
+     * @param self the proxied bean for this class
+     */
+    @Autowired
+    public void setSelf(@Lazy OrderExecutionService self) {
+        this.self = self;
+    }
+
     /**
      * Execute all orders that are due for execution.
      * This is called periodically by a scheduled task.
@@ -73,10 +105,10 @@ public class OrderExecutionService {
     public void executeAllDueOrders() {
         var dueOrders = orderRepository.findDueForExecution(Instant.now());
         log.info("Found {} orders due for execution", dueOrders.size());
-        
+
         for (Order order : dueOrders) {
             try {
-                executeOrder(order);
+                self.executeOrder(order);
             } catch (Exception e) {
                 log.error("Error executing order {}: {}", order.getOrderId(), e.getMessage(), e);
             }
@@ -133,7 +165,25 @@ public class OrderExecutionService {
     @Transactional
     protected void executeFill(Order order, Quote quote, BigDecimal executionPrice) {
         log.info("Filling order {} at price {}", order.getOrderId(), executionPrice);
-        
+
+        // Idempotency (TS-10.1 ADR §4.3): a fill may already exist for this
+        // order (retry after a transient failure, a duplicate scheduler tick).
+        // Never create a second one - fills.order_id is UNIQUE at the schema
+        // level too, but checking first avoids relying on a thrown constraint
+        // violation and gives a clean no-op instead.
+        if (fillRepository.findByOrderOrderId(order.getOrderId()).isPresent()) {
+            log.info("Order {} already has a fill; skipping duplicate settlement", order.getOrderId());
+            return;
+        }
+
+        // Lock the account row before touching its cash/holdings caches, so
+        // two settlements against the same account cannot interleave
+        // (TS-10.1 ADR §4, step 2: order, then account, then cash/holdings).
+        Account lockedAccount = accountRepository.findWithLockByAccountId(order.getAccount().getAccountId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Account " + order.getAccount().getAccountId() + " referenced by order "
+                                + order.getOrderId() + " does not exist"));
+
         // Create Fill record (AC2: record execution details)
         // BR-08: Store quote_timestamp to prove price was from a current market quote
         Fill fill = new Fill(
@@ -144,20 +194,75 @@ public class OrderExecutionService {
             quote.getQuotedAt()
         );
         fillRepository.save(fill);
-        
+
         // Create settlement ledger entries
         createHoldingMovement(order, fill);
         createCashTransaction(order, fill, executionPrice);
-        
+
+        // BR-09/BR-10: the holdings cache is maintained by the database trigger
+        // tg_holding_movement_projection (db/migrations/008), which runs inside the
+        // holding_movements INSERT above and so commits or rolls back with this
+        // transaction. Do not also write holdings here: a first purchase would
+        // insert a duplicate row. cash_balances has no trigger, so update it here.
+        applyCashToCache(lockedAccount, computeCashAmount(order, executionPrice));
+
         // Update order status to FILLED
         order.setStatus("FILLED");
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
-        
+
         // Record status history
         recordStatusHistory(order, "FILLED", "EXECUTION_SUCCESS", "Order filled at " + executionPrice);
-        
+
         log.info("Order {} filled successfully", order.getOrderId());
+    }
+
+    /**
+     * Returns the settlement record for one fill, per the TS-10.1 ADR's
+     * {@code getSettlement(settlementId)} contract, where settlementId is
+     * fills.fill_id. Read-only; performs no writes.
+     *
+     * @param fillId persistent fill identifier
+     * @return the fill and its associated order/quote, or empty when not found
+     */
+    public Optional<Fill> getSettlement(UUID fillId) {
+        return fillRepository.findById(fillId);
+    }
+
+    /**
+     * Updates the cash_balances cache for one account after a fill, applying
+     * the same signed amount written to the cash_transactions ledger.
+     *
+     * @param account locked account the fill belongs to
+     * @param signedAmount negative for BUY, positive for SELL
+     */
+    protected void applyCashToCache(Account account, BigDecimal signedAmount) {
+        CashBalance cashBalance = cashBalanceRepository.findByAccountId(account.getAccountId())
+                .orElseGet(() -> {
+                    CashBalance created = new CashBalance();
+                    created.setAccount(account);
+                    created.setCurrency("USD");
+                    created.setBalance(BigDecimal.ZERO);
+                    return created;
+                });
+
+        cashBalance.setBalance(cashBalance.getBalance().add(signedAmount));
+        cashBalance.setUpdatedAt(Instant.now());
+        cashBalanceRepository.save(cashBalance);
+    }
+
+    /**
+     * Signed cash amount for a fill: negative for BUY (outflow), positive for
+     * SELL (inflow). Shared by the ledger write and the cache update so the
+     * two can never disagree.
+     *
+     * @param order order being executed
+     * @param executionPrice execution price per unit
+     * @return the signed total cash amount for this fill
+     */
+    private static BigDecimal computeCashAmount(Order order, BigDecimal executionPrice) {
+        BigDecimal totalCost = executionPrice.multiply(new BigDecimal(order.getQuantity()));
+        return "BUY".equalsIgnoreCase(order.getSide()) ? totalCost.negate() : totalCost;
     }
     
     /**
@@ -202,18 +307,9 @@ public class OrderExecutionService {
      * @param executionPrice execution price per unit
      */
     protected void createCashTransaction(Order order, Fill fill, BigDecimal executionPrice) {
-        BigDecimal totalCost = executionPrice.multiply(new BigDecimal(order.getQuantity()));
-        BigDecimal amount;
-        String transactionType;
-        
-        if ("BUY".equalsIgnoreCase(order.getSide())) {
-            amount = totalCost.negate();  // Negative for outflow
-            transactionType = "BUY";
-        } else {
-            amount = totalCost;  // Positive for inflow
-            transactionType = "SELL";
-        }
-        
+        BigDecimal amount = computeCashAmount(order, executionPrice);
+        String transactionType = "BUY".equalsIgnoreCase(order.getSide()) ? "BUY" : "SELL";
+
         CashTransaction transaction = new CashTransaction(
             UUID.randomUUID(),
             order.getAccount(),

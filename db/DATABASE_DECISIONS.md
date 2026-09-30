@@ -221,6 +221,8 @@ Includes midpoint price (bid/ask average) for quick market assessment.
 
 ## Settlement and Ledger Model
 
+See the [TS-10.1 ADR](../docs/architecture/ADR-TS-10.1-atomic-settlement.md) for the atomic transaction decision, seven-operation comparison, crash recovery and implementation handoff.
+
 ### Dual-Cache + Ledger Architecture
 
 **Decision**: Holdings and cash use an append-only ledger (source of truth) with a cache table (performance):
@@ -228,22 +230,22 @@ Includes midpoint price (bid/ask average) for quick market assessment.
 **Holdings**:
 - **Ledger**: `holding_movements` (append-only) — every fill creates one record
 - **Cache**: `holdings` — current quantity and average cost per account/instrument
-- View: `v_account_holdings` — computed from ledger if cache diverges
+- View: `v_account_holdings` — ledger-derived quantities; its current cost-basis calculation needs alignment before settlement recovery (see the ADR)
 
 **Cash**:
 - **Ledger**: `cash_transactions` (append-only) — every cash event creates one record
-- **Cache**: `cash_balances` — current balance per account/currency
-- View: `v_account_cash` — computed from ledger if cache diverges
+- **Cache**: `cash_balances` — current USD balance, keyed by account
+- View: `v_account_cash` — computed from the ledger; cache reconciliation is an explicit application operation
 
 **Why**:
 - **Auditability**: Ledger captures complete history; can replay to any point in time
 - **Correctness**: If cache corrupts, recompute from ledger
 - **Performance**: Cache lookup is O(1) for current balance/holdings
-- **Ledger Integrity**: No UPDATE/DELETE on ledgers; immutable for compliance
+- **Ledger Integrity**: Append-only is the intended contract; runtime privilege enforcement is required by the ADR and is not provided by the current broad DML grants
 
 **Constraint**: 
 - `holding_movements.uk_movement_fill UNIQUE (fill_id)` — one movement per fill
-- `cash_transactions.fk_transaction_fill FOREIGN KEY (fill_id) REFERENCES fills` — only fills create transactions
+- `cash_transactions.fk_transaction_fill FOREIGN KEY (fill_id) REFERENCES fills` — validates non-null fill references; deposits, withdrawals and other non-trade cash events may have no fill
 
 ---
 
