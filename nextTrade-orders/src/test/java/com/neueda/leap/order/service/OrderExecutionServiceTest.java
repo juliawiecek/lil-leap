@@ -39,10 +39,19 @@ class OrderExecutionServiceTest {
     
     @Mock
     private HoldingMovementRepository holdingMovementRepository;
-    
+
     @Mock
     private CashTransactionRepository cashTransactionRepository;
-    
+
+    @Mock
+    private OrderAccountRepository orderAccountRepository;
+
+    @Mock
+    private HoldingRepository holdingRepository;
+
+    @Mock
+    private CashBalanceRepository cashBalanceRepository;
+
     private OrderExecutionService orderExecutionService;
     
     private Account testAccount;
@@ -58,9 +67,12 @@ class OrderExecutionServiceTest {
             fillRepository,
             statusHistoryRepository,
             holdingMovementRepository,
-            cashTransactionRepository
+            cashTransactionRepository,
+            orderAccountRepository,
+            holdingRepository,
+            cashBalanceRepository
         );
-        
+
         // Setup test data
         testAccount = new Account(
             UUID.randomUUID(),
@@ -73,7 +85,13 @@ class OrderExecutionServiceTest {
             new BigDecimal("5000.00"),
             new BigDecimal("2.00")
         );
-        
+
+        // Only exercised by tests that reach a successful fill; lenient so
+        // the other scenarios (stale quote, no quote, out-of-tolerance) don't
+        // trip strict-stubbing on an unused stub.
+        lenient().when(orderAccountRepository.findWithLockByAccountId(any(UUID.class)))
+                .thenReturn(Optional.of(testAccount));
+
         testInstrument = new Instrument(
             UUID.randomUUID(),
             "AAPL",
@@ -511,6 +529,95 @@ class OrderExecutionServiceTest {
         ));
     }
     
+    /**
+     * TS-10.1 ADR idempotency contract: a fill that already exists for an
+     * order must never be duplicated, and none of the settlement side
+     * effects (ledgers, caches, status update) should run again.
+     */
+    @Test
+    void testExecuteOrder_FillAlreadyExists_SkipsDuplicateSettlement() {
+        // Arrange
+        Fill existingFill = new Fill(UUID.randomUUID(), testOrder, 100L, new BigDecimal("150.50"), Instant.now());
+        when(quoteRepository.findLatestByInstrumentId(testInstrument.getInstrumentId()))
+            .thenReturn(Optional.of(testQuote));
+        when(fillRepository.findByOrderOrderId(testOrder.getOrderId()))
+            .thenReturn(Optional.of(existingFill));
+
+        // Act
+        orderExecutionService.executeOrder(testOrder);
+
+        // Assert - no new fill, no ledger entries, no cache writes, no status change
+        verify(fillRepository, never()).save(any());
+        verify(holdingMovementRepository, never()).save(any());
+        verify(cashTransactionRepository, never()).save(any());
+        verify(holdingRepository, never()).save(any());
+        verify(cashBalanceRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    /**
+     * BR-09/BR-10: a fill must update the holdings cache in the same
+     * transaction as the ledger write, using weighted-average cost for a
+     * first-time BUY position (no prior holding row).
+     */
+    @Test
+    void testApplyHoldingToCache_NewPosition_BuyOrder_SetsQuantityAndAvgCost() {
+        // Arrange - no existing holding row for this account/instrument
+        when(holdingRepository.findByAccountIdAndInstrumentId(testAccount.getAccountId(), testInstrument.getInstrumentId()))
+            .thenReturn(Optional.empty());
+
+        // Act
+        orderExecutionService.applyHoldingToCache(testAccount, testInstrument, "BUY", 100L, new BigDecimal("150.50"));
+
+        // Assert - new holding created with the fill's quantity and price as avg cost
+        verify(holdingRepository).save(argThat(holding ->
+            holding.getQuantity().equals(100L) &&
+            holding.getAvgCost().compareTo(new BigDecimal("150.50")) == 0
+        ));
+    }
+
+    /**
+     * BR-09/BR-10: a SELL reduces quantity but leaves average cost unchanged
+     * unless the position is fully liquidated (TS-10.1 ADR §4).
+     */
+    @Test
+    void testApplyHoldingToCache_PartialSell_QuantityDropsAvgCostUnchanged() {
+        // Arrange - existing position: 100 units at avg cost 150.00
+        Holding existing = new Holding(testAccount.getAccountId(), testInstrument.getInstrumentId());
+        existing.setQuantity(100L);
+        existing.setAvgCost(new BigDecimal("150.00"));
+        when(holdingRepository.findByAccountIdAndInstrumentId(testAccount.getAccountId(), testInstrument.getInstrumentId()))
+            .thenReturn(Optional.of(existing));
+
+        // Act - sell 40 units at a different execution price
+        orderExecutionService.applyHoldingToCache(testAccount, testInstrument, "SELL", 40L, new BigDecimal("160.00"));
+
+        // Assert - quantity drops by the sold amount; avg cost is untouched by the sale price
+        verify(holdingRepository).save(argThat(holding ->
+            holding.getQuantity().equals(60L) &&
+            holding.getAvgCost().compareTo(new BigDecimal("150.00")) == 0
+        ));
+    }
+
+    /**
+     * BR-09/BR-10: a fill must update the cash_balances cache with the same
+     * signed amount written to the cash_transactions ledger.
+     */
+    @Test
+    void testApplyCashToCache_NoExistingBalance_CreatesRowWithSignedAmount() {
+        // Arrange - no existing cash balance row for this account
+        when(cashBalanceRepository.findByAccountId(testAccount.getAccountId()))
+            .thenReturn(Optional.empty());
+
+        // Act - a BUY's signed amount is negative (outflow)
+        orderExecutionService.applyCashToCache(testAccount, new BigDecimal("-15050.00"));
+
+        // Assert
+        verify(cashBalanceRepository).save(argThat(balance ->
+            balance.getBalance().compareTo(new BigDecimal("-15050.00")) == 0
+        ));
+    }
+
     /**
      * Test: executeAllDueOrders processes all due orders.
      */
