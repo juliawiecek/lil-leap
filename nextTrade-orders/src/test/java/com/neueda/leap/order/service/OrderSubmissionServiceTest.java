@@ -84,7 +84,7 @@ class OrderSubmissionServiceTest {
 
         // Create active instrument
         Instrument instrument = new Instrument(instrumentId, "AAPL", "Apple Inc.", "COMMON_STOCK",
-                "USD", "NASDAQ", true);
+                "NASDAQ", "USD", true, true);
         instrumentRepository.save(instrument);
 
         // Set up cash balance
@@ -230,7 +230,7 @@ class OrderSubmissionServiceTest {
         // Arrange
         UUID disabledInstrumentId = UUID.fromString("650e8400-e29b-41d4-a716-446655440011");
         Instrument disabledInstrument = new Instrument(disabledInstrumentId, "HALT", "Halted", "COMMON_STOCK",
-                "USD", "NYSE", false);
+                "NYSE", "USD", false, true);  // enabled=false, tradable=true
         instrumentRepository.save(disabledInstrument);
 
         SubmitOrderRequest request = new SubmitOrderRequest(
@@ -314,7 +314,7 @@ class OrderSubmissionServiceTest {
         // Arrange: Create instrument without quote
         UUID noQuoteInstrumentId = UUID.randomUUID();
         Instrument noQuoteInstrument = new Instrument(noQuoteInstrumentId, "NOQUOTE", "No Quote", "COMMON_STOCK",
-                "USD", "NYSE", true);
+                "NYSE", "USD", true, true);  // enabled=true, tradable=true
         instrumentRepository.save(noQuoteInstrument);
 
         SubmitOrderRequest request = new SubmitOrderRequest(

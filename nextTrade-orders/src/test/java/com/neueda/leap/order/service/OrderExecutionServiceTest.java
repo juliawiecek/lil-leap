@@ -79,8 +79,9 @@ class OrderExecutionServiceTest {
             "AAPL",
             "Apple Inc",
             "COMMON_STOCK",
-            "USD",
             "NASDAQ",
+            "USD",
+            true,
             true
         );
         
