@@ -2,6 +2,8 @@ package com.neueda.leap.order.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -21,19 +23,20 @@ public class Instrument {
     @Column(name = "symbol", nullable = false, unique = true, length = 20)
     private String symbol;
     
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "instrument_name", nullable = false, length = 200)
     private String name;
     
     @Column(name = "asset_class", nullable = false, length = 30)
     private String assetClass;  // COMMON_STOCK, FX, CRYPTO
     
+    @JdbcTypeCode(SqlTypes.CHAR) // schema column is CHAR(3)
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
     
-    @Column(name = "market", nullable = false, length = 30)
+    @Column(name = "market_code", nullable = false, length = 20)
     private String market;
     
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "enabled", nullable = false)
     private Boolean isActive;
     
     @CreationTimestamp

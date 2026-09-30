@@ -36,8 +36,8 @@ public class Fill {
     @Column(name = "quote_timestamp", nullable = false)
     private Instant quoteTimestamp;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "quote_id", nullable = false)
+    // fills has no quote_id column; the quote is kept in memory only and quote_timestamp is what gets stored.
+    @Transient
     private Quote quote;
     
     @CreationTimestamp
