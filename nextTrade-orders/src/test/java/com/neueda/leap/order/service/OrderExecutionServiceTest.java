@@ -511,6 +511,8 @@ class OrderExecutionServiceTest {
             fill.getQuoteTimestamp().equals(testQuote.getQuotedAt())
         ));
     }
+
+    /**
      * Test: executeAllDueOrders processes all due orders.
      */
     @Test
