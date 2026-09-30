@@ -424,6 +424,47 @@ class OrderExecutionServiceTest {
     }
     
     /**
+     * BR-09: a fractional-cent execution total is rounded once to cents. The ledger entry
+     * and the cash_balances update both use this same computed amount.
+     */
+    @Test
+    void testCashAmount_FractionalCent_LedgerAndBalanceUseSameRoundedAmount() {
+        // Arrange - 1 share at 225.045 = 225.045, which must become -225.05 in both places
+        testOrder.setQuantity(1L);
+        BigDecimal price = new BigDecimal("225.045");
+        Fill fill = new Fill(UUID.randomUUID(), testOrder, 1L, price, Instant.now());
+
+        // Act
+        orderExecutionService.createCashTransaction(testOrder, fill, price);
+
+        // Assert
+        verify(cashTransactionRepository).save(argThat(transaction ->
+            transaction.getAmount().compareTo(new BigDecimal("-225.05")) == 0 &&
+            transaction.getAmount().scale() == 2
+        ));
+    }
+
+    /**
+     * A successful fill clears any error left from an earlier deferred attempt.
+     */
+    @Test
+    void testExecuteOrder_SuccessfulFill_ClearsLastExecutionError() {
+        // Arrange - a previous attempt left a deferral reason on the order
+        testOrder.setLastExecutionError("STALE_QUOTE");
+        when(quoteRepository.findLatestByInstrumentId(testInstrument.getInstrumentId()))
+            .thenReturn(Optional.of(testQuote));
+        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+
+        // Act
+        orderExecutionService.executeOrder(testOrder);
+
+        // Assert
+        verify(orderRepository).save(argThat(order ->
+            "FILLED".equals(order.getStatus()) && order.getLastExecutionError() == null
+        ));
+    }
+
+    /**
      * Test: Exponential backoff is applied on price tolerance failures.
      */
     @Test

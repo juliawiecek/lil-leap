@@ -209,6 +209,7 @@ public class OrderExecutionService {
 
         // Update order status to FILLED
         order.setStatus("FILLED");
+        order.setLastExecutionError(null);
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
 
@@ -262,7 +263,10 @@ public class OrderExecutionService {
      * @return the signed total cash amount for this fill
      */
     private static BigDecimal computeCashAmount(Order order, BigDecimal executionPrice) {
-        BigDecimal totalCost = executionPrice.multiply(new BigDecimal(order.getQuantity()));
+        // Round once to whole cents so the ledger and cash_balances store the same amount
+        // (TS-10.1 ADR section 4, step 4); otherwise PostgreSQL rounds each column separately.
+        BigDecimal totalCost = executionPrice.multiply(new BigDecimal(order.getQuantity()))
+                .setScale(2, RoundingMode.HALF_UP);
         return "BUY".equalsIgnoreCase(order.getSide()) ? totalCost.negate() : totalCost;
     }
     
