@@ -2,6 +2,8 @@ package com.neueda.leap.order.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -41,6 +43,7 @@ public class CashTransaction {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
     
+    @JdbcTypeCode(SqlTypes.CHAR) // schema column is CHAR(3)
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
     
