@@ -41,7 +41,7 @@ public class CashTransaction {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
     
-    @Column(name = "currency", nullable = false, length = 3, columnDefinition = "varchar(3)")
+    @Column(name = "currency", nullable = false, length = 3, columnDefinition = "char(3)")
     private String currency;
     
     @CreationTimestamp
