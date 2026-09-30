@@ -53,17 +53,13 @@ logging:
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
 
 # NextTrade custom application configuration
-# Externalized security and session settings
+# Externalized security configurations
 nexttrade:
   security:
     # SSN encryption key (pgcrypto symmetric encryption)
     # IMPORTANT: Never log or print this value
     # Must be configured in environment: NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY
     ssn-encryption-key: ${SSN_ENCRYPTION_KEY:replace_me}
-  
-  session:
-    # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
-    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
 
 app:
   jwt:
