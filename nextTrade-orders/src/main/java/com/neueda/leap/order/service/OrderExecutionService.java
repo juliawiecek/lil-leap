@@ -185,14 +185,13 @@ public class OrderExecutionService {
                                 + order.getOrderId() + " does not exist"));
 
         // Create Fill record (AC2: record execution details)
-        // BR-08 proof: Store quote_id to prove price was from a current market quote
+        // BR-08: Store quote_timestamp to prove price was from a current market quote
         Fill fill = new Fill(
             UUID.randomUUID(),
             order,
             order.getQuantity(),
             executionPrice,
-            quote.getQuotedAt(),
-            quote
+            quote.getQuotedAt()
         );
         fillRepository.save(fill);
 

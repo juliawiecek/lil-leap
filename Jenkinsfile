@@ -92,7 +92,8 @@ pipeline {
       steps {
         archiveArtifacts(
           artifacts: 'nextTrade-orders/target/site/jacoco/**',
-          fingerprint: true
+          fingerprint: true,
+          allowEmptyArchive: true
         )
       }
     }
@@ -101,7 +102,8 @@ pipeline {
       steps {
         archiveArtifacts(
           artifacts: 'nextTrade-holdings/target/site/jacoco/**',
-          fingerprint: true
+          fingerprint: true,
+          allowEmptyArchive: true
         )
       }
     }

@@ -26,7 +26,7 @@ import java.util.UUID;
 public class CashTransaction {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "transaction_id", columnDefinition = "uuid")
     private UUID transactionId;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,8 +43,7 @@ public class CashTransaction {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
     
-    @JdbcTypeCode(SqlTypes.CHAR) // schema column is CHAR(3)
-    @Column(name = "currency", nullable = false, length = 3)
+    @Column(name = "currency", nullable = false, length = 3, columnDefinition = "char(3)")
     private String currency;
     
     @CreationTimestamp

@@ -21,7 +21,7 @@ import java.util.UUID;
 public class Order {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "order_id", columnDefinition = "uuid")
     private UUID orderId;
     
     @ManyToOne(fetch = FetchType.LAZY)

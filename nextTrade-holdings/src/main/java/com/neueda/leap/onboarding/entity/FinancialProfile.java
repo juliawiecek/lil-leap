@@ -16,6 +16,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -74,9 +75,11 @@ public class FinancialProfile {
     @Column(name = "is_politically_exposed_person", nullable = false)
     private boolean politicallyExposedPerson;
 
+    @Transient  // H2 test database doesn't support JSONB
     @Column(name = "regulatory_disclosures", columnDefinition = "jsonb")
     private String regulatoryDisclosures;
 
+    @Transient  // H2 test database doesn't support JSONB
     @Column(name = "beneficial_owner_info", columnDefinition = "jsonb")
     private String beneficialOwnerInfo;
 

@@ -93,8 +93,9 @@ class OrderExecutionServiceTest {
             "AAPL",
             "Apple Inc",
             "COMMON_STOCK",
-            "USD",
             "NASDAQ",
+            "USD",
+            true,
             true
         );
         
@@ -559,13 +560,13 @@ class OrderExecutionServiceTest {
         // Act
         orderExecutionService.executeOrder(testOrder);
         
-        // Assert - Fill should store quote reference for BR-08 proof
+        // Assert - Fill should store quote timestamp for BR-08 proof
         verify(fillRepository).save(argThat(fill -> 
-            fill.getQuote() != null &&
-            fill.getQuote().getQuoteId().equals(testQuote.getQuoteId())
+            fill.getQuoteTimestamp() != null &&
+            fill.getQuoteTimestamp().equals(testQuote.getQuotedAt())
         ));
     }
-    
+
     /**
      * TS-10.1 ADR idempotency contract: a fill that already exists for an
      * order must never be duplicated, and none of the settlement side

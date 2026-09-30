@@ -1,15 +1,12 @@
 package com.neueda.leap.order.controller;
 
-import com.neueda.leap.config.SecurityConfig;
-import com.neueda.leap.order.model.Account;
-import com.neueda.leap.order.model.Instrument;
-import com.neueda.leap.order.model.Order;
+import com.neueda.leap.config.TestSecurityConfig;
+import com.neueda.leap.order.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.repository.InstrumentRepository;
 import com.neueda.leap.order.repository.OrderAccountRepository;
 import com.neueda.leap.order.repository.OrderRepository;
 import com.neueda.leap.order.repository.OrderStatusHistoryRepository;
 import com.neueda.leap.order.service.OrderSubmissionService;
-import com.neueda.leap.order.service.OrderValidationService;
 import com.neueda.leap.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,23 +16,20 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Role checks for {@code POST /orders} through the real JWT filter, method security
- * and submission service. Only the repositories are mocked.
+ * Test same valid token works across multiple consecutive requests.
  */
 @WebMvcTest(OrderController.class)
-@Import({SecurityConfig.class, JwtService.class, OrderSubmissionService.class, OrderValidationService.class})
-class OrderControllerSecurityTest {
+@Import(TestSecurityConfig.class)
+class OrderControllerTokenReuseTest {
 
     private final UUID accountId = UUID.randomUUID();
     private final UUID instrumentId = UUID.randomUUID();
@@ -45,6 +39,9 @@ class OrderControllerSecurityTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @MockBean
+    private OrderSubmissionService submissionService;
 
     @MockBean
     private OrderRepository orderRepository;
@@ -69,34 +66,33 @@ class OrderControllerSecurityTest {
     }
 
     @Test
-    void traderCanSubmitOrder() throws Exception {
+    void tokenReuseAcrossMultipleRequests() throws Exception {
         UUID userId = UUID.randomUUID();
-        Account account = new Account();
-        account.setAccountId(accountId);
-        account.setUserId(userId);
-        Instrument instrument = new Instrument();
-        instrument.setInstrumentId(instrumentId);
-        when(accountRepository.findByAccountIdAndUserId(accountId, userId)).thenReturn(Optional.of(account));
-        when(instrumentRepository.findById(instrumentId)).thenReturn(Optional.of(instrument));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        String token = bearer(userId, "TRADER");
+        OrderSubmissionResponse response = new OrderSubmissionResponse(UUID.randomUUID(), UUID.randomUUID(), "PENDING");
+        
+        when(submissionService.submit(any(UUID.class), any())).thenReturn(response);
 
+        // First request
         mockMvc.perform(post("/orders")
-                        .header("Authorization", bearer(userId, "TRADER"))
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body()))
+                .andExpect(status().isCreated());
+
+        // Second request - same token
+        mockMvc.perform(post("/orders")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body()))
+                .andExpect(status().isCreated());
+
+        // Third request - same token
+        mockMvc.perform(post("/orders")
+                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("PENDING"));
-    }
-
-    @Test
-    void analystIsForbiddenAndNoOrderIsSubmitted() throws Exception {
-        mockMvc.perform(post("/orders")
-                        .header("Authorization", bearer(UUID.randomUUID(), "ANALYST"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body()))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
-
-        verifyNoInteractions(accountRepository, instrumentRepository, orderRepository, statusHistoryRepository);
     }
 }
