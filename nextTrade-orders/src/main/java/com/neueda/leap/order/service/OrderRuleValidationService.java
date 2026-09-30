@@ -36,6 +36,9 @@ public class OrderRuleValidationService {
 
     /**
      * Validates that an instrument is supported and enabled for trading.
+     * NEXT-193: Checks both enabled and tradable fields separately.
+     * - enabled=false → INSTRUMENT_DISABLED (halted/suspended)
+     * - tradable=false → INSTRUMENT_NOT_TRADABLE (restricted instrument type)
      *
      * @param instrument the instrument to validate
      * @throws OrderRuleException if the instrument is unsupported, disabled, or not tradable
@@ -44,10 +47,11 @@ public class OrderRuleValidationService {
         if (instrument == null) {
             throw new OrderRuleException(INSTRUMENT_UNSUPPORTED);
         }
-        if (!instrument.getIsActive()) {
+        if (!instrument.isEnabled()) {
             throw new OrderRuleException(INSTRUMENT_DISABLED);
         }
-        // In the MVP, all active instruments are tradable
-        // This field is reserved for halts/suspensions
+        if (!instrument.isTradable()) {
+            throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);
+        }
     }
 }
