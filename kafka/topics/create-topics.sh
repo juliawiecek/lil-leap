@@ -3,9 +3,7 @@ set -euo pipefail
 
 # Wait for Kafka to be ready.
 echo "Waiting for Kafka broker to start..."
-until kafka-topics.sh --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
-  sleep 1
-done
+cub kafka-ready -b kafka:9092 1 30 > /dev/null 2>&1
 
 echo "Kafka broker is ready. Creating topics..."
 
