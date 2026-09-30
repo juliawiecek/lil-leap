@@ -8,6 +8,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -32,6 +34,7 @@ public class CashBalance {
     @JoinColumn(name = "account_id")
     private Account account;
 
+    @JdbcTypeCode(SqlTypes.CHAR) // schema column is CHAR(3)
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
