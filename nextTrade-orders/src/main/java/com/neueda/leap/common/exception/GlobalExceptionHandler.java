@@ -1,5 +1,6 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.order.exception.ClientNotFoundException;
 import com.neueda.leap.order.exception.InvalidOrderException;
 import com.neueda.leap.order.exception.OrderAccountNotFoundException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
@@ -103,5 +104,21 @@ public class GlobalExceptionHandler {
     handleOrderAccountNotFoundException(OrderAccountNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
                 ("error", "ACCOUNT_NOT_FOUND", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles requests that name a client id which does not exist or does not
+     * belong to the caller. Both cases return the same 404 so client ids
+     * cannot be probed.
+     *
+     * @param exception the exception describing the missing client
+     * @return a {@link ResponseEntity} with HTTP 404 Not Found status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(ClientNotFoundException.class)
+    public ResponseEntity<Map<String, String>>
+    handleClientNotFoundException(ClientNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
+                ("error", "CLIENT_NOT_FOUND", "message", exception.getMessage()));
     }
 }
