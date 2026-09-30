@@ -63,8 +63,21 @@ class OrderSubmissionServiceTest {
     void setUp() {
         // Create tables that don't have JPA entities
         // (Hibernate's create-drop only creates tables for entities)
+        jdbc.execute("DROP TABLE IF EXISTS audit_log");
         jdbc.execute("DROP TABLE IF EXISTS holdings");
         jdbc.execute("DROP TABLE IF EXISTS cash_balances");
+        
+        // Create audit_log table for NEXT-122 audit events
+        jdbc.execute("CREATE TABLE audit_log (" +
+                "audit_id UUID PRIMARY KEY, " +
+                "user_id UUID, " +
+                "account_id UUID, " +
+                "related_order_id UUID, " +
+                "actor_type VARCHAR(20) NOT NULL, " +
+                "event_type VARCHAR(100) NOT NULL, " +
+                "payload CLOB, " +  // H2 doesn't support JSONB, use CLOB
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                ")");
         
         jdbc.execute("CREATE TABLE holdings (" +
                 "account_id UUID NOT NULL, " +
@@ -87,6 +100,7 @@ class OrderSubmissionServiceTest {
         jdbc.update("DELETE FROM fills");
         jdbc.update("DELETE FROM holding_movements");
         jdbc.update("DELETE FROM cash_transactions");
+        jdbc.update("DELETE FROM audit_log");
         jdbc.update("DELETE FROM orders");
         jdbc.update("DELETE FROM quotes");
         jdbc.update("DELETE FROM accounts");

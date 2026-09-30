@@ -58,6 +58,7 @@ class OrderExecutionServiceTest {
 
     @BeforeEach
     void setUp() {
+        AuditEventWriter auditEventWriter = mock(AuditEventWriter.class);
         orderExecutionService = new OrderExecutionService(
             orderRepository,
             quoteRepository,
@@ -66,7 +67,8 @@ class OrderExecutionServiceTest {
             holdingMovementRepository,
             cashTransactionRepository,
             orderAccountRepository,
-            cashBalanceRepository
+            cashBalanceRepository,
+            auditEventWriter
         );
 
         // Setup test data
