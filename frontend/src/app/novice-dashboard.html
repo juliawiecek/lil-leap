@@ -362,23 +362,7 @@
           @if (activeTab() === 'Orders') {
             <section class="panel expanded-list">
               <div class="panel-heading"><h2>Order history</h2></div>
-              @for (order of orderHistory(); track order.id) {
-                <div class="watchlist-item">
-                  <b>{{ order.side }} {{ order.symbol }}</b
-                  ><span>{{ order.shares }} shares</span
-                  ><span>{{ order.price | currency }} per share</span
-                  ><span class="positive">Filled</span>
-                </div>
-              } @empty {
-                <div class="empty-state">
-                  <app-dashboard-icon name="orders" />
-                  <h2>No orders yet</h2>
-                  <p>Your completed orders will appear here.</p>
-                  <button class="green-button" type="button" (click)="openTrade()">
-                    Open trade ticket
-                  </button>
-                </div>
-              }
+              <app-order-history />
             </section>
           }
           <app-novice-learn [hidden]="activeTab() !== 'Learn'" />

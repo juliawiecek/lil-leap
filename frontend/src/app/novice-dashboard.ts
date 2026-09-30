@@ -2,6 +2,7 @@ import { Component, computed, ElementRef, input, output, signal, viewChild } fro
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
+import { OrderHistory } from './order-history';
 
 interface Holding {
   symbol: string;
@@ -24,7 +25,7 @@ interface Quote {
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
