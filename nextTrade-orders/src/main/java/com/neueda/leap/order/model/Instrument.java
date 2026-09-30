@@ -15,7 +15,7 @@ import java.util.UUID;
 public class Instrument {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "instrument_id", columnDefinition = "uuid")
     private UUID instrumentId;
     
     @Column(name = "symbol", nullable = false, unique = true, length = 20)

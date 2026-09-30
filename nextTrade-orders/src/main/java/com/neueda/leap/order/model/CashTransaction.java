@@ -24,7 +24,7 @@ import java.util.UUID;
 public class CashTransaction {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "transaction_id", columnDefinition = "uuid")
     private UUID transactionId;
     
     @ManyToOne(fetch = FetchType.LAZY)

@@ -20,7 +20,7 @@ import java.util.UUID;
 public class Fill {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "fill_id", columnDefinition = "uuid")
     private UUID fillId;
     
     @OneToOne(fetch = FetchType.LAZY)
