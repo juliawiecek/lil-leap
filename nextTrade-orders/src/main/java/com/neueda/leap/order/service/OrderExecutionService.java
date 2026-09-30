@@ -245,18 +245,34 @@ public class OrderExecutionService {
         recordStatusHistory(order, "FILLED", "EXECUTION_SUCCESS", "Order filled at " + executionPrice);
 
         // AC3: Write ORDER_FILLED audit event in same transaction as fill and settlement
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", order.getOrderId());
-        payload.put("fillId", fill.getFillId());
-        payload.put("quantity", fill.getFilledQuantity());
-        payload.put("executionPrice", fill.getExecutionPrice());
-        payload.put("quoteTimestamp", fill.getQuoteTimestamp());
-        payload.put("fillTimestamp", Instant.now());
-        payload.put("instrumentId", order.getInstrument().getInstrumentId());
-        payload.put("side", order.getSide());
-        auditEventWriter.writeOrderFilled(order.getAccount().getAccountId(), order.getOrderId(), payload);
+        Map<String, Object> filledPayload = new HashMap<>();
+        filledPayload.put("orderId", order.getOrderId());
+        filledPayload.put("fillId", fill.getFillId());
+        filledPayload.put("quantity", fill.getFilledQuantity());
+        filledPayload.put("executionPrice", fill.getExecutionPrice());
+        filledPayload.put("quoteTimestamp", fill.getQuoteTimestamp());
+        filledPayload.put("fillTimestamp", Instant.now());
+        filledPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        filledPayload.put("side", order.getSide());
+        auditEventWriter.writeOrderFilled(order.getAccount().getAccountId(), order.getOrderId(), filledPayload);
 
-        log.info("Order {} filled successfully", order.getOrderId());
+        // Write SETTLEMENT_COMPLETED in same transaction as fill, ledger writes, cache updates, and status
+        // This confirms all settlements (holdings, cash) committed together.
+        BigDecimal settlementCash = computeCashAmount(order, executionPrice);
+        Map<String, Object> settlementPayload = new HashMap<>();
+        settlementPayload.put("orderId", order.getOrderId());
+        settlementPayload.put("fillId", fill.getFillId());
+        settlementPayload.put("quantity", fill.getFilledQuantity());
+        settlementPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        settlementPayload.put("side", order.getSide());
+        settlementPayload.put("executionPrice", fill.getExecutionPrice());
+        settlementPayload.put("cashDelta", settlementCash);
+        settlementPayload.put("holdingDelta", "BUY".equalsIgnoreCase(order.getSide()) ? order.getQuantity() : -order.getQuantity());
+        settlementPayload.put("settlementTimestamp", Instant.now());
+        settlementPayload.put("accountId", order.getAccount().getAccountId());
+        auditEventWriter.writeSettlementCompleted(order.getAccount().getAccountId(), order.getOrderId(), settlementPayload);
+
+        log.info("Order {} filled successfully with settlement recorded", order.getOrderId());
     }
 
     /**

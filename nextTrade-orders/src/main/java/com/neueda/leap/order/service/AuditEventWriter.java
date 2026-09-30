@@ -24,9 +24,12 @@ import java.util.UUID;
  * (order save, fill creation, settlement ledger writes) so they roll back together
  * on failure.</p>
  *
- * <p>Idempotency: Callers must verify that a terminal event does not already
- * exist before calling the write method. This service does not enforce uniqueness
- * but relies on the caller's pre-check for terminal events.</p>
+ * <p>Idempotency: Terminal events (ORDER_ACCEPTED, ORDER_FILLED, ORDER_REJECTED,
+ * SETTLEMENT_COMPLETED) use application-level checks via hasTerminalEventForOrder()
+ * before write. NOTE: This is NOT database-safe under high concurrency.
+ * A race condition exists if two threads reach hasTerminalEventForOrder() before
+ * either commits. Future work (NEXT-123+) should implement database-enforced
+ * idempotency via unique index on (related_order_id, event_type) for terminal events.</p>
  */
 @Service
 class AuditEventWriter {
@@ -168,16 +171,22 @@ class AuditEventWriter {
     /**
      * Write a SETTLEMENT_FAILED event.
      *
-     * Called ONLY when settlement fails and a durable failure record is needed.
-     * This event is written only if a post-rollback failure-recording path exists.
-     * Do not call this inside a transaction that is guaranteed to roll back.
+     * NOT IMPLEMENTED (DEFERRED).
+     * A post-rollback failure-recording path does not yet exist.
+     * When settlement transaction fails, it rolls back completely (no partial writes).
+     * Future work (NEXT-123+) may implement durable post-rollback event recording
+     * via a separate failure-log table or asynchronous retry queue.
+     * Do not call this method; it throws UnsupportedOperationException.
      *
      * @param accountId account the settlement was for
      * @param orderId order identifier
      * @param payload event details (reason, attemptNumber, etc.)
+     * @throws UnsupportedOperationException always
      */
     public void writeSettlementFailed(UUID accountId, UUID orderId, Map<String, Object> payload) {
-        write(null, accountId, orderId, ACTOR_SYSTEM, EVENT_SETTLEMENT_FAILED, payload);
+        throw new UnsupportedOperationException(
+            "SETTLEMENT_FAILED is not implemented. Settlement failures roll back completely. " +
+            "Post-rollback event recording is deferred to NEXT-123+.");
     }
 
     /**
