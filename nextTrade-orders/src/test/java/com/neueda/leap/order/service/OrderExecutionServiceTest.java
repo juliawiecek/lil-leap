@@ -505,14 +505,12 @@ class OrderExecutionServiceTest {
         // Act
         orderExecutionService.executeOrder(testOrder);
         
-        // Assert - Fill should store quote reference for BR-08 proof
+        // Assert - Fill should store quote timestamp for BR-08 proof
         verify(fillRepository).save(argThat(fill -> 
-            fill.getQuote() != null &&
-            fill.getQuote().getQuoteId().equals(testQuote.getQuoteId())
+            fill.getQuoteTimestamp() != null &&
+            fill.getQuoteTimestamp().equals(testQuote.getQuotedAt())
         ));
     }
-    
-    /**
      * Test: executeAllDueOrders processes all due orders.
      */
     @Test
