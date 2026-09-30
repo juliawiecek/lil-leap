@@ -1,6 +1,7 @@
 package com.neueda.leap.common.exception;
 
 import com.neueda.leap.order.exception.ClientNotFoundException;
+import com.neueda.leap.order.exception.InvalidFilterException;
 import com.neueda.leap.order.exception.InvalidOrderException;
 import com.neueda.leap.order.exception.OrderAccountNotFoundException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
@@ -138,5 +139,20 @@ public class GlobalExceptionHandler {
     handleClientNotFoundException(ClientNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
                 ("error", "CLIENT_NOT_FOUND", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles query filters that cannot be applied, such as an unknown order
+     * status or a date range whose start is after its end.
+     *
+     * @param exception the exception naming the invalid filter
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(InvalidFilterException.class)
+    public ResponseEntity<Map<String, String>>
+    handleInvalidFilterException(InvalidFilterException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_FILTER", "message", exception.getMessage()));
     }
 }
