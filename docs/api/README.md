@@ -1,6 +1,6 @@
 # API Documentation
 
-How to browse and try the lil-leap service APIs in Swagger UI. Each service publishes its
+How to browse and try the NextTrade service APIs in Swagger UI. Each service publishes its
 own docs, generated from its code, so they stay in step with what is deployed.
 
 | Service | Swagger UI | Raw spec |

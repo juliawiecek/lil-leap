@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-Navigate the lil-leap project documentation using the links below.
+Navigate the NextTrade project documentation using the links below.
 
 ---
 
@@ -111,7 +111,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ## External References
 
-- Project: NextTrade (lil-leap platform)
+- Project: NextTrade, built by team Lil Leap
 - Repository: GitHub (private)
 - Team Lead: Kevin Marin
 
