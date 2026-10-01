@@ -113,7 +113,7 @@ class ClientFinancialControllerTest {
         when(queryService.getHoldings(userId)).thenReturn(List.of(holding));
         
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/clients/{clientId}/portfolio-summary", userId)
+        mockMvc.perform(get("/api/v1/clients/{clientId}/portfolio-summary", userId)
                         .principal(authentication(userId)))
                 .andExpect(status().isOk());
         verify(queryService).getPortfolioSummary(userId, accountId);
@@ -125,7 +125,7 @@ class ClientFinancialControllerTest {
         UUID otherUserId = UUID.randomUUID();
         
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/clients/{clientId}/portfolio-summary", otherUserId)
+        mockMvc.perform(get("/api/v1/clients/{clientId}/portfolio-summary", otherUserId)
                         .principal(authentication(userId)))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(queryService);
