@@ -123,8 +123,7 @@ Open `coverage/lcov-report/index.html` in a browser (Windows:
 `start coverage\lcov-report\index.html`). Click a file to see untested lines in
 red. The report is generated locally and is not committed.
 
-Unit-test coverage as of 24 Sep 2026: **90.2% lines, 90.2% statements, 79.7%
-branches, 86.7% functions** (88 tests). The end-to-end suite isn't included.
+The latest figures are in [docs/coverage](../docs/coverage/README.md); the end-to-end suite isn't included.
 
 ### End-to-end tests
 

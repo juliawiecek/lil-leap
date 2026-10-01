@@ -70,7 +70,11 @@ public class OrderExecutionWorker {
                 ), accepted AS (
                     UPDATE orders o SET status = 'ACCEPTED', accepted_at = CURRENT_TIMESTAMP,
                         next_execution_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                    FROM candidate c WHERE o.order_id = c.order_id RETURNING o.order_id
+                    FROM candidate c WHERE o.order_id = c.order_id RETURNING o.order_id, o.account_id
+                ), audited AS (
+                    INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                    SELECT account_id, order_id, 'SYSTEM', 'ORDER_ACCEPTED',
+                           jsonb_build_object('status', 'ACCEPTED') FROM accepted
                 )
                 INSERT INTO order_status_history(order_id, status, reason_code)
                 SELECT order_id, 'ACCEPTED', 'ORDER_ACCEPTED' FROM accepted
@@ -128,9 +132,16 @@ public class OrderExecutionWorker {
 
     private void defer(Claim claim, String reason) {
         transaction.executeWithoutResult(tx -> jdbc.update("""
-                UPDATE orders SET next_execution_at = CURRENT_TIMESTAMP + (? * INTERVAL '1 second'),
-                    last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                WITH deferred AS (
+                    UPDATE orders SET next_execution_at = CURRENT_TIMESTAMP + (? * INTERVAL '1 second'),
+                        last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                    RETURNING order_id, account_id, execution_attempts, next_execution_at, last_execution_error
+                )
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'ORDER_REQUEUED',
+                       jsonb_build_object('attemptNumber', execution_attempts, 'reasonCode', last_execution_error,
+                                          'nextExecutionTime', next_execution_at) FROM deferred
                 """, retrySeconds, reason, claim.orderId(), claim.attempt()));
     }
 

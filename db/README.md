@@ -44,7 +44,7 @@ WAL; a prolonged outage can require a replica rebuild.
 
 ## Schema
 
-### 17 Core Tables
+### 18 Core Tables
 
 | Table | Purpose |
 |-------|---------|
@@ -63,7 +63,8 @@ WAL; a prolonged outage can require a replica rebuild.
 | `holdings` | Cache: current securities per account (source of truth: `holding_movements`) |
 | `holding_movements` | Append-only ledger: every fill creates a movement |
 | `cash_balances` | Cache: current cash per account (source of truth: `cash_transactions`) |
-| `cash_transactions` | Append-only ledger: every cash event creates a transaction |
+| `cash_transactions` | Append-only ledger with settlement status and timestamp |
+| `cash_holds` | Active/released cash reservations; no automatic writer yet |
 | `audit_log` | Append-only compliance log (application role: SELECT/INSERT only) |
 
 ### 5 Helper Views
@@ -83,6 +84,8 @@ WAL; a prolonged outage can require a replica rebuild.
 - Migration 008 installs the transactional holdings projection trigger and rebuilds
   ledger-backed positions. Stop settlement writers and review complete ledger
   history before upgrading. Orders checks for the trigger at startup.
+- Apply [migration 009](migrations/009_cash_settlement_detail.sql) as schema owner before deploying portfolio summaries. Pause settlement writers; it backfills historical cash as settled, adds hold storage, preserves the legacy `v_account_cash.balance` column, and grants existing ledger readers SELECT on holds. New databases include these changes in the finalized schema.
+- Current fills settle immediately. Pending-cash and hold fields are available for reads; automatic reservation/release and delayed settlement workflows remain future work.
 - Orders records idempotent submissions and settles fills, ledger entries, caches,
   status and audit data atomically under account-level locking.
 - `audit_log` is append-only for `app_user`.

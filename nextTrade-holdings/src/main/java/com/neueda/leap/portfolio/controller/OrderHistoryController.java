@@ -4,6 +4,10 @@ import com.neueda.leap.portfolio.dto.OrderHistoryResponse;
 import com.neueda.leap.portfolio.service.ClientNotFoundException;
 import com.neueda.leap.portfolio.service.OrderHistoryService;
 import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +27,7 @@ import java.util.UUID;
  */
 @RestController
 @PreAuthorize("hasRole('TRADER')")
+@Tag(name = "Order History", description = "Order history reads, with date and status filters")
 public class OrderHistoryController {
 
     private final OrderHistoryService historyService;
@@ -48,11 +53,18 @@ public class OrderHistoryController {
      * @return HTTP 200 with the matching orders
      */
     @GetMapping("/clients/{id}/orders")
+    @Operation(summary = "Get a client's order history",
+            description = "Newest first. All three filters are optional and combinable. "
+                    + "id must be the caller's own - a mismatch returns 404, identically to an unknown id.")
+    @ApiResponse(responseCode = "200", description = "Matching orders, or an empty list if none")
+    @ApiResponse(responseCode = "404", description = "id does not match the authenticated caller")
     public ResponseEntity<List<OrderHistoryResponse>> getOrders(
-            @PathVariable UUID id,
+            @Parameter(description = "Client (user) id; must be the caller's own") @PathVariable UUID id,
+            @Parameter(description = "First day to include (ISO date), e.g. 2026-09-01")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Last day to include (ISO date)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam(required = false) String status,
+            @Parameter(description = "One order status, e.g. FILLED") @RequestParam(required = false) String status,
             @AuthenticationPrincipal JwtPrincipal principal) {
         if (!id.equals(principal.userId())) {
             throw new ClientNotFoundException("Client not found");

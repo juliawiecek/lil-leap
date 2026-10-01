@@ -18,7 +18,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
 
-All endpoints require a Bearer JWT. The service denies other routes and does not
+All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
 
 ## Development
@@ -45,7 +45,11 @@ disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submi
 contracts. Run Maven from this directory so the production schema can be loaded.
 Without these variables, PostgreSQL-only tests are explicitly skipped.
 
-Apply migrations 007 and 008 before starting Orders on an existing database.
+Apply migrations 007, 008 and 009 before starting Orders on an existing database.
 The holdings projection trigger updates positions within the settlement transaction;
 Orders refuses startup if that trigger is missing or disabled. See the
 [upgrade instructions](../docs/architecture/service-boundaries.md#deployment-and-existing-databases).
+
+Swagger UI is available at `/api/v1/swagger-ui.html` and the specification at `/api/v1/v3/api-docs` on the native service port. These documentation routes are public; base Compose does not publish Java ports. See [API access](../docs/api/README.md).
+
+The worker records ORDER_ACCEPTED, PRICE_DECISION, ORDER_FILLED, ORDER_REJECTED, ORDER_REQUEUED and SETTLEMENT_COMPLETED events. Acceptance commits before execution; fill/settlement audit records roll back with their transaction, and requeue diagnostics commit after a rollback. Immediate cash settlement supplies both SETTLED status and a settlement timestamp.

@@ -98,3 +98,7 @@ the [service-boundary guide](docs/architecture/service-boundaries.md#remaining-f
 
 Earlier story documents under `docs/` are historical and may name the old backend
 or pre-refactor service owners.
+
+## API and coverage guides
+
+See [Swagger/OpenAPI access](docs/api/README.md) for service-specific documentation and remote gateway access, and [coverage generation](docs/coverage/README.md) for report commands.

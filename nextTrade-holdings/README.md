@@ -17,6 +17,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | GET | `/api/v1/holdings` | Caller-owned positions |
 | GET | `/api/v1/clients/{id}/holdings` | Positions when the ID matches the caller |
 | GET | `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Cash when the ID matches the caller |
+| GET | `/api/v1/clients/{id}/portfolio-summary` | Caller-owned default account, positions, detailed cash and total value |
 | GET | `/api/v1/cash` | Caller-owned cash balances |
 | GET | `/api/v1/orders` | Caller-owned order history |
 | GET | `/api/v1/clients/{id}/orders` | Trader-owned history with optional `from`, `to`, `status` filters and fill details |
@@ -26,7 +27,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | GET | `/api/v1/quotes/latest/by-market-symbol?market=NASDAQ&symbol=AAPL` | Latest eligible quote |
 | GET | `/api/v1/quotes/history/{id}?limit=100` | Quote history (maximum 1000) |
 
-All endpoints require a Bearer JWT. The service denies other routes and does not
+All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
 
 The client-addressed order-history endpoint (NEXT-117) accepts ISO calendar dates
@@ -53,7 +54,11 @@ Cash aliases return 404 for another or unknown caller and 400 for malformed UUID
 Holdings aliases retain their 403 ownership contract. Quote reads require TRADER
 or ANALYST authentication. Holdings never generates quotes or executes trades.
 
-To include the five production-schema projection/migration tests, run Maven with
+To include the production-schema projection, portfolio and migration tests, run Maven with
 `-Dtest.holdings.postgres.url=jdbc:postgresql://localhost:5432/test_database`,
 `-Dtest.holdings.postgres.user=test_user` and `-Dtest.holdings.postgres.password=...`
 against a disposable database. Each run creates and removes an isolated schema.
+
+Swagger UI is available at `/api/v1/swagger-ui.html` and the specification at `/api/v1/v3/api-docs` on the native service port. These documentation routes are public; base Compose does not publish Java ports. See [API access](../docs/api/README.md).
+
+Portfolio summaries choose the first owned account by ID, including empty accounts. They use latest stored midpoint prices plus total ledger cash; holds reduce available cash only. Missing quotes for nonzero positions return 503. Apply migration 009 before deploying to an existing database. Delayed settlement and automatic cash reservations are not implemented.

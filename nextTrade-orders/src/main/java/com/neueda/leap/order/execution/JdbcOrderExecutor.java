@@ -74,6 +74,13 @@ public class JdbcOrderExecutor implements OrderExecutor {
         if (decision.action() == ExecutionQuoteDecision.Action.REJECT)
             return reject(orderId, decision.reason().name());
         var quote = decision.quote();
+        jdbc.update("""
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'PRICE_DECISION',
+                       jsonb_build_object('quoteId', CAST(? AS uuid), 'quotedAt', CAST(? AS timestamptz),
+                                          'bid', CAST(? AS numeric), 'ask', CAST(? AS numeric),
+                                          'attemptNumber', execution_attempts) FROM orders WHERE order_id = ?
+                """, quote.quoteId(), quote.quotedAt(), quote.bid(), quote.ask(), orderId);
         boolean buy = "BUY".equals(order.side());
         BigDecimal price = buy ? quote.ask() : quote.bid();
         BigDecimal buffer = (order.buffer() == null ? account.buffer() : order.buffer()).movePointLeft(2);
@@ -104,8 +111,8 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 """, order.account(), order.instrument(), fill, change, price, order.side());
         BigDecimal cashChange = buy ? amount.negate() : amount;
         jdbc.update("""
-                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency)
-                VALUES (?, ?, ?, ?, 'USD')
+                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
+                VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
                 """, order.account(), fill, order.side(), cashChange);
 
         // holding_movements invokes the transactional holdings projection trigger.
@@ -115,9 +122,12 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 """, order.account(), cash.add(cashChange));
         history(orderId, "FILLED", "EXECUTION_SUCCESS");
         jdbc.update("""
-                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type)
-                VALUES (?, ?, 'SYSTEM', 'ORDER_FILLED')
-                """, order.account(), orderId);
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT ?, ?, 'SYSTEM', event_type,
+                       jsonb_build_object('fillId', CAST(? AS uuid), 'quantity', CAST(? AS bigint),
+                                          'executionPrice', CAST(? AS numeric), 'cashDelta', CAST(? AS numeric))
+                FROM (VALUES ('ORDER_FILLED'), ('SETTLEMENT_COMPLETED')) events(event_type)
+                """, order.account(), orderId, fill, order.quantity(), price, cashChange);
         return Outcome.FILLED;
     }
 
@@ -125,6 +135,12 @@ public class JdbcOrderExecutor implements OrderExecutor {
         jdbc.update("UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
                 reason, orderId);
         history(orderId, "REJECTED", reason);
+        jdbc.update("""
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'ORDER_REJECTED',
+                       jsonb_build_object('reasonCode', last_execution_error, 'attemptNumber', execution_attempts)
+                FROM orders WHERE order_id = ?
+                """, orderId);
         return Outcome.REJECTED;
     }
 

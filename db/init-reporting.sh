@@ -14,7 +14,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA public FROM reporting_user;
 GRANT USAGE ON SCHEMA public TO reporting_user;
 -- Deliberately excludes credentials, sessions, password-reset tokens and PII.
 GRANT SELECT ON accounts, instruments, quotes, orders, fills, order_status_history,
-    holdings, holding_movements, cash_balances, cash_transactions TO reporting_user;
+    holdings, holding_movements, cash_balances, cash_transactions, cash_holds TO reporting_user;
 SELECT 'CREATE ROLE replicator LOGIN REPLICATION' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'replicator') \gexec
 SELECT format('ALTER ROLE replicator REPLICATION PASSWORD %L', :'replication_password') \gexec
 SELECT pg_create_physical_replication_slot('reporting_replica')

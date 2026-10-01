@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Real production schema and transaction manager; no mocks of settlement or persistence. */
 @SpringBootTest(properties = "orders.execution.enabled=false")
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 @EnabledIfEnvironmentVariable(named = "TEST_POSTGRES_URL", matches = ".+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrderLifecyclePostgresTest {
@@ -29,6 +30,7 @@ class OrderLifecyclePostgresTest {
     @Autowired PlatformTransactionManager manager;
     @Autowired OrderExecutor executor;
     @Autowired OrderSubmissionService submissions;
+    @Autowired org.springframework.test.web.servlet.MockMvc mvc;
     private UUID user, account, instrument;
     private OrderExecutionWorker worker;
 
@@ -79,6 +81,18 @@ class OrderLifecyclePostgresTest {
     private int count(String table) { return jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class); }
 
     @Test
+    void apiDocumentationExposesOnlyTheCanonicalOrderRoute() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/v3/api-docs").contextPath("/api/v1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/orders'].post").exists())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/clients/{id}/orders']").doesNotExist());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/swagger-ui/index.html").contextPath("/api/v1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
     void submittedOrderIsAcceptedFilledAndSettledExactlyOnce() {
         UUID reference = UUID.randomUUID();
         var request = new SubmitOrderRequest(account, "AAPL", reference, "BUY", 10, "MARKET", null);
@@ -92,6 +106,12 @@ class OrderLifecyclePostgresTest {
         assertThat(submissions.submit(user, request).created()).isFalse();
         assertThat(count("fills")).isEqualTo(1);
         assertThat(count("holding_movements")).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+                .containsExactly("ORDER_ACCEPTED", "ORDER_FILLED", "PRICE_DECISION", "SETTLEMENT_COMPLETED");
+        assertThat(jdbc.queryForObject("SELECT payload->>'executionPrice' FROM audit_log WHERE event_type='ORDER_FILLED'", String.class))
+                .isEqualTo("100.00000000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM cash_transactions WHERE settlement_status='SETTLED' AND settled_at IS NOT NULL", Integer.class))
+                .isEqualTo(2);
         assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("9000");
         assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("9000");
         assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(10);
@@ -168,6 +188,8 @@ class OrderLifecyclePostgresTest {
         assertThat(count("holding_movements")).isZero();
         assertThat(count("holdings")).isZero();
         assertThat(count("cash_transactions")).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+                .containsExactly("ORDER_ACCEPTED", "ORDER_REQUEUED");
         assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10000");
     }
 
@@ -202,6 +224,8 @@ class OrderLifecyclePostgresTest {
         jdbc.update("UPDATE orders SET execution_attempts=9,next_execution_at=CURRENT_TIMESTAMP WHERE order_id=?", id);
         worker.execute(worker.claimNext());
         assertThat(status(id)).isEqualTo("REJECTED");
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+                .containsExactly("ORDER_ACCEPTED", "ORDER_REJECTED", "ORDER_REQUEUED");
         assertThat(count("fills")).isZero();
     }
 }

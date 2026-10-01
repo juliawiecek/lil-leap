@@ -19,6 +19,9 @@
 | Reporting client | [insights-frontend](../insights-frontend/README.md) |
 | Shared routing | [gateway configuration](../gateway/nginx.conf) |
 
+- [API documentation](api/README.md): Swagger, endpoint ownership and remote gateway access.
+- [Coverage generation](coverage/README.md): current commands and historical measurements.
+
 ## Historical references
 
 These preserve earlier story/bundle context; their old paths and commands are

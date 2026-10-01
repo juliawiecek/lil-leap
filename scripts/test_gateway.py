@@ -67,6 +67,8 @@ def main():
             (18420, 'GET', '/api/v1/quotes/latest/by-instrument/test', 'holdings:8080'),
             (18420, 'GET', '/api/v1/quotes/history/test?limit=5', 'holdings:8080'),
             (18420, 'GET', '/api/v1/clients/test/holdings', 'holdings:8080'),
+            (18420, 'GET', '/api/v1/clients/test/portfolio-summary', 'holdings:8080'),
+            (18421, 'GET', '/api/v1/clients/test/portfolio-summary', None),
             (18420, 'GET', '/api/v1/clients/test/cash', 'holdings:8080'),
             (18420, 'GET', '/api/v1/clients/test/orders?from=2026-09-01&status=FILLED', 'holdings:8080'),
             (18420, 'GET', '/api/v1/cash/balance/test', 'holdings:8080'),

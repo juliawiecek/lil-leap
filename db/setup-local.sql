@@ -32,6 +32,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
     password_reset_tokens, sessions, instruments, quotes, accounts, orders,
     fills, order_status_history, holdings, holding_movements,
     cash_balances, cash_transactions TO app_user;
+GRANT SELECT ON cash_holds TO app_user;
 GRANT SELECT ON v_account_cash, v_account_holdings, v_latest_quotes,
     v_active_sessions, v_trader_tier_eligibility TO app_user;
 GRANT SELECT, INSERT ON audit_log TO app_user;

@@ -214,6 +214,69 @@ class HoldingsSettlementPostgresTest {
         assertRoutes(20, "17.5");
     }
 
+    @Test
+    void portfolioSummaryIncludesEmptyAccountsAndEnforcesOwnership() throws Exception {
+        String route = "/clients/" + owner + "/portfolio-summary";
+        mvc.perform(get(route).header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value(account.toString()))
+                .andExpect(jsonPath("$.cash.totalBalance").value(0));
+        mvc.perform(get("/clients/" + UUID.randomUUID() + "/portfolio-summary").header("Authorization", bearer))
+                .andExpect(status().isForbidden());
+        assertThatThrownBy(() -> new ClientFinancialQueryService(jdbc).getPortfolioSummary(UUID.randomUUID(), account))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void portfolioSummaryUsesSettledPendingAndHeldCashAndLatestPrices() throws Exception {
+        jdbc.update("INSERT INTO cash_transactions(account_id,transaction_type,amount) VALUES (?,'DEPOSIT',1000)", account);
+        settle(10, "10");
+        jdbc.update("INSERT INTO cash_transactions(account_id,transaction_type,amount,settlement_status,settled_at) VALUES (?,'DEPOSIT',50,'PENDING',NULL)", account);
+        UUID order = jdbc.queryForObject("SELECT order_id FROM orders WHERE account_id=? LIMIT 1", UUID.class, account);
+        jdbc.update("INSERT INTO cash_holds(account_id,order_id,held_amount,hold_reason) VALUES (?,?,100,'ORDER_PENDING')", account, order);
+        jdbc.update("INSERT INTO quotes(instrument_id,bid,ask,quoted_at,source) VALUES (?,19,21,CURRENT_TIMESTAMP,'TEST')", instrument);
+        mvc.perform(get("/clients/" + owner + "/portfolio-summary").header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cash.settledBalance").value(900))
+                .andExpect(jsonPath("$.cash.pendingBalance").value(50))
+                .andExpect(jsonPath("$.cash.availableBalance").value(800))
+                .andExpect(jsonPath("$.cash.totalBalance").value(950))
+                .andExpect(jsonPath("$.totalPortfolioValue").value(1150));
+    }
+
+    @Test
+    void cashMigrationUpgradesHistoricalLedgerAndCanBeReapplied() throws Exception {
+        jdbc.execute("DROP VIEW v_account_cash");
+        jdbc.execute("DROP TABLE cash_holds");
+        jdbc.execute("ALTER TABLE cash_transactions DROP COLUMN settlement_status, DROP COLUMN settled_at");
+        jdbc.execute("CREATE VIEW v_account_cash AS SELECT account_id, 'USD' AS currency, COALESCE(SUM(amount),0) AS balance FROM cash_transactions GROUP BY account_id");
+        jdbc.update("INSERT INTO cash_transactions(account_id,transaction_type,amount) VALUES (?,'DEPOSIT',1000)", account);
+        String migration = Files.readString(Path.of("../db/migrations/009_cash_settlement_detail.sql"));
+        String reader = "cash_reader_" + UUID.randomUUID().toString().replace("-", "");
+        jdbc.execute("CREATE ROLE " + reader);
+        try {
+            jdbc.execute("GRANT SELECT ON cash_transactions TO " + reader);
+            jdbc.execute(migration);
+            jdbc.execute(migration);
+            assertThat(jdbc.queryForObject("SELECT has_table_privilege(?, 'cash_holds', 'SELECT')", Boolean.class, reader)).isTrue();
+            assertThat(jdbc.queryForObject("SELECT has_table_privilege(?, 'cash_holds', 'INSERT')", Boolean.class, reader)).isFalse();
+        } finally {
+            jdbc.execute("REVOKE ALL ON ALL TABLES IN SCHEMA " + SCHEMA + " FROM " + reader);
+            jdbc.execute("DROP ROLE " + reader);
+        }
+        assertThat(jdbc.queryForObject("SELECT settled_at=created_at FROM cash_transactions WHERE account_id=?", Boolean.class, account)).isTrue();
+        settle(1, "10");
+        assertThat(jdbc.queryForObject("SELECT balance FROM v_account_cash WHERE account_id=?", BigDecimal.class, account)).isEqualByComparingTo("990");
+        assertThat(jdbc.queryForObject("SELECT available_balance FROM v_account_cash WHERE account_id=?", BigDecimal.class, account)).isEqualByComparingTo("990");
+    }
+
+    @Test
+    void portfolioDoesNotSilentlyValueUnquotedPositionsAtZero() throws Exception {
+        settle(1, "10");
+        mvc.perform(get("/clients/" + owner + "/portfolio-summary").header("Authorization", bearer))
+                .andExpect(status().isServiceUnavailable());
+    }
+
     private void settle(long quantity, String price) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> insertSettlement(quantity, price));
     }

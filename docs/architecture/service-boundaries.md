@@ -98,20 +98,21 @@ docker compose up --build
 
 For an existing database, preserve the `db_data` volume. Init scripts do not rerun
 automatically. Stop settlement writers first (`docker compose stop orders`). Apply
-the execution and holdings-projection migrations in order, then initialize
+the execution, holdings-projection and cash-detail migrations in order, then initialize
 reporting roles and the replication slot **before** starting the replica:
 
 ```sh
 docker compose up -d db
 docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1 < db/migrations/007_durable_order_execution.sql
 docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1 < db/migrations/008_holdings_projection.sql
+docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1 < db/migrations/009_cash_settlement_detail.sql
 docker compose exec -T db bash /docker-entrypoint-initdb.d/04-reporting.sh
 docker compose up --build -d
 ```
 
 The input-redirection command is for a POSIX shell. In PowerShell use
 `Get-Content db/migrations/007_durable_order_execution.sql | docker compose exec -T db psql -U main -d nexttrade -v ON_ERROR_STOP=1`,
-then repeat with `008_holdings_projection.sql`. Migration 008 rebuilds ledger-backed
+then repeat with `008_holdings_projection.sql` and `009_cash_settlement_detail.sql`. Migration 008 rebuilds ledger-backed
 positions and requires complete ledger history for those positions. Review opening
 balances before applying it. Orders refuses startup without the enabled projection
 trigger, preventing trades from leaving stale holdings after an incomplete upgrade.
@@ -335,3 +336,13 @@ nine and six native PostgreSQL tests respectively. Trading UI: 89 tests and prod
 build passed. Both Java builds, coverage generation, 23 NGINX routing/isolation
 checks, base Compose parsing and active Markdown links/fences passed. Docker startup
 and Jenkins execution remain unverified on this workstation.
+
+### PR #85 follow-up for portfolio summaries and API docs
+
+Main advanced to `3a0a090` after `8e9eb6a`. Portfolio summaries and their Swagger annotations now live in Holdings, with caller/account ownership, deterministic default-account selection, and one `/api/v1` prefix. Totals include settled and pending cash; holds affect available cash only. Missing valuation quotes return 503.
+
+Migration 009 upgrades existing cash ledgers and preserves immediate settlement and the legacy balance view column. It also grants existing ledger readers SELECT on the new holds table. Apply it as schema owner with settlement writers paused before deploying. Fresh databases include the fields and table directly. Automated reservation/release and delayed settlement remain unimplemented.
+
+Incoming lifecycle audit behavior uses the existing JDBC worker transactions and claim fencing. Retired JPA execution classes stay removed. Swagger is generated separately by Orders, Holdings and Insights; Java documentation is available on native service ports, while the base gateway deployment remains unchanged except for the Holdings portfolio route. Optional Kafka and the Jenkins workspace-space regression fix are retained.
+
+Verification for this merge: Orders 109 tests, Holdings 83 and Insights 26 passed without skips, including PostgreSQL schema upgrade, ownership, settlement/audit and Swagger route checks. All three Java builds and strict Javadocs passed. Frontend verification passed 100 tests across the full suite and corrected six-test quote suite; its production build passed. Gateway: 25 checks; replica bootstrap: three checks, including workspace spaces. Base/optional Kafka Compose validation and active Markdown links/fences passed. Full Docker startup and Jenkins were not executed locally.

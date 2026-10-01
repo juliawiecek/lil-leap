@@ -34,11 +34,12 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny())
-                        .contentSecurityPolicy(c -> c.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
+                        .contentSecurityPolicy(c -> c.policyDirectives("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"))
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(a -> a
+                        .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/clients/*/orders").hasRole("TRADER")
-                        .requestMatchers(HttpMethod.GET, "/accounts", "/holdings", "/cash", "/orders", "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*", "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*").hasAnyRole("TRADER", "ANALYST")
+                        .requestMatchers(HttpMethod.GET, "/clients/*/portfolio-summary", "/accounts", "/holdings", "/cash", "/orders", "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*", "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*").hasAnyRole("TRADER", "ANALYST")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {

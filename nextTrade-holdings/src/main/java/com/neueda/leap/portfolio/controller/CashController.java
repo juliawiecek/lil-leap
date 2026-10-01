@@ -4,6 +4,10 @@ import com.neueda.leap.portfolio.dto.CashBalanceResponse;
 import com.neueda.leap.portfolio.service.ClientNotFoundException;
 import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +29,7 @@ import java.util.UUID;
  */
 @RestController
 @PreAuthorize("hasAnyRole('TRADER', 'ANALYST')")
+@Tag(name = "Cash", description = "Client cash balance reads")
 public class CashController {
 
     private final ClientFinancialQueryService queryService;
@@ -46,8 +51,13 @@ public class CashController {
      * @return HTTP 200 with owned balances, including an empty list when absent
      */
     @GetMapping("/clients/{id}/cash")
-    public ResponseEntity<List<CashBalanceResponse>> getByClientId(@PathVariable UUID id,
-                                                                    @AuthenticationPrincipal JwtPrincipal principal) {
+    @Operation(summary = "Get a client's cash balances",
+            description = "id must be the caller's own id - a mismatch returns 404, identically to an unknown id.")
+    @ApiResponse(responseCode = "200", description = "Owned balances, or an empty list if none exist")
+    @ApiResponse(responseCode = "404", description = "id does not match the authenticated caller")
+    public ResponseEntity<List<CashBalanceResponse>> getByClientId(
+            @Parameter(description = "Client (user) id; must be the caller's own") @PathVariable UUID id,
+            @AuthenticationPrincipal JwtPrincipal principal) {
         return ResponseEntity.ok(getOwnedBalances(id, principal));
     }
 
@@ -59,8 +69,14 @@ public class CashController {
      * @return HTTP 200 with owned balances, including an empty list when absent
      */
     @GetMapping("/cash/balance/{clientId}")
-    public ResponseEntity<List<CashBalanceResponse>> getByBalancePath(@PathVariable UUID clientId,
-                                                                       @AuthenticationPrincipal JwtPrincipal principal) {
+    @Operation(summary = "Get a client's cash balances (alternate path shape)",
+            description = "Same data as GET /clients/{id}/cash under a different URL shape; "
+                    + "clientId must be the caller's own id.")
+    @ApiResponse(responseCode = "200", description = "Owned balances, or an empty list if none exist")
+    @ApiResponse(responseCode = "404", description = "clientId does not match the authenticated caller")
+    public ResponseEntity<List<CashBalanceResponse>> getByBalancePath(
+            @Parameter(description = "Client (user) id; must be the caller's own") @PathVariable UUID clientId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
         return ResponseEntity.ok(getOwnedBalances(clientId, principal));
     }
 

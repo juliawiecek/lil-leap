@@ -15,7 +15,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | --- | --- | --- |
 | GET | `/api/v1/reports/summary` | Aggregate accounts, orders, fills and gross executed value |
 
-All endpoints require a Bearer JWT. The service denies other routes and does not
+All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
 
 ## Development
@@ -31,3 +31,5 @@ mvn spring-boot:run
 Database and JWT settings are environment-driven in `src/main/resources/application.yml`.
 See `../env.example`. Javadoc is generated at `target/site/apidocs/index.html` and
 JaCoCo at `target/site/jacoco/index.html`.
+
+Swagger UI is available at `/api/v1/swagger-ui.html` and the specification at `/api/v1/v3/api-docs` on the native service port. These documentation routes are public; base Compose does not publish Java ports. See [API access](../docs/api/README.md).
