@@ -4,6 +4,9 @@ import com.neueda.leap.order.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.dto.SubmitOrderRequest;
 import com.neueda.leap.order.service.OrderSubmissionService;
 import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/orders")
 @PreAuthorize("hasRole('TRADER')")
+@Tag(name = "Orders", description = "Order submission")
 public class OrderController {
 
     private final OrderSubmissionService submissionService;
@@ -42,6 +46,12 @@ public class OrderController {
      * @return HTTP 201 with the created order's identifier and status
      */
     @PostMapping
+    @Operation(summary = "Submit a market order",
+            description = "Trader-only. Field-level validation happens here; permission, sufficiency, "
+                    + "tradability and jurisdiction checks are enforced before the order is accepted.")
+    @ApiResponse(responseCode = "201", description = "Order accepted")
+    @ApiResponse(responseCode = "400", description = "Invalid payload (bad side, non-positive quantity, unknown instrument)")
+    @ApiResponse(responseCode = "403", description = "Caller is not a trader, or a trading-rule check rejected the order")
     public ResponseEntity<OrderSubmissionResponse> submit(@AuthenticationPrincipal JwtPrincipal principal,
                                                           @Valid @RequestBody SubmitOrderRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(submissionService.submit(principal.userId(), request));
