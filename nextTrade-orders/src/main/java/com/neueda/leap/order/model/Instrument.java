@@ -17,27 +17,32 @@ import java.util.UUID;
 public class Instrument {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "instrument_id", columnDefinition = "uuid")
     private UUID instrumentId;
     
-    @Column(name = "symbol", nullable = false, unique = true, length = 20)
+    @Column(name = "symbol", nullable = false, length = 20)
     private String symbol;
     
     @Column(name = "instrument_name", nullable = false, length = 200)
-    private String name;
+    private String instrumentName;
     
     @Column(name = "asset_class", nullable = false, length = 30)
     private String assetClass;  // COMMON_STOCK, FX, CRYPTO
     
-    @JdbcTypeCode(SqlTypes.CHAR) // schema column is CHAR(3)
+    @Column(name = "market_code", nullable = false, length = 20)
+    private String marketCode;
+    
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
     
-    @Column(name = "market_code", nullable = false, length = 20)
-    private String market;
+    @Column(name = "sector", nullable = true, length = 100)
+    private String sector;
     
     @Column(name = "enabled", nullable = false)
-    private Boolean isActive;
+    private Boolean enabled;
+    
+    @Column(name = "tradable", nullable = false)
+    private Boolean tradable;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
@@ -55,21 +60,23 @@ public class Instrument {
      *
      * @param instrumentId persistent instrument identifier
      * @param symbol instrument trading symbol
-     * @param name name
-     * @param assetClass instrument asset class
+     * @param instrumentName display name of the instrument
+     * @param assetClass instrument asset class (COMMON_STOCK, FX, CRYPTO)
+     * @param marketCode market code
      * @param currency currency code
-     * @param market market identifier
-     * @param isActive whether the instrument is active
+     * @param enabled whether the instrument is enabled for trading
+     * @param tradable whether the instrument is tradable (vs halted/restricted)
      */
-    public Instrument(UUID instrumentId, String symbol, String name, String assetClass, 
-                     String currency, String market, Boolean isActive) {
+    public Instrument(UUID instrumentId, String symbol, String instrumentName, String assetClass, 
+                     String marketCode, String currency, Boolean enabled, Boolean tradable) {
         this.instrumentId = instrumentId;
         this.symbol = symbol;
-        this.name = name;
+        this.instrumentName = instrumentName;
         this.assetClass = assetClass;
+        this.marketCode = marketCode;
         this.currency = currency;
-        this.market = market;
-        this.isActive = isActive;
+        this.enabled = enabled;
+        this.tradable = tradable;
     }
 
     // Getters and Setters
@@ -110,27 +117,27 @@ public class Instrument {
     }
 
     /**
-     * Returns name.
+     * Returns display name of the instrument.
      *
-     * @return name
+     * @return instrument name
      */
-    public String getName() {
-        return name;
+    public String getInstrumentName() {
+        return instrumentName;
     }
 
     /**
-     * Sets name.
+     * Sets display name of the instrument.
      *
-     * @param name name
+     * @param instrumentName instrument name
      */
-    public void setName(String name) {
-        this.name = name;
+    public void setInstrumentName(String instrumentName) {
+        this.instrumentName = instrumentName;
     }
 
     /**
      * Returns instrument asset class.
      *
-     * @return instrument asset class
+     * @return instrument asset class (COMMON_STOCK, FX, CRYPTO)
      */
     public String getAssetClass() {
         return assetClass;
@@ -143,6 +150,24 @@ public class Instrument {
      */
     public void setAssetClass(String assetClass) {
         this.assetClass = assetClass;
+    }
+
+    /**
+     * Returns market code.
+     *
+     * @return market code
+     */
+    public String getMarketCode() {
+        return marketCode;
+    }
+
+    /**
+     * Sets market code.
+     *
+     * @param marketCode market code
+     */
+    public void setMarketCode(String marketCode) {
+        this.marketCode = marketCode;
     }
 
     /**
@@ -164,39 +189,59 @@ public class Instrument {
     }
 
     /**
-     * Returns market identifier.
+     * Returns industry sector classification.
      *
-     * @return market identifier
+     * @return sector (nullable)
      */
-    public String getMarket() {
-        return market;
+    public String getSector() {
+        return sector;
     }
 
     /**
-     * Sets market identifier.
+     * Sets industry sector classification.
      *
-     * @param market market identifier
+     * @param sector sector
      */
-    public void setMarket(String market) {
-        this.market = market;
+    public void setSector(String sector) {
+        this.sector = sector;
     }
 
     /**
-     * Returns whether the instrument is active.
+     * Returns whether the instrument is enabled for trading.
+     * NEXT-193 Rejection: enabled=false → INSTRUMENT_DISABLED
      *
-     * @return whether the instrument is active
+     * @return whether instrument is enabled
      */
-    public Boolean getIsActive() {
-        return isActive;
+    public Boolean isEnabled() {
+        return enabled;
     }
 
     /**
-     * Sets whether the instrument is active.
+     * Sets whether the instrument is enabled for trading.
      *
-     * @param isActive whether the instrument is active
+     * @param enabled whether instrument is enabled
      */
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * Returns whether the instrument is tradable (not halted/restricted).
+     * NEXT-193 Rejection: tradable=false → INSTRUMENT_NOT_TRADABLE
+     *
+     * @return whether instrument is tradable
+     */
+    public Boolean isTradable() {
+        return tradable;
+    }
+
+    /**
+     * Sets whether the instrument is tradable (not halted/restricted).
+     *
+     * @param tradable whether instrument is tradable
+     */
+    public void setTradable(Boolean tradable) {
+        this.tradable = tradable;
     }
 
     /**

@@ -24,7 +24,7 @@ import java.util.UUID;
 public class Quote {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "quote_id", columnDefinition = "uuid")
     private UUID quoteId;
     
     @ManyToOne(fetch = FetchType.LAZY)

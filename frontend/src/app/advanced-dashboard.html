@@ -285,62 +285,7 @@
         @if (page() === 'Orders') {
           <section class="panel orders-history-panel">
             <div class="panel-heading"><h2>Order History</h2></div>
-            <div class="order-status-tabs">
-              @for (status of ['All', 'Open', 'Filled', 'Cancelled', 'Rejected']; track status) {
-                <button
-                  type="button"
-                  [class.active]="orderStatus() === status"
-                  (click)="orderStatus.set(status)"
-                >
-                  {{ status }}
-                </button>
-              }
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Side</th>
-                    <th>Type</th>
-                    <th>Quantity</th>
-                    <th>Limit Price</th>
-                    <th>Avg Fill Price</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (o of filteredOrders(); track o.id) {
-                    <tr>
-                      <td><strong>{{ o.symbol }}</strong></td>
-                      <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
-                        {{ o.side }}
-                      </td>
-                      <td>{{ o.type }}</td>
-                      <td>{{ o.quantity }}</td>
-                      <td>{{ o.type === 'Limit' ? (o.price | currency) : '—' }}</td>
-                      <td>{{ o.status === 'Filled' ? (o.price | currency) : '—' }}</td>
-                      <td>
-                        <span [class.gain]="o.status === 'Filled'" [class.loss]="o.status === 'Cancelled' || o.status === 'Rejected'">
-                          {{ o.status }}
-                        </span>
-                      </td>
-                      <td>{{ o.time }}</td>
-                      <td>
-                        @if (o.status === 'Open') {
-                          <div class="order-actions">
-                            <button type="button" class="order-action-btn">Modify</button>
-                            <button type="button" class="cancel-order" (click)="cancelOrder(o.id)">Cancel</button>
-                          </div>
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+            <app-order-history />
           </section>
         }
         @if (page() === 'Overview' || page() === 'Watchlist' || page() === 'Screeners') {

@@ -18,12 +18,13 @@ public interface QuoteRepository extends JpaRepository<Quote, UUID> {
     
     /**
      * Find the latest quote for an instrument.
-     * Orders by quoted_at DESC to get the most recent quote.
+     * Deterministic ordering: primary by quoted_at DESC (most recent timestamp),
+     * then created_at DESC (creation order tie-breaker), then quote_id DESC (UUID tie-breaker).
      *
      * @param instrumentId persistent instrument identifier
      * @return latest quote, or empty when no quote exists
      */
     @Query(value = "SELECT * FROM quotes WHERE instrument_id = :instrumentId " +
-           "ORDER BY quoted_at DESC LIMIT 1", nativeQuery = true)
+           "ORDER BY quoted_at DESC, created_at DESC, quote_id DESC LIMIT 1", nativeQuery = true)
     Optional<Quote> findLatestByInstrumentId(@Param("instrumentId") UUID instrumentId);
 }

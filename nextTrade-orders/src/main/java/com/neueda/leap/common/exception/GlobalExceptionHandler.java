@@ -1,5 +1,7 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.order.exception.ClientNotFoundException;
+import com.neueda.leap.order.exception.InvalidFilterException;
 import com.neueda.leap.order.exception.InvalidOrderException;
 import com.neueda.leap.order.exception.OrderAccountNotFoundException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
@@ -10,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 
@@ -77,6 +80,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles a path or query parameter that cannot be converted to its
+     * declared type, such as a non-UUID path segment. Without this handler
+     * the failure falls through to Spring Boot's default error body instead
+     * of this API's error shape.
+     *
+     * @param exception the exception describing the failed conversion
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>>
+    handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_REQUEST", "message", "Request is invalid"));
+    }
+
+    /**
      * Handles order submissions that refer to data that cannot be traded.
      *
      * @param exception the exception describing why the order was rejected
@@ -103,5 +123,36 @@ public class GlobalExceptionHandler {
     handleOrderAccountNotFoundException(OrderAccountNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
                 ("error", "ACCOUNT_NOT_FOUND", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles requests that name a client id which does not exist or does not
+     * belong to the caller. Both cases return the same 404 so client ids
+     * cannot be probed.
+     *
+     * @param exception the exception describing the missing client
+     * @return a {@link ResponseEntity} with HTTP 404 Not Found status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(ClientNotFoundException.class)
+    public ResponseEntity<Map<String, String>>
+    handleClientNotFoundException(ClientNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of
+                ("error", "CLIENT_NOT_FOUND", "message", exception.getMessage()));
+    }
+
+    /**
+     * Handles query filters that cannot be applied, such as an unknown order
+     * status or a date range whose start is after its end.
+     *
+     * @param exception the exception naming the invalid filter
+     * @return a {@link ResponseEntity} with HTTP 400 Bad Request status and
+     *         a body containing an error code and descriptive message
+     */
+    @ExceptionHandler(InvalidFilterException.class)
+    public ResponseEntity<Map<String, String>>
+    handleInvalidFilterException(InvalidFilterException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of
+                ("error", "INVALID_FILTER", "message", exception.getMessage()));
     }
 }

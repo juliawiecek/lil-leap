@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: nexttrade-orders-test
+
+  datasource:
+    # H2 in-memory database for testing - isolated from any external database
+    # REFERENTIAL_INTEGRITY=FALSE disables FK checks for easier test data cleanup
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;TRACE_LEVEL_SYSTEM_OUT=0;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  jpa:
+    hibernate:
+      # Use create-drop to reset schema before/after each test
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
+
+# JWT Configuration
+app:
+  jwt:
+    secret: test-secret-key-32-bytes-minimum
+    expiration-minutes: 60
+    client-id: nexttrade-test
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+orders:
+  execution:
+    max-quote-age-seconds: 60

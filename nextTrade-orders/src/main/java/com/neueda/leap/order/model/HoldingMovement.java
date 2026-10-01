@@ -25,7 +25,7 @@ import java.util.UUID;
 public class HoldingMovement {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "movement_id", columnDefinition = "uuid")
     private UUID movementId;
     
     @ManyToOne(fetch = FetchType.LAZY)

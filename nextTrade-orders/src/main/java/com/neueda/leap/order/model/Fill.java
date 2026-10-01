@@ -20,7 +20,7 @@ import java.util.UUID;
 public class Fill {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "fill_id", columnDefinition = "uuid")
     private UUID fillId;
     
     @OneToOne(fetch = FetchType.LAZY)
@@ -35,10 +35,6 @@ public class Fill {
     
     @Column(name = "quote_timestamp", nullable = false)
     private Instant quoteTimestamp;
-    
-    // fills has no quote_id column; the quote is kept in memory only and quote_timestamp is what gets stored.
-    @Transient
-    private Quote quote;
     
     @CreationTimestamp
     @Column(name = "filled_at", nullable = false)
@@ -66,25 +62,6 @@ public class Fill {
         this.filledQuantity = filledQuantity;
         this.executionPrice = executionPrice;
         this.quoteTimestamp = quoteTimestamp;
-    }
-
-    /**
-     * Creates a {@code Fill} with the supplied initial values.
-     *
-     * @param fillId persistent fill identifier
-     * @param order order being executed
-     * @param filledQuantity filled quantity
-     * @param executionPrice execution price per unit
-     * @param quoteTimestamp timestamp of the source market quote
-     * @param quote source quote associated with the fill
-     */
-    public Fill(UUID fillId, Order order, Long filledQuantity, BigDecimal executionPrice, Instant quoteTimestamp, Quote quote) {
-        this.fillId = fillId;
-        this.order = order;
-        this.filledQuantity = filledQuantity;
-        this.executionPrice = executionPrice;
-        this.quoteTimestamp = quoteTimestamp;
-        this.quote = quote;
     }
 
     // Getters and Setters
@@ -193,23 +170,5 @@ public class Fill {
      */
     public void setFilledAt(Instant filledAt) {
         this.filledAt = filledAt;
-    }
-
-    /**
-     * Returns source quote associated with the fill.
-     *
-     * @return source quote associated with the fill
-     */
-    public Quote getQuote() {
-        return quote;
-    }
-
-    /**
-     * Sets source quote associated with the fill.
-     *
-     * @param quote source quote associated with the fill
-     */
-    public void setQuote(Quote quote) {
-        this.quote = quote;
     }
 }

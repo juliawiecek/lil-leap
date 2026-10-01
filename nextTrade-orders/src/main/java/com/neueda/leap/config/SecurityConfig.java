@@ -64,6 +64,10 @@ public class SecurityConfig {
      * signed-in caller lacks the role an endpoint requires, such as an analyst
      * calling {@code POST /orders}.</p>
      *
+     * <p>The generated OpenAPI document and Swagger UI ({@code /v3/api-docs/**},
+     * {@code /swagger-ui/**}) are open to anonymous callers, since they only
+     * describe the API shape and carry no account data.</p>
+     *
      * @param http the {@link HttpSecurity} builder to configure
      * @param jwtService the service used to validate incoming bearer tokens
      * @return the configured {@link SecurityFilterChain}
@@ -74,7 +78,9 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
