@@ -50,7 +50,7 @@ Navigate the NextTrade project documentation using the links below.
 - **[api/README.md](api/README.md)** - Swagger pages per service
   - Auth and orders Swagger UI links
   - Getting a token and authorizing
-  - SSH tunnel for the EC2 server
+  - Reaching a stack on a remote server
 
 ---
 

@@ -20,13 +20,13 @@ own docs, generated from its code, so they stay in step with what is deployed.
 Tokens expire after 10 minutes of inactivity (BR-03). If calls start returning `401`, log in
 again and re-authorize.
 
-### On the shared EC2 server
+### When the stack runs on a remote server
 
-Only port 8080 (Jenkins) is open from outside, so tunnel the ports from your machine and
-then use the same `localhost` links:
+If the stack is running on another machine and its ports aren't reachable from yours,
+forward them over SSH, then use the same `localhost` links:
 
 ```
-ssh -L 4200:localhost:4200 -L 8082:localhost:8082 ec2-user@10.14.134.115
+ssh -L 4200:localhost:4200 -L 8082:localhost:8082 <user>@<server-host>
 ```
 
 Keep that terminal open while you use the pages.

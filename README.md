@@ -148,8 +148,8 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | `auth` | http://localhost:4200/auth/docs |
 | `orders` | http://localhost:8082/api/v1/swagger-ui.html |
 
-How to get a token and try the endpoints, per-service notes, and the SSH tunnel for the
-shared EC2 server: **[docs/api/README.md](docs/api/README.md)**.
+How to get a token and try the endpoints, per-service notes, and how to reach a stack running
+on a remote server: **[docs/api/README.md](docs/api/README.md)**.
 
 ## Database
 
