@@ -58,13 +58,13 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">HTTP authentication, authorization and security filter configuration.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
 <div class="col-last odd-row-color">
-<div class="block">JWT identity verification and security support for the service.</div>
+<div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.user">com.neueda.leap.user</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
 <div class="col-last even-row-color">
-<div class="block">Authentication domain: core user credentials, repository access, and auth-related exceptions.</div>
+<div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
 </div>
 </div>
 <section class="package-uses">
@@ -77,7 +77,20 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><a href="class-use/JwtService.html#com.neueda.leap.config">JwtService</a></div>
 <div class="col-last even-row-color">
-<div class="block">Service responsible for issuing and validating JWT session tokens.</div>
+<div class="block">Contract for issuing and validating JWT session tokens.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.controller">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/JwtPrincipal.html#com.neueda.leap.order.submission.controller">JwtPrincipal</a></div>
+<div class="col-last even-row-color">
+<div class="block">Identity extracted from a validated JWT.</div>
 </div>
 </div>
 </section>
@@ -94,20 +107,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color"><a href="class-use/JwtService.html#com.neueda.leap.security">JwtService</a></div>
 <div class="col-last odd-row-color">
-<div class="block">Service responsible for issuing and validating JWT session tokens.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.user">
-<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../user/package-summary.html">com.neueda.leap.user</a></span></div>
-<div class="summary-table two-column-summary">
-<div class="table-header col-first">Class</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/JwtService.html#com.neueda.leap.user">JwtService</a></div>
-<div class="col-last even-row-color">
-<div class="block">Service responsible for issuing and validating JWT session tokens.</div>
+<div class="block">Contract for issuing and validating JWT session tokens.</div>
 </div>
 </div>
 </section>

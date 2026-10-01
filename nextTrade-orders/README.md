@@ -33,7 +33,8 @@ mvn spring-boot:run
 
 Database and JWT settings are environment-driven in `src/main/resources/application.yml`.
 See `../env.example`. Javadoc is generated at `target/site/apidocs/index.html` and
-JaCoCo at `target/site/jacoco/index.html`.
+published snapshot HTML is available at `../docs/javadoc/nextTrade-orders/index.html`.
+JaCoCo is generated at `target/site/jacoco/index.html`.
 
 Submission returns 201/SUBMITTED; an idempotent retry returns the existing order
 with 200. Execution accepts in a separate committed transaction, then claims and

@@ -90,11 +90,10 @@ loadScripts(document, 'script');</script>
 </div>
 <section class="class-description" id="class-description">
 <hr>
-<div class="type-signature"><span class="annotations">@SpringBootApplication
-@EnableScheduling
+<div class="type-signature"><span class="annotations">@SpringBootApplication(exclude=org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration.class)
 </span><span class="modifiers">public class </span><span class="element-name type-name-label">Main</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Entry point for the Lil Leap NextTrade Insights backend application.
+<div class="block">Entry point for the insights application.
 
  <p>This class bootstraps the Spring Boot application context and starts
  the backend services.</p></div>
@@ -111,7 +110,7 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E()" class="member-name-link">Main</a>()</code></div>
 <div class="col-last even-row-color">
-<div class="block">Creates the Spring Boot application configuration.</div>
+<div class="block">Creates the application configuration instantiated by Spring Boot.</div>
 </div>
 </div>
 </section>
@@ -153,7 +152,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="&lt;init&gt;()">
 <h3>Main</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">Main</span>()</div>
-<div class="block">Creates the Spring Boot application configuration.</div>
+<div class="block">Creates the application configuration instantiated by Spring Boot.</div>
 </section>
 </li>
 </ul>

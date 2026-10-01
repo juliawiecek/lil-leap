@@ -20,6 +20,10 @@
 | Shared routing | [gateway configuration](../gateway/nginx.conf) |
 
 - [API documentation](api/README.md): Swagger, endpoint ownership and remote gateway access.
+- JavaDocs:
+  - [Insights JavaDoc](javadoc/insights/index.html)
+  - [Holdings JavaDoc](javadoc/nextTrade-holdings/index.html)
+  - [Orders JavaDoc](javadoc/nextTrade-orders/index.html)
 - [Coverage generation](coverage/README.md): current commands and historical measurements.
 
 ## Historical references

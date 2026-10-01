@@ -83,9 +83,12 @@ JaCoCo reports are written under each Java module's `target/site/jacoco`.
 ## Javadocs
 
 Generate current API docs with `mvn javadoc:javadoc` inside each service, or publish
-all sites using `python scripts/generate_javadocs.py`. The checked-in
-[HTML snapshots](docs/javadoc/index.html) predate the boundary refactor; current
-source and the architecture guide take precedence until they are regenerated.
+all sites using `python scripts/generate_javadocs.py`.
+
+- Landing page: [docs/javadoc/index.html](docs/javadoc/index.html)
+- Insights: [docs/javadoc/insights/index.html](docs/javadoc/insights/index.html)
+- Holdings: [docs/javadoc/nextTrade-holdings/index.html](docs/javadoc/nextTrade-holdings/index.html)
+- Orders: [docs/javadoc/nextTrade-orders/index.html](docs/javadoc/nextTrade-orders/index.html)
 
 ## Known gaps
 

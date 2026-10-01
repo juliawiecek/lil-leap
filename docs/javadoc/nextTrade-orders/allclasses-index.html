@@ -56,94 +56,85 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/onboarding/entity/Account.html" title="class in com.neueda.leap.onboarding.entity">Account</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Trading account metadata created during onboarding.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/Account.html" title="class in com.neueda.leap.order.model">Account</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Account entity representing a trading account.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/onboarding/repository/AccountRepository.html" title="interface in com.neueda.leap.onboarding.repository">AccountRepository</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for account persistence operations.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/AccountType.html" title="enum class in com.neueda.leap.onboarding.enums">AccountType</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Supported brokerage account types for registration.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/onboarding/dto/AddressRequest.html" title="class in com.neueda.leap.onboarding.dto">AddressRequest</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/repository/AccountTradingProfile.html" title="class in com.neueda.leap.order.submission.repository">AccountTradingProfile</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Request DTO containing optional address information supplied during user registration.</div>
+<div class="block">Account fields needed by NEXT-99 before a new order is accepted.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/user/AuthController.html" title="class in com.neueda.leap.user">AuthController</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">REST controller for authentication operations.</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/execution/quote/ExecutionOrderContext.html" title="class in com.neueda.leap.order.execution.quote">ExecutionOrderContext</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Minimum order data required to select a quote during an execution attempt.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/CashTransaction.html" title="class in com.neueda.leap.order.model">CashTransaction</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">CashTransaction entity for append-only cash ledger.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/CashTransactionRepository.html" title="interface in com.neueda.leap.order.repository">CashTransactionRepository</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for CashTransaction entities.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/CitizenshipStatus.html" title="enum class in com.neueda.leap.onboarding.enums">CitizenshipStatus</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Citizenship or residency statuses supported by onboarding.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/onboarding/entity/CustomerProfile.html" title="class in com.neueda.leap.onboarding.entity">CustomerProfile</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Identity and contact profile separated from authentication data.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/onboarding/repository/CustomerProfileRepository.html" title="interface in com.neueda.leap.onboarding.repository">CustomerProfileRepository</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/execution/quote/ExecutionOrderContextRepository.html" title="interface in com.neueda.leap.order.execution.quote">ExecutionOrderContextRepository</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for customer profile persistence operations.</div>
+<div class="block">Reads order context immediately before execution pricing.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/EmploymentStatus.html" title="enum class in com.neueda.leap.onboarding.enums">EmploymentStatus</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteConfiguration.html" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteConfiguration</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Configures the UTC clock, quote freshness limits and execution quote selection service.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.html" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteDecision</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Quote evidence and action to be consumed by the fill executor.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.Action.html" title="enum class in com.neueda.leap.order.execution.quote">ExecutionQuoteDecision.Action</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Employment statuses collected for investor onboarding.</div>
+<div class="block">Action requested after inspecting execution quote evidence.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/Fill.html" title="class in com.neueda.leap.order.model">Fill</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Fill entity representing the execution of an order against a market quote.</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.Reason.html" title="enum class in com.neueda.leap.order.execution.quote">ExecutionQuoteDecision.Reason</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Stable reason code describing the rule or quote decision.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/FillRepository.html" title="interface in com.neueda.leap.order.repository">FillRepository</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for Fill entities.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/onboarding/entity/FinancialProfile.html" title="class in com.neueda.leap.onboarding.entity">FinancialProfile</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Financial and regulatory onboarding profile for a user.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/onboarding/repository/FinancialProfileRepository.html" title="interface in com.neueda.leap.onboarding.repository">FinancialProfileRepository</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for financial profile persistence operations.</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteService.html" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteService</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Retrieves the latest quote during execution and makes a deterministic freshness decision.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Global exception handler for REST controllers.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/HoldingMovement.html" title="class in com.neueda.leap.order.model">HoldingMovement</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">HoldingMovement entity for append-only ledger of quantity changes.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/HoldingMovementRepository.html" title="interface in com.neueda.leap.order.repository">HoldingMovementRepository</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for HoldingMovement entities.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/Instrument.html" title="class in com.neueda.leap.order.model">Instrument</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Instrument entity representing a tradeable security.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/InstrumentRepository.html" title="interface in com.neueda.leap.order.repository">InstrumentRepository</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for Instrument entities.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/user/exception/InvalidCredentialsException.html" title="class in com.neueda.leap.user.exception">InvalidCredentialsException</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/instrument/service/InstrumentNotFoundException.html" title="class in com.neueda.leap.instrument.service">InstrumentNotFoundException</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
-<div class="block">Exception thrown when a login attempt fails because the supplied
- email address and password do not match an existing user's credentials.</div>
+<div class="block">Raised when an instrument identifier does not exist.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/instrument/repository/InstrumentRepository.html" title="interface in com.neueda.leap.instrument.repository">InstrumentRepository</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="block">Read-only persistence boundary for the instrument reference catalog.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Stable API representation of a market instrument.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Application service for read-only instrument discovery.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/repository/InstrumentTradingProfile.html" title="class in com.neueda.leap.order.submission.repository">InstrumentTradingProfile</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Instrument support and tradability flags used by NEXT-99 and NEXT-101.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/quote/JdbcExecutionOrderContextRepository.html" title="class in com.neueda.leap.order.execution.quote">JdbcExecutionOrderContextRepository</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Reads accepted PENDING orders and their persisted execution attempt counts.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/instrument/repository/JdbcInstrumentRepository.html" title="class in com.neueda.leap.instrument.repository">JdbcInstrumentRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">PostgreSQL-backed read model for instruments.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/JdbcOrderExecutor.html" title="class in com.neueda.leap.order.execution">JdbcOrderExecutor</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Fills or rejects a locked order; settlement participates in the worker transaction.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/repository/JdbcOrderSubmissionRepository.html" title="class in com.neueda.leap.order.submission.repository">JdbcOrderSubmissionRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">PostgreSQL implementation of account ownership checks and idempotent order submission.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/repository/JdbcOrderSufficiencyRepository.html" title="class in com.neueda.leap.order.submission.repository">JdbcOrderSufficiencyRepository</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Reads the same cash and holdings caches exposed by the portfolio API.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/marketdata/JdbcQuoteRepository.html" title="class in com.neueda.leap.marketdata">JdbcQuoteRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Reads the latest stored quote, breaking timestamp ties by creation time and quote ID.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security">JwtAuthenticationFilter</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
@@ -153,114 +144,113 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Identity extracted from a validated JWT.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtService.html" title="class in com.neueda.leap.security">JwtService</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="block">Contract for issuing and validating JWT session tokens.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtServiceImpl.html" title="class in com.neueda.leap.security">JwtServiceImpl</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Service responsible for issuing and validating JWT session tokens.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/user/dto/LoginRequest.html" title="class in com.neueda.leap.user.dto">LoginRequest</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/Main.html" title="class in com.neueda.leap">Main</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Entry point for the insights application.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/marketdata/MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Request DTO used to authenticate an existing user.</div>
+<div class="block">Immutable quote evidence used for market display and execution pricing.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/user/dto/LoginResponse.html" title="class in com.neueda.leap.user.dto">LoginResponse</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Response DTO returned after a successful login.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/Main.html" title="class in com.neueda.leap">Main</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Entry point for the Lil Leap NextTrade Insights backend application.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/NetWorthBracket.html" title="enum class in com.neueda.leap.onboarding.enums">NetWorthBracket</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Net worth bracket options used during onboarding.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/Order.html" title="class in com.neueda.leap.order.model">Order</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Order entity representing a market order for trading securities.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/service/OrderExecutionScheduler.html" title="class in com.neueda.leap.order.service">OrderExecutionScheduler</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/OpenApiConfig.html" title="class in com.neueda.leap.config">OpenApiConfig</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">OrderExecutionScheduler periodically executes orders that are due.</div>
+<div class="block">OpenAPI metadata for the generated spec and Swagger UI.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/service/OrderExecutionService.html" title="class in com.neueda.leap.order.service">OrderExecutionService</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/OrderExecutionConfiguration.html" title="class in com.neueda.leap.order.execution">OrderExecutionConfiguration</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Processes due orders using current bid/ask quotes and a midpoint tolerance.</div>
+<div class="block">Configures database-backed execution polling when <code>orders.execution.enabled</code> is true or absent.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/OrderRepository.html" title="interface in com.neueda.leap.order.repository">OrderRepository</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/OrderExecutionWorker.html" title="class in com.neueda.leap.order.execution">OrderExecutionWorker</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Database-backed queue: acceptance, claim, and execution commit independently.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/execution/OrderExecutionWorker.Claim.html" title="class in com.neueda.leap.order.execution">OrderExecutionWorker.Claim</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Persisted order claim whose attempt number prevents execution by a stale worker.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/execution/OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for Order entities.</div>
+<div class="block">Execution extension point.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/OrderStatusHistory.html" title="class in com.neueda.leap.order.model">OrderStatusHistory</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">OrderStatusHistory entity for audit trail of order status changes.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/OrderStatusHistoryRepository.html" title="interface in com.neueda.leap.order.repository">OrderStatusHistoryRepository</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for OrderStatusHistory entities.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/service/OrderValidationService.html" title="class in com.neueda.leap.order.service">OrderValidationService</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Service responsible for validating <a href="com/neueda/leap/order/model/Order.html" title="class in com.neueda.leap.order.model"><code>Order</code></a> objects.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/model/Quote.html" title="class in com.neueda.leap.order.model">Quote</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Quote entity representing a market quote for a security.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/repository/QuoteRepository.html" title="interface in com.neueda.leap.order.repository">QuoteRepository</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository for Quote entities.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/onboarding/dto/RegisterUserRequest.html" title="class in com.neueda.leap.onboarding.dto">RegisterUserRequest</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Request DTO used to register a new user and complete investor onboarding fields.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/onboarding/controller/RegistrationController.html" title="class in com.neueda.leap.onboarding.controller">RegistrationController</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
-<div class="block">REST controller for onboarding and registration operations.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/onboarding/service/RegistrationService.html" title="class in com.neueda.leap.onboarding.service">RegistrationService</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Service responsible for registration business logic.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/RiskProfile.html" title="enum class in com.neueda.leap.onboarding.enums">RiskProfile</a></div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Risk profiles used for investor suitability.</div>
+<div class="block">Result of a transactional execution attempt.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/order/rules/OrderRuleException.html" title="class in com.neueda.leap.order.rules">OrderRuleException</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="block">Fixed, client-safe rejection for a pre-acceptance trading rule.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Stable reason code describing the rule or quote decision.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html" title="class in com.neueda.leap.order.submission.controller">OrderSubmissionController</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Exposes authenticated order submission at <code>POST /api/v1/orders</code>.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/submission/repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="block">Persistence contract for authenticated, idempotent order submission.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Saved order returned for both initial submissions and retries; not a trade fill.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/service/OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Distinguishes a new submission from an idempotent retry.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Authorizes account ownership and validates trading rules before persisting an idempotent submission.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/order/service/OrderSufficiencyException.html" title="class in com.neueda.leap.order.service">OrderSufficiencyException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
+<div class="block">A fixed, safe rejection reason for an order that cannot pass sufficiency checks.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/service/OrderSufficiencyException.Reason.html" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Supported rejections; messages never include account balances or identifiers.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/order/submission/repository/OrderSufficiencyRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSufficiencyRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="block">Account-scoped balances used after the submission service authorizes the caller.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Checks current resources before submission.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/execution/quote/QuoteFreshnessPolicy.html" title="class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Validates quote timestamps against the execution instant.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/execution/quote/QuoteFreshnessPolicy.Freshness.html" title="enum class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy.Freshness</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Timestamp classification relative to the configured age and clock-skew limits.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="block">Read-only access to the latest stored market quotes and bounded history.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/SecurityConfig.html" title="class in com.neueda.leap.config">SecurityConfig</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Configuration class for application security-related beans.</div>
+<div class="block">Verifies Identity-issued JWTs and exposes only this service's API.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/onboarding/enums/TraderLevel.html" title="enum class in com.neueda.leap.onboarding.enums">TraderLevel</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
-<div class="block">Trader tiers supported by the platform.</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/SensitiveLogConverter.html" title="class in com.neueda.leap.security">SensitiveLogConverter</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Defense in depth for accidental structured credential logging, including exception text.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/user/entity/User.html" title="class in com.neueda.leap.user.entity">User</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Authentication-focused user entity mapped to the normalized users table.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/user/exception/UserAlreadyExistsException.html" title="class in com.neueda.leap.user.exception">UserAlreadyExistsException</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
-<div class="block">Exception thrown when a registration attempt is made with an email address
- that already belongs to an existing user.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/user/UserController.html" title="class in com.neueda.leap.user">UserController</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">REST controller for authenticated user operations.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/user/repository/UserRepository.html" title="interface in com.neueda.leap.user.repository">UserRepository</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Repository interface for performing persistence operations on <a href="com/neueda/leap/user/entity/User.html" title="class in com.neueda.leap.user.entity"><code>User</code></a> entities.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/onboarding/dto/UserResponse.html" title="class in com.neueda.leap.onboarding.dto">UserResponse</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Response DTO representing the public user data returned by the API.</div>
-</div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/user/dto/UserResponse.html" title="class in com.neueda.leap.user.dto">UserResponse</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Authentication-focused user payload returned by auth and /me endpoints.</div>
-</div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/user/UserService.html" title="class in com.neueda.leap.user">UserService</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
-<div class="block">Service responsible for authentication-oriented user operations.</div>
+<div class="block">Input for a market-order submission; Bean Validation runs at the API boundary.</div>
 </div>
 </div>
 </div>
