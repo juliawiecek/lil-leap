@@ -60,6 +60,12 @@ test('client surfaces the server’s error message, or a friendly fallback', asy
   await assert.rejects(offline.list(), /Could not reach the server/);
 });
 
+test('the app-wide service uses the signed-in user’s token, so it refuses while signed out', async t => {
+  const { AuthService } = await import('../src/app/auth.service.ts');
+  const service = component(t, OrderHistoryService, [AuthService]);
+  await assert.rejects(service.list(), /Sign in/);
+});
+
 function historyWith(list) {
   const calls = [];
   const service = { list: async filters => { calls.push(filters); return list(filters); } };
