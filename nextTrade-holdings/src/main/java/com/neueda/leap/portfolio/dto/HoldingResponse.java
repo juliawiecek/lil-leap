@@ -5,7 +5,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Client-owned holding returned by the portfolio API.
+ * Single holding owned by a client, returned by the portfolio API.
+ *
+ * <p>TS-11.1c AC1: GET /holdings/{accountId}/{instrumentId} returns detail
+ * for one holding, scoped to the authenticated caller.</p>
+ *
  * @param accountId account owning the holding
  * @param instrumentId held instrument identifier
  * @param symbol instrument symbol
