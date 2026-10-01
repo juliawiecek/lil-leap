@@ -19,11 +19,11 @@ fi
 umask 077
 escaped=${REPLICATION_PASSWORD//\\/\\\\}
 escaped=${escaped//:/\\:}
-printf '%s:5432:replication:replicator:%s\n' "${PRIMARY_DB_HOST:-db}" "$escaped" > /tmp/reporting.pgpass
-export PGPASSFILE=/tmp/reporting.pgpass
+printf '%s:5432:replication:replicator:%s\n' "${PRIMARY_DB_HOST:-db}" "$escaped" > "/tmp/reporting.pgpass"
+export PGPASSFILE="/tmp/reporting.pgpass"
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
     # Never delete an existing or partially initialized volume automatically.
-    pg_basebackup -d "host=${PRIMARY_DB_HOST:-db} user=replicator passfile=/tmp/reporting.pgpass" \
+    pg_basebackup -d "host=${PRIMARY_DB_HOST:-db} user=replicator passfile='/tmp/reporting.pgpass'" \
         -D "$PGDATA" -R -X stream -S reporting_replica --checkpoint=fast
 fi
 if [ ! -f "$PGDATA/standby.signal" ]; then

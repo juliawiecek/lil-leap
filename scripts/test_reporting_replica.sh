@@ -3,12 +3,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p target
-work=$(mktemp -d "$PWD/target/replica-bootstrap-test.XXXXXX")
-[[ "$work" == "$PWD"/target/replica-bootstrap-test.* ]] || exit 1
+work=$(mktemp -d "$PWD/target/replica-bootstrap-test with spaces.XXXXXX")
+[[ "$work" == "$PWD"/target/replica-bootstrap-test\ with\ spaces.* ]] || exit 1
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin" "$work/data"
+# Always exercise a path containing spaces, as Jenkins workspaces may contain them.
+# Expand TEST_WORK at runtime instead of inserting a path into shell/sed source.
 # Isolate only the fixed container passfile path; all bootstrap logic is retained.
-sed "s|/tmp/reporting.pgpass|$work/replication.pgpass|g" db/start-reporting-replica.sh > "$work/bootstrap.sh"
+sed 's|/tmp/reporting.pgpass|${TEST_WORK}/replication.pgpass|g' db/start-reporting-replica.sh > "$work/bootstrap.sh"
 cat > "$work/bin/id" <<'SH'
 #!/usr/bin/env bash
 echo 1000
