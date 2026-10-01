@@ -20,7 +20,7 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
 2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
-3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - Java and Python coverage reports
+3. **[Code Coverage](docs/coverage/README.md)** - How to generate each service's coverage report, and the latest figures
 
 **All systems running?** Access the apps:
 - NextTrade: http://localhost:4200
@@ -42,7 +42,7 @@ lil-leap/
 |- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
 |- kafka/                # Kafka broker image and topic setup
 |- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
-|- docs/                 # architecture/ (ADRs), stories/, generated javadoc/
+|- docs/                 # api/, coverage/ (generated reports), architecture/ (ADRs), stories/, javadoc/
 |- InitialSetup/         # Jenkins setup guide
 |- docker-compose.yml    # Runs the whole stack locally
 |- Jenkinsfile           # CI: compose validation, tests, coverage, image build
@@ -366,21 +366,25 @@ pytest
 
 ### Code Coverage
 
-| Service              | Generate                                  | Report                                              |
-| --------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| `nextTrade-orders`    | `cd nextTrade-orders && mvn clean verify` | `nextTrade-orders/target/site/jacoco/index.html`    |
-| `nextTrade-holdings`  | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
-| `insights`            | see [insights/JACOCO_COVERAGE.md](insights/JACOCO_COVERAGE.md) | `insights/target/site/jacoco/index.html` |
-| `auth`                | see [auth/README.md → Code coverage](auth/README.md#code-coverage) | `auth/coverage/lcov-report/index.html` |
-| `data-pipeline`       | see [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) | `data-pipeline/htmlcov/index.html` |
+How to generate the report for every service, and the latest figures:
+**[docs/coverage](docs/coverage/README.md)**.
+
+| Service              | Tool       | Generate                                    | Report                                             |
+| -------------------- | ---------- | ------------------------------------------- | -------------------------------------------------- |
+| `nextTrade-orders`   | JaCoCo     | `cd nextTrade-orders && mvn clean verify`   | `nextTrade-orders/target/site/jacoco/index.html`   |
+| `nextTrade-holdings` | JaCoCo     | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
+| `insights`           | JaCoCo     | `cd insights && mvn clean verify`           | `insights/target/site/jacoco/index.html`           |
+| `auth`               | Jest       | `cd auth && npm run test:cov`               | `auth/coverage/lcov-report/index.html`             |
+| `data-pipeline`      | pytest-cov | see [docs/coverage](docs/coverage/README.md#quote-service-pytest-cov) | `data-pipeline/htmlcov/index.html` |
+| `frontend`           | c8         | `cd frontend && npm run test:coverage`      | `frontend/coverage/index.html`                     |
+| `insights-frontend`  | c8         | `cd insights-frontend && npm run test:coverage` | `insights-frontend/coverage/index.html`        |
 
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does
 not produce a coverage report; use `mvn clean verify` when you need one.
 Jenkins archives the `nextTrade-orders` and `nextTrade-holdings` JaCoCo
 reports and the `data-pipeline` coverage output as build artifacts (see
-[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)); `insights` and `auth`
-coverage are local-only today.
+[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)).
 
 ## Javadocs
 
