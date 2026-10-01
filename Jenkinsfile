@@ -4,6 +4,8 @@ pipeline {
   options {
     timestamps()
     disableConcurrentBuilds()
+    // Keep only recent builds and their archived coverage reports; the CI server's disk is small.
+    buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
   }
 
   tools {
