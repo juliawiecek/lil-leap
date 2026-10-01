@@ -49,7 +49,7 @@ class ClientFinancialControllerTest {
         UUID userId = UUID.randomUUID();
         when(queryService.getHoldings(userId)).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/holdings").principal(authentication(userId)))
+        mockMvc.perform(get("/api/v1/holdings").principal(authentication(userId)))
                 .andExpect(status().isOk());
         verify(queryService).getHoldings(userId);
     }
@@ -58,7 +58,7 @@ class ClientFinancialControllerTest {
     void anotherClientsHoldingsAreDeniedBeforeQuerying() throws Exception {
         UUID userId = UUID.randomUUID();
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/clients/{id}/holdings", UUID.randomUUID())
+        mockMvc.perform(get("/api/v1/clients/{id}/holdings", UUID.randomUUID())
                         .principal(authentication(userId)))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(queryService);
@@ -69,7 +69,7 @@ class ClientFinancialControllerTest {
         UUID userId = UUID.randomUUID();
         when(queryService.getCashBalances(userId)).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/cash").principal(authentication(userId)))
+        mockMvc.perform(get("/api/v1/cash").principal(authentication(userId)))
                 .andExpect(status().isOk());
         verify(queryService).getCashBalances(userId);
     }
@@ -79,7 +79,7 @@ class ClientFinancialControllerTest {
         UUID userId = UUID.randomUUID();
         when(queryService.getOrders(userId)).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
-        mockMvc.perform(get("/orders").principal(authentication(userId)))
+        mockMvc.perform(get("/api/v1/orders").principal(authentication(userId)))
                 .andExpect(status().isOk());
         verify(queryService).getOrders(userId);
     }

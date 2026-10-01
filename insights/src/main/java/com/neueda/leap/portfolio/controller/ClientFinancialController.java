@@ -26,7 +26,7 @@ import java.util.UUID;
 
 /** Client-scoped read endpoints for holdings, cash, and order history. */
 @RestController
-@RequestMapping
+@RequestMapping("/api/v1")
 @PreAuthorize("hasAnyRole('TRADER', 'ANALYST')")
 @SecurityRequirement(name = "bearerAuth")
 public class ClientFinancialController {

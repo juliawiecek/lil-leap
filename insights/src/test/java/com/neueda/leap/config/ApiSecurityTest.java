@@ -34,10 +34,10 @@ class ApiSecurityTest {
 
     @Test
     void unauthorizedRequestsToProtectedRouteStillReturn401() throws Exception {
-        mvc.perform(get("/holdings"))
+        mvc.perform(get("/api/v1/holdings"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("UNAUTHENTICATED"));
-        mvc.perform(get("/holdings").header("Authorization", "Bearer invalid-token"))
+        mvc.perform(get("/api/v1/holdings").header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
         verifyNoInteractions(queryService);
@@ -47,7 +47,7 @@ class ApiSecurityTest {
     void unexpectedErrorsDoNotLogUnlabelledSecrets(CapturedOutput output) throws Exception {
         UUID user = UUID.randomUUID();
         when(queryService.getHoldings(any())).thenThrow(new IllegalStateException("unlabelled-password-canary"));
-        mvc.perform(get("/holdings").header("Authorization", "Bearer " + jwtService.issueToken(user, "client@example.com")))
+        mvc.perform(get("/api/v1/holdings").header("Authorization", "Bearer " + jwtService.issueToken(user, "client@example.com")))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("INTERNAL_ERROR"))
                 .andExpect(header().doesNotExist("Strict-Transport-Security"));

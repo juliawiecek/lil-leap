@@ -155,6 +155,6 @@ class HoldingsEndpointsTest {
     }
 
     private String[] routes() {
-        return new String[]{"/holdings", "/clients/" + owner + "/holdings"};
+        return new String[]{"/api/v1/holdings", "/api/v1/clients/" + owner + "/holdings"};
     }
 }

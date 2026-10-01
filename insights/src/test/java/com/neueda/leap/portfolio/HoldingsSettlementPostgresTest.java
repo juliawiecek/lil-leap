@@ -235,7 +235,7 @@ class HoldingsSettlementPostgresTest {
         }
     }
 
-    private String[] routes() { return new String[]{"/holdings", "/clients/" + owner + "/holdings"}; }
+    private String[] routes() { return new String[]{"/api/v1/holdings", "/api/v1/clients/" + owner + "/holdings"}; }
 
     private static void await(CountDownLatch latch) {
         try {
