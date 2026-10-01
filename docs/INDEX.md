@@ -22,11 +22,9 @@ Navigate the NextTrade project documentation using the links below.
 
 **View test execution reports:**
 
-- **[Coverage Reports](COVERAGE_REPORTS.md)** - Interactive HTML reports
-  - Python coverage: 79.67% (72 tests)
-  - Java coverage: 77.79% (320 tests)
-  - Per-module/class breakdown with uncovered lines
-  - Reports located in `coverage-reports/` folder
+- **[coverage/README.md](coverage/README.md)** - Code coverage for every service
+  - JaCoCo, Jest, pytest-cov and c8 commands and report locations
+  - Latest coverage figures
 
 ---
 
