@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:coverage"
+  ],
+  "cwd": "insights-frontend",
+  "started_utc": "2026-10-01T20:43:52.273544+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "3357c3cc159a43c4ab1e65dd5e4a3e8828716fd6764d55a3638538b58184b49c",
+  "output": "docs/review/runs/insights-frontend-coverage.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:44:11.116387+00:00"
+}

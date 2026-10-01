@@ -1,0 +1,179 @@
+
+up to date, audited 685 packages in 11s
+
+116 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+@nestjs/core  <=11.1.17
+Severity: moderate
+Depends on vulnerable versions of @nestjs/platform-express
+@nestjs/core Improperly Neutralizes Special Elements in Output Used by a Downstream Component ('Injection') - https://github.com/advisories/GHSA-36xv-jgw5-4q75
+fix available via `npm audit fix --force`
+Will install @nestjs/core@12.1.2, which is a breaking change
+node_modules/@nestjs/core
+  @nestjs/platform-express  <=11.1.14 || 12.0.0-alpha.0 - 12.0.0-alpha.7
+  Depends on vulnerable versions of @nestjs/core
+  Depends on vulnerable versions of body-parser
+  Depends on vulnerable versions of multer
+  node_modules/@nestjs/platform-express
+    @nestjs/testing  <=11.0.0-next.4
+    Depends on vulnerable versions of @nestjs/core
+    Depends on vulnerable versions of @nestjs/platform-express
+    node_modules/@nestjs/testing
+  @nestjs/swagger  <=11.2.5 || 12.0.0-alpha.0 - 12.0.0-alpha.2
+  Depends on vulnerable versions of @nestjs/core
+  Depends on vulnerable versions of js-yaml
+  Depends on vulnerable versions of lodash
+  node_modules/@nestjs/swagger
+  @nestjs/typeorm  5.1.0 - 10.0.2
+  Depends on vulnerable versions of @nestjs/core
+  Depends on vulnerable versions of uuid
+  node_modules/@nestjs/typeorm
+
+ajv  7.0.0-alpha.0 - 8.17.1
+Severity: moderate
+ajv has ReDoS when using `$data` option - https://github.com/advisories/GHSA-2g4f-4pwh-qvx6
+fix available via `npm audit fix --force`
+Will install @nestjs/cli@12.0.8, which is a breaking change
+node_modules/ajv
+  @angular-devkit/core  12.0.0-next.0 - 19.2.22 || 20.0.0-next.0 - 20.3.21 || 21.0.0-next.0 - 21.2.4 || 22.0.0-next.0 - 22.0.0-rc.3
+  Depends on vulnerable versions of ajv
+  Depends on vulnerable versions of picomatch
+  node_modules/@angular-devkit/core
+    @angular-devkit/schematics  12.0.0-next.0 - 19.2.21 || 20.0.0-next.0 - 20.3.17 || 21.0.0-next.0 - 21.1.4 || 21.2.0-next.0 - 21.2.0-rc.2
+    Depends on vulnerable versions of @angular-devkit/core
+    node_modules/@angular-devkit/schematics
+    @angular-devkit/schematics-cli  0.12.0-beta.0 - 19.2.21 || 20.0.0-next.0 - 20.3.17 || 21.0.0-next.0 - 21.1.4 || 21.2.0-next.0 - 21.2.0-rc.2
+    Depends on vulnerable versions of @angular-devkit/core
+    Depends on vulnerable versions of @angular-devkit/schematics
+    Depends on vulnerable versions of inquirer
+    node_modules/@angular-devkit/schematics-cli
+    @nestjs/cli  2.0.0-rc.1 - 11.0.16 || 12.0.0-alpha.0 - 12.0.0-alpha.9
+    Depends on vulnerable versions of @angular-devkit/core
+    Depends on vulnerable versions of @angular-devkit/schematics
+    Depends on vulnerable versions of @angular-devkit/schematics-cli
+    Depends on vulnerable versions of @nestjs/schematics
+    Depends on vulnerable versions of glob
+    Depends on vulnerable versions of inquirer
+    Depends on vulnerable versions of webpack
+    node_modules/@nestjs/cli
+    @nestjs/schematics  8.0.0 - 11.0.9
+    Depends on vulnerable versions of @angular-devkit/core
+    Depends on vulnerable versions of @angular-devkit/schematics
+    node_modules/@nestjs/schematics
+
+body-parser  <1.20.6
+body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement - https://github.com/advisories/GHSA-v422-hmwv-36x6
+fix available via `npm audit fix --force`
+Will install @nestjs/platform-express@12.1.2, which is a breaking change
+node_modules/body-parser
+
+file-type  13.0.0 - 21.3.1
+Severity: moderate
+file-type affected by infinite loop in ASF parser on malformed input with zero-size sub-header - https://github.com/advisories/GHSA-5v7r-6r5c-r473
+file-type: ZIP Decompression Bomb DoS via [Content_Types].xml entry - https://github.com/advisories/GHSA-j47w-4g3g-c36v
+fix available via `npm audit fix`
+node_modules/file-type
+  @nestjs/common  10.4.16 - 10.4.22 || 11.0.16 - 11.1.16 || 12.0.0-alpha.0 - 12.0.0-alpha.7
+  Depends on vulnerable versions of file-type
+  node_modules/@nestjs/common
+
+glob  10.2.0 - 10.4.5
+Severity: high
+glob CLI: Command injection via -c/--cmd executes matches with shell:true - https://github.com/advisories/GHSA-5j98-mcp5-4vw2
+fix available via `npm audit fix --force`
+Will install @nestjs/cli@12.0.8, which is a breaking change
+node_modules/glob
+
+js-yaml  4.0.0 - 4.3.1
+Severity: high
+js-yaml has prototype pollution in merge (<<) - https://github.com/advisories/GHSA-mh29-5h37-fv8m
+JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases - https://github.com/advisories/GHSA-h67p-54hq-rp68
+js-yaml: YAML merge-key chains can force quadratic CPU consumption - https://github.com/advisories/GHSA-52cp-r559-cp3m
+JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported - https://github.com/advisories/GHSA-5p4m-2wfm-xmqj
+js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources - https://github.com/advisories/GHSA-2883-xcg3-v3hh
+fix available via `npm audit fix --force`
+Will install @nestjs/swagger@12.0.2, which is a breaking change
+node_modules/@nestjs/swagger/node_modules/js-yaml
+
+lodash  <=4.17.23
+Severity: high
+lodash vulnerable to Code Injection via `_.template` imports key names - https://github.com/advisories/GHSA-r5fr-rjxr-66jc
+lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit` - https://github.com/advisories/GHSA-f23m-r3pf-42rh
+Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions - https://github.com/advisories/GHSA-xxjr-mmjv-4gpg
+fix available via `npm audit fix --force`
+Will install @nestjs/swagger@12.0.2, which is a breaking change
+node_modules/@nestjs/swagger/node_modules/lodash
+
+multer  <=2.2.0
+Severity: high
+Multer vulnerable to Denial of Service via incomplete cleanup - https://github.com/advisories/GHSA-xf7r-hgr6-v32p
+Multer vulnerable to Denial of Service via resource exhaustion - https://github.com/advisories/GHSA-v52c-386h-88mc
+Multer Vulnerable to Denial of Service via Uncontrolled Recursion - https://github.com/advisories/GHSA-5528-5vmv-3xc2
+Multer vulnerable to Denial of Service via deeply nested field names - https://github.com/advisories/GHSA-72gw-mp4g-v24j
+Multer vulnerable to Denial of Service via incomplete cleanup of aborted uploads - https://github.com/advisories/GHSA-3p4h-7m6x-2hcm
+multer vulnerable to Denial of Service via crafted multipart field names - https://github.com/advisories/GHSA-wc9g-mqfw-jrwm
+multer vulnerable to file size limit bypass via async fileFilter race condition - https://github.com/advisories/GHSA-qvfw-j98x-7q72
+multer vulnerable to Denial of Service via oversized array index in field names - https://github.com/advisories/GHSA-535w-7cp7-47q4
+fix available via `npm audit fix --force`
+Will install @nestjs/platform-express@12.1.2, which is a breaking change
+node_modules/multer
+
+picomatch  4.0.0 - 4.0.3
+Severity: high
+Picomatch: Method Injection in POSIX Character Classes causes incorrect Glob Matching - https://github.com/advisories/GHSA-3v7f-55p6-f55p
+Picomatch has a ReDoS vulnerability via extglob quantifiers - https://github.com/advisories/GHSA-c2c7-rcm5-vvqj
+fix available via `npm audit fix --force`
+Will install @nestjs/cli@12.0.8, which is a breaking change
+node_modules/picomatch
+
+qs  2.2.5 - 6.15.3
+Severity: moderate
+qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set - https://github.com/advisories/GHSA-q8mj-m7cp-5q26
+qs array-limit bypass via bracket-key comma parsing - https://github.com/advisories/GHSA-x5fp-wj9c-mxmx
+qs: Denial of Service via Attacker Controlled isBuffer - https://github.com/advisories/GHSA-4mjr-xmp4-gh2g
+fix available via `npm audit fix`
+node_modules/qs
+
+tmp  <=0.2.5
+Severity: high
+tmp allows arbitrary temporary file / directory write via symbolic link `dir` parameter - https://github.com/advisories/GHSA-52f5-9888-hmc6
+tmp has Path Traversal via unsanitized prefix/postfix that enables directory escape - https://github.com/advisories/GHSA-ph9p-34f9-6g65
+fix available via `npm audit fix --force`
+Will install @nestjs/cli@12.0.8, which is a breaking change
+node_modules/tmp
+  external-editor  >=1.1.1
+  Depends on vulnerable versions of tmp
+  node_modules/external-editor
+    inquirer  3.0.0 - 8.2.6 || 9.0.0 - 9.3.7
+    Depends on vulnerable versions of external-editor
+    node_modules/@angular-devkit/schematics-cli/node_modules/inquirer
+    node_modules/inquirer
+
+uuid  <11.1.1
+Severity: moderate
+uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided - https://github.com/advisories/GHSA-w5hq-g745-h8pq
+fix available via `npm audit fix --force`
+Will install @nestjs/typeorm@12.0.2, which is a breaking change
+node_modules/uuid
+
+webpack  5.49.0 - 5.104.0
+webpack buildHttp: allowedUris allow-list bypass via URL userinfo (@) leading to build-time SSRF behavior - https://github.com/advisories/GHSA-8fgc-7cc6-rx7x
+webpack buildHttp HttpUriPlugin allowedUris bypass via HTTP redirects → SSRF + cache persistence - https://github.com/advisories/GHSA-38r7-794h-5758
+fix available via `npm audit fix --force`
+Will install @nestjs/cli@12.0.8, which is a breaking change
+node_modules/webpack
+
+25 vulnerabilities (4 low, 13 moderate, 8 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   @nestjs/core@10.4.22 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.

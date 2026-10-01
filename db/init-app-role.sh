@@ -3,8 +3,8 @@
 # Creates or updates a restricted role for the Spring Boot app, separate from the
 # admin role which owns the schema and runs migrations.
 # NOTE: only executes on first container start against an empty db_data volume.
-# To re-run against an existing volume, use `docker compose down -v` or apply
-# the SQL below manually.
+# To re-run against an existing volume, execute this script as the schema owner.
+# Preserve the existing volume; initialization never requires deleting user data.
 
 set -euo pipefail
 

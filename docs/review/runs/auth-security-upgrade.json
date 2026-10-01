@@ -1,0 +1,23 @@
+{
+  "command": [
+    "npm",
+    "install",
+    "@nestjs/common@11",
+    "@nestjs/core@11",
+    "@nestjs/platform-express@11",
+    "@nestjs/swagger@11",
+    "@nestjs/typeorm@11",
+    "@nestjs/testing@11",
+    "@nestjs/cli@11"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T20:40:11.319592+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "dbca7aa10c690481fe4aa5005109177feb1af4fe2bff7910f89cc292ee7b904d",
+  "output": "docs/review/runs/auth-security-upgrade.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:40:36.023634+00:00"
+}

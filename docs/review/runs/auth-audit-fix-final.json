@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "audit",
+    "fix"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T20:42:08.030378+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "3357c3cc159a43c4ab1e65dd5e4a3e8828716fd6764d55a3638538b58184b49c",
+  "output": "docs/review/runs/auth-audit-fix-final.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 1,
+  "finished_utc": "2026-10-01T20:42:12.388486+00:00"
+}

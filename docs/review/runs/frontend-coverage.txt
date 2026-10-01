@@ -1,0 +1,143 @@
+
+> nexttrade-angular@0.0.0 test:coverage
+> c8 node --enable-source-maps --test tests/*.test.mjs
+
+✔ screeners separate gainers and decliners and restore all quotes (12.1735ms)
+✔ choosing a symbol updates ticket prices and clears stale search and errors (0.9769ms)
+✔ advanced ticket rejects quantity=1.5 without placing an order (1.387ms)
+✔ advanced ticket rejects quantity=-1 without placing an order (0.5279ms)
+✔ advanced ticket rejects limitPrice=0 without placing an order (0.8031ms)
+✔ advanced ticket rejects limitPrice=Infinity without placing an order (0.4879ms)
+✔ advanced ticket rejects limitPrice=oops without placing an order (0.4045ms)
+✔ advanced ticket rejects quantity=100000 without placing an order (2.2361ms)
+✔ sell quantities and optional bracket prices are validated (0.9213ms)
+✔ market buy fills at the quote and charges fees to cash and portfolio (41.6152ms)
+✔ nonmarketable limit stays open, can be canceled, and does not change holdings or cash (1.3475ms)
+✔ marketable sell limit fills at the better quote and removes a fully sold position (0.7794ms)
+✔ price alerts reject invalid prices and retain the selected symbol (0.7961ms)
+✔ signup validates password rules, confirmation, and name before opening the profile (2713.9908ms)
+✔ sign-in submits credentials once, uses server tier, clears secrets, and signs out (549.6475ms)
+✔ sign-in displays a safe message for AuthApiError and allows retry (28.0182ms)
+✔ sign-in displays a safe message for Error and allows retry (25.6053ms)
+✔ successful registration sends profile answers then signs in to a fresh novice account (483.733ms)
+✔ registration errors keep the profile open and duplicate submissions are ignored (116.6575ms)
+✔ password visibility, recovery, and restored-page reload work through app actions (42.8217ms)
+✔ canvas startup draws candles, responds to resize, reveals auth, and cleans body classes (70.9065ms)
+✔ calls same-origin /auth paths so nginx can proxy them without CORS (63.1595ms)
+✔ login keeps tokens in memory, and logout revokes the refresh token then clears them (2.1766ms)
+✔ logout signs out locally even when the server is unreachable (1.6798ms)
+✔ logout without a session makes no request (0.3244ms)
+✔ maps error codes to fixed messages and never echoes the server message (4.1218ms)
+✔ a network failure gets a connection message (0.4706ms)
+✔ times the access token from its lifetime, so a skewed device clock does not matter (0.8074ms)
+✔ reads the server-assigned tier from the access token, and forgets it on logout (0.5386ms)
+✔ ignores a missing or unknown trader_level claim (0.5643ms)
+✔ refresh swaps in the new token pair (0.7765ms)
+✔ a rejected refresh (session idle too long) clears the tokens (0.9063ms)
+✔ toTraderRegistration converts yes/no answers to booleans and drops blank fields (0.3614ms)
+✔ icons render requested paths and fall back for unknown names (159.9291ms)
+✔ server tier selects the visible dashboard and child sign-out reaches the parent (2651.924ms)
+✔ trade ticket binds order inputs and submits a review with validation (46.1619ms)
+✔ chart period buttons update accessible labels and plotted candles (140.8717ms)
+✔ missing or negative ages read as unknown (13.2552ms)
+✔ ages under a second read as just now (0.8853ms)
+✔ each unit is singular for one and plural otherwise (0.2862ms)
+✔ employment details appear only for employed and self-employed applicants (50.8073ms)
+✔ review masks SSNs, displays option labels, and handles missing answers (2.3359ms)
+✔ submission omits hidden stale details and fields outside the questionnaire (12.6675ms)
+✔ quote search matches symbols and company names regardless of case or surrounding spaces (12.2939ms)
+✔ watchlist toggling removes and restores the selected quote without duplicates (1.3723ms)
+✔ opening a different trade clears stale review, quantity, search, and errors (23.2278ms)
+✔ novice order rejects invalid share quantity "" without changing balances (1.4043ms)
+✔ novice order rejects invalid share quantity "0" without changing balances (0.7778ms)
+✔ novice order rejects invalid share quantity "-1" without changing balances (0.5382ms)
+✔ novice order rejects invalid share quantity "1.5" without changing balances (0.4098ms)
+✔ novice order rejects invalid share quantity "abc" without changing balances (1.4036ms)
+✔ novice order rejects invalid share quantity "Infinity" without changing balances (0.9514ms)
+✔ novice order rejects invalid share quantity "9007199254740992" without changing balances (0.5309ms)
+✔ buying power and owned shares constrain novice orders (0.918ms)
+✔ buying a new holding debits cash, credits invested value, and records the fill (1.5329ms)
+✔ adding to a holding updates weighted cost and selling all shares removes it (1.2485ms)
+✔ confirmation revalidates buying power after review (0.4677ms)
+✔ learning progress requires a correct answer and persists each lesson only once (14.8164ms)
+✔ learning progress tolerates invalid saved data: broken json (0.7821ms)
+✔ learning progress tolerates invalid saved data: {} (0.6284ms)
+✔ learning progress tolerates invalid saved data: [0,2,-1,5,1.5,"1",null] (0.588ms)
+✔ learning remains usable when browser storage is unavailable (1.7128ms)
+✔ topic changes select a matching lesson and clear the previous answer (1.1579ms)
+✔ compound calculator responds to principal, years, zero rates, and negative returns (0.7755ms)
+✔ client calls the caller’s own history with only the filters supplied and the bearer token (101.2837ms)
+✔ client sends no query string when no filters are set (0.6994ms)
+✔ client refuses to call the server when signed out (1.1581ms)
+✔ client surfaces the server’s error message, or a friendly fallback (1.2363ms)
+✔ the app-wide service uses the signed-in user’s token, so it refuses while signed out (8.8795ms)
+✔ history loads the user’s orders as soon as it is shown (43.8751ms)
+✔ changing a filter reloads the list in place with that filter (31.7843ms)
+✔ a start date after the end date shows an error without calling the server (15.0446ms)
+✔ a failed load shows the error message and no stale rows (10.2475ms)
+✔ invalid dates cancel the loading state and ignore an earlier response (2.635ms)
+✔ status filters include the durable execution lifecycle (1.1894ms)
+✔ profile prefills name, formats contact and currency inputs, and builds the address (692.1901ms)
+✔ backspacing a phone separator removes the adjacent digit rather than trapping the caret (124.7928ms)
+✔ profile blocks missing or invalid personal information and advances valid answers (247.8746ms)
+✔ without an instrument id it shows an error and fetches nothing (5.7203ms)
+✔ it fetches the latest quote straight away and stores it with numeric prices (6.1896ms)
+✔ a failed fetch shows the error, and retry clears it and fetches again (1.2728ms)
+✔ an error without a message falls back to a generic one (0.7135ms)
+✔ quote requests use the gateway paths and current in-memory token (4.9733ms)
+✔ QuoteService is exported and provides quote methods (0.2951ms)
+✔ QuoteService normalizeQuote converts prices correctly (0.2139ms)
+✔ QuoteService calls the quote routes with the expected paths and parameters (1.9538ms)
+✔ QuoteService normalizeQuote turns string prices into numbers and keeps numbers as they are (0.3039ms)
+✔ QuoteService surfaces the API error message, or a generic one (4.8063ms)
+✔ application bootstraps without a protocol requirement (3.5435ms)
+✔ bootstrap and runtime failures never log error objects or credentials (2.4474ms)
+✔ injected auth service shares one session and revokes it on logout (63.6037ms)
+✔ configured Angular error handler never exposes exception details (2.0176ms)
+✔ signs an idle user out after 10 minutes and revokes the session (2.6491ms)
+✔ keeps an active user signed in by refreshing before the access token expires (3.0842ms)
+✔ measures inactivity from the last input, not the last refresh (0.4818ms)
+✔ does not refresh for a user who has been idle since the last refresh (0.3618ms)
+✔ signs out when the server rejects the refresh (session already ended) (0.4715ms)
+✔ stop() prevents any later sign-out (0.6881ms)
+Angular is running in development mode.
+✔ real entry point bootstraps the auth screen with the safe error handler (881.4451ms)
+✔ startup failure logs a fixed message instead of the bootstrap exception (13.7398ms)
+ℹ tests 100
+ℹ suites 0
+ℹ pass 100
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68890.4069
+-----------------------------|---------|----------|---------|---------|-----------------------------
+File                         | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s           
+-----------------------------|---------|----------|---------|---------|-----------------------------
+All files                    |   98.36 |    92.39 |   91.85 |   98.36 |                             
+ src                         |     100 |      100 |     100 |     100 |                             
+  main.ts                    |     100 |      100 |     100 |     100 |                             
+ src/app                     |   98.36 |    92.38 |   91.85 |   98.36 |                             
+  advanced-chart.ts          |     100 |      100 |     100 |     100 |                             
+  advanced-dashboard.ts      |   95.82 |    92.37 |   85.71 |   95.82 | ...,295-297,302-303,381-391 
+  advanced-ticket.ts         |     100 |      100 |     100 |     100 |                             
+  app.config.ts              |     100 |      100 |     100 |     100 |                             
+  app.ts                     |   97.83 |    87.35 |   94.44 |   97.83 | ...,267-269,439-441,449-450 
+  auth-api.ts                |    97.5 |    93.02 |   92.85 |    97.5 | 71-72,134-135               
+  auth.service.ts            |     100 |      100 |     100 |     100 |                             
+  dashboard-icon.ts          |     100 |      100 |     100 |     100 |                             
+  format-age.pipe.ts         |     100 |      100 |     100 |     100 |                             
+  investor-profile.ts        |   99.65 |    90.17 |     100 |   99.65 | 529-530                     
+  novice-dashboard.ts        |   97.25 |    94.54 |      70 |   97.25 | 156-158,164-165,167-168     
+  novice-learn.ts            |     100 |      100 |     100 |     100 |                             
+  order-history-api.ts       |    97.8 |    83.87 |      80 |    97.8 | 89-90                       
+  order-history.service.ts   |     100 |      100 |     100 |     100 |                             
+  order-history.ts           |   95.74 |    94.11 |   77.77 |   95.74 | 64-65,69-70                 
+  quote-display.component.ts |     100 |      100 |     100 |     100 |                             
+  quote.service.ts           |     100 |      100 |     100 |     100 |                             
+  registration-payload.ts    |     100 |      100 |     100 |     100 |                             
+  safe-error-handler.ts      |     100 |      100 |     100 |     100 |                             
+  security.ts                |     100 |      100 |     100 |     100 |                             
+  session-keeper.ts          |   97.27 |    93.75 |     100 |   97.27 | 90-92                       
+  stock-dashboard.ts         |     100 |      100 |     100 |     100 |                             
+-----------------------------|---------|----------|---------|---------|-----------------------------

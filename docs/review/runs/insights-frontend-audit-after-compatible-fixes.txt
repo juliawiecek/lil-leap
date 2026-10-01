@@ -1,0 +1,68 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@angular/build": {
+      "name": "@angular/build",
+      "severity": "critical",
+      "isDirect": true,
+      "via": [
+        "piscina"
+      ],
+      "effects": [],
+      "range": "20.0.0-next.0 - 22.2.0-rc.0",
+      "nodes": [
+        "node_modules/@angular/build"
+      ],
+      "fixAvailable": true
+    },
+    "piscina": {
+      "name": "piscina",
+      "severity": "critical",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1240852,
+          "name": "piscina",
+          "dependency": "piscina",
+          "title": "piscina: Prototype-pollution gadget in ThreadPool.options allows RCE via execArgv / loadBalancer / env",
+          "url": "https://github.com/advisories/GHSA-67c8-pqhq-4rmx",
+          "severity": "critical",
+          "cwe": [
+            "CWE-1321"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": ">=5.0.0 <5.3.2"
+        }
+      ],
+      "effects": [
+        "@angular/build"
+      ],
+      "range": "5.0.0 - 5.3.1",
+      "nodes": [
+        "node_modules/piscina"
+      ],
+      "fixAvailable": true
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 2,
+      "total": 2
+    },
+    "dependencies": {
+      "prod": 10,
+      "dev": 459,
+      "optional": 150,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 468
+    }
+  }
+}

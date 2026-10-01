@@ -1,0 +1,16 @@
+{
+  "command": [
+    "target/po-sprint7/venv/Scripts/python.exe",
+    "scripts/generate_erd.py"
+  ],
+  "cwd": ".",
+  "started_utc": "2026-10-01T20:49:12.909108+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "bffdd02d4d5476b1915e932e319a696aa6ca6d688eebe0246671606eaa900ad8",
+  "output": "docs/review/runs/erd-generation.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:49:13.567931+00:00"
+}

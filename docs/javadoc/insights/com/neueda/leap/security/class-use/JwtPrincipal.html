@@ -54,14 +54,6 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
-<div class="col-last even-row-color">
-<div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
-</div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.portfolio.controller">com.neueda.leap.portfolio.controller</a></div>
-<div class="col-last odd-row-color">
-<div class="block">Authenticated endpoints exposing only the caller's financial data.</div>
-</div>
 <div class="col-first even-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
 <div class="col-last even-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
@@ -69,49 +61,6 @@ loadScripts(document, 'script');</script>
 </div>
 <section class="class-uses">
 <ul class="block-list">
-<li>
-<section class="detail" id="com.neueda.leap.order.submission.controller">
-<h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a></h2>
-<div class="caption"><span>Methods in <a href="../../order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a> with parameters of type <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></span></div>
-<div class="summary-table three-column-summary">
-<div class="table-header col-first">Modifier and Type</div>
-<div class="table-header col-second">Method</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionController.</span><code><a href="../../order/submission/controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
- @Valid <a href="../../order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
-<div class="col-last even-row-color">
-<div class="block">Submits a validated order on behalf of the authenticated caller.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.portfolio.controller">
-<h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../portfolio/controller/package-summary.html">com.neueda.leap.portfolio.controller</a></h2>
-<div class="caption"><span>Methods in <a href="../../portfolio/controller/package-summary.html">com.neueda.leap.portfolio.controller</a> with parameters of type <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></span></div>
-<div class="summary-table three-column-summary">
-<div class="table-header col-first">Modifier and Type</div>
-<div class="table-header col-second">Method</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#cash(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last even-row-color">
-<div class="block">Lists cash balances owned by the authenticated caller.</div>
-</div>
-<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last odd-row-color">
-<div class="block">Lists holdings owned by the authenticated caller.</div>
-</div>
-<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/OrderSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderSummaryResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#orders(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">orders</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last even-row-color">
-<div class="block">Lists order history owned by the authenticated caller.</div>
-</div>
-</div>
-</section>
-</li>
 <li>
 <section class="detail" id="com.neueda.leap.security">
 <h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../package-summary.html">com.neueda.leap.security</a></h2>

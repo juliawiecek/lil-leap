@@ -1,0 +1,30 @@
+Isolated fixture/logs: target\native-stack-683b21d1c27e
+PASS reporting server is a physical standby
+PASS reporting role rejects writes and credential reads on primary
+PASS missing token
+PASS real Identity registration through gateway
+PASS real Identity login
+PASS Identity token accepted by Holdings
+PASS tampered token
+PASS invalid order body
+PASS trader cannot report
+PASS reporting gateway cannot trade
+PASS trading gateway cannot report
+PASS Holdings caller ownership
+PASS Orders caller ownership
+PASS quote ingestion and API through gateway
+PASS positive order submission
+PASS one fill
+PASS settled Holdings API
+PASS persisted order fills and Holdings read
+Traceback (most recent call last):
+  File "C:\Users\Administrator\lil-leap\scripts\test_stack_native.py", line 231, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Administrator\lil-leap\scripts\test_stack_native.py", line 202, in main
+    check("analyst registration", http(r, "/auth/register", "POST", dict(user_role="ANALYST", email=analyst, password=password, employee_id=str(uuid.uuid4())))[0], 201)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\lil-leap\scripts\test_stack_native.py", line 104, in check
+    assert actual == expected, f"{label}: expected {expected!r}, got {actual!r}"
+           ^^^^^^^^^^^^^^^^^^
+AssertionError: analyst registration: expected 201, got 400

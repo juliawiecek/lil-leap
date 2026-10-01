@@ -1,0 +1,23 @@
+{
+  "command": [
+    "C:/Users/Administrator/lil-leap/target/po-sprint7/venv/Scripts/python.exe",
+    "-m",
+    "pytest",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=60",
+    "--junitxml=test-results.xml"
+  ],
+  "cwd": "data-pipeline",
+  "started_utc": "2026-10-01T20:37:38.155127+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "ff2170e523ada941571162fa24353fcfb650dc54a37e9fb6eb9fc89d6f18f958",
+  "output": "docs/review/runs/python-coverage.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:37:57.060998+00:00"
+}

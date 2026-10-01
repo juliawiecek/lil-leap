@@ -1,0 +1,16 @@
+{
+  "command": [
+    "npm",
+    "update"
+  ],
+  "cwd": "insights-frontend",
+  "started_utc": "2026-10-01T20:40:39.900345+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "10ea8d21e6414b7e6a7bad7c93566ab272693d4e95e02878d21c4be316b371b6",
+  "output": "docs/review/runs/insights-frontend-security-upgrade.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:41:18.290012+00:00"
+}

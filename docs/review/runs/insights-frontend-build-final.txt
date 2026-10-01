@@ -1,0 +1,16 @@
+
+> insights-frontend@0.0.0 build
+> ng build
+
+> Building...
+√ Building...
+Initial chunk files | Names         |  Raw size | Estimated transfer size
+main-6N67NTAD.js    | main          | 277.01 kB |                72.47 kB
+styles-OXT3GPJP.css | styles        | 641 bytes |               641 bytes
+
+                    | Initial total | 277.65 kB |                73.11 kB
+
+Application bundle generation complete. [17.459 seconds] - 2026-10-01T21:41:02.505Z
+
+Output location: C:\Users\Administrator\lil-leap\insights-frontend\dist\insights-frontend
+

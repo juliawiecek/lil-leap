@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "build"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T21:38:06.997140+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "654f0c7614798c98e58d16d898cc8a376f7b83c26aae512ffca4105efa979793",
+  "output": "docs/review/runs/auth-build-final.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T21:38:32.027459+00:00"
+}

@@ -1,0 +1,19 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:cov",
+    "--",
+    "--runInBand"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T20:45:59.667570+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "bffdd02d4d5476b1915e932e319a696aa6ca6d688eebe0246671606eaa900ad8",
+  "output": "docs/review/runs/auth-coverage.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:46:14.266814+00:00"
+}

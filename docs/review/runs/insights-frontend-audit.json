@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "audit",
+    "--json"
+  ],
+  "cwd": "insights-frontend",
+  "started_utc": "2026-10-01T20:34:19.944130+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "f4a82c8f8b5b01bb4c43c6417bcf8cf7a6a22162f9f7d37620719d07b070383d",
+  "output": "docs/review/runs/insights-frontend-audit.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 1,
+  "finished_utc": "2026-10-01T20:34:50.369652+00:00"
+}

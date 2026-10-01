@@ -1,0 +1,20 @@
+{
+  "command": [
+    "mvn",
+    "-B",
+    "clean",
+    "verify"
+  ],
+  "cwd": "nextTrade-orders",
+  "started_utc": "2026-10-01T20:32:32.054111+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "f4a82c8f8b5b01bb4c43c6417bcf8cf7a6a22162f9f7d37620719d07b070383d",
+  "output": "docs/review/runs/java-orders.txt",
+  "environment_keys": [
+    "JAVA_HOME",
+    "TEST_POSTGRES_URL",
+    "TEST_POSTGRES_USER"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:35:53.992927+00:00"
+}

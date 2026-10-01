@@ -1,0 +1,96 @@
+
+> auth@1.0.0 test:cov
+> jest --coverage
+
+PASS src/user/auth.controller.spec.ts (27.294 s)
+PASS src/security/refresh-token.service.spec.ts
+PASS src/onboarding/registration.service.spec.ts (28.566 s)
+PASS src/security/jwt.service.spec.ts
+PASS src/user/dto/register-request.dto.spec.ts
+PASS src/user/user.service.spec.ts
+PASS src/rules/rules.controller.spec.ts
+PASS src/onboarding/tier-rules.spec.ts
+[31m[Nest] 13184  - [39m10/01/2026, 9:37:08 PM [31m  ERROR[39m [38;5;3m[GlobalExceptionFilter] [39m[31mRequest failed exceptionType=Error[39m
+PASS src/common/filters/global-exception.filter.spec.ts
+PASS src/security/access-token.guard.spec.ts
+PASS src/security/ssn-encryption.service.spec.ts
+PASS src/health/health.controller.spec.ts
+PASS src/security/password-encoder.service.spec.ts
+PASS src/docs/openapi.spec.ts (35.497 s)
+----------------------------------------------|---------|----------|---------|---------|-------------------
+File                                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+----------------------------------------------|---------|----------|---------|---------|-------------------
+All files                                     |   90.27 |       80 |   86.66 |   90.23 |                   
+ src                                          |   31.14 |    18.18 |   66.66 |    32.2 |                   
+  app.module.ts                               |       0 |        0 |       0 |       0 | 1-54              
+  app.setup.ts                                |     100 |      100 |     100 |     100 |                   
+  main.ts                                     |       0 |        0 |       0 |       0 | 1-38              
+ src/common/dto                               |     100 |      100 |     100 |     100 |                   
+  error-response.dto.ts                       |     100 |      100 |     100 |     100 |                   
+ src/common/filters                           |   89.47 |       60 |     100 |   88.23 |                   
+  global-exception.filter.ts                  |   89.47 |       60 |     100 |   88.23 | 24-25             
+ src/docs                                     |     100 |      100 |     100 |     100 |                   
+  openapi-docs.module.ts                      |     100 |      100 |     100 |     100 |                   
+  openapi.ts                                  |     100 |      100 |     100 |     100 |                   
+ src/health                                   |     100 |      100 |     100 |     100 |                   
+  health.controller.ts                        |     100 |      100 |     100 |     100 |                   
+ src/onboarding                               |   93.47 |    86.66 |   84.21 |    93.1 |                   
+  registration.service.ts                     |   98.46 |    93.75 |     100 |   98.38 | 141               
+  tier-rules.ts                               |     100 |      100 |     100 |     100 |                   
+  tier.service.ts                             |   58.33 |        0 |       0 |      50 | 23-46             
+ src/onboarding/entities                      |   94.44 |      100 |       0 |   93.75 |                   
+  account.entity.ts                           |   94.73 |      100 |       0 |   94.11 | 12                
+  analyst-profile.entity.ts                   |   91.66 |      100 |       0 |      90 | 13                
+  customer-profile.entity.ts                  |   94.44 |      100 |       0 |   93.75 | 11                
+  financial-profile.entity.ts                 |   95.65 |      100 |       0 |   95.23 | 13                
+ src/onboarding/enums                         |     100 |      100 |     100 |     100 |                   
+  account-type.enum.ts                        |     100 |      100 |     100 |     100 |                   
+  citizenship-status.enum.ts                  |     100 |      100 |     100 |     100 |                   
+  employment-status.enum.ts                   |     100 |      100 |     100 |     100 |                   
+  net-worth-bracket.enum.ts                   |     100 |      100 |     100 |     100 |                   
+  risk-profile.enum.ts                        |     100 |      100 |     100 |     100 |                   
+  trader-level.enum.ts                        |     100 |      100 |     100 |     100 |                   
+ src/onboarding/exceptions                    |     100 |      100 |     100 |     100 |                   
+  insufficient-investable-assets.exception.ts |     100 |      100 |     100 |     100 |                   
+ src/rules                                    |     100 |      100 |     100 |     100 |                   
+  rules.controller.ts                         |     100 |      100 |     100 |     100 |                   
+ src/rules/dto                                |     100 |      100 |     100 |     100 |                   
+  tier-eligibility-response.dto.ts            |     100 |      100 |     100 |     100 |                   
+ src/security                                 |   88.99 |    80.48 |      90 |   89.69 |                   
+  access-token.guard.ts                       |     100 |      100 |     100 |     100 |                   
+  jwt.service.ts                              |   96.55 |    81.25 |     100 |   96.29 | 28                
+  password-encoder.service.ts                 |     100 |      100 |     100 |     100 |                   
+  refresh-token.service.ts                    |     100 |       80 |     100 |     100 | 77                
+  secure-transport.middleware.ts              |       0 |        0 |       0 |       0 | 1-12              
+  session-policy.ts                           |     100 |      100 |     100 |     100 |                   
+  ssn-encryption.service.ts                   |     100 |     87.5 |     100 |     100 | 16                
+  tls.ts                                      |       0 |        0 |       0 |       0 | 5-7               
+ src/security/entities                        |    92.3 |      100 |       0 |    90.9 |                   
+  session.entity.ts                           |    92.3 |      100 |       0 |    90.9 | 10                
+ src/user                                     |     100 |      100 |     100 |     100 |                   
+  auth.controller.ts                          |     100 |      100 |     100 |     100 |                   
+  user-role.enum.ts                           |     100 |      100 |     100 |     100 |                   
+  user.service.ts                             |     100 |      100 |     100 |     100 |                   
+ src/user/dto                                 |     100 |       92 |     100 |     100 |                   
+  login-request.dto.ts                        |     100 |      100 |     100 |     100 |                   
+  login-response.dto.ts                       |     100 |      100 |     100 |     100 |                   
+  refresh-request.dto.ts                      |     100 |      100 |     100 |     100 |                   
+  refresh-response.dto.ts                     |     100 |      100 |     100 |     100 |                   
+  register-request.dto.ts                     |     100 |       92 |     100 |     100 | 80,91-96,103      
+  user-response.dto.ts                        |     100 |      100 |     100 |     100 |                   
+ src/user/entities                            |     100 |      100 |     100 |     100 |                   
+  user.entity.ts                              |     100 |      100 |     100 |     100 |                   
+ src/user/exceptions                          |     100 |      100 |     100 |     100 |                   
+  account-not-found.exception.ts              |     100 |      100 |     100 |     100 |                   
+  auth.exception.ts                           |     100 |      100 |     100 |     100 |                   
+  invalid-access-token.exception.ts           |     100 |      100 |     100 |     100 |                   
+  invalid-credentials.exception.ts            |     100 |      100 |     100 |     100 |                   
+  invalid-refresh-token.exception.ts          |     100 |      100 |     100 |     100 |                   
+  user-already-exists.exception.ts            |     100 |      100 |     100 |     100 |                   
+----------------------------------------------|---------|----------|---------|---------|-------------------
+
+Test Suites: 14 passed, 14 total
+Tests:       88 passed, 88 total
+Snapshots:   0 total
+Time:        64.02 s
+Ran all test suites.

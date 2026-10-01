@@ -19,18 +19,13 @@
     <p>Generated Javadoc for the production Java APIs. Each service has its own site
       because the services share some package and class names.</p>
     <ul>
-      <li><a href="insights/index.html">Insights</a> â€” portfolio queries, order submission,
-        execution queue and quote policies, instruments, authentication and password reset.</li>
-      <li><a href="nextTrade-orders/index.html">Orders</a> â€” scheduled execution, quotes,
-        fills, settlement ledger entities and shared onboarding APIs.</li>
-      <li><a href="nextTrade-holdings/index.html">Holdings</a> â€” shared starter APIs;
-        dedicated holdings business logic is not implemented in this service.</li>
+      <li><a href="insights/index.html">Insights</a>: analyst-only reporting queries
+        against the read-only reporting replica.</li>
+      <li><a href="nextTrade-orders/index.html">Orders</a>: order submission,
+        validation, durable execution, fills and atomic settlement.</li>
+      <li><a href="nextTrade-holdings/index.html">Holdings</a>: accounts, portfolio,
+        cash, holdings, order history, instrument reference and quote display reads.</li>
     </ul>
-    <!-- snapshot-note:start -->
-    <aside><strong>Historical snapshots:</strong> these generated sites predate the service-boundary refactor.
-      Use <a href="../architecture/service-boundaries.md">the current architecture guide</a> and source,
-      or regenerate the sites using the command below.</aside>
-    <!-- snapshot-note:end -->
     <p>From the repository root, regenerate with JDK 21, Maven and Python 3:</p>
     <pre><code>python scripts/generate_javadocs.py</code></pre>
     <p>The script validates all three services before replacing these HTML snapshots.

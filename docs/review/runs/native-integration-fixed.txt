@@ -1,0 +1,25 @@
+Isolated fixture/logs: target\native-stack-18ba28d81c37
+PASS reporting server is a physical standby
+PASS reporting role rejects writes and credential reads on primary
+PASS missing token
+PASS real Identity registration through gateway
+PASS real Identity login
+PASS Identity token accepted by Holdings
+PASS tampered token
+PASS invalid order body
+PASS trader cannot report
+PASS reporting gateway cannot trade
+PASS trading gateway cannot report
+PASS Holdings caller ownership
+PASS Orders caller ownership
+PASS quote ingestion and API through gateway
+PASS positive order submission
+PASS one fill
+PASS settled Holdings API
+PASS persisted order fills and Holdings read
+PASS analyst registration
+PASS analyst login
+PASS analyst cannot trade
+PASS analyst reporting API
+PASS settled fill propagated to read-only reporting replica
+PASS native six-service integration (not Docker/Jenkins evidence)

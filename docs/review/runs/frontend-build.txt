@@ -1,0 +1,16 @@
+
+> nexttrade-angular@0.0.0 build
+> ng build
+
+> Building...
+√ Building...
+Initial chunk files | Names         |  Raw size | Estimated transfer size
+main-KBX4SDCC.js    | main          | 414.10 kB |               100.19 kB
+styles-UQX2XLUJ.css | styles        | 761 bytes |               761 bytes
+
+                    | Initial total | 414.86 kB |               100.95 kB
+
+Application bundle generation complete. [12.808 seconds] - 2026-10-01T20:43:51.491Z
+
+Output location: C:\Users\Administrator\lil-leap\frontend\dist\nexttrade-angular
+

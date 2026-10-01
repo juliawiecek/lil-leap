@@ -3,9 +3,8 @@
   "paths": {
     "/auth/register": {
       "post": {
-        "operationId": "AuthController_register",
-        "summary": "Register a TRADER or ANALYST",
         "description": "Issues no tokens -- call /auth/login next. For a TRADER the server assigns trader_level from declared finances: capacity = net_worth_bracket lower bound + 10% of annual_income; ADVANCED at >= $100,000, NOVICE at >= $5,000. Any trader_level sent by the client is ignored.",
+        "operationId": "AuthController_register",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -59,6 +58,7 @@
             }
           }
         },
+        "summary": "Register a TRADER or ANALYST",
         "tags": [
           "auth"
         ]
@@ -67,7 +67,6 @@
     "/auth/login": {
       "post": {
         "operationId": "AuthController_login",
-        "summary": "Sign in and get an access + refresh token pair",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -111,6 +110,7 @@
             }
           }
         },
+        "summary": "Sign in and get an access + refresh token pair",
         "tags": [
           "auth"
         ]
@@ -118,9 +118,8 @@
     },
     "/auth/refresh": {
       "post": {
-        "operationId": "AuthController_refresh",
-        "summary": "Rotate the refresh token and get a new access token",
         "description": "The refresh token sent is invalidated either way. Sessions expire after the inactivity window.",
+        "operationId": "AuthController_refresh",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -164,6 +163,7 @@
             }
           }
         },
+        "summary": "Rotate the refresh token and get a new access token",
         "tags": [
           "auth"
         ]
@@ -171,9 +171,8 @@
     },
     "/auth/logout": {
       "post": {
-        "operationId": "AuthController_logout",
-        "summary": "Revoke a refresh token",
         "description": "Always 204, even for an unknown or already-revoked token. Issued access tokens stay valid until they expire.",
+        "operationId": "AuthController_logout",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -200,6 +199,7 @@
             }
           }
         },
+        "summary": "Revoke a refresh token",
         "tags": [
           "auth"
         ]
@@ -208,7 +208,6 @@
     "/rules/tier-eligibility": {
       "get": {
         "operationId": "RulesController_tierEligibility",
-        "summary": "The caller's trader tier, balance against its minimum, and gap to the next tier",
         "parameters": [],
         "responses": {
           "200": {
@@ -242,20 +241,20 @@
             }
           }
         },
-        "tags": [
-          "rules"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "The caller's trader tier, balance against its minimum, and gap to the next tier",
+        "tags": [
+          "rules"
         ]
       }
     },
     "/health": {
       "get": {
         "operationId": "HealthController_check",
-        "summary": "Liveness probe (no database check)",
         "parameters": [],
         "responses": {
           "200": {
@@ -279,6 +278,7 @@
             }
           }
         },
+        "summary": "Liveness probe (no database check)",
         "tags": [
           "health"
         ]

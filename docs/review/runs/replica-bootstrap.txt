@@ -1,0 +1,3 @@
+PASS: first bootstrap uses escaped replication credentials without PGPASSWORD
+PASS: restart preserves the standby and removes inherited PGPASSWORD
+PASS: existing non-standby data is not overwritten or started

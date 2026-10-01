@@ -1,0 +1,26 @@
+
+up to date, audited 672 packages in 4s
+
+133 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+js-yaml  5.0.0 - 5.4.0
+Severity: moderate
+js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources - https://github.com/advisories/GHSA-r3ph-w7gj-g6xm
+fix available via `npm audit fix --force`
+Will install @nestjs/swagger@12.0.2, which is a breaking change
+node_modules/js-yaml
+  @nestjs/swagger  11.4.6 - 12.0.0
+  Depends on vulnerable versions of js-yaml
+  node_modules/@nestjs/swagger
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+npm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn allow-scripts   @scarf/scarf@1.4.0 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.

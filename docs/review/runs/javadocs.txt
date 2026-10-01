@@ -1,0 +1,70 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.neueda.leap:insights >----------------------
+[INFO] Building insights 0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> javadoc:3.6.3:javadoc (default-cli) > generate-sources @ insights >>>
+[INFO] 
+[INFO] --- jacoco:0.8.11:prepare-agent (default) @ insights ---
+[INFO] argLine set to -javaagent:C:\\Users\\Administrator\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.11\\org.jacoco.agent-0.8.11-runtime.jar=destfile=C:\\Users\\Administrator\\lil-leap\\insights\\target\\jacoco.exec
+[INFO] 
+[INFO] <<< javadoc:3.6.3:javadoc (default-cli) < generate-sources @ insights <<<
+[INFO] 
+[INFO] 
+[INFO] --- javadoc:3.6.3:javadoc (default-cli) @ insights ---
+[INFO] No previous run data found, generating javadoc.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  36.040 s
+[INFO] Finished at: 2026-10-01T20:35:56Z
+[INFO] ------------------------------------------------------------------------
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.neueda.leap:nexttrade-orders >------------------
+[INFO] Building NextTrade-orders 0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> javadoc:3.6.3:javadoc (default-cli) > generate-sources @ nexttrade-orders >>>
+[INFO] 
+[INFO] --- jacoco:0.8.13:prepare-agent (prepare-agent) @ nexttrade-orders ---
+[INFO] argLine set to -javaagent:C:\\Users\\Administrator\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.13\\org.jacoco.agent-0.8.13-runtime.jar=destfile=C:\\Users\\Administrator\\lil-leap\\nextTrade-orders\\target\\jacoco.exec
+[INFO] 
+[INFO] <<< javadoc:3.6.3:javadoc (default-cli) < generate-sources @ nexttrade-orders <<<
+[INFO] 
+[INFO] 
+[INFO] --- javadoc:3.6.3:javadoc (default-cli) @ nexttrade-orders ---
+[INFO] No previous run data found, generating javadoc.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.915 s
+[INFO] Finished at: 2026-10-01T20:36:20Z
+[INFO] ------------------------------------------------------------------------
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------< com.neueda.leap:nexttrade-holdings >-----------------
+[INFO] Building NextTrade Holdings 0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> javadoc:3.6.3:javadoc (default-cli) > generate-sources @ nexttrade-holdings >>>
+[INFO] 
+[INFO] --- jacoco:0.8.13:prepare-agent (prepare-agent) @ nexttrade-holdings ---
+[INFO] argLine set to -javaagent:C:\\Users\\Administrator\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.13\\org.jacoco.agent-0.8.13-runtime.jar=destfile=C:\\Users\\Administrator\\lil-leap\\nextTrade-holdings\\target\\jacoco.exec
+[INFO] 
+[INFO] <<< javadoc:3.6.3:javadoc (default-cli) < generate-sources @ nexttrade-holdings <<<
+[INFO] 
+[INFO] 
+[INFO] --- javadoc:3.6.3:javadoc (default-cli) @ nexttrade-holdings ---
+[INFO] No previous run data found, generating javadoc.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.780 s
+[INFO] Finished at: 2026-10-01T20:36:36Z
+[INFO] ------------------------------------------------------------------------
+Generated HTML: C:\Users\Administrator\lil-leap\docs\javadoc\index.html

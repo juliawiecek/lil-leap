@@ -83,9 +83,11 @@ JaCoCo reports are written under each Java module's `target/site/jacoco`.
 ## Javadocs
 
 Generate current API docs with `mvn javadoc:javadoc` inside each service, or publish
-all sites using `python scripts/generate_javadocs.py`. The checked-in
-[HTML snapshots](docs/javadoc/index.html) predate the boundary refactor; current
-source and the architecture guide take precedence until they are regenerated.
+all sites using `python scripts/generate_javadocs.py`.
+
+Published HTML is under [docs/javadoc/index.html](docs/javadoc/index.html) with
+service-specific pages for Orders, Holdings and Insights. Regenerate these docs
+after Java API changes so checked-in HTML stays aligned with source.
 
 ## Known gaps
 
@@ -99,6 +101,6 @@ the [service-boundary guide](docs/architecture/service-boundaries.md#remaining-f
 Earlier story documents under `docs/` are historical and may name the old backend
 or pre-refactor service owners.
 
-## API and coverage guides
+## API, coverage and diagram guides
 
-See [Swagger/OpenAPI access](docs/api/README.md) for service-specific documentation and remote gateway access, and [coverage generation](docs/coverage/README.md) for report commands.
+See [Swagger/OpenAPI access](docs/api/README.md) for service-specific documentation and remote gateway access, [coverage generation](docs/coverage/README.md) for report commands, [service UML](docs/architecture/uml.md), and the schema ERD in [PDF](db/ER_Diagram.pdf), [PNG](db/er_diagram.png), and [Mermaid](db/er-diagram.md) forms.

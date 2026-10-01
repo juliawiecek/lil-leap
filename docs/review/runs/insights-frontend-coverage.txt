@@ -1,0 +1,50 @@
+
+> insights-frontend@0.0.0 test:coverage
+> c8 node --enable-source-maps --test tests/*.test.mjs
+
+✔ navigation clears stale selections, search, notices, and the mobile menu (5.6696ms)
+✔ invalid dates clear dashboard results and prevent report downloads (2.9308ms)
+✔ asset and market filters update totals, chart, rankings, and status counts together (3.8191ms)
+✔ investigation search intersects status and supports order and client identifiers (2.2737ms)
+✔ client selection scopes orders and segment activity totals reconcile (2.4845ms)
+✔ search destination follows role and returning to Analyst exits investigation (0.6539ms)
+✔ reset restores the default data after restrictive filters and search (0.669ms)
+✔ Trading Activity Report exports filtered content and retains the downloadable report (5.8724ms)
+✔ Client Activity Summary exports filtered content and retains the downloadable report (5.9383ms)
+✔ Monthly Executive Report exports filtered content and retains the downloadable report (0.8412ms)
+✔ empty and zero-valued charts have finite scales and no invalid path coordinates (9.7318ms)
+✔ chart endpoints span the plot and labels stay unique for short series (0.9179ms)
+✔ chart units and path recompute when input values change (0.6008ms)
+✔ date labels use the UTC calendar date and preserve non-date labels (36.0649ms)
+✔ volume excludes nonfilled orders and reconciles across asset classes and chart groupings (5.4775ms)
+✔ filters intersect and include the end date; empty data produces finite zero metrics (2.6849ms)
+✔ sample orders have unique identifiers and cannot precede client registration (0.6172ms)
+✔ CSV escapes quotes, commas, newlines and spreadsheet formulas (0.3706ms)
+✔ insights icons bind known names and fall back for unknown names (115.1703ms)
+✔ chart renders empty state, binds points, and exposes values on keyboard focus and hover (197.7971ms)
+✔ dashboard navigation renders pages and their corresponding controls (1169.7771ms)
+✔ report download creates a CSV blob, clicks its filename, and revokes the URL (103.6306ms)
+Angular is running in development mode.
+✔ real insights entry point starts the dashboard with configured providers (635.5316ms)
+✔ entry point catches and reports bootstrap failure when the root host is missing (65.7948ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16747.5968
+--------------------|---------|----------|---------|---------|-------------------
+File                | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+--------------------|---------|----------|---------|---------|-------------------
+All files           |     100 |    97.07 |     100 |     100 |                   
+ src                |     100 |      100 |     100 |     100 |                   
+  main.ts           |     100 |      100 |     100 |     100 |                   
+ src/app            |     100 |    97.05 |     100 |     100 |                   
+  app.config.ts     |     100 |      100 |     100 |     100 |                   
+  app.ts            |     100 |    96.25 |     100 |     100 | 94,199,225        
+  dashboard-icon.ts |     100 |      100 |     100 |     100 |                   
+  insights-chart.ts |     100 |      100 |     100 |     100 |                   
+  insights-data.ts  |     100 |    96.87 |     100 |     100 | 124,145           
+--------------------|---------|----------|---------|---------|-------------------

@@ -1,0 +1,5 @@
+
+> auth@1.0.0 docs:openapi
+> ts-node scripts/generate-openapi.ts
+
+Wrote C:\Users\Administrator\lil-leap\auth\openapi.json

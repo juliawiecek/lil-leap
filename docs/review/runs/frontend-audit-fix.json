@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "audit",
+    "fix"
+  ],
+  "cwd": "frontend",
+  "started_utc": "2026-10-01T20:37:27.737338+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "ff2170e523ada941571162fa24353fcfb650dc54a37e9fb6eb9fc89d6f18f958",
+  "output": "docs/review/runs/frontend-audit-fix.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:37:50.020613+00:00"
+}

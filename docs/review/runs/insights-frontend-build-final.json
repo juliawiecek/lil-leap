@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "build"
+  ],
+  "cwd": "insights-frontend",
+  "started_utc": "2026-10-01T21:40:32.919822+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "654f0c7614798c98e58d16d898cc8a376f7b83c26aae512ffca4105efa979793",
+  "output": "docs/review/runs/insights-frontend-build-final.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T21:41:04.894526+00:00"
+}

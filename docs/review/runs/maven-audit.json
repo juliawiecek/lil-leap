@@ -1,0 +1,19 @@
+{
+  "command": [
+    "mvn",
+    "-B",
+    "org.owasp:dependency-check-maven:12.1.0:check",
+    "-Dformats=JSON,HTML",
+    "-DfailBuildOnCVSS=0"
+  ],
+  "cwd": "nextTrade-orders",
+  "started_utc": "2026-10-01T20:37:48.279563+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "ff2170e523ada941571162fa24353fcfb650dc54a37e9fb6eb9fc89d6f18f958",
+  "output": "docs/review/runs/maven-audit.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 124,
+  "finished_utc": "2026-10-01T20:41:48.472969+00:00"
+}

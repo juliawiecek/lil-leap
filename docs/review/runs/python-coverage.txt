@@ -1,0 +1,37 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\Administrator\lil-leap\data-pipeline
+plugins: platformdirs-4.12.2, cov-7.0.0
+collected 72 items
+
+tests\test_coverage_enhancements.py ................................     [ 44%]
+tests\test_database.py ..                                                [ 47%]
+tests\test_generate_quotes.py ..........                                 [ 61%]
+tests\test_instrument_catalog.py ....                                    [ 66%]
+tests\test_postgres_quote_provider.py ..                                 [ 69%]
+tests\test_quote_api.py ........                                         [ 80%]
+tests\test_quote_ingestor.py ...                                         [ 84%]
+tests\test_quote_ingestor_integration.py ...........                     [100%]
+
+- generated xml file: C:\Users\Administrator\lil-leap\data-pipeline\test-results.xml -
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.13.2-final-0 _______________
+
+Name                           Stmts   Miss  Cover   Missing
+------------------------------------------------------------
+src\__init__.py                    0      0   100%
+src\app.py                        35      5    86%   30, 72-74, 88
+src\database.py                   33      0   100%
+src\generate_quotes.py            80     12    85%   161, 208-222, 227-234, 241
+src\instrument_catalog.py         40      4    90%   41, 43, 45, 49
+src\instrument_repository.py      28      0   100%
+src\quote_ingestor.py             79     34    57%   51-61, 64-79, 82-94
+src\quote_provider.py            121     17    86%   57-60, 80, 82, 97-98, 113, 130-133, 138, 186, 229-230
+src\quote_repository.py           37      0   100%
+src\service_runner.py             34     27    21%   10-42, 46
+------------------------------------------------------------
+TOTAL                            487     99    80%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+Required test coverage of 60% reached. Total coverage: 79.67%
+============================= 72 passed in 12.02s =============================

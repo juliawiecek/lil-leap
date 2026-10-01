@@ -1,0 +1,17 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "docs:openapi"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T20:45:53.815059+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "5977f9875ac79be5b74f11861e7c2d426653df867d6241a114767fcf3624f137",
+  "output": "docs/review/runs/auth-openapi.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:45:59.549891+00:00"
+}

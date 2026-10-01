@@ -8,9 +8,9 @@ use `coverage/lcov.info` and `coverage/coverage-summary.json` in reporting tools
 The c8 configuration includes all `src/**/*.ts` files, including untested files
 at zero coverage, and excludes declaration files. Tests and dependencies are
 outside that scope. Inline source maps map compiled components back to TypeScript.
-Reports are generated locally and ignored by Git. Each file must reach at least
-1% in every metric so completely untested files fail the coverage command. This
-is a guard against zero coverage, not a claim that 1% is adequate coverage.
+Reports are generated locally and ignored by Git. Each component must reach at least
+60% overall in every metric. All production TypeScript files remain in scope,
+including files with zero coverage. Per-file results remain visible in the reports.
 
 - `dashboard.test.mjs`: navigation, dates, intersecting filters, metrics,
   investigation search, client details, role-based navigation, reset, and all

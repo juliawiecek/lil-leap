@@ -1,0 +1,16 @@
+{
+  "command": [
+    "npm",
+    "install"
+  ],
+  "cwd": "auth",
+  "started_utc": "2026-10-01T20:45:51.624122+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "907ff25cf66af52de9ab76798492da8193cd6dc4ae802a540e1237eb65fed700",
+  "output": "docs/review/runs/auth-yaml-security-fix.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:45:53.706661+00:00"
+}

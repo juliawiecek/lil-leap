@@ -3,7 +3,8 @@ import { DataSource } from 'typeorm';
 
 /**
  * Encrypts/decrypts SSNs via Postgres pgcrypto (`pgp_sym_encrypt`/`_decrypt`)
- * so plaintext never passes through application memory or logs. The key
+ * for encrypted storage. Plaintext necessarily passes through request/application
+ * memory; it must never be logged. SQL parameters keep it out of SQL text. The key
  * (`NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY`) must match NextTrade backend's,
  * since both read and write the same encrypted column.
  */

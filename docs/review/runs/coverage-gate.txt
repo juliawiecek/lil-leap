@@ -1,0 +1,58 @@
+[
+  {
+    "component": "nextTrade-orders",
+    "covered": 475,
+    "total": 521,
+    "line_percent": 91.17,
+    "pass": true,
+    "report": "nextTrade-orders/target/site/jacoco/jacoco.xml"
+  },
+  {
+    "component": "nextTrade-holdings",
+    "covered": 307,
+    "total": 369,
+    "line_percent": 83.2,
+    "pass": true,
+    "report": "nextTrade-holdings/target/site/jacoco/jacoco.xml"
+  },
+  {
+    "component": "insights",
+    "covered": 87,
+    "total": 112,
+    "line_percent": 77.68,
+    "pass": true,
+    "report": "insights/target/site/jacoco/jacoco.xml"
+  },
+  {
+    "component": "frontend",
+    "covered": 3005,
+    "total": 3055,
+    "line_percent": 98.36,
+    "pass": true,
+    "report": "frontend/coverage/lcov.info"
+  },
+  {
+    "component": "insights-frontend",
+    "covered": 697,
+    "total": 697,
+    "line_percent": 100.0,
+    "pass": true,
+    "report": "insights-frontend/coverage/lcov.info"
+  },
+  {
+    "component": "auth",
+    "covered": 582,
+    "total": 645,
+    "line_percent": 90.23,
+    "pass": true,
+    "report": "auth/coverage/lcov.info"
+  },
+  {
+    "component": "data-pipeline",
+    "covered": 388,
+    "total": 487,
+    "line_percent": 79.67,
+    "pass": true,
+    "report": "data-pipeline/coverage.xml"
+  }
+]

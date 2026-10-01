@@ -1,0 +1,21 @@
+{
+  "command": [
+    "target/po-sprint7/venv/Scripts/python.exe",
+    "-m",
+    "pip_audit",
+    "-r",
+    "data-pipeline/requirements.txt",
+    "--format",
+    "json"
+  ],
+  "cwd": ".",
+  "started_utc": "2026-10-01T20:37:59.118583+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "7ae1c9a1d8e627dc7a78f7bdbcbeeab95db093cb53ed43de6657482662ba1bf9",
+  "output": "docs/review/runs/python-audit.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:38:35.404213+00:00"
+}

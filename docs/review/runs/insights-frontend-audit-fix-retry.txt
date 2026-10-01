@@ -1,0 +1,28 @@
+
+up to date, audited 341 packages in 3s
+
+108 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+piscina  5.0.0 - 5.3.1
+Severity: critical
+piscina: Prototype-pollution gadget in ThreadPool.options allows RCE via execArgv / loadBalancer / env - https://github.com/advisories/GHSA-67c8-pqhq-4rmx
+fix available via `npm audit fix`
+node_modules/piscina
+  @angular/build  20.0.0-next.0 - 22.2.0-rc.0
+  Depends on vulnerable versions of piscina
+  node_modules/@angular/build
+
+2 critical severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+npm warn allow-scripts 4 packages have install scripts not yet covered by allowScripts:
+npm warn allow-scripts   @parcel/watcher@2.6.0 (install: node-gyp rebuild)
+npm warn allow-scripts   esbuild@0.28.2 (install: (install scripts present))
+npm warn allow-scripts   lmdb@3.5.6 (install: node-gyp rebuild)
+npm warn allow-scripts   msgpackr-extract@3.0.4 (install: node-gyp rebuild)
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.

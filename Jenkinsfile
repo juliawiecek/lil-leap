@@ -29,9 +29,7 @@ pipeline {
         script {
           env.COMPOSE_CMD = sh(
             script: '''
-              if command -v docker-compose >/dev/null 2>&1; then
-                echo docker-compose
-              elif docker compose version >/dev/null 2>&1; then
+              if docker compose version >/dev/null 2>&1; then
                 echo "docker compose"
               else
                 echo ""
@@ -41,7 +39,7 @@ pipeline {
           ).trim()
 
           if (!env.COMPOSE_CMD) {
-            error('Neither docker-compose nor docker compose is available on this Jenkins agent.')
+            error('Docker Compose v2 is required on this Jenkins agent.')
           }
 
           echo "Using compose command: ${env.COMPOSE_CMD}"
@@ -63,24 +61,7 @@ pipeline {
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} -f docker-compose.kafka.yml config -q
           bash scripts/test_reporting_replica.sh
-          ${COMPOSE_CMD} -f ${COMPOSE_FILE} config
         '''
-      }
-    }
-
-    stage('Unit Tests - nextTrade-orders') {
-      steps {
-        dir('nextTrade-orders') {
-          sh 'mvn -B -ntp clean verify'
-        }
-      }
-    }
-
-    stage('Unit Tests - nextTrade-holdings') {
-      steps {
-        dir('nextTrade-holdings') {
-          sh 'mvn -B -ntp clean verify'
-        }
       }
     }
 
@@ -89,11 +70,13 @@ pipeline {
         dir('nextTrade-orders') {
           sh '''
             set -eu
-            test_container="nexttrade-orders-tests-${BUILD_NUMBER}"
-            trap 'docker rm -f "$test_container" >/dev/null 2>&1 || true' EXIT
-            docker run -d --name "$test_container" \
+            # Branch and PR jobs can share BUILD_NUMBER and run concurrently.
+            # Let Docker allocate an identity; clean up only this build's container.
+            test_container=
+            trap '[ -z "$test_container" ] || docker rm -f "$test_container" >/dev/null 2>&1 || true' EXIT
+            test_container=$(docker run -d \
               -e POSTGRES_USER=orders_test -e POSTGRES_PASSWORD=ci-test-only \
-              -e POSTGRES_DB=orders_test -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
+              -e POSTGRES_DB=orders_test -p 127.0.0.1::5432 postgres:16-alpine)
             ready=false
             for attempt in $(seq 1 30); do
               if docker exec "$test_container" pg_isready -h 127.0.0.1 -U orders_test >/dev/null 2>&1; then
@@ -106,12 +89,11 @@ pipeline {
             test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
             export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
             export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
-            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest test
+            mvn -B -ntp clean verify
             mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
-              -Dtest=HoldingsSettlementPostgresTest \
-              -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
+                            -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
               -Dtest.holdings.postgres.user=orders_test \
-              -Dtest.holdings.postgres.password=ci-test-only test
+              -Dtest.holdings.postgres.password=ci-test-only clean verify
           '''
         }
       }
@@ -128,7 +110,7 @@ pipeline {
         archiveArtifacts(
           artifacts: 'nextTrade-orders/target/site/jacoco/**',
           fingerprint: true,
-          allowEmptyArchive: true
+          allowEmptyArchive: false
         )
       }
     }
@@ -138,7 +120,7 @@ pipeline {
         archiveArtifacts(
           artifacts: 'nextTrade-holdings/target/site/jacoco/**',
           fingerprint: true,
-          allowEmptyArchive: true
+          allowEmptyArchive: false
         )
       }
     }
@@ -158,7 +140,7 @@ pipeline {
             --cov=src \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
-            --cov-report=xml:coverage.xml'
+            --cov-report=xml:coverage.xml --cov-fail-under=60 --junitxml=test-results.xml'
             '''
           }
         }
@@ -173,10 +155,54 @@ pipeline {
     }
 
 
+    stage('Angular and Identity Tests / Builds / Audits') {
+      steps {
+        sh '''
+          set -eu
+          for component in frontend insights-frontend auth; do
+            docker run --rm --user "$(id -u):$(id -g)" \
+              -e npm_config_cache=/tmp/npm-cache \
+              -v "$WORKSPACE/$component:/app" -w /app node:24-bookworm \
+              sh -ec 'npm ci
+                if [ -f .c8rc.json ]; then npm run test:coverage; else npm run test:cov -- --runInBand; fi
+                npm run build
+                npm audit --audit-level=low'
+          done
+        '''
+      }
+    }
+
+    stage('Strict Documentation and Coverage') {
+      steps {
+        sh '''
+          python3 scripts/generate_javadocs.py
+          python3 scripts/check_coverage.py
+        '''
+        archiveArtifacts artifacts: 'docs/javadoc/**,insights/target/site/jacoco/**,frontend/coverage/**,insights-frontend/coverage/**,auth/coverage/**', fingerprint: true
+      }
+    }
+
     stage('Build Compose Services') {
       steps {
         sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
       }
+    }
+    stage('Live Cross-Service Integration') {
+      steps {
+        sh '''
+          set -eu
+          export COMPOSE_PROJECT_NAME="po-$(printf '%s' "$BUILD_TAG" | tr '[:upper:]_' '[:lower:]-')"
+          trap 'docker compose down --remove-orphans' EXIT
+          bash scripts/auth-integration-test.sh --no-build
+          docker compose ps
+          docker ps
+        '''
+      }
+    }
+  }
+  post {
+    always {
+      junit testResults: '**/target/surefire-reports/TEST-*.xml,data-pipeline/test-results.xml', allowEmptyResults: false
     }
   }
 }

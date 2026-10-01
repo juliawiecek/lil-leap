@@ -1,0 +1,18 @@
+{
+  "command": [
+    "python",
+    "scripts/test_gateway.py",
+    "--nginx",
+    "C:/Users/Administrator/lil-leap/target/po-sprint7/nginx/nginx-1.31.6/nginx.exe"
+  ],
+  "cwd": ".",
+  "started_utc": "2026-10-01T20:39:30.132676+00:00",
+  "git_head": "31dc64920fa2349f0cff3895eb9af7c987d9e7a8",
+  "source_sha256": "dbca7aa10c690481fe4aa5005109177feb1af4fe2bff7910f89cc292ee7b904d",
+  "output": "docs/review/runs/gateway.txt",
+  "environment_keys": [
+    "JAVA_HOME"
+  ],
+  "exit_code": 0,
+  "finished_utc": "2026-10-01T20:39:33.745066+00:00"
+}
