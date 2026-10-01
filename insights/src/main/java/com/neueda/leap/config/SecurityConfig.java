@@ -27,6 +27,8 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
  * <p>Provides the password encoder used to securely hash user passwords,
  * and the HTTP security filter chain that enforces stateless JWT-based
  * authentication on every route except registration and login.</p>
+ *
+ * <p>OpenAPI/Swagger documentation endpoints are publicly accessible without authentication.</p>
  */
 @Configuration
 @EnableMethodSecurity
@@ -82,11 +84,13 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
                         .frameOptions(frame -> frame.deny())
-                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'none'"))
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
                         .permissionsPolicy(permissions -> permissions.policy("camera=(), microphone=(), geolocation=()")))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // OpenAPI/Swagger UI endpoints and resources - publicly accessible
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/orders").access(AuthorizationManagers.allOf(
                                 AuthenticatedAuthorizationManager.authenticated(),
                                 AuthorityAuthorizationManager.hasRole("TRADER"),

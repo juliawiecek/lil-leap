@@ -111,7 +111,7 @@ class HoldingsEndpointsTest {
     @Test
     void anotherOrUnknownClientIsDenied() throws Exception {
         for (UUID id : new UUID[]{stranger, UUID.randomUUID()}) {
-            mvc.perform(get("/clients/{id}/holdings", id).header("Authorization", bearer))
+            mvc.perform(get("/api/v1/clients/{id}/holdings", id).header("Authorization", bearer))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$[*].accountId").doesNotExist());
         }
@@ -155,6 +155,6 @@ class HoldingsEndpointsTest {
     }
 
     private String[] routes() {
-        return new String[]{"/holdings", "/clients/" + owner + "/holdings"};
+        return new String[]{"/api/v1/holdings", "/api/v1/clients/" + owner + "/holdings"};
     }
 }
