@@ -141,7 +141,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    <!-- @{argLine} keeps the JaCoCo agent that prepare-agent adds; without it orders reports no coverage -->
+                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
                 </configuration>
             </plugin>
             <plugin>
