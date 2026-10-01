@@ -4,7 +4,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 🚀 Getting Started (START HERE)
+## Getting Started (START HERE)
 
 **New team members or running the project locally?**
 
@@ -18,7 +18,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 📊 Test Coverage & Quality
+## Test Coverage & Quality
 
 **View test execution reports:**
 
@@ -30,7 +30,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 🛠️ Operations & Database
+## Operations & Database
 
 **Database setup, schema details, and production hardening:**
 
@@ -56,7 +56,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 🏗️ Architecture & Design
+## Architecture & Design
 
 **System design, decisions, and documentation:**
 
@@ -71,7 +71,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## � Release & Deployment
+## Release & Deployment
 
 **Runner scripts and release documentation:**
 
@@ -82,7 +82,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## �📋 Sprint Planning & Stories
+## Sprint Planning & Stories
 
 **Sprint boards and story tracking:**
 
@@ -92,7 +92,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 📁 Quick Directory Reference
+## Quick Directory Reference
 
 | Folder | Purpose |
 |--------|---------|
@@ -109,7 +109,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 🔗 External References
+## External References
 
 - Project: NextTrade (lil-leap platform)
 - Repository: GitHub (private)
