@@ -20,12 +20,12 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
 2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
-3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - View 79.67% Python & 77.79% Java coverage
+3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - Java and Python coverage reports
 
 **All systems running?** Access the apps:
-- Frontend: http://localhost:4200
-- Backend: http://localhost:8080
-- Reporting: http://localhost:4201
+- NextTrade: http://localhost:4200
+- Insights (reporting): http://localhost:4201
+- API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
 ## Project Structure
 
@@ -40,6 +40,7 @@ lil-leap/
 |- frontend/             # Angular: NextTrade trading app (nginx, :4200)
 |- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
 |- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
+|- kafka/                # Kafka broker image and topic setup
 |- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
 |- docs/                 # architecture/ (ADRs), stories/, generated javadoc/
 |- InitialSetup/         # Jenkins setup guide
@@ -93,6 +94,7 @@ restricted `app_user` role; the schema is owned by the admin role.
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data, password reset (email via mailpit). |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the `orders-events`, `holdings-events` and `insights-events` topics are created on startup. See [kafka/README.md](kafka/README.md). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 | `mailpit` | mailpit | 1025, 8025 | Captures outgoing email in development. |
 
@@ -127,6 +129,7 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
 | Frontend       | Angular 22 + TypeScript                 | Two standalone Angular apps                     |
 | Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
+| Messaging      | Apache Kafka + ZooKeeper                | Event streaming between services                |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
 ## Backend API
@@ -173,7 +176,7 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines nine services:
+`docker-compose.yml` defines twelve services:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
@@ -186,6 +189,9 @@ DML permissions. These are development-only credentials — see
 | `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | nginx: serves the Insights app, proxies to `auth`, `insights` |
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `mailpit`            | `axllent/mailpit`  | `1025` (SMTP), `8025` (web UI)| Captures password-reset emails in dev    |
+| `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
+| `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
+| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the topics once `kafka` is healthy |
 
 Important runtime behavior:
 
