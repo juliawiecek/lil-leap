@@ -33,8 +33,8 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 lil-leap/
 |- auth/                 # NestJS Identity Service: register, login, refresh/logout,
 |                        #   server-assigned trader tier, OpenAPI spec (openapi.json)
-|- nextTrade-orders/     # Spring Boot: fill-or-reject order execution engine
-|- nextTrade-holdings/   # Spring Boot: holdings service (still the shared starter codebase)
+|- nextTrade-orders/     # Spring Boot: order submission, execution, settlement, history, cash
+|- nextTrade-holdings/   # Spring Boot: holdings service
 |- insights/             # Spring Boot: portfolio, order submission, instruments,
 |                        #   market data, password reset
 |- frontend/             # Angular: NextTrade trading app (nginx, :4200)
@@ -89,8 +89,8 @@ restricted `app_user` role; the schema is owned by the admin role.
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
 | `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
-| `orders` | Spring Boot 3.3.4 | 8082 | Scheduled fill-or-reject execution of due orders. |
-| `holdings` | Spring Boot 3.3.4 | 8083 | Placeholder: same starter codebase as `orders`, no holdings logic yet. |
+| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances. |
+| `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data, password reset (email via mailpit). |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
@@ -178,8 +178,8 @@ DML permissions. These are development-only credentials — see
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
 | `db`                 | `postgres:16-alpine`| `5432`                        | Runs schema/seed scripts once, on an empty volume; has a `pg_isready` healthcheck |
-| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Order execution engine; `frontend` proxies `/api/orders/*` and `/api/*` here |
-| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service (starter code only); `frontend` proxies `/api/holdings/*` here |
+| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Orders service; `frontend` proxies `/api/orders/*` and `/api/*` here |
+| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service; `frontend` proxies `/api/holdings/*` here |
 | `insights`           | `./insights`       | `8081` -> `8080`              | Reporting service (see [Architecture](#architecture)) |
 | `auth`               | `./auth`           | none (`3000` internal)        | Identity Service; reached only via the frontends' nginx (`/auth/*`, `/rules/*`) |
 | `frontend`           | `./frontend`       | `4200` -> `80`                | nginx: serves the NextTrade app, proxies to `auth`, `orders`, `holdings` |
@@ -256,8 +256,8 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-Swap `nextTrade-orders` for `nextTrade-holdings` to run the other service —
-they're identical today, so either one works. Both default to
+Swap `nextTrade-orders` for `nextTrade-holdings` to run the holdings service
+instead. Both default to
 `http://localhost:8080` when run this way, so **don't run them side by side
 outside Docker** without overriding `server.port` on one of them; Docker
 Compose keeps them apart on host ports `8082` and `8083`.
@@ -309,7 +309,7 @@ cd nextTrade-orders
 mvn clean test
 ```
 
-Same command from `nextTrade-holdings` runs its (currently identical) test suite.
+Same command from `nextTrade-holdings` runs its tests.
 
 ### insights
 
