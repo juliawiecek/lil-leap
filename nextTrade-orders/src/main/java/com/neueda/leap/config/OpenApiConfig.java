@@ -35,7 +35,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("NextTrade Orders API")
-                        .description("Order submission, order history, and cash balance endpoints. "
+                        .description("Validated, idempotent order submission. "
                                 + "Also runs the scheduled fill-or-reject execution engine (not exposed over HTTP).")
                         .version("v1"))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME))

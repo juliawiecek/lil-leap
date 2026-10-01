@@ -5,9 +5,9 @@ from the latest run. Each command runs the service's full test suite and writes 
 report; open its `index.html` in a browser and click through to a file to see covered lines
 in green and missed lines in red.
 
-## Latest figures
+## Historical figures before service consolidation
 
-From local runs on 2026-10-01, with every test passing.
+These incoming measurements describe the earlier service layout on 2026-10-01. They are not current NEXT-193 coverage claims. Regenerate reports with the commands below; opt-in PostgreSQL tests need their database settings to avoid skips.
 
 | Service | Tool | Tests | Lines | Branches |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@ Run each command from the repository root.
 
 ### Spring Boot services (JaCoCo)
 
-Requires JDK 21 and Maven 3.9+. JaCoCo's report runs in Maven's `verify` phase, so
+Requires JDK 17 or newer and Maven 3.9+ (CI uses JDK 21). JaCoCo's report runs in Maven's `verify` phase, so
 `mvn test` alone does not produce it. The Spring Boot reports also show instruction and
 method coverage per package and class. Jenkins archives the orders and holdings reports on
 every build.

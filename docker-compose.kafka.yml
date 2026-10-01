@@ -1,0 +1,33 @@
+# Optional development broker; application event integration is not implemented.
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+  kafka:
+    build: ./kafka
+    depends_on: [zookeeper]
+    ports: ["127.0.0.1:29092:29092"]
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+  kafka-topics:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      kafka: {condition: service_healthy}
+    entrypoint: ["bash", "/scripts/create-topics.sh"]
+    volumes:
+      - ./kafka/topics/create-topics.sh:/scripts/create-topics.sh:ro
+volumes:
+  kafka_data:
+  zookeeper_data:
+  zookeeper_log:

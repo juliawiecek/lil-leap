@@ -3,7 +3,7 @@
  * The user id comes from the access token's subject, so callers never pass one.
  */
 
-/** One order as returned by the orders service. Fill fields are null until the order fills. */
+/** One order as returned by the Holdings service. Fill fields are null until the order fills. */
 export interface OrderHistoryRow {
   orderId: string;
   symbol: string;
@@ -36,7 +36,7 @@ export class OrderHistoryClient {
   constructor(
     tokens: AccessTokenSource,
     fetchImpl: typeof fetch = (input, init) => fetch(input, init),
-    baseUrl = '/api/orders',
+    baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
     this.#fetch = fetchImpl;

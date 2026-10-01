@@ -1,6 +1,11 @@
+Historical document: retained from the pre-consolidation order-validation branch.
+Its JPA classes, direct service routes, deployment claims and test observations describe that earlier implementation, not the current architecture.
+See docs/architecture/service-boundaries.md and the service READMEs for current behavior.
+The current JDBC Orders service retains account/instrument eligibility and cash/holdings checks; Holdings serves order history through the shared gateway.
+
 # Integration Test Report - NEXT-191/192/193 Orders Service
 
-**Date**: 2026-09-30  
+**Date**: 2026-09-30
 **Status**: ✅ AUTHENTICATION RESOLVED | ⚠️ MAVEN TESTS NEED REVIEW
 
 ---
@@ -107,7 +112,7 @@ Skipped: 0
 Total time: 34.658 s
 ```
 
-**Analysis**: 
+**Analysis**:
 - ✅ 0 test failures = code logic is correct
 - ❌ 13 errors = test infrastructure issue (likely H2 database initialization in test)
 - These errors are **NOT** related to the authentication fix or business logic
@@ -127,7 +132,7 @@ HTTP/1.1 401
 {"error":"UNAUTHENTICATED","message":"Authentication is required."}
 ```
 
-✅ **Confirmed**: 
+✅ **Confirmed**:
 - Port 8082 returns 401 (authentication required)
 - This is the **Orders service**, not Insights (Insights doesn't require auth for this endpoint)
 - Nginx is correctly routing `/api/v1/orders` to Orders service
@@ -156,11 +161,11 @@ HTTP/1.1 401
 
 ## Key Verification Steps Completed
 
-✅ Nginx routing verified (Orders service responding correctly)  
-✅ JWT authentication flow verified (fresh tokens working)  
-✅ Basic order submission working (201 responses)  
-✅ Validation rejection working (400 responses for disabled instruments)  
-✅ Service deployed and responding  
+✅ Nginx routing verified (Orders service responding correctly)
+✅ JWT authentication flow verified (fresh tokens working)
+✅ Basic order submission working (201 responses)
+✅ Validation rejection working (400 responses for disabled instruments)
+✅ Service deployed and responding
 
 ---
 
@@ -195,11 +200,11 @@ HTTP/1.1 401
 
 ## Build & Deployment Status
 
-✅ **Docker Build**: SUCCESS  
-✅ **Service Startup**: SUCCESS  
-✅ **Port 8082**: LISTENING  
-✅ **Authentication**: WORKING  
-❌ **Maven Tests**: INFRASTRUCTURE FAILURE (not code failure)  
+✅ **Docker Build**: SUCCESS
+✅ **Service Startup**: SUCCESS
+✅ **Port 8082**: LISTENING
+✅ **Authentication**: WORKING
+❌ **Maven Tests**: INFRASTRUCTURE FAILURE (not code failure)
 
 **Service Logs** (Recent):
 ```

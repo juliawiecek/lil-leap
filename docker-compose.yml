@@ -1,198 +1,62 @@
+# Diagram ports: Holdings 8080, Identity 8081, Orders 8082, Quotes 8083, Insights 8084.
+# Services stay internal; the gateway serves both clients on 4200/4201.
+x-primary-database: &primary-database
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: nexttrade
+  DB_APP_USERNAME: app_user
+  DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
+x-jwt: &jwt
+  APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
+
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    healthcheck:
-      test: ["CMD-SHELL", "cub zk-ready localhost:2181 30 >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 10s
-      retries: 12
-      start_period: 20s
-
-  kafka:
-    build: ./kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    healthcheck:
-      test: ["CMD-SHELL", "cub kafka-ready -b localhost:9092 1 20 >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 10s
-      retries: 12
-      start_period: 20s
-
-  kafka-topics:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      kafka:
-        condition: service_healthy
-    entrypoint: /bin/bash
-    command: /opt/create-topics.sh
+  gateway:
+    image: nginx:1.27-alpine
+    ports: ["4200:4200", "4201:4201"]
     volumes:
-      - ./kafka/topics/create-topics.sh:/opt/create-topics.sh:ro
-    environment:
-      KAFKA_BROKERS: kafka:9092
-
-  orders:
-    build: ./nextTrade-orders
-    # No ports: mapping — the orders service is intentionally unreachable from the
-    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `orders` unless a ports: entry is added.
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
-      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-      # db/init-app-role.sh. It is separate from "main", which owns the schema
-      # and runs migrations.
-      SPRING_DATASOURCE_USERNAME: app_user
-      SPRING_DATASOURCE_PASSWORD: my_app_password
-      # JWT secret shared with auth service for token validation
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
-    ports:
-      - "8082:8080"
-
-  holdings:
-    build: ./nextTrade-holdings
-    # No ports: mapping — the holdings service is intentionally unreachable from the
-    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `holdings` unless a ports: entry is added.
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
-      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-      # db/init-app-role.sh. It is separate from "main", which owns the schema
-      # and runs migrations.
-      SPRING_DATASOURCE_USERNAME: app_user
-      SPRING_DATASOURCE_PASSWORD: my_app_password
-      # JWT secret shared with auth service for token validation
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
-    ports:
-      - "8083:8080"
-
-  insights:
-    build: ./insights
-    # No ports: mapping — the insights service is intentionally unreachable from the
-    # host. It can reach `db` by the service name "db" (Docker bridge DNS),
-    # but nothing outside Docker can reach `insights` unless a ports: entry is added.
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/nexttrade
-      # app_user is a restricted role (DML only, no CREATE/DROP/ALTER) — see
-      # db/init-app-role.sh. It is separate from "main", which owns the schema
-      # and runs migrations.
-      SPRING_DATASOURCE_USERNAME: app_user
-      SPRING_DATASOURCE_PASSWORD: my_app_password
-      # JWT secret shared with auth service for token validation
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
-    ports:
-      - "8081:8080"
-
-  auth:
-    build: ./auth
-    # No ports: mapping -- browsers reach auth only through the frontends' nginx
-    # (/auth/ -> http://auth:3000), so requests stay same-origin and need no CORS.
-    # TLS terminates at nginx, so TLS_KEYSTORE is unset and auth serves plaintext
-    # on the internal network.
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      # JWT secret shared with all backend services for token validation
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
-      DB_HOST: db
-      DB_PORT: "5432"
-      DB_NAME: nexttrade
-      DB_APP_USERNAME: app_user
-      DB_APP_PASSWORD: my_app_password
-      # Same secret in auth (signs) and orders/holdings/insights (verify) -- tokens are checked locally.
-      # The Java services need at least 32 bytes.
-
-      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
-      # BR-03: sessions end after this many idle minutes; access tokens never last longer.
-      SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./gateway/proxy-headers.conf:/etc/nginx/routes/proxy-headers.conf:ro
+      - ./gateway/http-trading.conf:/etc/nginx/listeners/trading.conf:ro
+      - ./gateway/http-reporting.conf:/etc/nginx/listeners/reporting.conf:ro
+    depends_on: [frontend, insights-frontend, auth, holdings, orders, quote-service, insights]
 
   frontend:
     build: ./frontend
-    depends_on:
-      - orders
-      - holdings
-      - auth
-    ports:
-      - "4200:80"
-    environment:
-      API_BASE_URL: http://orders:8080
-
   insights-frontend:
     build: ./insights-frontend
-    depends_on:
-      - insights
-      - auth
-    ports:
-      - "4201:80"
-    environment:
-      API_BASE_URL: http://insights:8080
 
-  db:
-    image: postgres:16-alpine
+  auth:
+    build: ./auth
     environment:
-      POSTGRES_DB: nexttrade
-      POSTGRES_USER: main
-      POSTGRES_PASSWORD: main_password
-      DB_APP_USERNAME: app_user
-      DB_APP_PASSWORD: my_app_password
-    healthcheck:
-      # TCP on purpose: during first-run init Postgres listens only on a local socket,
-      # so this stays unhealthy until the schema and app role are in place.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      # Only db is reachable from the host. Backend services use the internal
-      # Docker network and do not need direct host exposure to reach Postgres.
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-      # Numeric prefixes control init order: schema first, then the
-      # restricted app role. Both only run once, against an empty volume.
-      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
-      - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
+      <<: [*primary-database, *jwt]
+      PORT: 8081
+      SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
+      SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
+    depends_on:
+      db: {condition: service_healthy}
+
+  holdings:
+    build: ./nextTrade-holdings
+    environment:
+      <<: [*primary-database, *jwt]
+      PORT: 8080
+    depends_on:
+      db: {condition: service_healthy}
+
+  orders:
+    build: ./nextTrade-orders
+    environment:
+      <<: [*primary-database, *jwt]
+      PORT: 8082
+    depends_on:
+      db: {condition: service_healthy}
 
   quote-service:
     build: ./data-pipeline
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: nexttrade
-      DB_APP_USERNAME: app_user
-      DB_APP_PASSWORD: my_app_password
+      <<: *primary-database
+      PORT: 8083
       QUOTE_PROVIDER: postgres
       QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-5}
       QUOTE_PERIODS: ${QUOTE_PERIODS:-10}
@@ -200,24 +64,64 @@ services:
       QUOTE_RETENTION_DAYS: ${QUOTE_RETENTION_DAYS:-0}
       QUOTE_INGEST_CONTINUOUS: "true"
     command: ["python", "-m", "src.service_runner"]
-    ports:
-      - "${QUOTE_SERVICE_PORT:-8084}:8080"
+    depends_on:
+      db: {condition: service_healthy}
     restart: unless-stopped
 
-  # Local SMTP server used to capture password reset emails during development.
-  mailpit:
-    image: axllent/mailpit
-    ports:
-      # Spring Boot sends email through SMTP on port 1025.
-      - "1025:1025"
-      # Mailpit's browser inbox is available on port 8025.
-      - "8025:8025"
-secrets:
-  backend_tls_keystore:
-    file: ${TLS_KEYSTORE_PATH:-./certs/backend.p12}
+  insights:
+    build: ./insights
+    environment:
+      <<: *jwt
+      PORT: 8084
+      REPORTING_DB_HOST: reporting-db
+      REPORTING_DB_USERNAME: reporting_user
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+    depends_on:
+      reporting-db: {condition: service_healthy}
+
+  db:
+    image: postgres:16-alpine
+    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10", "-c", "max_slot_wal_keep_size=1GB"]
+    environment:
+      POSTGRES_DB: nexttrade
+      POSTGRES_USER: main
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-main_password}
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
+      - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
+      - ./db/init-reporting.sh:/docker-entrypoint-initdb.d/04-reporting.sh:ro
+
+  reporting-db:
+    image: postgres:16-alpine
+    entrypoint: ["bash", "/usr/local/bin/start-reporting-replica.sh"]
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      PRIMARY_DB_HOST: db
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=\"$$REPORTING_DB_PASSWORD\" psql -h 127.0.0.1 -U reporting_user -d nexttrade -tAc 'SELECT pg_is_in_recovery()' | grep -qx t"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - reporting_data:/var/lib/postgresql/data
+      - ./db/start-reporting-replica.sh:/usr/local/bin/start-reporting-replica.sh:ro
 
 volumes:
   db_data:
-    # Named volume: persists Postgres data across `docker compose down` and
-    # `docker compose up`. Use `docker compose down -v` to also remove this
-    # volume, which wipes the database and starts fresh on the next `up`.
+  reporting_data:

@@ -31,7 +31,7 @@ npm ci
 npm start
 ```
 
-Open **http://localhost:4200** after the build finishes.
+Open **http://localhost:4300** after the build finishes.
 Keep the terminal open. Press **Ctrl+C** to stop the app.
 On later runs, run `npm start` from `frontend`.
 Run `npm ci` again if you pull changes to `package-lock.json`.
@@ -39,9 +39,9 @@ Run `npm ci` again if you pull changes to `package-lock.json`.
 ### Signing in (auth service)
 
 Sign up, sign in, and sign out call the auth service at relative `/auth/...`
-paths. `npm start` forwards them to `http://localhost:3000` through
-`proxy.conf.json`, so run the auth service locally first (see
-`../auth/README.md`). In Docker, nginx proxies `/auth/` the same way. Both keep
+paths. Start the stack from the repository root with `docker compose up --build -d gateway`.
+`npm start` forwards API requests to the shared gateway at `http://localhost:4200`
+through `proxy.conf.json`. In Docker, the shared gateway routes `/auth/` to Identity. Both keep
 requests same-origin, so no CORS setup is needed. Never call the auth
 service by absolute URL.
 
@@ -56,7 +56,7 @@ BR-03 — keep `SESSION_INACTIVITY_MINUTES` there in step with the auth service)
 - **Connection refused:** check that `npm start` is still running.
 - **Port already in use:** stop the previous server with **Ctrl+C**.
 
-For backend startup, follow the [orders backend setup guide](../nextTrade-orders/README.md#local-development).
+For backend startup, follow the [setup guide](../docs/GETTING_STARTED.md).
 
 ## Production build
 
@@ -68,17 +68,17 @@ The compiled site is written to `dist/nexttrade-angular/browser`.
 
 ## Run with Docker
 
-The repository `docker-compose.yml` already defines a `frontend` service that builds from `./frontend`
-and publishes the container on `http://localhost:4200`.
+The shared gateway publishes the trading client at `http://localhost:4200`:
 
 ```bash
-docker compose up --build frontend
+docker compose up --build -d gateway
 ```
 
-The container serves the production build with Nginx on port `80`, and Docker maps that to host port `4200`.
-Requests sent by the browser to `/api/...` are reverse proxied by Nginx to the `orders` service on the internal Docker Compose network.
-Requests sent to `/api/holdings/...` are reverse proxied to the `holdings` service, with the `/api/holdings/` prefix stripped before forwarding.
-This lets the Angular app use same-origin relative paths instead of calling service hostnames directly from the browser.
+The frontend container serves static files on internal port 80. The gateway routes
+authentication to Identity, portfolio and instrument reads to Holdings, order
+submission to Orders, and quote requests to Quotes. `GET /api/v1/orders` belongs
+to Holdings; `POST /api/v1/orders` belongs to Orders. Paths are preserved.
+See the [route table](../docs/architecture/service-boundaries.md#gateway-routes).
 
 ## Main files
 
@@ -86,7 +86,7 @@ This lets the Angular app use same-origin relative paths instead of calling serv
 - `src/app/app.scss`: visual design and animations
 - `src/app/app.ts`: Angular state, interactions, and chart rendering
 
-The current authentication controls are front-end placeholders. They do not send credentials or connect to a brokerage backend yet.
+Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load real order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order tickets and other trading views still use local sample data and simulated interactions; live submission, quote and portfolio integration remains separate work.
 
 ## Error logging
 

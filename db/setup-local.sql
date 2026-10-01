@@ -1,4 +1,5 @@
--- Native PostgreSQL development setup, matching docker-compose.yml.
+-- Native primary-only development setup. This does not provision the reporting
+-- role/replica from Compose; see docs/DATABASE_SETUP.md for the complete topology.
 -- Run as the local PostgreSQL administrator, connected to the postgres database:
 -- psql -h localhost -p 5432 -U postgres -d postgres -f db/setup-local.sql
 \set ON_ERROR_STOP on
@@ -31,6 +32,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
     password_reset_tokens, sessions, instruments, quotes, accounts, orders,
     fills, order_status_history, holdings, holding_movements,
     cash_balances, cash_transactions TO app_user;
+GRANT SELECT ON cash_holds TO app_user;
 GRANT SELECT ON v_account_cash, v_account_holdings, v_latest_quotes,
     v_active_sessions, v_trader_tier_eligibility TO app_user;
 GRANT SELECT, INSERT ON audit_log TO app_user;

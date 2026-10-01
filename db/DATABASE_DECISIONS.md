@@ -1,5 +1,10 @@
 # NextTrade Database Decisions
 
+Current deployment and role configuration is documented in the [database reference](README.md)
+and [NEXT-193 service boundaries](../docs/architecture/service-boundaries.md).
+The ledger design below describes intent; `v_account_holdings` average cost after
+sells remains a known limitation. Holdings reads the correctly maintained cache.
+
 ## Core Architectural Decisions
 
 ### Transactional System of Record
@@ -13,7 +18,7 @@
 - Maturit and widespread adoption in fintech
 
 **Trade-offs**: 
-- No native horizontal scaling (can add read replicas and sharding layers later)
+- The reporting read replica is implemented; primary write scaling/sharding remains separate work
 - Schema migrations require downtime if not carefully versioned
 
 ---
@@ -22,18 +27,19 @@
 
 ### Development (Isolated Per Developer)
 
-**Decision**: Each developer runs a complete, isolated PostgreSQL instance using Docker Compose with a shared schema and version-controlled initialization scripts.
+**Decision**: Each developer runs an isolated PostgreSQL primary and reporting standby using Docker Compose with a shared schema and version-controlled initialization scripts.
 
 **How It Works**:
 - Docker Compose starts a `db` service with a named volume (`db_data`)
-- On first run, `01-schema.sql` and `02-app-role.sh` are executed
+- On first run, the schema, application-role script, equity seed and reporting-role script are executed
+- `reporting-db` uses its own volume and follows the primary via physical streaming replication
 - Volume persists across `docker compose down` (no `-v` flag)
 - Developers can safely test schema changes and migrations
 
 **Benefits**:
 - Schema consistency across all dev environments
 - No shared database contention
-- Easy reset: `docker compose down -v`
+- Disposable environments can be intentionally reset with `docker compose down -v` (deletes both database volumes); existing databases use migrations
 - Close simulation of production initialization
 
 ---
@@ -294,7 +300,8 @@ VALUES (account_123, instr_456, '550e8400-e29b-41d4-a716-446655440000', 'BUY', 1
 ```sql
 -- Admin role can do everything
 -- Application role can do only SELECT, INSERT, UPDATE, DELETE
--- Future: could add SELECT-only role for read replicas
+-- reporting_user has SELECT-only access to an explicit financial-table allowlist
+-- replicator owns physical replication authentication
 ```
 
 **Benefit**: If application is compromised, attacker cannot:

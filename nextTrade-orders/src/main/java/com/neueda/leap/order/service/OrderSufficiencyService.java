@@ -1,22 +1,19 @@
 package com.neueda.leap.order.service;
 
-import com.neueda.leap.order.dto.SubmitOrderRequest;
-import com.neueda.leap.order.exception.OrderSufficiencyException;
-import com.neueda.leap.order.model.Quote;
-import com.neueda.leap.order.repository.OrderSufficiencyRepository;
-import com.neueda.leap.order.repository.QuoteRepository;
+import com.neueda.leap.marketdata.QuoteRepository;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.repository.OrderSufficiencyRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
 
-import static com.neueda.leap.order.exception.OrderSufficiencyException.Reason.*;
+import static com.neueda.leap.order.service.OrderSufficiencyException.Reason.*;
 
 /**
- * Validates order sufficiency: verifies cash for BUY and holdings for SELL.
- * Uses the latest durable PostgreSQL ask price for BUY cost estimation.
- * Applies execution buffer from account profile or order override.
+ * Checks current resources before submission. This check neither reserves nor settles
+ * funds or shares; a later acceptance/execution step must recheck and reserve atomically.
  */
 @Service
 public class OrderSufficiencyService {
@@ -24,10 +21,9 @@ public class OrderSufficiencyService {
     private final QuoteRepository quotes;
 
     /**
-     * Creates the sufficiency validator.
-     *
-     * @param balances cash and holdings repository
-     * @param quotes quote repository for latest prices
+     * Creates the sufficiency rule checker.
+     * @param balances account-scoped cash, holdings and buffer queries
+     * @param quotes server-side market quotes
      */
     public OrderSufficiencyService(OrderSufficiencyRepository balances, QuoteRepository quotes) {
         this.balances = balances;
@@ -35,66 +31,44 @@ public class OrderSufficiencyService {
     }
 
     /**
-     * Validates that an order has sufficient cash (BUY) or holdings (SELL).
+     * Requires cash for a BUY or owned units for a SELL. Buying power is the latest
+     * ask times quantity times (1 + buffer / 100), rounded up to USD cents once.
+     * The order override takes precedence over the account's buffer, including zero.
      *
-     * @param request the order request
-     * @param instrumentId the resolved instrument identifier
-     * @throws OrderSufficiencyException if cash or holdings are insufficient, or quote is unavailable
+     * @param request validated request for an account already authorized by the caller
+     * @param instrumentId resolved tradable instrument
+     * @throws OrderSufficiencyException if resources or a usable buy quote are missing
+     * @throws IllegalArgumentException if the quantity, side or buffer is invalid
      */
     public void validate(SubmitOrderRequest request, UUID instrumentId) {
-        if ("BUY".equalsIgnoreCase(request.side())) {
-            // For nextTrade-orders, bufferPercent is not in the request; always use account default
-            validateBuySufficiency(request.accountId(), request.quantity(), instrumentId, null);
-        } else if ("SELL".equalsIgnoreCase(request.side())) {
-            validateSellSufficiency(request.accountId(), request.quantity(), instrumentId);
+        if (request.quantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero");
+        }
+        switch (request.normalizedSide()) {
+            case "BUY" -> validateBuy(request, instrumentId);
+            case "SELL" -> {
+                if (balances.holdingQuantity(request.accountId(), instrumentId) < request.quantity()) {
+                    throw new OrderSufficiencyException(INSUFFICIENT_HOLDINGS);
+                }
+            }
+            default -> throw new IllegalArgumentException("Unsupported order side");
         }
     }
 
-    /**
-     * Validates that the account has sufficient cash for a BUY order.
-     * Uses the latest ask price and applies execution buffer.
-     *
-     * @param accountId account identifier
-     * @param quantity number of shares
-     * @param instrumentId instrument identifier
-     * @param bufferPercent order-specific buffer, or null to use account default
-     * @throws OrderSufficiencyException if cash is insufficient or quote is unavailable
-     */
-    private void validateBuySufficiency(UUID accountId, long quantity, UUID instrumentId,
-                                        BigDecimal bufferPercent) {
-        // Fetch latest quote
-        Quote quote = quotes.findLatestByInstrumentId(instrumentId)
-                .orElseThrow(() -> new OrderSufficiencyException(QUOTE_UNAVAILABLE));
-
-        // Get execution buffer (use order override if provided, else account default)
-        BigDecimal buffer = bufferPercent != null ? bufferPercent
-                : balances.executionBufferPercent(accountId);
-
-        // Calculate required cash: ask × quantity × (1 + buffer%)
-        BigDecimal baseCost = quote.getAsk().multiply(BigDecimal.valueOf(quantity));
-        BigDecimal bufferMultiplier = BigDecimal.ONE.add(buffer.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP));
-        BigDecimal requiredCash = baseCost.multiply(bufferMultiplier)
+    private void validateBuy(SubmitOrderRequest request, UUID instrumentId) {
+        BigDecimal ask = quotes.findLatestByInstrumentId(instrumentId)
+                .filter(quote -> quote.ask() != null && quote.ask().signum() > 0)
+                .orElseThrow(() -> new OrderSufficiencyException(QUOTE_UNAVAILABLE)).ask();
+        BigDecimal buffer = request.bufferPercent() != null ? request.bufferPercent()
+                : balances.executionBufferPercent(request.accountId());
+        if (buffer == null || buffer.signum() < 0) {
+            throw new IllegalArgumentException("A nonnegative execution buffer is required");
+        }
+        BigDecimal requiredCash = ask.multiply(BigDecimal.valueOf(request.quantity()))
+                .multiply(BigDecimal.ONE.add(buffer.movePointLeft(2)))
                 .setScale(2, RoundingMode.CEILING);
-
-        // Check cash balance
-        BigDecimal availableCash = balances.cashBalance(accountId);
-        if (availableCash.compareTo(requiredCash) < 0) {
+        if (balances.cashBalance(request.accountId()).compareTo(requiredCash) < 0) {
             throw new OrderSufficiencyException(INSUFFICIENT_CASH);
-        }
-    }
-
-    /**
-     * Validates that the account has sufficient holdings for a SELL order.
-     *
-     * @param accountId account identifier
-     * @param quantity number of shares
-     * @param instrumentId instrument identifier
-     * @throws OrderSufficiencyException if holdings are insufficient
-     */
-    private void validateSellSufficiency(UUID accountId, long quantity, UUID instrumentId) {
-        long holdingQuantity = balances.holdingQuantity(accountId, instrumentId);
-        if (holdingQuantity < quantity) {
-            throw new OrderSufficiencyException(INSUFFICIENT_HOLDINGS);
         }
     }
 }

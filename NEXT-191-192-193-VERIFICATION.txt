@@ -1,3 +1,8 @@
+Historical document: retained from the pre-consolidation order-validation branch.
+Its JPA classes, direct service routes, deployment claims and test observations describe that earlier implementation, not the current architecture.
+See docs/architecture/service-boundaries.md and the service READMEs for current behavior.
+The current JDBC Orders service retains account/instrument eligibility and cash/holdings checks; Holdings serves order history through the shared gateway.
+
 ================================================================================
 NEXT-191/192/193 ORDER VALIDATION IMPLEMENTATION - VERIFICATION DOCUMENT
 ================================================================================
@@ -18,9 +23,9 @@ CODE SNIPPET:
            "ORDER BY quoted_at DESC, created_at DESC, quote_id DESC LIMIT 1", nativeQuery = true)
     Optional<Quote> findLatestByInstrumentId(@Param("instrumentId") UUID instrumentId);
 
-VERIFICATION: 
+VERIFICATION:
 ✅ Query uses correct schema columns: quoted_at, created_at, quote_id
-✅ Deterministic ordering: Primary DESC by quoted_at (timestamp), secondary DESC by created_at 
+✅ Deterministic ordering: Primary DESC by quoted_at (timestamp), secondary DESC by created_at
    (tie-breaker if multiple quotes at same quoted_at), tertiary DESC by quote_id (UUID tie-breaker)
 ✅ Resolves non-determinism issue where multiple quotes with same timestamp would return unpredictable result
 ✅ Guarantees latest quote is always selected consistently
@@ -52,7 +57,7 @@ CODE SNIPPET (FULL SUBMIT METHOD):
         UUID clientReference = request.clientReference() != null
                 ? request.clientReference()
                 : UUID.randomUUID();
-        
+
         Order order = new Order(UUID.randomUUID(), account, instrument, clientReference,
                 request.side().toUpperCase(Locale.ROOT), request.quantity(), "MARKET", INITIAL_STATUS);
         order.setAcceptedAt(Instant.now());
@@ -223,7 +228,7 @@ CODE SNIPPET:
         UUID clientReference = request.clientReference() != null
                 ? request.clientReference()
                 : UUID.randomUUID();
-        
+
         Order order = new Order(...clientReference...);
 
 VERIFICATION:
@@ -276,7 +281,7 @@ Before running tests, create test data in PostgreSQL:
 
 SQL: Create test account
 INSERT INTO accounts (account_id, user_id, account_number, account_name, account_type, status, trading_enabled, execution_buffer)
-VALUES ('550e8400-e29b-41d4-a716-446655440001'::uuid, '550e8400-e29b-41d4-a716-446655440000'::uuid, 
+VALUES ('550e8400-e29b-41d4-a716-446655440001'::uuid, '550e8400-e29b-41d4-a716-446655440000'::uuid,
         'TEST001', 'Test Account', 'INDIVIDUAL', 'ACTIVE', true, 5.0);
 
 SQL: Create test instrument
@@ -285,7 +290,7 @@ VALUES ('550e8400-e29b-41d4-a716-446655440010'::uuid, 'AAPL', 'NYSE', true, 'EQU
 
 SQL: Create test quote
 INSERT INTO quotes (quote_id, instrument_id, bid, ask, quoted_at, source, is_synthetic)
-VALUES ('550e8400-e29b-41d4-a716-446655440020'::uuid, '550e8400-e29b-41d4-a716-446655440010'::uuid, 
+VALUES ('550e8400-e29b-41d4-a716-446655440020'::uuid, '550e8400-e29b-41d4-a716-446655440010'::uuid,
         150.00, 150.10, NOW(), 'TEST', false);
 
 SQL: Set cash balance
@@ -582,7 +587,7 @@ Expected: 0 rows (NO order created - validation failed at stage 5)
 SCENARIO 11: DUPLICATE CLIENT REFERENCE (IDEMPOTENCY)
 SQL: Insert quote
 INSERT INTO quotes (quote_id, instrument_id, bid, ask, quoted_at, source, is_synthetic)
-VALUES ('550e8400-e29b-41d4-a716-446655440021'::uuid, '550e8400-e29b-41d4-a716-446655440010'::uuid, 
+VALUES ('550e8400-e29b-41d4-a716-446655440021'::uuid, '550e8400-e29b-41d4-a716-446655440010'::uuid,
         150.00, 150.10, NOW(), 'TEST', false);
 
 REQUEST 1:

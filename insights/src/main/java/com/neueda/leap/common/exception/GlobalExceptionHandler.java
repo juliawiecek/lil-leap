@@ -1,9 +1,5 @@
 package com.neueda.leap.common.exception;
 
-import com.neueda.leap.order.service.OrderSufficiencyException;
-import com.neueda.leap.order.rules.OrderRuleException;
-import com.neueda.leap.user.exception.InvalidCredentialsException;
-import com.neueda.leap.user.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,28 +26,6 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler() {
     }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    /**
-     * Reports a pre-submission trading-rule rejection without exposing request data.
-     * @param exception account or instrument rule rejection
-     * @return HTTP 422 with the stable reason and fixed message
-     */
-    @ExceptionHandler(OrderRuleException.class)
-    public ResponseEntity<Map<String, String>> handleOrderRule(OrderRuleException exception) {
-        return ResponseEntity.unprocessableEntity().body(Map.of(
-                "error", exception.reason().name(), "message", exception.reason().message()));
-    }
-
-    /**
-     * Rejects an order with a fixed rule code without exposing financial data.
-     * @param exception sufficiency rule rejection
-     * @return HTTP 422 with a safe reason code and message
-     */
-    @ExceptionHandler(OrderSufficiencyException.class)
-    public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
-        return ResponseEntity.unprocessableEntity().body(Map.of(
-                "error", exception.reason().name(), "message", exception.getMessage()));
-    }
 
     /**
      * Preserves an explicit HTTP failure status while hiding exception details.
@@ -93,43 +67,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
                 "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
-    }
-
-    /**
-     * Handles attempts to register a user with an email address
-     * that already exists in the system.
-     *
-     * @param exception the exception describing the duplicate user condition
-     * @return a {@link ResponseEntity} with HTTP 409 Conflict status and
-     *         a body containing an error code and descriptive message
-     */
-    @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>>
-    handleUserAlreadyExistsException(UserAlreadyExistsException exception) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
-                "error", "USER_ALREADY_EXISTS",
-                "message", exception.getMessage()
-        ));
-    }
-
-    /**
-     * Handles failed login attempts caused by an unknown email address or an
-     * incorrect password.
-     *
-     * <p>Both cases are reported identically, by design: revealing which one
-     * occurred would let a caller enumerate registered email addresses.</p>
-     *
-     * @param exception the exception describing the failed login attempt
-     * @return a {@link ResponseEntity} with HTTP 401 Unauthorized status and
-     *         a body containing a generic error code and message
-     */
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<Map<String, String>>
-    handleInvalidCredentialsException(InvalidCredentialsException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                "error", "INVALID_CREDENTIALS",
-                "message", exception.getMessage()
-        ));
     }
 
 }

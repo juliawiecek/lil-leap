@@ -1,13 +1,18 @@
+Historical document: retained from the pre-consolidation order-validation branch.
+Its JPA classes, direct service routes, deployment claims and test observations describe that earlier implementation, not the current architecture.
+See docs/architecture/service-boundaries.md and the service READMEs for current behavior.
+The current JDBC Orders service retains account/instrument eligibility and cash/holdings checks; Holdings serves order history through the shared gateway.
+
 # COMPREHENSIVE INTEGRATION TEST RESULTS
-**Date**: 2026-09-30  
+**Date**: 2026-09-30
 **Status**: CRITICAL ISSUE CONFIRMED - Token Reuse Failure
 
 ---
 
 ## Test Execution Summary
 
-**Total Scenarios Tested**: 9  
-**Successful HTTP Responses**: 3  
+**Total Scenarios Tested**: 9
+**Successful HTTP Responses**: 3
 **Failed/Blocked Responses**: 6 (due to token reuse rejection)
 
 ---
@@ -65,7 +70,7 @@ curl -H "Authorization: Bearer ${T}" ... # Request 2 (SAME TOKEN)
 
 ## What DID Work
 
-✅ **Authentication Framework**: 
+✅ **Authentication Framework**:
 - First request with fresh token: PASSES (HTTP 201)
 - Fresh tokens generate correctly
 - JWT parsing works
@@ -115,8 +120,8 @@ These could not be tested due to token reuse rejection:
 
 ## Maven Build Status
 
-**Status**: ⏳ Still Running (last seen executing tests)  
-**Previous Results**: 
+**Status**: ⏳ Still Running (last seen executing tests)
+**Previous Results**:
 - Tests Run: 48
 - Failures: 0 (zero actual code failures)
 - Errors: 13 (test infrastructure issue, not code)

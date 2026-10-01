@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from './auth.service';
 import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 
 /**
  * Stable quote record for market display and indicative pricing.
@@ -32,14 +33,19 @@ export interface QuoteError {
  * Provides methods to fetch the latest quote by instrument or by market/symbol,
  * and to retrieve bounded historical quotes. All endpoints require JWT authentication.
  *
- * Requests use relative URLs (/api/quotes/...) so nginx proxies them correctly
+ * Requests use relative URLs (/api/v1/quotes/...) so nginx proxies them correctly
  * in Docker Compose and via proxy.conf.json under ng serve.
  */
 @Injectable({ providedIn: 'root' })
 export class QuoteService {
-  private baseUrl = '/api/quotes';
+  private baseUrl = '/api/v1/quotes';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auth: AuthService) {}
+
+  private headers(): Record<string, string> {
+    const token = this.auth.accessToken;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 
   /**
    * Retrieves the latest quote for a specific instrument.
@@ -51,7 +57,7 @@ export class QuoteService {
    */
   getLatestByInstrument(instrumentId: string): Observable<Quote> {
     return this.http
-      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`)
+      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`, { headers: this.headers() })
       .pipe(catchError(this.handleError));
   }
 
@@ -69,6 +75,7 @@ export class QuoteService {
   getLatestByMarketSymbol(market: string, symbol: string): Observable<Quote> {
     return this.http
       .get<Quote>(`${this.baseUrl}/latest/by-market-symbol`, {
+        headers: this.headers(),
         params: { market, symbol }
       })
       .pipe(catchError(this.handleError));
@@ -88,6 +95,7 @@ export class QuoteService {
   getHistory(instrumentId: string, limit: number = 100): Observable<Quote[]> {
     return this.http
       .get<Quote[]>(`${this.baseUrl}/history/${instrumentId}`, {
+        headers: this.headers(),
         params: { limit: limit.toString() }
       })
       .pipe(catchError(this.handleError));

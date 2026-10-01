@@ -8,10 +8,10 @@ Use Node 24.15+:
 
 ```powershell
 npm ci
-npm start -- --port 4201
+npm start
 ```
 
-Open http://localhost:4201. Production: `npm run build`. Data checks: `node --test tests/insights-data.test.mjs`.
+Open http://localhost:4301. Start `docker compose up --build -d gateway` from the repository root first for API access. The development proxy forwards `/auth/` and reporting API requests to the gateway on port 4201. The Docker client remains at http://localhost:4201; its container serves static files only. Production: `npm run build`. Data checks: `node --test tests/insights-data.test.mjs`.
 
 ## Implemented preview
 
@@ -42,7 +42,7 @@ Core palette and panel tokens are in `src/styles.scss`, matched to `frontend/src
 
 The data tests check aggregate reconciliation across chart groupings and asset classes, intersecting/inclusive filters, empty results, fixture chronology and CSV escaping/formula protection. A production build checks Angular template and type integration. Daily refresh and report-generation service performance require later integration tests.
 
-Verified for this implementation: production build passed; all four data tests passed. Headless Chrome checks covered all eight sections at desktop and 390px widths, client/order selection, asset filtering, invalid dates and the report-generation UI. No application runtime exceptions were observed. Production authentication, backend APIs and scheduled jobs were not tested because they are not connected.
+Historical UI-preview verification (before NEXT-193): production build passed; all four data tests passed. Headless Chrome checks covered all eight sections at desktop and 390px widths, client/order selection, asset filtering, invalid dates and the report-generation UI. No application runtime exceptions were observed. Production authentication, backend APIs and scheduled jobs were not tested because they are not connected.
 
 ## Local development files
 

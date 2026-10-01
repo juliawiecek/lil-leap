@@ -39,6 +39,7 @@ Each quote contains the following fields:
 ```csv
 symbol,quote_timestamp,price,bid,ask,currency,source,synthetic
 AAPL,2026-09-08T14:30:00Z,225.4300,225.4100,225.4500,USD,SYNTHETIC_GBM,true
+```
 
 
 ## PostgreSQL quote architecture
@@ -50,11 +51,13 @@ flowchart LR
   G[Python GBM generator] --> I[Quote ingestor]
   I --> P[(PostgreSQL instruments + quotes)]
   P --> F[Flask quote API]
-  P --> J[Spring Boot quote DAO]
+  P --> J[Orders JDBC quote reader]
 ```
 
-PostgreSQL is the durable shared quote source. Spring Boot reads it directly and does not call Flask on the execution-critical path. Field mapping is: `symbol` resolves `(NASDAQ, symbol)` to `instrument_id`; `quote_timestamp` becomes `quoted_at`; `bid`, `ask`, and `source` map directly; `synthetic` becomes `is_synthetic`; midpoint is derived from bid and ask.
+PostgreSQL is the durable shared quote source. The Orders service reads it directly and does not call Flask on the execution-critical path. Field mapping is: `symbol` resolves `(NASDAQ, symbol)` to `instrument_id`; `quote_timestamp` becomes `quoted_at`; `bid`, `ask`, and `source` map directly; `synthetic` becomes `is_synthetic`; midpoint is derived from bid and ask.
 
 One shot: `python -m src.quote_ingestor --once --periods 10 --seed 42`. Continuous: `python -m src.quote_ingestor --continuous`. Set `QUOTE_PROVIDER=csv` only for explicit local fallback. PostgreSQL failures never silently fall back to CSV.
 
-The MVP retention policy deletes nothing automatically. Historical synthetic quotes are retained because future execution and audit work requires exact provenance. This branch does not execute orders, create fills, settle cash, or update holdings.
+Retention deletes nothing by default (`QUOTE_RETENTION_DAYS=0`); positive values enable the configured retention policy. Orders owns execution, fills and atomic cash/holdings settlement. This quote service only generates, persists and serves quotes.
+
+Compose runs `python -m src.service_runner` on internal port 8083 with continuous ingestion. The gateway exposes quote reads at `http://localhost:4200/api/v1/quotes/AAPL`. The generator is in-process; a separate external HTTP provider is not implemented.

@@ -1,9 +1,7 @@
 FROM confluentinc/cp-kafka:7.5.0
 
-# Copy custom broker configuration
-COPY broker-config/server.properties /etc/kafka/server.properties.custom
-
-# Use the custom configuration
+# The Confluent entrypoint builds configuration from the environment.
+ENV KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
 ENV KAFKA_BROKER_ID=1
 ENV KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
 ENV KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092

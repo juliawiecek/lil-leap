@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# NEXT-156: Docker-based integration test for the Identity Service (auth).
+# NEXT-156 / NEXT-193: Identity and service boundaries through the shared gateway.
 #
 # Brings up the real stack with docker compose, then checks end to end that:
 #   AC1  protected NextTrade endpoints reject requests without a valid token (401)
@@ -17,14 +17,13 @@
 
 set -uo pipefail
 
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:4200}"   # nginx: /auth/* and /rules/* -> auth
-INSIGHTS_URL="${INSIGHTS_URL:-http://localhost:8081}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:4200}"
+INSIGHTS_URL="${INSIGHTS_URL:-http://localhost:4201}"
 DB_USER="${DB_USER:-main}"
 DB_NAME="${DB_NAME:-nexttrade}"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
-# orders and holdings have no endpoints yet, so they aren't tested; compose still
-# starts them because the frontend's nginx proxies to them.
-SERVICES=(db auth insights frontend)
+# Gateway dependencies start both clients, all APIs, and both databases.
+SERVICES=(gateway)
 
 BUILD=--build
 STOP_AFTER=false
@@ -40,6 +39,7 @@ cd "$(dirname "$0")/.."
 
 RUN_ID="$(date +%s)$RANDOM"
 EMAIL="it-trader-${RUN_ID}@example.com"
+ANALYST_EMAIL="it-analyst-${RUN_ID}@example.com"
 PASSWORD="Integration-Test-9!"
 SSN="$(printf '%09d' "$(( RUN_ID % 1000000000 ))")"
 BODY="$(mktemp)"
@@ -65,9 +65,9 @@ jwt_payload() {
   printf '%s' "$p" | base64 -d 2>/dev/null
 }
 
-wait_for() { # wait_for <name> <url> <expected status>
+wait_for() { # wait_for <name> <url> <expected status> [curl options...]
   local deadline=$((SECONDS + WAIT_SECONDS))
-  until [[ "$(status "$2")" == "$3" ]]; do
+  until [[ "$(status "$2" "${@:4}")" == "$3" ]]; do
     if (( SECONDS > deadline )); then
       echo "  $1 did not become ready at $2 within ${WAIT_SECONDS}s" >&2
       docker compose ps >&2
@@ -80,11 +80,11 @@ wait_for() { # wait_for <name> <url> <expected status>
 
 cleanup() {
   if [[ "${KEEP_DATA:-0}" != 1 ]]; then
-    local users="(SELECT user_id FROM users WHERE email = '$EMAIL')"
-    for table in sessions accounts financial_profiles customer_profiles; do
+    local users="(SELECT user_id FROM users WHERE email IN ('$EMAIL', '$ANALYST_EMAIL'))"
+    for table in sessions accounts financial_profiles customer_profiles analyst_profiles; do
       sql "DELETE FROM $table WHERE user_id IN $users" >/dev/null 2>&1
     done
-    sql "DELETE FROM users WHERE email = '$EMAIL'" >/dev/null 2>&1
+    sql "DELETE FROM users WHERE email IN ('$EMAIL', '$ANALYST_EMAIL')" >/dev/null 2>&1
   fi
   rm -f "$BODY"
   if $STOP_AFTER; then docker compose down >/dev/null 2>&1; fi
@@ -96,7 +96,8 @@ docker compose up -d $BUILD "${SERVICES[@]}" || { echo "docker compose up failed
 
 echo "== Waiting for services"
 wait_for "auth (via nginx)" "$FRONTEND_URL/auth/docs-json" 200 || exit 1
-wait_for insights "$INSIGHTS_URL/api/v1/holdings" 401 || exit 1
+wait_for holdings "$FRONTEND_URL/api/v1/holdings" 401 || exit 1
+wait_for insights "$INSIGHTS_URL/api/v1/reports/summary" 401 || exit 1
 
 echo "== Register a trader through the Identity Service"
 REGISTER='{
@@ -134,17 +135,44 @@ check "token carries user_role TRADER" "$(grep -o '"user_role":"[A-Z]*"' <<<"$CL
 check "token carries trader_level NOVICE" "$(grep -o '"trader_level":"[A-Z]*"' <<<"$CLAIMS")" '"trader_level":"NOVICE"'
 
 echo "== AC1: protected endpoints reject missing or invalid tokens"
-check "insights GET /api/v1/holdings without a token -> 401" "$(status "$INSIGHTS_URL/api/v1/holdings")" 401
-check "insights with a tampered token -> 401" \
-  "$(status -H "Authorization: Bearer ${TOKEN}x" "$INSIGHTS_URL/api/v1/holdings")" 401
+check "holdings without a token -> 401" "$(status "$FRONTEND_URL/api/v1/holdings")" 401
+check "holdings with a tampered token -> 401" \
+  "$(status -H "Authorization: Bearer ${TOKEN}x" "$FRONTEND_URL/api/v1/holdings")" 401
+wait_for orders "$FRONTEND_URL/api/v1/orders" 401 -X POST || exit 1
+check "orders POST without a token -> 401" \
+  "$(status -X POST -H 'Content-Type: application/json' -d '{}' "$FRONTEND_URL/api/v1/orders")" 401
+check "orders POST with a tampered token -> 401" \
+  "$(status -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer ${TOKEN}x" -d '{}' "$FRONTEND_URL/api/v1/orders")" 401
 check "auth GET /rules/tier-eligibility without a token -> 401" "$(status "$FRONTEND_URL/rules/tier-eligibility")" 401
 
 echo "== AC2: the real token is accepted"
-check "insights GET /api/v1/holdings with the token -> 200" \
-  "$(status -H "Authorization: Bearer $TOKEN" "$INSIGHTS_URL/api/v1/holdings")" 200
-check "insights returns the (empty) holdings list for the new trader" "$(tr -d ' \r\n' < "$BODY")" "[]"
+check "holdings with the token -> 200" \
+  "$(status -H "Authorization: Bearer $TOKEN" "$FRONTEND_URL/api/v1/holdings")" 200
+check "holdings returns the empty list for the new trader" "$(tr -d ' \r\n' < "$BODY")" "[]"
+check "order history is available through Holdings -> 200" \
+  "$(status -H "Authorization: Bearer $TOKEN" "$FRONTEND_URL/api/v1/orders")" 200
+# An empty body reaches validation but cannot submit a trade or create ledger data.
+check "orders accepts trader authentication and validates the body -> 400" \
+  "$(status -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" -d '{}' "$FRONTEND_URL/api/v1/orders")" 400
 check "auth GET /rules/tier-eligibility with the token -> 200" \
   "$(status -H "Authorization: Bearer $TOKEN" "$FRONTEND_URL/rules/tier-eligibility")" 200
+
+echo "== Reporting role and listener isolation"
+check "reports with a trader token -> 403" \
+  "$(status -H "Authorization: Bearer $TOKEN" "$INSIGHTS_URL/api/v1/reports/summary")" 403
+check "reports with a tampered token -> 401" \
+  "$(status -H "Authorization: Bearer ${TOKEN}x" "$INSIGHTS_URL/api/v1/reports/summary")" 401
+check "reporting listener rejects trading routes -> 404" \
+  "$(status -H "Authorization: Bearer $TOKEN" "$INSIGHTS_URL/api/v1/holdings")" 404
+check "register analyst -> 201" \
+  "$(status -X POST -H 'Content-Type: application/json' \
+    -d '{"user_role":"ANALYST","email":"'"$ANALYST_EMAIL"'","password":"'"$PASSWORD"'","employee_id":"IT-'"$RUN_ID"'"}' "$INSIGHTS_URL/auth/register")" 201
+check "analyst login -> 200" \
+  "$(status -X POST -H 'Content-Type: application/json' \
+    -d '{"email":"'"$ANALYST_EMAIL"'","password":"'"$PASSWORD"'"}' "$INSIGHTS_URL/auth/login")" 200
+ANALYST_TOKEN="$(sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p' "$BODY")"
+check "reports with analyst token -> 200" \
+  "$(status -H "Authorization: Bearer $ANALYST_TOKEN" "$INSIGHTS_URL/api/v1/reports/summary")" 200
 
 echo
 if (( FAILURES == 0 )); then

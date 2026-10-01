@@ -1,5 +1,12 @@
 # TS-10.1: Atomic settlement for all seven operations
 
+> **Historical design snapshot, superseded in part by NEXT-193.** The original
+> evidence and handoff below describe the pre-split code. Atomic JDBC settlement
+> and the holdings projection trigger are now implemented in Orders/database.
+> Removed JPA classes and Insights execution paths below are historical references.
+> Use [current service boundaries](service-boundaries.md) for code ownership,
+> migrations, remaining gaps and current verification.
+
 | Decision record | Value |
 | --- | --- |
 | Requirement | BR-09 (Must): holdings, cash and the permanent trade record update together |

@@ -1,99 +1,29 @@
-# NextTrade Spring Boot Application Configuration
-# Database and security settings are externalized via environment variables
-
 spring:
   application:
-    name: nexttrade-backend
-
+    name: insights
+  datasource:
+    url: jdbc:postgresql://${REPORTING_DB_HOST:reporting-db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${REPORTING_DB_USERNAME:reporting_user}
+    password: ${REPORTING_DB_PASSWORD:reporting_dev_password}
+    hikari:
+      read-only: true
+      maximum-pool-size: 10
   mvc:
     log-request-details: false
-
-  datasource:
-    # PostgreSQL JDBC connection
-    # URL format: jdbc:postgresql://[host]:[port]/[database]
-    # Development datasource defaults.
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
-    username: ${DB_APP_USERNAME:app_user}
-    password: ${DB_APP_PASSWORD:my_app_password}
-    
-    # Connection pool configuration
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 20000
-      idle-timeout: 300000
-      max-lifetime: 1200000
-
-  jpa:
-    hibernate:
-      # ddl-auto: validate - do not create/update schema; admin role handles migrations
-      ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: false
-        use_sql_comments: false
-
-  # Suppress sensitive datasource information in logs
-  jpa.show-sql: false
-
-# Springdoc OpenAPI configuration (Swagger UI)
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-    show-extensions: true
-    operations-sorter: method
-    tags-sorter: alpha
-    doc-expansion: list
-  show-actuator: false
-  use-management-port: false
-  # Handle context path properly
-  swagger-ui.use-root-path: true
-
-logging:
-  level:
-    root: INFO
-    # Never enable HTTP payload, security debug, or SQL bind-value logging.
-    org.springframework.security: INFO
-    org.springframework.web: WARN
-    org.springframework.web.filter.CommonsRequestLoggingFilter: OFF
-    org.hibernate: INFO
-    org.hibernate.SQL: OFF
-    org.hibernate.orm.jdbc.bind: OFF
-    org.hibernate.orm.jdbc.extract: OFF
-    org.hibernate.type.descriptor.sql: OFF
-    # Database error details can include rejected row values (including password hashes).
-    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
-
-# NextTrade custom application configuration
-# Externalized security and session settings
-nexttrade:
-  security:
-    # SSN encryption key (pgcrypto symmetric encryption)
-    # IMPORTANT: Never log or print this value
-    # Must be configured in environment: NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY
-    ssn-encryption-key: ${SSN_ENCRYPTION_KEY:replace_me}
-  
-  session:
-    # Session inactivity timeout in minutes (configurable, defaults to 10 minutes)
-    inactivity-minutes: ${SESSION_INACTIVITY_MINUTES:10}
-
 app:
   jwt:
     secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
-    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:60}
-    client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
-
 server:
-  port: 8888
-  tomcat:
-    accesslog:
-      enabled: false
+  port: ${PORT:8084}
+  servlet:
+    context-path: /api/v1
   error:
     include-message: never
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN
