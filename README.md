@@ -153,8 +153,6 @@ The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
 | `auth` | http://localhost:4200/auth/docs |
 | `orders` | http://localhost:8082/api/v1/swagger-ui.html |
 
-`holdings`, `insights` and the Python quote-service don't publish OpenAPI specs yet.
-
 How to get a token and try the endpoints, per-service notes, and the SSH tunnel for the
 shared EC2 server: **[docs/api/README.md](docs/api/README.md)**.
 

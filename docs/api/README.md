@@ -7,7 +7,6 @@ own docs, generated from its code, so they stay in step with what is deployed.
 |---|---|---|
 | `auth` | http://localhost:4200/auth/docs | http://localhost:4200/auth/docs-json, or [auth/openapi.json](../../auth/openapi.json) |
 | `orders` | http://localhost:8082/api/v1/swagger-ui.html | http://localhost:8082/api/v1/v3/api-docs |
-| `holdings`, `insights`, quote-service | Not published yet | – |
 
 ## Trying the APIs
 
@@ -59,8 +58,3 @@ Keep that terminal open while you use the pages.
   (BR-02).
 - Errors come back as `{"error": "...", "message": "..."}`, for example `INVALID_REQUEST`,
   `INVALID_FILTER`, `ACCOUNT_NOT_FOUND` or `UNAUTHENTICATED`.
-
-## Not documented yet
-
-`holdings`, `insights` and the Python quote-service don't publish OpenAPI specs yet. When one
-does, add a row to the table above and a section like the ones for auth and orders.
