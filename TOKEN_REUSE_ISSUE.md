@@ -1,7 +1,12 @@
+Historical document: retained from the pre-consolidation order-validation branch.
+Its JPA classes, direct service routes, deployment claims and test observations describe that earlier implementation, not the current architecture.
+See docs/architecture/service-boundaries.md and the service READMEs for current behavior.
+The current JDBC Orders service retains account/instrument eligibility and cash/holdings checks; Holdings serves order history through the shared gateway.
+
 # Critical Issue: JWT Token Reuse Rejection
 
-**Status**: CONFIRMED  
-**Severity**: HIGH - Blocks integration testing  
+**Status**: CONFIRMED
+**Severity**: HIGH - Blocks integration testing
 **Date**: 2026-09-30 18:25 UTC
 
 ---
@@ -99,7 +104,7 @@ public Optional<JwtPrincipal> validate(String token) {
 }
 ```
 
-**Potential Issue**: 
+**Potential Issue**:
 - JwtException thrown on second use (but not logged)
 - Possible causes:
   - Token already parsed and cached (unlikely)
@@ -119,7 +124,7 @@ for scenario in buy sell disabled; do
   curl -H "Authorization: Bearer ${TOKEN}" ...
 done
 
-# ❌ BROKEN APPROACH  
+# ❌ BROKEN APPROACH
 TOKEN=$(generate_jwt_once)
 for scenario in buy sell disabled; do
   curl -H "Authorization: Bearer ${TOKEN}" ...  # Reuse fails

@@ -3,7 +3,7 @@
 -- PostgreSQL
 -- Based on comparison with Fidelity brokerage schema
 -- NORMALIZED: Separated auth, identity, verification, financial concerns
--- 
+--
 -- BUSINESS REQUIREMENT MAPPING:
 -- BR-01: Registration → users + customer_profiles + financial_profiles (TRADER),
 --        or users + analyst_profiles (ANALYST) — role decides which extension table(s) get written
@@ -37,14 +37,14 @@ CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    
+
     -- User role for access control (TRADER: client self-service; ANALYST: internal staff)
     user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST')),
-    
+
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
-    
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -75,14 +75,14 @@ CREATE TABLE customer_profiles (
     address TEXT NOT NULL,
     country VARCHAR(100),
     date_of_birth DATE NOT NULL,
-    
+
     -- SECURITY: Full synthetic or real SSN encrypted with pgcrypto symmetric encryption.
     -- Application supplies encryption key at runtime (nexttrade.security.ssn-encryption-key).
     ssn_encrypted BYTEA NOT NULL,
-    
+
     -- FIDELITY COMPLIANCE: Citizenship & residency (BR-01, Fidelity)
     citizenship_status VARCHAR(50),  -- 'CITIZEN', 'PERMANENT_RESIDENT', 'OTHER'
-    
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -131,31 +131,31 @@ EXECUTE FUNCTION check_customer_age_21();
 CREATE TABLE financial_profiles (
     financial_profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    
+
     -- KYC Status
     kyc_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',  -- 'PENDING', 'IN_PROGRESS', 'VERIFIED', 'REJECTED'
     kyc_verified_by_user_id UUID,  -- (MVP: not used - format validation only)
-    
+
     -- Accredited investor (SEC requirement)
     accredited_investor BOOLEAN NOT NULL DEFAULT FALSE,
-    
+
     -- Risk profile / net worth for tier eligibility
     net_worth_bracket VARCHAR(30),  -- '$0-5k', '$5k-25k', '$25k-100k', '$100k-500k', '$500k+'
     risk_profile VARCHAR(30),  -- 'CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'
-    
+
     -- FIDELITY COMPLIANCE: Employment & income (Fidelity Brokerage Rules)
     employment_status VARCHAR(50),  -- 'EMPLOYED', 'SELF_EMPLOYED', 'RETIRED', 'STUDENT', 'UNEMPLOYED'
     employer_name VARCHAR(255),
     occupation VARCHAR(100),
     annual_income NUMERIC(18,2),  -- Optional: only if customer provides
     liquidity_position VARCHAR(100),  -- Descriptive field for financial position
-    
+
     -- FIDELITY COMPLIANCE: Regulatory disclosures
     is_politically_exposed_person BOOLEAN NOT NULL DEFAULT FALSE,  -- PEP status for AML/KYC
     regulatory_disclosures JSONB,  -- Flexible for control persons, affiliations, broker-dealer affiliations
     beneficial_owner_info JSONB,  -- Beneficial ownership details if applicable
     funds_source_verified BOOLEAN NOT NULL DEFAULT FALSE,  -- Source of funds verification
-    
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -168,7 +168,7 @@ CREATE TABLE financial_profiles (
         kyc_status IN ('PENDING', 'IN_PROGRESS', 'VERIFIED', 'REJECTED')
     ),
     CONSTRAINT chk_net_worth_bracket CHECK (
-        net_worth_bracket IS NULL OR net_worth_bracket IN 
+        net_worth_bracket IS NULL OR net_worth_bracket IN
         ('$0-5k', '$5k-25k', '$25k-100k', '$100k-500k', '$500k+')
     ),
     CONSTRAINT chk_risk_profile CHECK (
@@ -332,20 +332,20 @@ CREATE TABLE accounts (
     account_name VARCHAR(100) NOT NULL,
     account_type VARCHAR(30) NOT NULL DEFAULT 'INDIVIDUAL_CASH',
     account_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',  -- BR-05: account must be ACTIVE to trade
-    
+
     -- BR-11: TRADER TIER (minimum balance enforcement)
     trader_level VARCHAR(20) NOT NULL DEFAULT 'NOVICE',  -- 'NOVICE' ($5k), 'ADVANCED' ($100k)
     min_balance_requirement NUMERIC(18,2) NOT NULL DEFAULT 5000.00,
-    
+
     -- Price tolerance: Default execution price buffer per account (% above market price user accepts)
     execution_buffer_percent NUMERIC(5,2) NOT NULL DEFAULT 2.00 CHECK (execution_buffer_percent >= 0),
-    
+
     -- FIDELITY COMPLIANCE: Product approvals (Fidelity Brokerage Rules)
     margin_approved BOOLEAN NOT NULL DEFAULT FALSE,  -- Requires additional approval and financial info
     margin_approved_at TIMESTAMPTZ,
     options_approved BOOLEAN NOT NULL DEFAULT FALSE,  -- Requires additional approval and financial info
     options_approved_at TIMESTAMPTZ,
-    
+
     trading_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -377,11 +377,11 @@ CREATE TABLE orders (
     order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL,
     instrument_id UUID NOT NULL,
-    
+
     -- BR-16: IDEMPOTENCY KEY (client-supplied UUID, unique per account)
     -- Allows safe retry: same client_reference = same order
     client_reference UUID NOT NULL,
-    
+
     side VARCHAR(10) NOT NULL,  -- BR-04: BUY or SELL
     quantity BIGINT NOT NULL,
     order_type VARCHAR(20) NOT NULL DEFAULT 'MARKET',
@@ -392,7 +392,7 @@ CREATE TABLE orders (
     execution_attempts BIGINT NOT NULL DEFAULT 0 CHECK (execution_attempts >= 0),
     last_execution_error VARCHAR(50),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Per-order price tolerance override (NULL = use account default)
     buffer_percent NUMERIC(5,2) CHECK (buffer_percent IS NULL OR buffer_percent >= 0),
 
@@ -601,7 +601,7 @@ CREATE TABLE cash_transactions (
     amount NUMERIC(18,2) NOT NULL,  -- signed: negative for outflow, positive for inflow
     currency CHAR(3) NOT NULL DEFAULT 'USD',
     settlement_status VARCHAR(20) NOT NULL DEFAULT 'SETTLED',  -- 'PENDING', 'SETTLED'
-    settled_at TIMESTAMPTZ,  -- NULL until settlement completes
+    settled_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,  -- NULL until settlement completes
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_transaction_account
@@ -694,9 +694,10 @@ CREATE INDEX idx_audit_event_type ON audit_log(event_type);
 -- BR-10: Current balance per account (computed from ledger)
 -- TS-11.3 AC2: Now returns settled, pending, and available balances
 CREATE OR REPLACE VIEW v_account_cash AS
-    SELECT 
+    SELECT
         account_id,
         'USD' as currency,
+        COALESCE(SUM(amount), 0) as balance,
         COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) as settled_balance,
         COALESCE(SUM(CASE WHEN settlement_status = 'PENDING' THEN amount ELSE 0 END), 0) as pending_balance,
         COALESCE(SUM(CASE WHEN settlement_status = 'SETTLED' THEN amount ELSE 0 END), 0) -
@@ -710,11 +711,11 @@ CREATE OR REPLACE VIEW v_account_cash AS
 
 -- BR-10: Current holdings per account (computed from ledger)
 CREATE OR REPLACE VIEW v_account_holdings AS
-    SELECT 
+    SELECT
         account_id,
         instrument_id,
         COALESCE(SUM(quantity_change), 0) as quantity,
-        CASE 
+        CASE
             WHEN SUM(quantity_change) = 0 THEN 0
             ELSE ROUND(SUM(quantity_change * cost_basis) / SUM(quantity_change)::NUMERIC, 8)
         END as avg_cost
@@ -740,7 +741,7 @@ CREATE OR REPLACE VIEW v_latest_quotes AS
 
 -- BR-03: Active sessions per user
 CREATE OR REPLACE VIEW v_active_sessions AS
-    SELECT 
+    SELECT
         user_id,
         COUNT(*) as active_sessions
     FROM sessions
@@ -750,13 +751,13 @@ CREATE OR REPLACE VIEW v_active_sessions AS
 
 -- BR-11: Trader tier eligibility check (cash balance vs min requirement)
 CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
-    SELECT 
+    SELECT
         a.account_id,
         a.user_id,
         a.trader_level,
         a.min_balance_requirement,
         COALESCE(ct.balance, 0) as current_balance,
-        CASE 
+        CASE
             WHEN COALESCE(ct.balance, 0) >= a.min_balance_requirement THEN 'ELIGIBLE'
             ELSE 'INELIGIBLE'
         END as tier_status
@@ -773,7 +774,7 @@ CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
 -- \i /full/path/to/finalized-schema.sql
 -- \dt  -- list all tables
 -- \dv  -- list all views
--- 
+--
 -- Key test scenarios:
 -- 1. Create user → customer_profile → customer_verification → financial_profile
 -- 2. Verify email verification flow (partial verification)

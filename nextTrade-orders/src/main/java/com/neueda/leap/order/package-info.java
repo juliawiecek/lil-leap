@@ -1,5 +1,2 @@
-/**
- * Order domain: lightweight order model and validation behavior.
- */
+/** Order submission, validation, durable execution and atomic settlement. */
 package com.neueda.leap.order;
-

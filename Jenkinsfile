@@ -61,6 +61,8 @@ pipeline {
       steps {
         sh '''
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config -q
+          ${COMPOSE_CMD} -f ${COMPOSE_FILE} -f docker-compose.kafka.yml config -q
+          bash scripts/test_reporting_replica.sh
           ${COMPOSE_CMD} -f ${COMPOSE_FILE} config
         '''
       }
@@ -78,6 +80,39 @@ pipeline {
       steps {
         dir('nextTrade-holdings') {
           sh 'mvn -B -ntp clean verify'
+        }
+      }
+    }
+
+    stage('PostgreSQL Settlement and Holdings') {
+      steps {
+        dir('nextTrade-orders') {
+          sh '''
+            set -eu
+            test_container="nexttrade-orders-tests-${BUILD_NUMBER}"
+            trap 'docker rm -f "$test_container" >/dev/null 2>&1 || true' EXIT
+            docker run -d --name "$test_container" \
+              -e POSTGRES_USER=orders_test -e POSTGRES_PASSWORD=ci-test-only \
+              -e POSTGRES_DB=orders_test -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
+            ready=false
+            for attempt in $(seq 1 30); do
+              if docker exec "$test_container" pg_isready -h 127.0.0.1 -U orders_test >/dev/null 2>&1; then
+                ready=true
+                break
+              fi
+              sleep 1
+            done
+            [ "$ready" = true ]
+            test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
+            export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
+            export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
+            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest test
+            mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
+              -Dtest=HoldingsSettlementPostgresTest \
+              -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
+              -Dtest.holdings.postgres.user=orders_test \
+              -Dtest.holdings.postgres.password=ci-test-only test
+          '''
         }
       }
     }

@@ -1,7 +1,12 @@
+Historical document: retained from the pre-consolidation order-validation branch.
+Its JPA classes, direct service routes, deployment claims and test observations describe that earlier implementation, not the current architecture.
+See docs/architecture/service-boundaries.md and the service READMEs for current behavior.
+The current JDBC Orders service retains account/instrument eligibility and cash/holdings checks; Holdings serves order history through the shared gateway.
+
 # Schema Audit & Entity Mapping Fixes - COMPLETED
 
-**Status**: ✅ ALL FIXES IMPLEMENTED & DEPLOYED TO EC2  
-**Deployment Timestamp**: 2026-09-30T15:35:32Z  
+**Status**: ✅ ALL FIXES IMPLEMENTED & DEPLOYED TO EC2
+**Deployment Timestamp**: 2026-09-30T15:35:32Z
 **Service Status**: Running on EC2 (port 8082)
 
 ---
@@ -22,11 +27,11 @@
 **Constructor Signature Change**:
 ```java
 // BEFORE (7 params)
-public Instrument(UUID instrumentId, String symbol, String name, String assetClass, 
+public Instrument(UUID instrumentId, String symbol, String name, String assetClass,
                  String currency, String market, Boolean isActive)
 
 // AFTER (8 params)
-public Instrument(UUID instrumentId, String symbol, String instrumentName, String assetClass, 
+public Instrument(UUID instrumentId, String symbol, String instrumentName, String assetClass,
                  String marketCode, String currency, Boolean enabled, Boolean tradable)
 ```
 
@@ -35,7 +40,7 @@ public Instrument(UUID instrumentId, String symbol, String instrumentName, Strin
 ---
 
 ### 1.2 Account Entity ✅ VERIFIED
-**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Account.java`  
+**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Account.java`
 **Status**: Already correct - all columns properly mapped
 - account_status → `getAccountStatus()`
 - execution_buffer_percent → `getExecutionBufferPercent()`
@@ -44,7 +49,7 @@ public Instrument(UUID instrumentId, String symbol, String instrumentName, Strin
 ---
 
 ### 1.3 Quote Entity ✅ VERIFIED
-**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Quote.java`  
+**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Quote.java`
 **Status**: Already correct - all columns properly mapped
 - quote_id (PK) → `getQuoteId()`
 - instrument_id (FK) → `getInstrumentId()`
@@ -60,7 +65,7 @@ Ensures same quote returned on retry with identical timestamp.
 ---
 
 ### 1.4 Order Entity ✅ VERIFIED
-**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Order.java`  
+**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/Order.java`
 **Status**: All columns correctly mapped
 
 | Column | Entity Field | Type | Notes |
@@ -84,7 +89,7 @@ Ensures same quote returned on retry with identical timestamp.
 ---
 
 ### 1.5 OrderStatusHistory Entity ✅ VERIFIED
-**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/OrderStatusHistory.java`  
+**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/OrderStatusHistory.java`
 **Status**: All columns correctly mapped
 
 | Column | Entity Field | Type |
@@ -127,7 +132,7 @@ private Instant filledAt;
 ---
 
 ### 1.7 HoldingMovement Entity ✅ VERIFIED
-**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/HoldingMovement.java`  
+**File**: `nextTrade-orders/src/main/java/com/neueda/leap/order/model/HoldingMovement.java`
 **Status**: All columns correctly mapped
 
 | Column | Entity Field | Type |
@@ -218,13 +223,13 @@ new Instrument(id, "AAPL", "Apple Inc.", "COMMON_STOCK", "NASDAQ", "USD", true, 
 
 ```java
 // BEFORE
-verify(fillRepository).save(argThat(fill -> 
+verify(fillRepository).save(argThat(fill ->
     fill.getQuote() != null &&
     fill.getQuote().getQuoteId().equals(testQuote.getQuoteId())
 ));
 
 // AFTER
-verify(fillRepository).save(argThat(fill -> 
+verify(fillRepository).save(argThat(fill ->
     fill.getQuoteTimestamp() != null &&
     fill.getQuoteTimestamp().equals(testQuote.getQuotedAt())
 ));
@@ -326,4 +331,3 @@ b4e4290 fix: align Instrument entity with actual schema - add enabled/tradable f
 4. **Quote Timestamp Proof**: BR-08 compliance requires storing quote_timestamp for pricing evidence, NOT quote_id foreign key.
 5. **Deterministic Selection**: Multi-column ordering ensures consistent quote selection on retry.
 6. **Test Fidelity**: Tests must use correct constructor signatures and verify correct fields - otherwise they hide real issues.
-

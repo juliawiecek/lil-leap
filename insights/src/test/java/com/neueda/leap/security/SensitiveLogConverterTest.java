@@ -1,9 +1,6 @@
 package com.neueda.leap.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.neueda.leap.onboarding.dto.RegisterUserRequest;
-import com.neueda.leap.user.dto.LoginRequest;
-import com.neueda.leap.user.dto.LoginResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -31,16 +28,4 @@ class SensitiveLogConverterTest {
                 .isEqualTo("Login failed status=401 requestId=123");
     }
 
-    @Test
-    void dtoLoggingIsSafeWithoutChangingWireValues() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        LoginRequest login = new LoginRequest("email-canary", "password-canary");
-        LoginResponse response = new LoginResponse("token-canary", null);
-        RegisterUserRequest registration = mapper.readValue(
-                "{\"password\":\"password-canary\",\"ssn\":\"ssn-canary\",\"email\":\"email-canary\"}", RegisterUserRequest.class);
-        assertThat(login.toString() + response + registration).doesNotContain("canary");
-        assertThat(mapper.readTree(mapper.writeValueAsString(response)).get("token").asText()).isEqualTo("token-canary");
-        assertThat(login.password()).isEqualTo("password-canary");
-        assertThat(registration.password()).isEqualTo("password-canary");
-    }
 }

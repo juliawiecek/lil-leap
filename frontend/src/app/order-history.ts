@@ -20,7 +20,10 @@ export class OrderHistory {
 
   readonly statusOptions = [
     { value: '', label: 'All' },
+    { value: 'SUBMITTED', label: 'Submitted' },
+    { value: 'ACCEPTED', label: 'Accepted' },
     { value: 'PENDING', label: 'Pending' },
+    { value: 'DELAYED', label: 'Delayed' },
     { value: 'FILLED', label: 'Filled' },
     { value: 'REJECTED', label: 'Rejected' },
   ];
@@ -69,6 +72,7 @@ export class OrderHistory {
   async load(): Promise<void> {
     const request = ++this.#request;
     if (this.from() && this.to() && this.from() > this.to()) {
+      this.loading.set(false);
       this.error.set('The start date must be on or before the end date.');
       this.rows.set([]);
       return;

@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 
 /**
- * Entry point for the NextTrade backend application.
+ * Entry point for the insights application.
  *
  * <p>This class bootstraps the Spring Boot application context and starts
  * the backend services.</p>

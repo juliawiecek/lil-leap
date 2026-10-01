@@ -32,7 +32,7 @@ test('client calls the caller’s own history with only the filters supplied and
 
   const rows = await client.list({ from: '2026-09-01', to: '', status: 'FILLED' });
 
-  assert.equal(calls[0].url, `/api/orders/clients/${USER_ID}/orders?from=2026-09-01&status=FILLED`);
+  assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders?from=2026-09-01&status=FILLED`);
   assert.equal(calls[0].init.headers.Authorization, `Bearer ${token}`);
   assert.equal(rows[0].fillPrice, 225.05);
 });
@@ -40,7 +40,7 @@ test('client calls the caller’s own history with only the filters supplied and
 test('client sends no query string when no filters are set', async () => {
   const { calls, fetchImpl } = fakeFetch(json(200, []));
   await new OrderHistoryClient({ accessToken: token }, fetchImpl).list();
-  assert.equal(calls[0].url, `/api/orders/clients/${USER_ID}/orders`);
+  assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders`);
 });
 
 test('client refuses to call the server when signed out', async () => {
@@ -133,4 +133,29 @@ test('a failed load shows the error message and no stale rows', async t => {
 
   assert.match(history.error(), /Could not reach the server/);
   assert.deepEqual(history.rows(), []);
+});
+
+test('invalid dates cancel the loading state and ignore an earlier response', async t => {
+  let finish;
+  const { providers } = historyWith(() => new Promise(resolve => { finish = resolve; }));
+  const history = component(t, OrderHistory, providers);
+  assert.equal(history.loading(), true);
+
+  history.from.set('2026-09-30');
+  history.setTo('2026-09-01');
+  assert.equal(history.loading(), false);
+  assert.match(history.error(), /start date/);
+
+  finish([row()]);
+  await flush();
+  assert.deepEqual(history.rows(), []);
+  assert.equal(history.loading(), false);
+});
+
+test('status filters include the durable execution lifecycle', async t => {
+  const { providers } = historyWith(() => []);
+  const history = component(t, OrderHistory, providers);
+  await flush();
+  assert.deepEqual(history.statusOptions.map(option => option.value),
+    ['', 'SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED', 'FILLED', 'REJECTED']);
 });

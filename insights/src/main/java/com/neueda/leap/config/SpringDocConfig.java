@@ -13,19 +13,21 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class SpringDocConfig {
+    /** Creates reporting API documentation metadata. */
+    public SpringDocConfig() {}
 
     /**
      * Customizes the OpenAPI specification with application info and security schemes.
-     * 
+     *
      * @return configured OpenAPI instance
      */
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("NextTrade API")
+                        .title("NextTrade Insights API")
                         .version("0.1.0")
-                        .description("Portfolio and order management API with JWT authentication"))
+                        .description("Read-only reporting API backed by the reporting replica"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new io.swagger.v3.oas.models.Components()
                         .addSecuritySchemes("bearerAuth", new SecurityScheme()
