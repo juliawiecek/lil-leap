@@ -96,11 +96,6 @@ restricted `app_user` role; the schema is owned by the admin role.
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 | `mailpit` | mailpit | 1025, 8025 | Captures outgoing email in development. |
 
-The three Spring Boot services still carry the original monolith's
-registration and login endpoints (`/api/v1/users`, `/auth/login`). They're
-unreachable from the browser -- nginx sends `/auth/*` to the NestJS service --
-and are due to be removed.
-
 ### Authentication Flow
 
 ```mermaid
@@ -142,9 +137,6 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | `insights` | Client financials/portfolio, order submission, instrument lookup, password reset under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
 | `orders` | `POST /orders` (order submission), `GET /clients/{id}/orders` (history, filterable by `from`/`to`/`status`), `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}` (cash balance); also runs the order execution engine on a schedule. |
 | `holdings` | No business endpoints yet. |
-
-The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
-`POST /auth/login` and `GET /api/v1/users/me`; see [Architecture](#architecture).
 
 ## API Documentation (Swagger / OpenAPI)
 
@@ -376,9 +368,6 @@ pytest
 | `auth`                | see [auth/README.md → Code coverage](auth/README.md#code-coverage) | `auth/coverage/lcov-report/index.html` |
 | `data-pipeline`       | see [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) | `data-pipeline/htmlcov/index.html` |
 
-**auth:** 90.2% lines, 79.7% branches (88 unit tests, 24 Sep 2026). Figures and how to
-open the report: [auth/README.md → Code coverage](auth/README.md#code-coverage).
-
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does
 not produce a coverage report; use `mvn clean verify` when you need one.
@@ -444,9 +433,6 @@ Key files:
   `db/init-app-role.sh`) with secrets or environment variables.
 - Set a strong JWT secret via `APP_JWT_SECRET` (the in-code default, and the
   value hardcoded in `docker-compose.yml`, are dev-only).
-- Actually split `nextTrade-orders` and `nextTrade-holdings` apart — they're
-  identical services today and both still own the full onboarding/auth
-  surface; trim each down to its namesake responsibility.
 - Add a CI stage for frontend tests and a deploy stage that binds a real TLS
   keystore from Jenkins credentials, per the placeholders already wired into
   the Compose validation stage.
