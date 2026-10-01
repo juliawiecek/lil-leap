@@ -45,6 +45,17 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
+## 🔌 API Documentation
+
+**Browse and try the service APIs in Swagger UI:**
+
+- **[api/README.md](api/README.md)** - Swagger pages per service
+  - Auth and orders Swagger UI links
+  - Getting a token and authorizing
+  - SSH tunnel for the EC2 server
+
+---
+
 ## 🏗️ Architecture & Design
 
 **System design, decisions, and documentation:**

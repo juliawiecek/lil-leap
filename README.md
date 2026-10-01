@@ -148,34 +148,15 @@ The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
 
 ## API Documentation (Swagger / OpenAPI)
 
-- **auth:** [auth/openapi.json](auth/openapi.json) (generated from the code by
-  [auth/src/docs/](auth/src/docs/); open it in [editor.swagger.io](https://editor.swagger.io)).
-  With the stack running, Swagger UI is at `http://localhost:4200/auth/docs`.
-- **orders:** generated at runtime by springdoc from the controllers - no committed
-  spec file to go stale. With the service running: Swagger UI at
-  `http://localhost:8082/api/v1/swagger-ui.html`, raw spec at
-  `http://localhost:8082/api/v1/v3/api-docs`. Covers `POST /orders`,
-  `GET /clients/{id}/orders`, `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}`.
-  Use the "Authorize" button with a bearer token to try protected endpoints.
+| Service | Swagger UI (with the stack running) |
+|---|---|
+| `auth` | http://localhost:4200/auth/docs |
+| `orders` | http://localhost:8082/api/v1/swagger-ui.html |
 
-`insights`, `holdings` and the Python quote-service don't publish OpenAPI specs yet.
+`holdings`, `insights` and the Python quote-service don't publish OpenAPI specs yet.
 
-### Trying the APIs in Swagger
-
-1. Start the stack: `docker compose up -d --build`
-2. Open the docs:
-   - Auth: http://localhost:4200/auth/docs
-   - Orders: http://localhost:8082/api/v1/swagger-ui.html
-3. Get a token: on the **auth** page, run `POST /auth/login` with a trader's email and
-   password, and copy `accessToken` from the response.
-4. On the **orders** page, click **Authorize**, paste the token, then use **Try it out**
-   on any endpoint. For `{id}`, use your own user id (`user.id` in the login response).
-   Another client's id returns 404. Tokens expire after 10 minutes of inactivity; log in
-   again if calls start returning 401.
-
-On the shared EC2 server only port 8080 is open from outside, so tunnel the ports first:
-`ssh -L 4200:localhost:4200 -L 8082:localhost:8082 ec2-user@10.14.134.115`,
-then use the same `localhost` links.
+How to get a token and try the endpoints, per-service notes, and the SSH tunnel for the
+shared EC2 server: **[docs/api/README.md](docs/api/README.md)**.
 
 ## Database
 
