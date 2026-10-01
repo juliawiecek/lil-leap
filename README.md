@@ -12,10 +12,10 @@ architecture diagram, API routes, migration steps, fixes and remaining feature g
 | Team Member     | Role                              |
 | ---------------- | ---------------------------------- |
 | Kevin Marin      | Technical Lead                     |
-| Lalima Karri     | Developer, Angular (Scrum Master)  |
+| Lalima Karri     | Developer, Angular   |
 | Ilhan Gelle      | Developer, Security                |
-| Tanush Kaushik   | Developer, Data Engineer           |
-| Julia Wiecek     | Developer, Spring Boot             |
+| Tanush Kaushik   | Tech Lead           |
+| Julia Wiecek     | Scrum Master             |
 
 ## Architecture
 
