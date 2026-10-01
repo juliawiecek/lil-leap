@@ -53,6 +53,19 @@ before starting the reporting replica. Do not remove the primary volume to apply
 For TLS, configure certificate paths and add `-f docker-compose.tls.yml` alongside
 `-f docker-compose.yml`. The base configuration uses HTTP for local development.
 
+### Optional Kafka
+
+Kafka is optional scaffolding for local architecture experiments and is not required
+for core trading/reporting flows. To run it alongside the base stack:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d kafka kafka-topics
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml logs kafka-topics
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml exec kafka kafka-topics --list --bootstrap-server kafka:9092
+```
+
+See [kafka/README.md](kafka/README.md) for details and cautions.
+
 For Angular hot reload with the Compose APIs running, `npm ci && npm start` in
 `frontend` serves port 4300; the same command in `insights-frontend` serves 4301.
 Their API requests pass through the gateway.
@@ -103,4 +116,4 @@ or pre-refactor service owners.
 
 ## API, coverage and diagram guides
 
-See [Swagger/OpenAPI access](docs/api/README.md) for service-specific documentation and remote gateway access, [coverage generation](docs/coverage/README.md) for report commands, [service UML](docs/architecture/uml.md), and the schema ERD in [PDF](db/ER_Diagram.pdf), [PNG](db/er_diagram.png), and [Mermaid](db/er-diagram.md) forms.
+See [Swagger/OpenAPI access](docs/api/README.md) for service-specific documentation and remote gateway access, [coverage generation](docs/coverage/README.md) for report commands, [service UML](docs/architecture/uml.md), optional [Kafka development setup](kafka/README.md), and the schema ERD in [PDF](db/ER_Diagram.pdf), [PNG](db/er_diagram.png), and [Mermaid](db/er-diagram.md) forms.
