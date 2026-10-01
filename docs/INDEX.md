@@ -45,7 +45,7 @@ Navigate the lil-leap project documentation using the links below.
 
 ---
 
-## 🔌 API Documentation
+## API Documentation
 
 **Browse and try the service APIs in Swagger UI:**
 

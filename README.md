@@ -14,7 +14,7 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 | Tanush Kaushik   | Developer, Data Engineer           |
 | Julia Wiecek     | Developer, Spring Boot             |
 
-## 🚀 Quick Start
+## Quick Start
 
 **New to the project?** Start here:
 
