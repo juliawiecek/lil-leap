@@ -10,6 +10,7 @@ import com.neueda.leap.order.model.Account;
 import com.neueda.leap.order.model.Instrument;
 import com.neueda.leap.order.model.Order;
 import com.neueda.leap.order.model.OrderStatusHistory;
+import com.neueda.leap.order.repository.AuditLogRepository;
 import com.neueda.leap.order.repository.InstrumentRepository;
 import com.neueda.leap.order.repository.OrderAccountRepository;
 import com.neueda.leap.order.repository.OrderRepository;
@@ -18,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -43,6 +46,7 @@ public class OrderSubmissionService {
     private final OrderValidationService validationService;
     private final OrderRuleValidationService ruleValidator;
     private final OrderSufficiencyService sufficiencyValidator;
+    private final AuditEventWriter auditEventWriter;
 
     /**
      * Creates the order submission service.
@@ -54,6 +58,7 @@ public class OrderSubmissionService {
      * @param validationService field-level order validation
      * @param ruleValidator account/instrument eligibility validation
      * @param sufficiencyValidator cash/holdings sufficiency validation
+     * @param auditEventWriter internal audit event writer
      */
     public OrderSubmissionService(OrderRepository orderRepository,
                                   OrderAccountRepository accountRepository,
@@ -61,7 +66,8 @@ public class OrderSubmissionService {
                                   OrderStatusHistoryRepository statusHistoryRepository,
                                   OrderValidationService validationService,
                                   OrderRuleValidationService ruleValidator,
-                                  OrderSufficiencyService sufficiencyValidator) {
+                                  OrderSufficiencyService sufficiencyValidator,
+                                  AuditEventWriter auditEventWriter) {
         this.orderRepository = orderRepository;
         this.accountRepository = accountRepository;
         this.instrumentRepository = instrumentRepository;
@@ -69,6 +75,7 @@ public class OrderSubmissionService {
         this.validationService = validationService;
         this.ruleValidator = ruleValidator;
         this.sufficiencyValidator = sufficiencyValidator;
+        this.auditEventWriter = auditEventWriter;
     }
 
     /**
@@ -81,6 +88,10 @@ public class OrderSubmissionService {
      * 4. Instrument eligibility: enabled=true, tradable by instrument type
      * 5. Sufficiency check: cash for BUY, holdings for SELL, quote available
      * 6. Idempotent persistence: use clientReference as unique key within account
+     *
+     * AC1: A valid order creates exactly one ORDER_ACCEPTED audit event in the same
+     * transaction as the order persistence. Rejected or invalid submissions create no
+     * acceptance event; idempotent retries create no duplicate event.
      *
      * @param userId authenticated user's identifier
      * @param request submission payload, already bean-validated
@@ -121,6 +132,19 @@ public class OrderSubmissionService {
         Order saved = orderRepository.save(order);
         statusHistoryRepository.save(new OrderStatusHistory(
                 UUID.randomUUID(), saved, INITIAL_STATUS, "ORDER_ACCEPTED", "Order accepted for execution"));
+
+        // AC1: Write ORDER_ACCEPTED audit event in the same transaction as order persistence
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", saved.getOrderId());
+        payload.put("accountId", saved.getAccount().getAccountId());
+        payload.put("instrumentId", saved.getInstrument().getInstrumentId());
+        payload.put("side", saved.getSide());
+        payload.put("quantity", saved.getQuantity());
+        payload.put("orderType", saved.getOrderType());
+        payload.put("acceptedStatus", saved.getStatus());
+        payload.put("clientReference", saved.getClientReference());
+        payload.put("acceptedTimestamp", saved.getAcceptedAt());
+        auditEventWriter.writeOrderAccepted(userId, account.getAccountId(), saved.getOrderId(), payload);
 
         return new OrderSubmissionResponse(saved.getOrderId(), saved.getClientReference(), saved.getStatus());
     }

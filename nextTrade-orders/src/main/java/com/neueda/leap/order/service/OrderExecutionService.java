@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,6 +47,7 @@ public class OrderExecutionService {
     private final CashTransactionRepository cashTransactionRepository;
     private final OrderAccountRepository accountRepository;
     private final CashBalanceRepository cashBalanceRepository;
+    private final AuditEventWriter auditEventWriter;
 
     private OrderExecutionService self;
 
@@ -65,6 +68,7 @@ public class OrderExecutionService {
      * @param cashTransactionRepository cash transaction repository
      * @param accountRepository account repository, used to lock the account row before settlement
      * @param cashBalanceRepository cash balance cache repository
+     * @param auditEventWriter internal audit event writer
      */
     public OrderExecutionService(OrderRepository orderRepository,
                                 QuoteRepository quoteRepository,
@@ -73,7 +77,8 @@ public class OrderExecutionService {
                                 HoldingMovementRepository holdingMovementRepository,
                                 CashTransactionRepository cashTransactionRepository,
                                 OrderAccountRepository accountRepository,
-                                CashBalanceRepository cashBalanceRepository) {
+                                CashBalanceRepository cashBalanceRepository,
+                                AuditEventWriter auditEventWriter) {
         this.orderRepository = orderRepository;
         this.quoteRepository = quoteRepository;
         this.fillRepository = fillRepository;
@@ -82,6 +87,7 @@ public class OrderExecutionService {
         this.cashTransactionRepository = cashTransactionRepository;
         this.accountRepository = accountRepository;
         this.cashBalanceRepository = cashBalanceRepository;
+        this.auditEventWriter = auditEventWriter;
         this.self = this;
     }
 
@@ -120,6 +126,9 @@ public class OrderExecutionService {
      * A missing or stale quote defers execution; an out-of-tolerance price retries or rejects.
      * A successful attempt persists a fill, settlement ledger entries and FILLED status.
      *
+     * AC2: Execution-time pricing decisions are recorded in PRICE_DECISION audit events
+     * with the selected quote, execution price, and freshness/tolerance results.
+     *
      * @param order order with populated account, instrument, side, quantity and attempt count
      */
     @Transactional
@@ -145,6 +154,22 @@ public class OrderExecutionService {
         // Step 3: Validate price within tolerance buffer
         BigDecimal executionPrice = getExecutionPrice(order, currentQuote);
         
+        // AC2: Write PRICE_DECISION when price is fresh and acceptable
+        Map<String, Object> priceDecisionPayload = new HashMap<>();
+        priceDecisionPayload.put("orderId", order.getOrderId());
+        priceDecisionPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        priceDecisionPayload.put("side", order.getSide());
+        priceDecisionPayload.put("quoteId", currentQuote.getQuoteId());
+        priceDecisionPayload.put("quotedAt", currentQuote.getQuotedAt());
+        priceDecisionPayload.put("bid", currentQuote.getBid());
+        priceDecisionPayload.put("ask", currentQuote.getAsk());
+        priceDecisionPayload.put("midpoint", currentQuote.getMidpoint());
+        priceDecisionPayload.put("selectedPrice", executionPrice);
+        priceDecisionPayload.put("freshness", "FRESH");
+        priceDecisionPayload.put("synthetic", currentQuote.getIsSynthetic());
+        priceDecisionPayload.put("source", currentQuote.getSource());
+        auditEventWriter.writePriceDecision(order.getAccount().getAccountId(), order.getOrderId(), priceDecisionPayload);
+        
         if (!isPriceWithinTolerance(order, currentQuote, executionPrice)) {
             handlePriceOutOfTolerance(order, currentQuote, executionPrice);
             return;
@@ -157,6 +182,10 @@ public class OrderExecutionService {
     /**
      * Execute a fill for an order.
      * AC2: Filled orders record execution details.
+     *
+     * AC3: A successful fill creates exactly one ORDER_FILLED event in the same transaction
+     * as the fill, settlement ledger entries, and order status update. Retry idempotency
+     * is enforced by checking if a fill already exists.
      *
      * @param order order being executed
      * @param quote selected quote, or null when unavailable
@@ -215,7 +244,35 @@ public class OrderExecutionService {
         // Record status history
         recordStatusHistory(order, "FILLED", "EXECUTION_SUCCESS", "Order filled at " + executionPrice);
 
-        log.info("Order {} filled successfully", order.getOrderId());
+        // AC3: Write ORDER_FILLED audit event in same transaction as fill and settlement
+        Map<String, Object> filledPayload = new HashMap<>();
+        filledPayload.put("orderId", order.getOrderId());
+        filledPayload.put("fillId", fill.getFillId());
+        filledPayload.put("quantity", fill.getFilledQuantity());
+        filledPayload.put("executionPrice", fill.getExecutionPrice());
+        filledPayload.put("quoteTimestamp", fill.getQuoteTimestamp());
+        filledPayload.put("fillTimestamp", Instant.now());
+        filledPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        filledPayload.put("side", order.getSide());
+        auditEventWriter.writeOrderFilled(order.getAccount().getAccountId(), order.getOrderId(), filledPayload);
+
+        // Write SETTLEMENT_COMPLETED in same transaction as fill, ledger writes, cache updates, and status
+        // This confirms all settlements (holdings, cash) committed together.
+        BigDecimal settlementCash = computeCashAmount(order, executionPrice);
+        Map<String, Object> settlementPayload = new HashMap<>();
+        settlementPayload.put("orderId", order.getOrderId());
+        settlementPayload.put("fillId", fill.getFillId());
+        settlementPayload.put("quantity", fill.getFilledQuantity());
+        settlementPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        settlementPayload.put("side", order.getSide());
+        settlementPayload.put("executionPrice", fill.getExecutionPrice());
+        settlementPayload.put("cashDelta", settlementCash);
+        settlementPayload.put("holdingDelta", "BUY".equalsIgnoreCase(order.getSide()) ? order.getQuantity() : -order.getQuantity());
+        settlementPayload.put("settlementTimestamp", Instant.now());
+        settlementPayload.put("accountId", order.getAccount().getAccountId());
+        auditEventWriter.writeSettlementCompleted(order.getAccount().getAccountId(), order.getOrderId(), settlementPayload);
+
+        log.info("Order {} filled successfully with settlement recorded", order.getOrderId());
     }
 
     /**
@@ -329,11 +386,31 @@ public class OrderExecutionService {
     /**
      * Handle case where no quote is available.
      * Schedule retry without incrementing final attempt count.
+     * AC2: Write PRICE_DECISION with unavailable evidence.
      *
      * @param order order being executed
      */
     protected void handleNoQuoteAvailable(Order order) {
         log.warn("No quote available for order {}, scheduling retry", order.getOrderId());
+        
+        // AC2: Write PRICE_DECISION with no-quote evidence
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", order.getOrderId());
+        payload.put("instrumentId", order.getInstrument().getInstrumentId());
+        payload.put("side", order.getSide());
+        payload.put("decision", "UNAVAILABLE");
+        payload.put("reason", "NO_QUOTE");
+        payload.put("attemptNumber", order.getExecutionAttempts() + 1);
+        auditEventWriter.writePriceDecision(order.getAccount().getAccountId(), order.getOrderId(), payload);
+        
+        // Write ORDER_REQUEUED event
+        Map<String, Object> requeuePayload = new HashMap<>();
+        requeuePayload.put("orderId", order.getOrderId());
+        requeuePayload.put("attemptNumber", order.getExecutionAttempts() + 1);
+        requeuePayload.put("reasonCode", "NO_QUOTE");
+        requeuePayload.put("nextExecutionTime", Instant.now().plusSeconds(10));
+        auditEventWriter.writeOrderRequeued(order.getAccount().getAccountId(), order.getOrderId(), requeuePayload);
+        
         order.setLastExecutionError("NO_QUOTE");
         order.setNextExecutionAt(Instant.now().plusSeconds(10));  // Retry in 10 seconds
         orderRepository.save(order);
@@ -343,6 +420,7 @@ public class OrderExecutionService {
     /**
      * Schedules a retry after five seconds without increasing the tolerance-failure count.
      * Freshness uses {@code orders.execution.max-quote-age-seconds}, defaulting to 60.
+     * AC2: Write PRICE_DECISION with stale quote evidence.
      *
      * @param order order to reschedule
      * @param quote stale quote used for diagnostics
@@ -350,6 +428,36 @@ public class OrderExecutionService {
     protected void handleStaleQuote(Order order, Quote quote) {
         log.warn("Stale quote for order {} (quote age: {} seconds)", 
                  order.getOrderId(), getQuoteAgeSeconds(quote));
+        
+        long quoteAge = getQuoteAgeSeconds(quote);
+        
+        // AC2: Write PRICE_DECISION with stale quote evidence
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", order.getOrderId());
+        payload.put("instrumentId", order.getInstrument().getInstrumentId());
+        payload.put("side", order.getSide());
+        payload.put("quoteId", quote.getQuoteId());
+        payload.put("quotedAt", quote.getQuotedAt());
+        payload.put("bid", quote.getBid());
+        payload.put("ask", quote.getAsk());
+        payload.put("midpoint", quote.getMidpoint());
+        payload.put("freshness", "STALE");
+        payload.put("quoteAgeSeconds", quoteAge);
+        payload.put("maxQuoteAgeSeconds", maxQuoteAgeSeconds);
+        payload.put("decision", "DEFERRED");
+        payload.put("reason", "STALE_QUOTE");
+        payload.put("attemptNumber", order.getExecutionAttempts() + 1);
+        auditEventWriter.writePriceDecision(order.getAccount().getAccountId(), order.getOrderId(), payload);
+        
+        // Write ORDER_REQUEUED event
+        Map<String, Object> requeuePayload = new HashMap<>();
+        requeuePayload.put("orderId", order.getOrderId());
+        requeuePayload.put("attemptNumber", order.getExecutionAttempts() + 1);
+        requeuePayload.put("reasonCode", "STALE_QUOTE");
+        requeuePayload.put("nextExecutionTime", Instant.now().plusSeconds(5));
+        requeuePayload.put("quoteEvidence", payload);
+        auditEventWriter.writeOrderRequeued(order.getAccount().getAccountId(), order.getOrderId(), requeuePayload);
+        
         order.setLastExecutionError("STALE_QUOTE");
         order.setNextExecutionAt(Instant.now().plusSeconds(5));  // Retry in 5 seconds
         orderRepository.save(order);
@@ -360,6 +468,7 @@ public class OrderExecutionService {
     /**
      * Handle case where price is outside tolerance buffer.
      * Increment attempt counter and reject if max attempts exceeded.
+     * AC2: Write PRICE_DECISION with out-of-tolerance evidence.
      *
      * @param order order being executed
      * @param quote selected quote, or null when unavailable
@@ -369,13 +478,46 @@ public class OrderExecutionService {
         log.warn("Price out of tolerance for order {}: quote={}, execution={}", 
                  order.getOrderId(), quote.getMidpoint(), executionPrice);
         
+        BigDecimal tolerance = order.getBufferPercent() != null 
+            ? order.getBufferPercent() 
+            : order.getAccount().getExecutionBufferPercent();
+        
+        // AC2: Write PRICE_DECISION with out-of-tolerance evidence
+        Map<String, Object> priceDecisionPayload = new HashMap<>();
+        priceDecisionPayload.put("orderId", order.getOrderId());
+        priceDecisionPayload.put("instrumentId", order.getInstrument().getInstrumentId());
+        priceDecisionPayload.put("side", order.getSide());
+        priceDecisionPayload.put("quoteId", quote.getQuoteId());
+        priceDecisionPayload.put("quotedAt", quote.getQuotedAt());
+        priceDecisionPayload.put("bid", quote.getBid());
+        priceDecisionPayload.put("ask", quote.getAsk());
+        priceDecisionPayload.put("midpoint", quote.getMidpoint());
+        priceDecisionPayload.put("selectedPrice", executionPrice);
+        priceDecisionPayload.put("tolerancePercent", tolerance);
+        priceDecisionPayload.put("freshness", "FRESH");
+        priceDecisionPayload.put("decision", "OUT_OF_TOLERANCE");
+        priceDecisionPayload.put("attemptNumber", order.getExecutionAttempts() + 1);
+        auditEventWriter.writePriceDecision(order.getAccount().getAccountId(), order.getOrderId(), priceDecisionPayload);
+        
         order.setExecutionAttempts(order.getExecutionAttempts() + 1);
         order.setLastExecutionError("PRICE_OUT_OF_TOLERANCE");
         
         if (order.getExecutionAttempts() >= MAX_EXECUTION_ATTEMPTS) {
+            // Terminal rejection after max attempts
             order.setStatus("REJECTED");
             recordStatusHistory(order, "REJECTED", "PRICE_OUT_OF_TOLERANCE",
                                "Price out of tolerance after " + MAX_EXECUTION_ATTEMPTS + " attempts");
+            
+            // Write ORDER_REJECTED event
+            Map<String, Object> rejectionPayload = new HashMap<>();
+            rejectionPayload.put("orderId", order.getOrderId());
+            rejectionPayload.put("reasonCode", "PRICE_OUT_OF_TOLERANCE");
+            rejectionPayload.put("attemptNumber", order.getExecutionAttempts());
+            rejectionPayload.put("maxAttempts", MAX_EXECUTION_ATTEMPTS);
+            rejectionPayload.put("rejectionTimestamp", Instant.now());
+            rejectionPayload.put("quoteEvidence", priceDecisionPayload);
+            auditEventWriter.writeOrderRejected(order.getAccount().getAccountId(), order.getOrderId(), rejectionPayload);
+            
             log.warn("Order {} rejected after {} failed attempts", order.getOrderId(), MAX_EXECUTION_ATTEMPTS);
         } else {
             // Exponential backoff for retry
@@ -383,6 +525,17 @@ public class OrderExecutionService {
             order.setNextExecutionAt(Instant.now().plusSeconds(backoffSeconds));
             recordStatusHistory(order, "PENDING", "PRICE_OUT_OF_TOLERANCE",
                                "Attempt " + order.getExecutionAttempts() + " failed, retrying");
+            
+            // Write ORDER_REQUEUED event
+            Map<String, Object> requeuePayload = new HashMap<>();
+            requeuePayload.put("orderId", order.getOrderId());
+            requeuePayload.put("attemptNumber", order.getExecutionAttempts());
+            requeuePayload.put("reasonCode", "PRICE_OUT_OF_TOLERANCE");
+            requeuePayload.put("nextExecutionTime", order.getNextExecutionAt());
+            requeuePayload.put("backoffSeconds", backoffSeconds);
+            requeuePayload.put("quoteEvidence", priceDecisionPayload);
+            auditEventWriter.writeOrderRequeued(order.getAccount().getAccountId(), order.getOrderId(), requeuePayload);
+            
             log.info("Order {} attempt {} failed, retrying in {} seconds", 
                      order.getOrderId(), order.getExecutionAttempts(), backoffSeconds);
         }
