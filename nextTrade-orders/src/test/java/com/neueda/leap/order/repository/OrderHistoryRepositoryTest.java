@@ -49,7 +49,7 @@ class OrderHistoryRepositoryTest {
         // accounts.user_id references users, which this test does not need to populate.
         entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate();
         account = account(userId);
-        instrument = new Instrument(UUID.randomUUID(), "AAPL", "Apple Inc.", "COMMON_STOCK", "USD", "NASDAQ", true);
+        instrument = new Instrument(UUID.randomUUID(), "AAPL", "Apple Inc.", "COMMON_STOCK", "NASDAQ", "USD", true, true);
         entityManager.persist(account);
         entityManager.persist(instrument);
 

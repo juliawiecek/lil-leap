@@ -43,13 +43,13 @@ Services within Docker can connect to Kafka using the hostname `kafka` on port `
 To check Kafka topics:
 
 ```bash
-docker compose exec kafka kafka-topics.sh --list --bootstrap-server localhost:9092
+docker compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 ```
 
 To consume from a topic:
 
 ```bash
-docker compose exec kafka kafka-console-consumer.sh \
+docker compose exec kafka kafka-console-consumer \
   --bootstrap-server localhost:9092 \
   --topic orders-events \
   --from-beginning
