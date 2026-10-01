@@ -179,4 +179,18 @@ pipeline {
       }
     }
   }
+
+  post {
+    always {
+      // The CI server has a small disk. Clear Docker build cache and unused images older
+      // than a day after every run so the next build has room. Running containers, the
+      // images they use and all volumes are left alone; a cleanup failure never fails the build.
+      sh '''
+        docker builder prune -af --filter until=24h || true
+        docker image prune -f || true
+        docker image prune -af --filter until=24h || true
+        df -h / || true
+      '''
+    }
+  }
 }
