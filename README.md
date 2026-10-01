@@ -140,7 +140,7 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 |---|---|
 | `auth` | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`; `GET /rules/tier-eligibility`; `GET /health`. Full spec: [auth/openapi.json](auth/openapi.json). |
 | `insights` | Client financials/portfolio, order submission, instrument lookup, password reset under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
-| `orders` | No business endpoints yet; runs the order execution engine on a schedule. |
+| `orders` | `POST /orders` (order submission), `GET /clients/{id}/orders` (history, filterable by `from`/`to`/`status`), `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}` (cash balance); also runs the order execution engine on a schedule. |
 | `holdings` | No business endpoints yet. |
 
 The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
@@ -151,8 +151,14 @@ The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
 - **auth:** [auth/openapi.json](auth/openapi.json) (generated from the code by
   [auth/src/docs/](auth/src/docs/); open it in [editor.swagger.io](https://editor.swagger.io)).
   With the stack running, Swagger UI is at `http://localhost:4200/auth/docs`.
+- **orders:** generated at runtime by springdoc from the controllers - no committed
+  spec file to go stale. With the service running: Swagger UI at
+  `http://localhost:8082/api/v1/swagger-ui.html`, raw spec at
+  `http://localhost:8082/api/v1/v3/api-docs`. Covers `POST /orders`,
+  `GET /clients/{id}/orders`, `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}`.
+  Use the "Authorize" button with a bearer token to try protected endpoints.
 
-The Spring Boot and Python services don't publish OpenAPI specs yet.
+`insights`, `holdings` and the Python quote-service don't publish OpenAPI specs yet.
 
 ## Database
 
