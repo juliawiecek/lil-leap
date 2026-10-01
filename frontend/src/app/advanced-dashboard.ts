@@ -3,6 +3,7 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
+import { OrderHistory } from './order-history';
 
 interface Quote {
   symbol: string;
@@ -42,7 +43,7 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })

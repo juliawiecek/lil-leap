@@ -19,7 +19,7 @@ import java.util.UUID;
 public class OrderStatusHistory {
     
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(name = "status_history_id", columnDefinition = "uuid")
     private UUID statusHistoryId;
     
     @ManyToOne(fetch = FetchType.LAZY)

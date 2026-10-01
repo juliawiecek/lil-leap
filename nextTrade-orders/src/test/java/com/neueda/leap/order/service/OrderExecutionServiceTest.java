@@ -39,10 +39,16 @@ class OrderExecutionServiceTest {
     
     @Mock
     private HoldingMovementRepository holdingMovementRepository;
-    
+
     @Mock
     private CashTransactionRepository cashTransactionRepository;
-    
+
+    @Mock
+    private OrderAccountRepository orderAccountRepository;
+
+    @Mock
+    private CashBalanceRepository cashBalanceRepository;
+
     private OrderExecutionService orderExecutionService;
     
     private Account testAccount;
@@ -52,15 +58,19 @@ class OrderExecutionServiceTest {
 
     @BeforeEach
     void setUp() {
+        AuditEventWriter auditEventWriter = mock(AuditEventWriter.class);
         orderExecutionService = new OrderExecutionService(
             orderRepository,
             quoteRepository,
             fillRepository,
             statusHistoryRepository,
             holdingMovementRepository,
-            cashTransactionRepository
+            cashTransactionRepository,
+            orderAccountRepository,
+            cashBalanceRepository,
+            auditEventWriter
         );
-        
+
         // Setup test data
         testAccount = new Account(
             UUID.randomUUID(),
@@ -73,14 +83,21 @@ class OrderExecutionServiceTest {
             new BigDecimal("5000.00"),
             new BigDecimal("2.00")
         );
-        
+
+        // Only exercised by tests that reach a successful fill; lenient so
+        // the other scenarios (stale quote, no quote, out-of-tolerance) don't
+        // trip strict-stubbing on an unused stub.
+        lenient().when(orderAccountRepository.findWithLockByAccountId(any(UUID.class)))
+                .thenReturn(Optional.of(testAccount));
+
         testInstrument = new Instrument(
             UUID.randomUUID(),
             "AAPL",
             "Apple Inc",
             "COMMON_STOCK",
-            "USD",
             "NASDAQ",
+            "USD",
+            true,
             true
         );
         
@@ -410,6 +427,47 @@ class OrderExecutionServiceTest {
     }
     
     /**
+     * BR-09: a fractional-cent execution total is rounded once to cents. The ledger entry
+     * and the cash_balances update both use this same computed amount.
+     */
+    @Test
+    void testCashAmount_FractionalCent_LedgerAndBalanceUseSameRoundedAmount() {
+        // Arrange - 1 share at 225.045 = 225.045, which must become -225.05 in both places
+        testOrder.setQuantity(1L);
+        BigDecimal price = new BigDecimal("225.045");
+        Fill fill = new Fill(UUID.randomUUID(), testOrder, 1L, price, Instant.now());
+
+        // Act
+        orderExecutionService.createCashTransaction(testOrder, fill, price);
+
+        // Assert
+        verify(cashTransactionRepository).save(argThat(transaction ->
+            transaction.getAmount().compareTo(new BigDecimal("-225.05")) == 0 &&
+            transaction.getAmount().scale() == 2
+        ));
+    }
+
+    /**
+     * A successful fill clears any error left from an earlier deferred attempt.
+     */
+    @Test
+    void testExecuteOrder_SuccessfulFill_ClearsLastExecutionError() {
+        // Arrange - a previous attempt left a deferral reason on the order
+        testOrder.setLastExecutionError("STALE_QUOTE");
+        when(quoteRepository.findLatestByInstrumentId(testInstrument.getInstrumentId()))
+            .thenReturn(Optional.of(testQuote));
+        when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+
+        // Act
+        orderExecutionService.executeOrder(testOrder);
+
+        // Assert
+        verify(orderRepository).save(argThat(order ->
+            "FILLED".equals(order.getStatus()) && order.getLastExecutionError() == null
+        ));
+    }
+
+    /**
      * Test: Exponential backoff is applied on price tolerance failures.
      */
     @Test
@@ -504,13 +562,57 @@ class OrderExecutionServiceTest {
         // Act
         orderExecutionService.executeOrder(testOrder);
         
-        // Assert - Fill should store quote reference for BR-08 proof
+        // Assert - Fill should store quote timestamp for BR-08 proof
         verify(fillRepository).save(argThat(fill -> 
-            fill.getQuote() != null &&
-            fill.getQuote().getQuoteId().equals(testQuote.getQuoteId())
+            fill.getQuoteTimestamp() != null &&
+            fill.getQuoteTimestamp().equals(testQuote.getQuotedAt())
         ));
     }
-    
+
+    /**
+     * TS-10.1 ADR idempotency contract: a fill that already exists for an
+     * order must never be duplicated, and none of the settlement side
+     * effects (ledgers, caches, status update) should run again.
+     */
+    @Test
+    void testExecuteOrder_FillAlreadyExists_SkipsDuplicateSettlement() {
+        // Arrange
+        Fill existingFill = new Fill(UUID.randomUUID(), testOrder, 100L, new BigDecimal("150.50"), Instant.now());
+        when(quoteRepository.findLatestByInstrumentId(testInstrument.getInstrumentId()))
+            .thenReturn(Optional.of(testQuote));
+        when(fillRepository.findByOrderOrderId(testOrder.getOrderId()))
+            .thenReturn(Optional.of(existingFill));
+
+        // Act
+        orderExecutionService.executeOrder(testOrder);
+
+        // Assert - no new fill, no ledger entries, no cache writes, no status change
+        verify(fillRepository, never()).save(any());
+        verify(holdingMovementRepository, never()).save(any());
+        verify(cashTransactionRepository, never()).save(any());
+        verify(cashBalanceRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    /**
+     * BR-09/BR-10: a fill must update the cash_balances cache with the same
+     * signed amount written to the cash_transactions ledger.
+     */
+    @Test
+    void testApplyCashToCache_NoExistingBalance_CreatesRowWithSignedAmount() {
+        // Arrange - no existing cash balance row for this account
+        when(cashBalanceRepository.findByAccountId(testAccount.getAccountId()))
+            .thenReturn(Optional.empty());
+
+        // Act - a BUY's signed amount is negative (outflow)
+        orderExecutionService.applyCashToCache(testAccount, new BigDecimal("-15050.00"));
+
+        // Assert
+        verify(cashBalanceRepository).save(argThat(balance ->
+            balance.getBalance().compareTo(new BigDecimal("-15050.00")) == 0
+        ));
+    }
+
     /**
      * Test: executeAllDueOrders processes all due orders.
      */
