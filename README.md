@@ -158,10 +158,10 @@ Start the services directly for development and access Swagger UI:
 - Swagger UI: `http://localhost:8888/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8888/v3/api-docs`
 - Endpoints documented by tab:
-    - **Holdings** — GET `/holdings`, GET `/clients/{id}/holdings`
-    - **Cash** — GET `/cash`
-    - **Orders** — Order submission endpoints
-    - **Portfolio** — GET `/clients/{clientId}/portfolio-summary` *(TS-11.3)*
+  - **Holdings** — GET `/holdings`, GET `/clients/{id}/holdings`
+  - **Cash** — GET `/cash`
+  - **Orders** — Order submission endpoints
+  - **Portfolio** — GET `/clients/{clientId}/portfolio-summary` *(TS-11.3)*
 
 ### Via Docker Compose (Production-like Setup)
 
@@ -174,10 +174,10 @@ With `docker-compose.yml`, services run behind nginx on fixed ports. Access Swag
 
 - **auth:** Spec auto-generated at `[auth/openapi.json](auth/openapi.json)` from decorators in [auth/src/docs/](auth/src/docs/)
 - **insights:** Spec auto-generated at `/v3/api-docs` from `@Tag`, `@Operation`, `@ApiResponse` annotations
-  | Service | Swagger UI (with the stack running) |
-  |---|---|
-  | `auth` | http://localhost:4200/auth/docs |
-  | `orders` | http://localhost:8082/api/v1/swagger-ui.html |
+| Service | Swagger UI (with the stack running) |
+|---|---|
+| `auth` | http://localhost:4200/auth/docs |
+| `orders` | http://localhost:8082/api/v1/swagger-ui.html |
 
 How to get a token and try the endpoints, per-service notes, and how to reach a stack running
 on a remote server: **[docs/api/README.md](docs/api/README.md)**.
