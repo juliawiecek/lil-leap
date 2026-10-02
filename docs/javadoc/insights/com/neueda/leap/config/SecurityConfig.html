@@ -91,13 +91,10 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <hr>
 <div class="type-signature"><span class="annotations">@Configuration
+@EnableMethodSecurity
 </span><span class="modifiers">public class </span><span class="element-name type-name-label">SecurityConfig</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Configuration class for application security-related beans.
-
- <p>Provides the password encoder used to securely hash user passwords,
- and the HTTP security filter chain that enforces stateless JWT-based
- authentication on every route except registration and login.</p></div>
+<div class="block">Verifies Identity-issued JWTs and exposes only this service's API.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -111,7 +108,7 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E()" class="member-name-link">SecurityConfig</a>()</code></div>
 <div class="col-last even-row-color">
-<div class="block">Creates the Spring configuration for this component.</div>
+<div class="block">Creates the service security configuration.</div>
 </div>
 </div>
 </section>
@@ -127,16 +124,11 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.security.crypto.password.PasswordEncoder</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#passwordEncoder()" class="member-name-link">passwordEncoder</a>()</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.security.web.SecurityFilterChain</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity,com.neueda.leap.security.JwtService)" class="member-name-link">securityFilterChain</a><wbr>(org.springframework.security.config.annotation.web.builders.HttpSecurity&nbsp;http,
+ <a href="../security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;tokens)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Creates and returns a delegating password encoder.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.security.web.SecurityFilterChain</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity,com.neueda.leap.security.JwtService)" class="member-name-link">securityFilterChain</a><wbr>(org.springframework.security.config.annotation.web.builders.HttpSecurity&nbsp;http,
- <a href="../security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;jwtService)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Configures the HTTP security filter chain.</div>
+<div class="block">Restricts access to the service's explicit routes.</div>
 </div>
 </div>
 </div>
@@ -159,7 +151,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="&lt;init&gt;()">
 <h3>SecurityConfig</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">SecurityConfig</span>()</div>
-<div class="block">Creates the Spring configuration for this component.</div>
+<div class="block">Creates the service security configuration.</div>
 </section>
 </li>
 </ul>
@@ -171,50 +163,21 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="passwordEncoder()">
-<h3>passwordEncoder</h3>
-<div class="member-signature"><span class="annotations">@Bean
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.security.crypto.password.PasswordEncoder</span>&nbsp;<span class="element-name">passwordEncoder</span>()</div>
-<div class="block">Creates and returns a delegating password encoder.
-
- <p>The delegating password encoder supports multiple encoding formats
- and uses a default secure encoding algorithm.</p></div>
-<dl class="notes">
-<dt>Returns:</dt>
-<dd>a configured <code>PasswordEncoder</code> instance</dd>
-</dl>
-</section>
-</li>
-<li>
 <section class="detail" id="securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity,com.neueda.leap.security.JwtService)">
 <h3>securityFilterChain</h3>
 <div class="member-signature"><span class="annotations">@Bean
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.security.web.SecurityFilterChain</span>&nbsp;<span class="element-name">securityFilterChain</span><wbr><span class="parameters">(org.springframework.security.config.annotation.web.builders.HttpSecurity&nbsp;http,
- <a href="../security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;jwtService)</span>
+ <a href="../security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;tokens)</span>
                                                                          throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></span></div>
-<div class="block">Configures the HTTP security filter chain.
-
- <p>Sessions are stateless (auth state lives entirely in the JWT), CSRF
- protection is disabled since there are no cookie-based sessions to
- protect, registration and login are open to anonymous callers, and the
- <a href="../security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security"><code>JwtAuthenticationFilter</code></a> runs ahead of Spring's own username/password
- filter so a valid bearer token is recognized before any other authentication
- mechanism is considered.</p>
-
- <p>The authentication entry point is set explicitly to always return 401:
- without it, Spring Security's default for an app with no login form or
- HTTP Basic configured is a 403, which is the wrong signal for a missing
- or absent bearer token on a token-only API (403 means "authenticated but
- not allowed"; 401 means "not authenticated at all", which is what a
- missing token actually is).</p></div>
+<div class="block">Restricts access to the service's explicit routes.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
-<dd><code>http</code> - the <code>HttpSecurity</code> builder to configure</dd>
-<dd><code>jwtService</code> - the service used to validate incoming bearer tokens</dd>
+<dd><code>http</code> - Spring Security builder</dd>
+<dd><code>tokens</code> - JWT verifier</dd>
 <dt>Returns:</dt>
-<dd>the configured <code>SecurityFilterChain</code></dd>
+<dd>stateless API security chain</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></code> - if the security configuration cannot be built</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></code> - when the chain cannot be built</dd>
 </dl>
 </section>
 </li>

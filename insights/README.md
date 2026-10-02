@@ -30,6 +30,7 @@ mvn spring-boot:run
 
 Database and JWT settings are environment-driven in `src/main/resources/application.yml`.
 See `../env.example`. Javadoc is generated at `target/site/apidocs/index.html` and
-JaCoCo at `target/site/jacoco/index.html`.
+published snapshot HTML is available at `../docs/javadoc/insights/index.html`.
+JaCoCo is generated at `target/site/jacoco/index.html`.
 
 Swagger UI is available at `/api/v1/swagger-ui.html` and the specification at `/api/v1/v3/api-docs` on the native service port. These documentation routes are public; base Compose does not publish Java ports. See [API access](../docs/api/README.md).

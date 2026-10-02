@@ -62,10 +62,6 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.user">com.neueda.leap.user</a></div>
-<div class="col-last even-row-color">
-<div class="block">Authentication and current-user domain.</div>
-</div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
@@ -79,9 +75,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>org.springframework.security.web.SecurityFilterChain</code></div>
 <div class="col-second even-row-color"><span class="type-name-label">SecurityConfig.</span><code><a href="../../config/SecurityConfig.html#securityFilterChain(org.springframework.security.config.annotation.web.builders.HttpSecurity,com.neueda.leap.security.JwtService)" class="member-name-link">securityFilterChain</a><wbr>(org.springframework.security.config.annotation.web.builders.HttpSecurity&nbsp;http,
- <a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;jwtService)</code></div>
+ <a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;tokens)</code></div>
 <div class="col-last even-row-color">
-<div class="block">Configures the HTTP security filter chain.</div>
+<div class="block">Restricts access to the service's explicit routes.</div>
 </div>
 </div>
 </section>
@@ -109,23 +105,6 @@ loadScripts(document, 'script');</script>
 <div class="col-second even-row-color"><code><a href="../JwtAuthenticationFilter.html#%3Cinit%3E(com.neueda.leap.security.JwtService)" class="member-name-link">JwtAuthenticationFilter</a><wbr>(<a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;jwtService)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a new filter backed by the given JWT service.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.user">
-<h2>Uses of <a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a> in <a href="../../user/package-summary.html">com.neueda.leap.user</a></h2>
-<div class="caption"><span>Constructors in <a href="../../user/package-summary.html">com.neueda.leap.user</a> with parameters of type <a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a></span></div>
-<div class="summary-table three-column-summary">
-<div class="table-header col-first">Modifier</div>
-<div class="table-header col-second">Constructor</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><code>&nbsp;</code></div>
-<div class="col-second even-row-color"><code><a href="../../user/AuthController.html#%3Cinit%3E(com.neueda.leap.user.UserService,com.neueda.leap.security.JwtService)" class="member-name-link">AuthController</a><wbr>(<a href="../../user/UserService.html" title="interface in com.neueda.leap.user">UserService</a>&nbsp;userService,
- <a href="../JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>&nbsp;jwtService)</code></div>
-<div class="col-last even-row-color">
-<div class="block">Creates a new controller with the required dependencies.</div>
 </div>
 </div>
 </section>
