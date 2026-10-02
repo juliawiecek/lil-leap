@@ -1,45 +1,24 @@
-# Test Coverage Reports
+# Test coverage reports
 
-View interactive code coverage reports for Python and Java components.
+## Historical snapshots
 
-## 📊 Quick Links
+The checked-in [Python test log](../coverage-reports/pytest_output.txt),
+[Java report](../coverage-reports/java/index.html) and
+[summary](../coverage-reports/SUMMARY.txt) predate NEXT-193. Their 72 Python tests,
+320 Java tests and coverage percentages describe that snapshot, not the current
+service split. The Java report includes code that has moved out of Insights.
+The referenced Python HTML snapshot is absent from the checkout; regenerate it
+using the command below instead of relying on the old link.
 
-| Language | Coverage | Tests | Report |
-|----------|----------|-------|--------|
-| **Python** | 79.67% | 72 passing ✓ | [`coverage-reports/python/index.html`](../coverage-reports/python/index.html) |
-| **Java** | 77.79% | 320 passing ✓ | [`coverage-reports/java/index.html`](../coverage-reports/java/index.html) |
+## Generate current reports
 
----
+- In each Java service (`nextTrade-orders`, `nextTrade-holdings`, `insights`), run
+  `mvn -B clean verify`; open `target/site/jacoco/index.html` for that service.
+- In `auth`, run `npm run test:cov`; open `coverage/lcov-report/index.html`.
+- In each frontend, run `npm run test:coverage`; see its tests README for reports.
+- In `data-pipeline`, follow [Python coverage](../data-pipeline/PYTEST_COVERAGE.md).
 
-## 🔍 How to View
-
-**Option 1: Direct (Easiest)**
-- Navigate to `coverage-reports/` folder
-- Double-click `python/index.html` or `java/index.html`
-
-**Option 2: PowerShell**
-```powershell
-cd coverage-reports
-Start-Process ./python/index.html
-Start-Process ./java/index.html
-```
-
----
-
-## 📝 Summary
-
-- **Python (data-pipeline)**: 79.67% coverage with 8/10 modules at 85%+
-- **Java (insights)**: 77.79% coverage with 66/99 classes at 85%+
-- **Total**: 392 tests, all passing
-- Reports include per-module/class breakdowns and uncovered line details
-
-See [`coverage-reports/SUMMARY.txt`](../coverage-reports/SUMMARY.txt) for detailed metrics.
-
----
-
-## 📁 Files in coverage-reports/
-
-- **python/** - Pytest HTML coverage report
-- **java/** - JaCoCo HTML coverage report
-- **SUMMARY.txt** - Quick metrics reference
-- **pytest_output.txt** - Python test execution log
+Install each component's dependencies first. PostgreSQL-dependent tests require
+the disposable database settings described in [service verification](architecture/service-boundaries.md#verification).
+Passing unit tests alone does not imply container startup or live API integration
+has been checked. The architecture guide records what was actually verified.

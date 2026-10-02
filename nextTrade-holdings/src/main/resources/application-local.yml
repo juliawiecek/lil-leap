@@ -1,0 +1,18 @@
+# Local equivalent of the holdings service in docker-compose.yml.
+# Activate with --spring.profiles.active=local (or the Maven local profile command).
+spring:
+  datasource:
+    # Docker's service hostname "db" becomes localhost outside Docker.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
+
+server:
+  # Native development uses the same Holdings port as the diagram.
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1

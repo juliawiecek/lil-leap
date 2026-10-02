@@ -1,5 +1,10 @@
 # NextTrade Database Decisions
 
+Current deployment and role configuration is documented in the [database reference](README.md)
+and [NEXT-193 service boundaries](../docs/architecture/service-boundaries.md).
+The ledger design below describes intent; `v_account_holdings` average cost after
+sells remains a known limitation. Holdings reads the correctly maintained cache.
+
 ## Core Architectural Decisions
 
 ### Transactional System of Record
@@ -13,7 +18,7 @@
 - Maturit and widespread adoption in fintech
 
 **Trade-offs**: 
-- No native horizontal scaling (can add read replicas and sharding layers later)
+- The reporting read replica is implemented; primary write scaling/sharding remains separate work
 - Schema migrations require downtime if not carefully versioned
 
 ---
@@ -22,18 +27,19 @@
 
 ### Development (Isolated Per Developer)
 
-**Decision**: Each developer runs a complete, isolated PostgreSQL instance using Docker Compose with a shared schema and version-controlled initialization scripts.
+**Decision**: Each developer runs an isolated PostgreSQL primary and reporting standby using Docker Compose with a shared schema and version-controlled initialization scripts.
 
 **How It Works**:
 - Docker Compose starts a `db` service with a named volume (`db_data`)
-- On first run, `01-schema.sql` and `02-app-role.sh` are executed
+- On first run, the schema, application-role script, equity seed and reporting-role script are executed
+- `reporting-db` uses its own volume and follows the primary via physical streaming replication
 - Volume persists across `docker compose down` (no `-v` flag)
 - Developers can safely test schema changes and migrations
 
 **Benefits**:
 - Schema consistency across all dev environments
 - No shared database contention
-- Easy reset: `docker compose down -v`
+- Disposable environments can be intentionally reset with `docker compose down -v` (deletes both database volumes); existing databases use migrations
 - Close simulation of production initialization
 
 ---
@@ -221,6 +227,8 @@ Includes midpoint price (bid/ask average) for quick market assessment.
 
 ## Settlement and Ledger Model
 
+See the [TS-10.1 ADR](../docs/architecture/ADR-TS-10.1-atomic-settlement.md) for the atomic transaction decision, seven-operation comparison, crash recovery and implementation handoff.
+
 ### Dual-Cache + Ledger Architecture
 
 **Decision**: Holdings and cash use an append-only ledger (source of truth) with a cache table (performance):
@@ -228,22 +236,22 @@ Includes midpoint price (bid/ask average) for quick market assessment.
 **Holdings**:
 - **Ledger**: `holding_movements` (append-only) — every fill creates one record
 - **Cache**: `holdings` — current quantity and average cost per account/instrument
-- View: `v_account_holdings` — computed from ledger if cache diverges
+- View: `v_account_holdings` — ledger-derived quantities; its current cost-basis calculation needs alignment before settlement recovery (see the ADR)
 
 **Cash**:
 - **Ledger**: `cash_transactions` (append-only) — every cash event creates one record
-- **Cache**: `cash_balances` — current balance per account/currency
-- View: `v_account_cash` — computed from ledger if cache diverges
+- **Cache**: `cash_balances` — current USD balance, keyed by account
+- View: `v_account_cash` — computed from the ledger; cache reconciliation is an explicit application operation
 
 **Why**:
 - **Auditability**: Ledger captures complete history; can replay to any point in time
 - **Correctness**: If cache corrupts, recompute from ledger
 - **Performance**: Cache lookup is O(1) for current balance/holdings
-- **Ledger Integrity**: No UPDATE/DELETE on ledgers; immutable for compliance
+- **Ledger Integrity**: Append-only is the intended contract; runtime privilege enforcement is required by the ADR and is not provided by the current broad DML grants
 
 **Constraint**: 
 - `holding_movements.uk_movement_fill UNIQUE (fill_id)` — one movement per fill
-- `cash_transactions.fk_transaction_fill FOREIGN KEY (fill_id) REFERENCES fills` — only fills create transactions
+- `cash_transactions.fk_transaction_fill FOREIGN KEY (fill_id) REFERENCES fills` — validates non-null fill references; deposits, withdrawals and other non-trade cash events may have no fill
 
 ---
 
@@ -292,7 +300,8 @@ VALUES (account_123, instr_456, '550e8400-e29b-41d4-a716-446655440000', 'BUY', 1
 ```sql
 -- Admin role can do everything
 -- Application role can do only SELECT, INSERT, UPDATE, DELETE
--- Future: could add SELECT-only role for read replicas
+-- reporting_user has SELECT-only access to an explicit financial-table allowlist
+-- replicator owns physical replication authentication
 ```
 
 **Benefit**: If application is compromised, attacker cannot:

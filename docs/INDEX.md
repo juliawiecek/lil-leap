@@ -1,109 +1,40 @@
-# Project Documentation Index
+# Project documentation index
 
-Navigate the lil-leap project documentation using the links below.
+## Current guides
 
----
+- [Getting started](GETTING_STARTED.md): startup, tools and client ports.
+- [Service boundaries](architecture/service-boundaries.md): NEXT-193 ownership, diagram, migrations and known gaps.
+- [Database setup](DATABASE_SETUP.md) and [database reference](../db/README.md).
+- [Quote storage ADR](architecture/ADR-quote-storage-and-retrieval.md).
+- [Coverage reports](COVERAGE_REPORTS.md): regeneration and historical snapshots.
 
-## 🚀 Getting Started (START HERE)
+| Component | Guide |
+| --- | --- |
+| Identity | [auth](../auth/README.md) |
+| Holdings, portfolio and instruments | [nextTrade-holdings](../nextTrade-holdings/README.md) |
+| Submission and execution | [nextTrade-orders](../nextTrade-orders/README.md) |
+| Replica-backed reporting | [insights](../insights/README.md) |
+| Synthetic quotes | [data-pipeline](../data-pipeline/README.md) |
+| Trading client | [frontend](../frontend/README.md) |
+| Reporting client | [insights-frontend](../insights-frontend/README.md) |
+| Shared routing | [gateway configuration](../gateway/nginx.conf) |
 
-**New team members or running the project locally?**
+- [API documentation](api/README.md): Swagger, endpoint ownership and remote gateway access.
+- [Coverage generation](coverage/README.md): current commands and historical measurements.
 
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Complete setup guide
-  - Prerequisites & dependencies
-  - Database startup with Docker
-  - Python environment setup
-  - Java build & test commands
-  - Frontend development server
-  - Service port reference
+## Historical references
 
----
+These preserve earlier story/bundle context; their old paths and commands are
+superseded by the current guides above:
 
-## 📊 Test Coverage & Quality
+- [NEXT-88 runbook](RUN_NEXT_88.md)
+- [NEXT-97 runbook](RUN_NEXT_97.md) and [technical notes](README_NEXT_97.md)
+- [Bundle notes](README_BUNDLE.md)
+- [Original database hardening runbook](RUN_DATABASE_HARDENING.md)
 
-**View test execution reports:**
+[NEXT-95/NEXT-145 notes](stories/NEXT-95-NEXT-145.md) include the corrected
+instrument ownership. Checked-in coverage HTML and Javadocs are historical
+snapshots; use current source and regenerated reports when reviewing NEXT-193.
 
-- **[Coverage Reports](COVERAGE_REPORTS.md)** - Interactive HTML reports
-  - Python coverage: 79.67% (72 tests)
-  - Java coverage: 77.79% (320 tests)
-  - Per-module/class breakdown with uncovered lines
-  - Reports located in `coverage-reports/` folder
-
----
-
-## 🛠️ Operations & Database
-
-**Database setup, schema details, and production hardening:**
-
-- **[DATABASE_SETUP.md](DATABASE_SETUP.md)** - PostgreSQL configuration
-  - Connection details
-  - Docker initialization
-  - Schema overview
-  - Access methods (psql, connection strings)
-  - Troubleshooting
-
-- **[RUN_DATABASE_HARDENING.md](RUN_DATABASE_HARDENING.md)** - Production hardening procedures
-
----
-
-## 🏗️ Architecture & Design
-
-**System design, decisions, and documentation:**
-
-- **[architecture/](architecture/)** - Architecture Decision Records
-  - ADR: Quote storage and retrieval patterns
-  - System design notes
-
-- **[../insights/README.md](../insights/README.md)** - Insights Service architecture
-- **[../nextTrade-orders/README.md](../nextTrade-orders/README.md)** - Orders Service architecture
-- **[../auth/README.md](../auth/README.md)** - Identity Service architecture
-
----
-
-## � Release & Deployment
-
-**Runner scripts and release documentation:**
-
-- **[RUN_NEXT_88.md](RUN_NEXT_88.md)** - NEXT 88 deployment guide
-- **[RUN_NEXT_97.md](RUN_NEXT_97.md)** - NEXT 97 deployment guide
-- **[README_NEXT_97.md](README_NEXT_97.md)** - NEXT 97 technical details
-- **[README_BUNDLE.md](README_BUNDLE.md)** - Build bundle documentation
-
----
-
-## �📋 Sprint Planning & Stories
-
-**Sprint boards and story tracking:**
-
-- **[stories/](stories/)** - Sprint planning documents
-  - NEXT-95 through NEXT-145
-  - User story details and acceptance criteria
-
----
-
-## 📁 Quick Directory Reference
-
-| Folder | Purpose |
-|--------|---------|
-| **docs/** | Documentation (current location) |
-| **coverage-reports/** | Test coverage reports & metrics |
-| **auth/** | NestJS Identity Service |
-| **insights/** | Spring Boot reporting & backend |
-| **nextTrade-orders/** | Spring Boot order service |
-| **nextTrade-holdings/** | Spring Boot holdings service |
-| **frontend/** | Angular trading UI |
-| **insights-frontend/** | Angular reporting UI |
-| **data-pipeline/** | Python quote generation & ingestion |
-| **db/** | PostgreSQL schemas & migrations |
-
----
-
-## 🔗 External References
-
-- Project: NextTrade (lil-leap platform)
-- Repository: GitHub (private)
-- Team Lead: Kevin Marin
-
----
-
-**Last Updated:** September 24, 2026  
-**Status:** Active Development
+- [Historical atomic-settlement design](architecture/ADR-TS-10.1-atomic-settlement.md)
+- [Optional Kafka development setup](../kafka/README.md)

@@ -1,0 +1,93 @@
+// Colours follow the surrounding dashboard (light or dark) through currentColor.
+:host {
+  display: block;
+}
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+
+  input,
+  select {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+
+  select option {
+    color: #111;
+  }
+}
+
+.clear-filters {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.history-message {
+  margin: 12px 0;
+  opacity: 0.8;
+
+  &.error {
+    color: #d64545;
+    opacity: 1;
+  }
+}
+
+.history-table {
+  overflow-x: auto;
+  transition: opacity 0.15s;
+
+  &.refreshing {
+    opacity: 0.6;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    white-space: nowrap;
+  }
+
+  th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+}
+
+.status {
+  &.filled {
+    color: #1a9b5b;
+  }
+
+  &.rejected {
+    color: #d64545;
+  }
+}

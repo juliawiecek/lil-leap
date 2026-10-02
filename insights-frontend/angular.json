@@ -82,6 +82,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": { "proxyConfig": "proxy.conf.json", "port": 4301 },
           "configurations": {
             "production": {
               "buildTarget": "insights-frontend:build:production"

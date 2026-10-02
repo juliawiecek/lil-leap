@@ -22,14 +22,14 @@ sequenceDiagram
     FE->>Auth: POST /auth/logout (revokes the session)
 ```
 
-- **Access token:** JWT (HS256) with `sub`, `email`, `client_id`, and
+- **Access token:** JWT (HS256) with `sub`, `email`, `user_role`, `client_id`, and
   `trader_level` for users with a trading account; at most 10 minutes. Backends verify it themselves and never call this service.
 - **Refresh token:** random value, stored only as a SHA-256 hash in `sessions`;
   single use (each refresh replaces it).
 - **10-minute inactivity timeout (BR-03):** a session expires 10 minutes after
   its last refresh (`SESSION_INACTIVITY_MINUTES`). The frontend refreshes in the
   background while the user is active and signs them out after 10 idle minutes.
-- Browsers reach the service only through the frontends' nginx at `/auth/*`
+- Browsers reach the service only through the shared gateway at `/auth/*`
   (same origin, so no CORS; no public port in docker-compose).
 
 ## Endpoints
@@ -39,7 +39,7 @@ Full request/response schemas are in the **OpenAPI spec**, generated from the co
 - **Without running anything:** [`openapi.json`](openapi.json). For the interactive
   view, paste it into [editor.swagger.io](https://editor.swagger.io).
 - **With the stack running:** Swagger UI at `/auth/docs` (e.g.
-  `http://localhost:4200/auth/docs` via the frontend), raw spec at `/auth/docs-json`.
+  `http://localhost:4200/auth/docs` via the gateway), raw spec at `/auth/docs-json`.
 
 After changing an endpoint or DTO, run `npm run docs:openapi` to regenerate
 `openapi.json`; a unit test fails while it's out of date.
@@ -85,7 +85,7 @@ never creates or changes tables. Unit tests (`*.spec.ts`) sit next to the code.
 
 ## Configuration
 
-See `.env.example`. The main settings:
+See the root [env.example](../env.example) for Compose settings. For a native process, supply these settings in its environment:
 
 | Variable | Purpose |
 |---|---|
@@ -93,14 +93,14 @@ See `.env.example`. The main settings:
 | `APP_JWT_SECRET` | Shared with the backends; required in production, 32+ bytes |
 | `SESSION_INACTIVITY_MINUTES` | Idle time before a session ends (default 10) |
 | `APP_JWT_EXPIRATION_MINUTES` | Access token lifetime; can only be shorter than the inactivity window |
-| `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Must match the key the backends use |
+| `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Identity SSN encryption key; Compose maps `SSN_ENCRYPTION_KEY` to this setting |
 | `TLS_KEYSTORE`, `TLS_KEYSTORE_PASSWORD` | Optional: serve HTTPS directly (unset behind nginx) |
-| `PORT` | Default 3000 |
+| `PORT` | Default 8081 (internal in Compose) |
 
 ## Running it
 
 ```
-npm install
+npm ci
 npm run start:dev      # needs a reachable Postgres
 npm run build && npm run start:prod
 ```
@@ -123,14 +123,13 @@ Open `coverage/lcov-report/index.html` in a browser (Windows:
 `start coverage\lcov-report\index.html`). Click a file to see untested lines in
 red. The report is generated locally and is not committed.
 
-Unit-test coverage as of 24 Sep 2026: **90.2% lines, 90.2% statements, 79.7%
-branches, 86.7% functions** (88 tests). The end-to-end suite isn't included.
+The latest figures are in [docs/coverage](../docs/coverage/README.md); the end-to-end suite isn't included.
 
 ### End-to-end tests
 
 They boot the real app against a Postgres with `db/finalized-schema.sql` and
 `db/init-app-role.sh` applied (the `db` service in `docker-compose.yml` does
-both). `auth.e2e-spec.ts` runs over HTTPS and needs a keystore;
+both). Host-run tests need a separately reachable disposable database; Compose does not publish PostgreSQL to the host by default. See [database setup](../docs/DATABASE_SETUP.md). `auth.e2e-spec.ts` runs over HTTPS and needs a keystore;
 `behind-nginx.e2e-spec.ts` runs plain HTTP, as docker-compose does.
 
 ```

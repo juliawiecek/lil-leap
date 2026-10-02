@@ -1,5 +1,6 @@
 package com.neueda.leap.common.exception;
 
+
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.reporting.model.InvalidReportDateRangeException;
 import com.neueda.leap.user.exception.InvalidCredentialsException;
@@ -34,17 +35,6 @@ public class GlobalExceptionHandler {
     public GlobalExceptionHandler() {
     }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    /**
-     * Rejects an order with a fixed rule code without exposing financial data.
-     * @param exception sufficiency rule rejection
-     * @return HTTP 422 with a safe reason code and message
-     */
-    @ExceptionHandler(OrderSufficiencyException.class)
-    public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
-        return ResponseEntity.unprocessableEntity().body(Map.of(
-                "error", exception.reason().name(), "message", exception.getMessage()));
-    }
 
     /**
      * Preserves an explicit HTTP failure status while hiding exception details.
@@ -87,6 +77,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
     }
+
 
     /**
      * Returns 403 when method security (for example {@code @PreAuthorize}) denies
@@ -161,5 +152,6 @@ public class GlobalExceptionHandler {
                 "message", exception.getMessage()
         ));
     }
+
 
 }

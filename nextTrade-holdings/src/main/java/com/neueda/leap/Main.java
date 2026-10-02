@@ -2,17 +2,18 @@ package com.neueda.leap;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 
 /**
- * Entry point for the Lil Leap NextTrade Holdings backend application.
+ * Entry point for the insights application.
  *
  * <p>This class bootstraps the Spring Boot application context and starts
  * the backend services.</p>
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class Main {
 
-    /** Creates the Spring Boot application configuration. */
+    /** Creates the application configuration instantiated by Spring Boot. */
     public Main() {
     }
 

@@ -78,7 +78,7 @@ describe('AuthController', () => {
     await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
 
     expect(tierService.findTraderLevel).toHaveBeenCalledWith(user.userId);
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED');
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER);
   });
 
   it('login issues a token without a tier for a user with no account', async () => {
@@ -87,7 +87,7 @@ describe('AuthController', () => {
 
     await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
 
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, null);
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, null, UserRole.ANALYST);
   });
 
   it('login propagates InvalidCredentialsException for bad credentials', async () => {
@@ -107,7 +107,7 @@ describe('AuthController', () => {
     expect(refreshTokenService.rotate).toHaveBeenCalledWith('old-raw-token');
     expect(result.accessToken).toBe('new.access.token');
     expect(result.refreshToken).toBe('new-raw-token');
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED');
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER);
   });
 
   it('logout revokes the given refresh token', async () => {

@@ -31,7 +31,7 @@ async function bootstrap(): Promise<void> {
 
   configureApp(app);
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 8081);
   await app.listen(port);
 }
 

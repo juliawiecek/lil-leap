@@ -1,4 +1,4 @@
 /**
- * JWT identity verification and security support for the service.
+ * JWT authentication, SSN encryption, and sensitive-log masking.
  */
 package com.neueda.leap.security;
