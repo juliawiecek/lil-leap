@@ -1,120 +1,64 @@
 package com.neueda.leap.reporting.controller;
 
-import com.neueda.leap.reporting.dto.ClientSegmentActivityResponse;
-import com.neueda.leap.reporting.dto.DailyTradeActivityResponse;
-import com.neueda.leap.reporting.dto.InsightsOverviewResponse;
-import com.neueda.leap.reporting.dto.InstrumentActivityResponse;
-import com.neueda.leap.reporting.dto.TopInstrumentResponse;
-import com.neueda.leap.reporting.model.ReportDateRange;
+import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
+import com.neueda.leap.reporting.dto.OverviewDto;
+import com.neueda.leap.reporting.dto.TopInstrumentDto;
 import com.neueda.leap.reporting.service.ReportingService;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Read-only reporting API over aggregated trading activity.
- *
- * <p>These reports span all clients, so access is limited to internal ANALYST
- * users. Dates use ISO format ({@code yyyy-MM-dd}), are inclusive, are
- * interpreted in UTC, and may span at most {@value ReportDateRange#MAX_DAYS} days.
- * Invalid or missing parameters return HTTP 400.</p>
- */
+/** Read-only dashboard and report-generation API for internal analyst users. */
 @RestController
 @RequestMapping("/reports")
 @PreAuthorize("hasRole('ANALYST')")
 public class ReportingController {
 
-    /** Service providing report data. */
     private final ReportingService reportingService;
 
-    /**
-     * Creates the reporting endpoints.
-     *
-     * @param reportingService reporting use cases
-     */
     public ReportingController(ReportingService reportingService) {
         this.reportingService = reportingService;
     }
 
-    /**
-     * Returns trading activity grouped by instrument.
-     *
-     * @param startDate first day included in the report
-     * @param endDate last day included in the report
-     * @return per-instrument trade count, volume, and value
-     */
-    @GetMapping("/by-instrument")
-    public List<InstrumentActivityResponse> getActivityByInstrument(
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
-        return reportingService.getActivityByInstrument(new ReportDateRange(startDate, endDate));
-    }
-
-    /**
-     * Returns trading activity grouped by client segment.
-     *
-     * @param startDate first day included in the report
-     * @param endDate last day included in the report
-     * @return per-segment trade count and value
-     */
-    @GetMapping("/by-client-segment")
-    public List<ClientSegmentActivityResponse> getActivityByClientSegment(
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
-        return reportingService.getActivityByClientSegment(new ReportDateRange(startDate, endDate));
-    }
-
-    /**
-     * Returns the dashboard summary.
-     *
-     * @param startDate first day included in the report
-     * @param endDate last day included in the report
-     * @return total trades, volume, active clients, and value
-     */
+    /** Returns the current-day dashboard summary. */
     @GetMapping("/insights/overview")
-    public InsightsOverviewResponse getOverview(
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
-        return reportingService.getOverview(new ReportDateRange(startDate, endDate));
+    public OverviewDto getOverview() {
+        return reportingService.getOverview();
     }
 
-    /**
-     * Returns the most actively traded instruments.
-     *
-     * @param startDate first day included in the report
-     * @param endDate last day included in the report
-     * @param limit maximum number of instruments to return, 1 to 100 (default 10)
-     * @return instruments ordered by trade count descending
-     */
+    /** Returns the most active instruments for the current day. */
     @GetMapping("/insights/top-instruments")
-    public List<TopInstrumentResponse> getTopInstruments(
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate endDate,
-            @RequestParam(defaultValue = "" + ReportingService.DEFAULT_TOP_INSTRUMENTS_LIMIT)
-            @Min(1) @Max(ReportingService.MAX_TOP_INSTRUMENTS_LIMIT) int limit) {
-        return reportingService.getTopInstruments(new ReportDateRange(startDate, endDate), limit);
+    public List<TopInstrumentDto> getTopInstruments() {
+        return reportingService.getTopInstruments();
     }
 
-    /**
-     * Returns the daily trade count trend for dashboard charting.
-     *
-     * @param startDate first day included in the report
-     * @param endDate last day included in the report
-     * @return one entry per day in the range, including days with zero trades
-     */
+    /** Returns the hourly client trading activity trend for the current day. */
     @GetMapping("/insights/client-activity-trend")
-    public List<DailyTradeActivityResponse> getClientActivityTrend(
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
-        return reportingService.getClientActivityTrend(new ReportDateRange(startDate, endDate));
+    public List<ClientActivityTrendDto> getClientActivityTrend() {
+        return reportingService.getClientActivityTrend();
+    }
+
+    /** Returns the downloadable CSV report aggregated by instrument. */
+    @GetMapping(value = "/generate/instrument-report", produces = "text/csv")
+    public ResponseEntity<Resource> generateInstrumentReport() {
+        return reportingService.generateInstrumentReport();
+    }
+
+    /** Returns the downloadable CSV report aggregated by client segment. */
+    @GetMapping(value = "/generate/client-segment-report", produces = "text/csv")
+    public ResponseEntity<Resource> generateClientSegmentReport() {
+        return reportingService.generateClientSegmentReport();
+    }
+
+    /** Returns the downloadable CSV report aggregated by trading activity. */
+    @GetMapping(value = "/generate/trading-activity-report", produces = "text/csv")
+    public ResponseEntity<Resource> generateTradingActivityReport() {
+        return reportingService.generateTradingActivityReport();
     }
 }

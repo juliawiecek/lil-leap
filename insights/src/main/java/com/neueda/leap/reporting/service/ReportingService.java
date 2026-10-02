@@ -1,62 +1,58 @@
 package com.neueda.leap.reporting.service;
 
-import com.neueda.leap.reporting.dto.ClientSegmentActivityResponse;
-import com.neueda.leap.reporting.dto.DailyTradeActivityResponse;
-import com.neueda.leap.reporting.dto.InsightsOverviewResponse;
-import com.neueda.leap.reporting.dto.InstrumentActivityResponse;
-import com.neueda.leap.reporting.dto.TopInstrumentResponse;
-import com.neueda.leap.reporting.model.ReportDateRange;
+import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
+import com.neueda.leap.reporting.dto.OverviewDto;
+import com.neueda.leap.reporting.dto.TopInstrumentDto;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-/** Read-only trading reports and dashboard insights for internal stakeholders. */
+/** Read-only dashboard insights and placeholder report-generation use cases. */
 public interface ReportingService {
 
-    /** Default number of instruments returned by {@link #getTopInstruments}. */
-    int DEFAULT_TOP_INSTRUMENTS_LIMIT = 10;
-
-    /** Maximum number of instruments returned by {@link #getTopInstruments}. */
-    int MAX_TOP_INSTRUMENTS_LIMIT = 100;
+    /** Fixed number of instruments shown on the MVP dashboard. */
+    int TOP_INSTRUMENTS_LIMIT = 10;
 
     /**
-     * Returns trading activity aggregated per instrument.
+     * Returns the current-day dashboard summary.
      *
-     * @param range validated reporting window
-     * @return per-instrument totals, empty when there was no activity
+     * @return today&apos;s total traded volume, active client count, and trade value
      */
-    List<InstrumentActivityResponse> getActivityByInstrument(ReportDateRange range);
+    OverviewDto getOverview();
 
     /**
-     * Returns trading activity aggregated per client segment.
+     * Returns the most actively traded instruments for the current UTC day.
      *
-     * @param range validated reporting window
-     * @return per-segment totals, empty when there was no activity
+     * @return instruments ordered by today&apos;s trade count descending
      */
-    List<ClientSegmentActivityResponse> getActivityByClientSegment(ReportDateRange range);
+    List<TopInstrumentDto> getTopInstruments();
 
     /**
-     * Returns the dashboard summary.
+     * Returns the current-day hourly trading activity trend.
      *
-     * @param range validated reporting window
-     * @return overall totals, with zero values when there was no activity
+     * @return one entry for each UTC hour of the current day, including zero-count hours
      */
-    InsightsOverviewResponse getOverview(ReportDateRange range);
+    List<ClientActivityTrendDto> getClientActivityTrend();
 
     /**
-     * Returns the most actively traded instruments.
+     * Returns the downloadable CSV report aggregated by instrument.
      *
-     * @param range validated reporting window
-     * @param limit maximum number of instruments, between 1 and {@value #MAX_TOP_INSTRUMENTS_LIMIT}
-     * @return instruments ordered by trade count descending
-     * @throws IllegalArgumentException if {@code limit} is out of bounds
+     * @return downloadable CSV attachment generated from the reporting dataset
      */
-    List<TopInstrumentResponse> getTopInstruments(ReportDateRange range, int limit);
+    ResponseEntity<Resource> generateInstrumentReport();
 
     /**
-     * Returns the daily trade count trend for charting.
+     * Returns the downloadable CSV report aggregated by client segment.
      *
-     * @param range validated reporting window
-     * @return one entry per day in the range, in date order, with zero for days without trades
+     * @return downloadable CSV attachment generated from the reporting dataset
      */
-    List<DailyTradeActivityResponse> getClientActivityTrend(ReportDateRange range);
+    ResponseEntity<Resource> generateClientSegmentReport();
+
+    /**
+     * Returns the downloadable CSV report aggregated by trading activity.
+     *
+     * @return downloadable CSV attachment generated from the reporting dataset
+     */
+    ResponseEntity<Resource> generateTradingActivityReport();
 }

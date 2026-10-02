@@ -1,62 +1,90 @@
 package com.neueda.leap.reporting.repository;
 
-import com.neueda.leap.reporting.dto.ClientSegmentActivityResponse;
-import com.neueda.leap.reporting.dto.DailyTradeActivityResponse;
-import com.neueda.leap.reporting.dto.InsightsOverviewResponse;
-import com.neueda.leap.reporting.dto.InstrumentActivityResponse;
-import com.neueda.leap.reporting.dto.TopInstrumentResponse;
-import com.neueda.leap.reporting.model.ReportDateRange;
+import com.neueda.leap.reporting.entity.TradeFillEntity;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Read-only aggregation queries over executed trades in the reporting store.
- *
- * <p>The reporting store is populated asynchronously from trading events, so
- * implementations must never query the live trading tables. Every method filters
- * trades by execution time using {@link ReportDateRange#startInclusive()} (inclusive)
- * and {@link ReportDateRange#endExclusive()} (exclusive).</p>
+ * Read-only dashboard queries over existing trading tables.
  */
-public interface TradeReportingRepository {
-
-    /**
-     * Aggregates trades per instrument.
-     *
-     * @param range execution-time window
-     * @return one row per traded instrument, ordered by total trade value descending
-     */
-    List<InstrumentActivityResponse> aggregateByInstrument(ReportDateRange range);
-
-    /**
-     * Aggregates trades per client segment.
-     *
-     * @param range execution-time window
-     * @return one row per segment with activity, ordered by total trade value descending
-     */
-    List<ClientSegmentActivityResponse> aggregateByClientSegment(ReportDateRange range);
+public interface TradeReportingRepository extends JpaRepository<TradeFillEntity, UUID> {
 
     /**
      * Summarizes all trades in the window.
      *
-     * @param range execution-time window
-     * @return overall totals; zero values when no trades exist
+     * @param startInclusive inclusive UTC lower bound
+     * @param endExclusive exclusive UTC upper bound
+     * @return projection with the current dashboard totals
      */
-    InsightsOverviewResponse summarize(ReportDateRange range);
+    @Query(value = """
+            SELECT
+                COALESCE(SUM(f.filled_quantity), 0) AS tradeVolumeToday,
+                COALESCE(COUNT(DISTINCT a.user_id), 0) AS activeClientsToday,
+                COALESCE(SUM(f.filled_quantity * f.execution_price), 0) AS tradeValueToday
+            FROM fills f
+            JOIN orders o ON o.order_id = f.order_id
+            JOIN accounts a ON a.account_id = o.account_id
+            WHERE f.filled_at >= :startInclusive
+              AND f.filled_at < :endExclusive
+            """, nativeQuery = true)
+    OverviewProjection summarize(@Param("startInclusive") Instant startInclusive,
+                                 @Param("endExclusive") Instant endExclusive);
 
     /**
-     * Finds the most actively traded instruments.
+     * Finds the most actively traded instruments in the window.
      *
-     * @param range execution-time window
-     * @param limit maximum number of instruments to return
-     * @return instruments ordered by trade count descending, then symbol ascending
+     * @param startInclusive inclusive UTC lower bound
+     * @param endExclusive exclusive UTC upper bound
+     * @param pageable limit/offset for ranked results
+     * @return projection rows ordered by trade count descending, then symbol ascending
      */
-    List<TopInstrumentResponse> findTopInstrumentsByTradeCount(ReportDateRange range, int limit);
+    @Query(value = """
+            SELECT
+                i.symbol AS instrument,
+                COUNT(*) AS tradeCount
+            FROM fills f
+            JOIN orders o ON o.order_id = f.order_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            WHERE f.filled_at >= :startInclusive
+              AND f.filled_at < :endExclusive
+            GROUP BY i.symbol
+            ORDER BY COUNT(*) DESC, i.symbol ASC
+            """, nativeQuery = true)
+    List<TopInstrumentProjection> findTopInstrumentsByTradeCount(@Param("startInclusive") Instant startInclusive,
+                                                                 @Param("endExclusive") Instant endExclusive,
+                                                                 Pageable pageable);
 
     /**
-     * Counts trades per UTC calendar day.
+     * Returns trades executed in the requested window.
      *
-     * @param range execution-time window
-     * @return one row per day that had at least one trade, ordered by date ascending
+     * @param startInclusive inclusive UTC lower bound
+     * @param endExclusive exclusive UTC upper bound
+     * @return fills ordered by execution time ascending
      */
-    List<DailyTradeActivityResponse> countTradesByDay(ReportDateRange range);
+    List<TradeFillEntity> findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
+            Instant startInclusive,
+            Instant endExclusive);
+
+    /** Projection for dashboard overview aggregates. */
+    interface OverviewProjection {
+        Long getTradeVolumeToday();
+
+        Long getActiveClientsToday();
+
+        BigDecimal getTradeValueToday();
+    }
+
+    /** Projection for ranked instrument activity. */
+    interface TopInstrumentProjection {
+        String getInstrument();
+
+        Long getTradeCount();
+    }
 }
