@@ -140,9 +140,16 @@ implements <a href="JwtService.html" title="interface in com.neueda.leap.securit
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Issues a new signed session token for the given user.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#validate(java.lang.String)" class="member-name-link">validate</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;token)</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#issueToken(java.util.UUID,java.lang.String,java.lang.String)" class="member-name-link">issueToken</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;userId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;email,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;role)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Issues a new signed session token for the given user.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#validate(java.lang.String)" class="member-name-link">validate</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;token)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Validates a bearer token and extracts the caller's identity.</div>
 </div>
 </div>
@@ -165,7 +172,7 @@ implements <a href="JwtService.html" title="interface in com.neueda.leap.securit
 <li>
 <section class="detail" id="&lt;init&gt;(java.lang.String,long,java.lang.String)">
 <h3>JwtServiceImpl</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">JwtServiceImpl</span><wbr><span class="parameters">(@Value("${app.jwt.secret:dev-only-insecure-secret-change-me-before-deploying}")
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">JwtServiceImpl</span><wbr><span class="parameters">(@Value("${app.jwt.secret:nexttrade-shared-dev-secret-32bytes-min}")
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;secret,
  @Value("${app.jwt.expiration-minutes:60}")
  long&nbsp;expirationMinutes,
@@ -204,6 +211,23 @@ implements <a href="JwtService.html" title="interface in com.neueda.leap.securit
 <dt>Parameters:</dt>
 <dd><code>userId</code> - the authenticated user's unique identifier</dd>
 <dd><code>email</code> - the authenticated user's email address</dd>
+<dt>Returns:</dt>
+<dd>a signed, compact JWT string</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="issueToken(java.util.UUID,java.lang.String,java.lang.String)">
+<h3>issueToken</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></span>&nbsp;<span class="element-name">issueToken</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;userId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;email,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;role)</span></div>
+<div class="block">Issues a new signed session token for the given user.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>userId</code> - the authenticated user's unique identifier</dd>
+<dd><code>email</code> - the authenticated user's email address</dd>
+<dd><code>role</code> - the authenticated user's role</dd>
 <dt>Returns:</dt>
 <dd>a signed, compact JWT string</dd>
 </dl>

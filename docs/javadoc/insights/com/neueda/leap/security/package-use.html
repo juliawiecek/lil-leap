@@ -58,25 +58,9 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Spring configuration for stateless authentication and API access.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.onboarding.service">com.neueda.leap.onboarding.service</a></div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
 <div class="col-last odd-row-color">
-<div class="block">Service layer for onboarding and registration workflows.</div>
-</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
-<div class="col-last even-row-color">
-<div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
-</div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.portfolio.controller">com.neueda.leap.portfolio.controller</a></div>
-<div class="col-last odd-row-color">
-<div class="block">Authenticated endpoints exposing only the caller's financial data.</div>
-</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
-<div class="col-last even-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
-</div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.user">com.neueda.leap.user</a></div>
-<div class="col-last odd-row-color">
-<div class="block">Authentication and current-user domain.</div>
 </div>
 </div>
 <section class="package-uses">
@@ -95,45 +79,6 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="com.neueda.leap.onboarding.service">
-<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../onboarding/service/package-summary.html">com.neueda.leap.onboarding.service</a></span></div>
-<div class="summary-table two-column-summary">
-<div class="table-header col-first">Class</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/SsnEncryptionService.html#com.neueda.leap.onboarding.service">SsnEncryptionService</a></div>
-<div class="col-last even-row-color">
-<div class="block">Service for encrypting and decrypting SSN values using PostgreSQL pgcrypto.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.order.submission.controller">
-<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a></span></div>
-<div class="summary-table two-column-summary">
-<div class="table-header col-first">Class</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/JwtPrincipal.html#com.neueda.leap.order.submission.controller">JwtPrincipal</a></div>
-<div class="col-last even-row-color">
-<div class="block">Identity extracted from a validated JWT.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.portfolio.controller">
-<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../portfolio/controller/package-summary.html">com.neueda.leap.portfolio.controller</a></span></div>
-<div class="summary-table two-column-summary">
-<div class="table-header col-first">Class</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/JwtPrincipal.html#com.neueda.leap.portfolio.controller">JwtPrincipal</a></div>
-<div class="col-last even-row-color">
-<div class="block">Identity extracted from a validated JWT.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
 <section class="detail" id="com.neueda.leap.security">
 <div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="package-summary.html">com.neueda.leap.security</a></span></div>
 <div class="summary-table two-column-summary">
@@ -145,19 +90,6 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color"><a href="class-use/JwtService.html#com.neueda.leap.security">JwtService</a></div>
 <div class="col-last odd-row-color">
-<div class="block">Contract for issuing and validating JWT session tokens.</div>
-</div>
-</div>
-</section>
-</li>
-<li>
-<section class="detail" id="com.neueda.leap.user">
-<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.security</a> used by <a href="../user/package-summary.html">com.neueda.leap.user</a></span></div>
-<div class="summary-table two-column-summary">
-<div class="table-header col-first">Class</div>
-<div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/JwtService.html#com.neueda.leap.user">JwtService</a></div>
-<div class="col-last even-row-color">
 <div class="block">Contract for issuing and validating JWT session tokens.</div>
 </div>
 </div>

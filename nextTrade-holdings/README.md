@@ -48,7 +48,8 @@ mvn spring-boot:run
 
 Database and JWT settings are environment-driven in `src/main/resources/application.yml`.
 See `../env.example`. Javadoc is generated at `target/site/apidocs/index.html` and
-JaCoCo at `target/site/jacoco/index.html`.
+published snapshot HTML is available at `../docs/javadoc/nextTrade-holdings/index.html`.
+JaCoCo is generated at `target/site/jacoco/index.html`.
 
 Cash aliases return 404 for another or unknown caller and 400 for malformed UUIDs.
 Holdings aliases retain their 403 ownership contract. Quote reads require TRADER
