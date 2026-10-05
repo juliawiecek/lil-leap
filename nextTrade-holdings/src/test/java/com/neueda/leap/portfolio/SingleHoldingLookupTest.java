@@ -4,6 +4,7 @@ import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.portfolio.controller.ClientPortfolioController;
 import com.neueda.leap.portfolio.service.ClientPortfolioQueryService;
 import com.neueda.leap.security.JwtService;
+import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * AC2: Requesting another client's holding ID returns 404, not their data.
  */
 @WebMvcTest(ClientPortfolioController.class)
-@Import({SecurityConfig.class, JwtService.class, ClientPortfolioQueryService.class,
+@Import({SecurityConfig.class, JwtServiceImpl.class, ClientPortfolioQueryService.class,
         SingleHoldingLookupTest.DatabaseConfiguration.class})
 class SingleHoldingLookupTest {
     @TestConfiguration
