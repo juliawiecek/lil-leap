@@ -1,24 +1,14 @@
-# NextTrade Spring Boot Application Configuration
-# Database and security settings are externalized via environment variables
-
 spring:
   application:
-    name: nexttrade-backend
-
-  mvc:
-    log-request-details: false
-
+    name: insights
   datasource:
-    # PostgreSQL JDBC connection
-    # URL format: jdbc:postgresql://[host]:[port]/[database]
-    # Development datasource defaults.
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
-    username: ${DB_APP_USERNAME:app_user}
-    password: ${DB_APP_PASSWORD:my_app_password}
-    
-    # Connection pool configuration
+    url: jdbc:postgresql://${REPORTING_DB_HOST:reporting-db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${REPORTING_DB_USERNAME:reporting_user}
+    password: ${REPORTING_DB_PASSWORD:reporting_dev_password}
     hikari:
+      read-only: true
       maximum-pool-size: 10
+
       minimum-idle: 2
       connection-timeout: 20000
       idle-timeout: 300000
@@ -64,18 +54,17 @@ nexttrade:
 app:
   jwt:
     secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
-    expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:60}
-    client-id: ${APP_JWT_CLIENT_ID:nexttrade-web}
-
 server:
-  port: 8080
-  tomcat:
-    accesslog:
-      enabled: false
+  port: ${PORT:8084}
+  servlet:
+    context-path: /api/v1
   error:
     include-message: never
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
-  servlet:
-    context-path: /api/v1
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN

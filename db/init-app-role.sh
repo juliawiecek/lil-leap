@@ -60,6 +60,9 @@ psql -v ON_ERROR_STOP=1 \
         cash_transactions
     TO :"app_user";
 
+    -- Portfolio detail reads active holds; no reservation writer is implemented yet.
+    GRANT SELECT ON cash_holds TO :"app_user";
+
     -- Grant SELECT on all helper views for application queries.
     GRANT SELECT ON
         v_account_cash,

@@ -10,9 +10,9 @@ COPY src/ src/
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
-ENV PORT=8080
+ENV PORT=8083
 ENV QUOTE_CSV_PATH=/app/output/quotes.csv
 
-EXPOSE 8080
+EXPOSE 8083
 
 CMD ["python", "-m", "src.app"]

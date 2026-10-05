@@ -8,24 +8,24 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 | Team Member     | Role                              |
 | ---------------- | ---------------------------------- |
-| Kevin Marin      | Technical Lead                     |
-| Lalima Karri     | Developer, Angular (Scrum Master)  |
+| Tanush Kaushik   | Technical Lead, Data Engineer      |
+| Julia Wiecek     | Developer, Spring Boot (Scrum Master) |
+| Kevin Marin      | Developer, Spring Boot             |
+| Lalima Karri     | Developer, Angular                 |
 | Ilhan Gelle      | Developer, Security                |
-| Tanush Kaushik   | Developer, Data Engineer           |
-| Julia Wiecek     | Developer, Spring Boot             |
 
-## 🚀 Quick Start
+## Quick Start
 
 **New to the project?** Start here:
 
 1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
 2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
-3. **[Test Coverage Reports](docs/COVERAGE_REPORTS.md)** - View 79.67% Python & 77.79% Java coverage
+3. **[Code Coverage](docs/coverage/README.md)** - How to generate each service's coverage report, and the latest figures
 
 **All systems running?** Access the apps:
-- Frontend: http://localhost:4200
-- Backend: http://localhost:8080
-- Reporting: http://localhost:4201
+- NextTrade: http://localhost:4200
+- Insights (reporting): http://localhost:4201
+- API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
 ## Project Structure
 
@@ -33,15 +33,16 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 lil-leap/
 |- auth/                 # NestJS Identity Service: register, login, refresh/logout,
 |                        #   server-assigned trader tier, OpenAPI spec (openapi.json)
-|- nextTrade-orders/     # Spring Boot: fill-or-reject order execution engine
-|- nextTrade-holdings/   # Spring Boot: holdings service (still the shared starter codebase)
+|- nextTrade-orders/     # Spring Boot: order submission, execution, settlement, history, cash
+|- nextTrade-holdings/   # Spring Boot: holdings service
 |- insights/             # Spring Boot: portfolio, order submission, instruments,
 |                        #   market data, password reset
 |- frontend/             # Angular: NextTrade trading app (nginx, :4200)
 |- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
 |- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
+|- kafka/                # Kafka broker image and topic setup
 |- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
-|- docs/                 # architecture/ (ADRs), stories/, generated javadoc/
+|- docs/                 # api/, coverage/ (generated reports), architecture/ (ADRs), stories/, javadoc/
 |- InitialSetup/         # Jenkins setup guide
 |- docker-compose.yml    # Runs the whole stack locally
 |- Jenkinsfile           # CI: compose validation, tests, coverage, image build
@@ -89,17 +90,13 @@ restricted `app_user` role; the schema is owned by the admin role.
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
 | `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
-| `orders` | Spring Boot 3.3.4 | 8082 | Scheduled fill-or-reject execution of due orders. |
-| `holdings` | Spring Boot 3.3.4 | 8083 | Placeholder: same starter codebase as `orders`, no holdings logic yet. |
+| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances. |
+| `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data, password reset (email via mailpit). |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the `orders-events`, `holdings-events` and `insights-events` topics are created on startup. See [kafka/README.md](kafka/README.md). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 | `mailpit` | mailpit | 1025, 8025 | Captures outgoing email in development. |
-
-The three Spring Boot services still carry the original monolith's
-registration and login endpoints (`/api/v1/users`, `/auth/login`). They're
-unreachable from the browser -- nginx sends `/auth/*` to the NestJS service --
-and are due to be removed.
 
 ### Authentication Flow
 
@@ -132,6 +129,7 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
 | Frontend       | Angular 22 + TypeScript                 | Two standalone Angular apps                     |
 | Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
+| Messaging      | Apache Kafka + ZooKeeper                | Event streaming between services                |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
 ## Backend API
@@ -140,19 +138,49 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 |---|---|
 | `auth` | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`; `GET /rules/tier-eligibility`; `GET /health`. Full spec: [auth/openapi.json](auth/openapi.json). |
 | `insights` | Client financials/portfolio, order submission, instrument lookup, password reset under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
-| `orders` | No business endpoints yet; runs the order execution engine on a schedule. |
+| `orders` | `POST /orders` (order submission), `GET /clients/{id}/orders` (history, filterable by `from`/`to`/`status`), `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}` (cash balance); also runs the order execution engine on a schedule. |
 | `holdings` | No business endpoints yet. |
-
-The Spring Boot services also still contain the monolith's `POST /api/v1/users`,
-`POST /auth/login` and `GET /api/v1/users/me`; see [Architecture](#architecture).
 
 ## API Documentation (Swagger / OpenAPI)
 
-- **auth:** [auth/openapi.json](auth/openapi.json) (generated from the code by
-  [auth/src/docs/](auth/src/docs/); open it in [editor.swagger.io](https://editor.swagger.io)).
-  With the stack running, Swagger UI is at `http://localhost:4200/auth/docs`.
+### Running Services Locally (Direct Ports)
 
-The Spring Boot and Python services don't publish OpenAPI specs yet.
+Start the services directly for development and access Swagger UI:
+
+**Auth Service (NestJS + NestJS Swagger):**
+- Port: `3000` (or `PORT` env var)
+- Swagger UI: `http://localhost:3000/auth/docs`
+- OpenAPI JSON: `http://localhost:3000/auth/docs-json`
+- Spec file: [auth/openapi.json](auth/openapi.json)
+
+**Insights Service (Spring Boot + Springdoc OpenAPI):**
+- Port: `8888` (configured to avoid conflicts)
+- Swagger UI: `http://localhost:8888/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8888/v3/api-docs`
+- Endpoints documented by tab:
+  - **Holdings** — GET `/holdings`, GET `/clients/{id}/holdings`
+  - **Cash** — GET `/cash`
+  - **Orders** — Order submission endpoints
+  - **Portfolio** — GET `/clients/{clientId}/portfolio-summary` *(TS-11.3)*
+
+### Via Docker Compose (Production-like Setup)
+
+With `docker-compose.yml`, services run behind nginx on fixed ports. Access Swagger through the frontend proxy:
+
+- **Auth Swagger:** `http://localhost:4200/auth/docs` (proxied via frontend nginx)
+- **Insights/Spring Boot services:** Not exposed through compose setup yet
+
+### OpenAPI Specs
+
+- **auth:** Spec auto-generated at `[auth/openapi.json](auth/openapi.json)` from decorators in [auth/src/docs/](auth/src/docs/)
+- **insights:** Spec auto-generated at `/v3/api-docs` from `@Tag`, `@Operation`, `@ApiResponse` annotations
+| Service | Swagger UI (with the stack running) |
+|---|---|
+| `auth` | http://localhost:4200/auth/docs |
+| `orders` | http://localhost:8082/api/v1/swagger-ui.html |
+
+How to get a token and try the endpoints, per-service notes, and how to reach a stack running
+on a remote server: **[docs/api/README.md](docs/api/README.md)**.
 
 ## Database
 
@@ -179,19 +207,22 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines nine services:
+`docker-compose.yml` defines twelve services:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
 | `db`                 | `postgres:16-alpine`| `5432`                        | Runs schema/seed scripts once, on an empty volume; has a `pg_isready` healthcheck |
-| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Order execution engine; `frontend` proxies `/api/orders/*` and `/api/*` here |
-| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service (starter code only); `frontend` proxies `/api/holdings/*` here |
+| `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Orders service; `frontend` proxies `/api/orders/*` and `/api/*` here |
+| `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service; `frontend` proxies `/api/holdings/*` here |
 | `insights`           | `./insights`       | `8081` -> `8080`              | Reporting service (see [Architecture](#architecture)) |
 | `auth`               | `./auth`           | none (`3000` internal)        | Identity Service; reached only via the frontends' nginx (`/auth/*`, `/rules/*`) |
 | `frontend`           | `./frontend`       | `4200` -> `80`                | nginx: serves the NextTrade app, proxies to `auth`, `orders`, `holdings` |
 | `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | nginx: serves the Insights app, proxies to `auth`, `insights` |
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `mailpit`            | `axllent/mailpit`  | `1025` (SMTP), `8025` (web UI)| Captures password-reset emails in dev    |
+| `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
+| `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
+| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the topics once `kafka` is healthy |
 
 Important runtime behavior:
 
@@ -262,8 +293,8 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-Swap `nextTrade-orders` for `nextTrade-holdings` to run the other service —
-they're identical today, so either one works. Both default to
+Swap `nextTrade-orders` for `nextTrade-holdings` to run the holdings service
+instead. Both default to
 `http://localhost:8080` when run this way, so **don't run them side by side
 outside Docker** without overriding `server.port` on one of them; Docker
 Compose keeps them apart on host ports `8082` and `8083`.
@@ -315,7 +346,7 @@ cd nextTrade-orders
 mvn clean test
 ```
 
-Same command from `nextTrade-holdings` runs its (currently identical) test suite.
+Same command from `nextTrade-holdings` runs its tests.
 
 ### insights
 
@@ -366,24 +397,25 @@ pytest
 
 ### Code Coverage
 
-| Service              | Generate                                  | Report                                              |
-| --------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| `nextTrade-orders`    | `cd nextTrade-orders && mvn clean verify` | `nextTrade-orders/target/site/jacoco/index.html`    |
-| `nextTrade-holdings`  | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
-| `insights`            | see [insights/JACOCO_COVERAGE.md](insights/JACOCO_COVERAGE.md) | `insights/target/site/jacoco/index.html` |
-| `auth`                | see [auth/README.md → Code coverage](auth/README.md#code-coverage) | `auth/coverage/lcov-report/index.html` |
-| `data-pipeline`       | see [data-pipeline/PYTEST_COVERAGE.md](data-pipeline/PYTEST_COVERAGE.md) | `data-pipeline/htmlcov/index.html` |
+How to generate the report for every service, and the latest figures:
+**[docs/coverage](docs/coverage/README.md)**.
 
-**auth:** 90.2% lines, 79.7% branches (88 unit tests, 24 Sep 2026). Figures and how to
-open the report: [auth/README.md → Code coverage](auth/README.md#code-coverage).
+| Service              | Tool       | Generate                                    | Report                                             |
+| -------------------- | ---------- | ------------------------------------------- | -------------------------------------------------- |
+| `nextTrade-orders`   | JaCoCo     | `cd nextTrade-orders && mvn clean verify`   | `nextTrade-orders/target/site/jacoco/index.html`   |
+| `nextTrade-holdings` | JaCoCo     | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
+| `insights`           | JaCoCo     | `cd insights && mvn clean verify`           | `insights/target/site/jacoco/index.html`           |
+| `auth`               | Jest       | `cd auth && npm run test:cov`               | `auth/coverage/lcov-report/index.html`             |
+| `data-pipeline`      | pytest-cov | see [docs/coverage](docs/coverage/README.md#quote-service-pytest-cov) | `data-pipeline/htmlcov/index.html` |
+| `frontend`           | c8         | `cd frontend && npm run test:coverage`      | `frontend/coverage/index.html`                     |
+| `insights-frontend`  | c8         | `cd insights-frontend && npm run test:coverage` | `insights-frontend/coverage/index.html`        |
 
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does
 not produce a coverage report; use `mvn clean verify` when you need one.
 Jenkins archives the `nextTrade-orders` and `nextTrade-holdings` JaCoCo
 reports and the `data-pipeline` coverage output as build artifacts (see
-[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)); `insights` and `auth`
-coverage are local-only today.
+[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)).
 
 ## Javadocs
 
@@ -442,9 +474,6 @@ Key files:
   `db/init-app-role.sh`) with secrets or environment variables.
 - Set a strong JWT secret via `APP_JWT_SECRET` (the in-code default, and the
   value hardcoded in `docker-compose.yml`, are dev-only).
-- Actually split `nextTrade-orders` and `nextTrade-holdings` apart — they're
-  identical services today and both still own the full onboarding/auth
-  surface; trim each down to its namesake responsibility.
 - Add a CI stage for frontend tests and a deploy stage that binds a real TLS
   keystore from Jenkins credentials, per the placeholders already wired into
   the Compose validation stage.

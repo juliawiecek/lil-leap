@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
--- Verify all 17 required tables exist
+-- Verify all 18 required tables exist
 DO $$
 DECLARE
   missing text;
@@ -11,7 +11,7 @@ BEGIN
     ('users'),('customer_profiles'),('financial_profiles'),('analyst_profiles'),('password_reset_tokens'),('sessions'),
     ('instruments'),('quotes'),('accounts'),('orders'),('fills'),
     ('order_status_history'),('holdings'),('holding_movements'),
-    ('cash_balances'),('cash_transactions'),('audit_log')
+    ('cash_balances'),('cash_transactions'),('cash_holds'),('audit_log')
   ) expected(name)
   WHERE to_regclass('public.' || expected.name) IS NULL;
   IF missing IS NOT NULL THEN RAISE EXCEPTION 'Missing tables: %', missing; END IF;
@@ -40,7 +40,7 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_name='customer_profiles' AND column_name='ssn_encrypted' AND data_type='bytea'
   ) THEN RAISE EXCEPTION 'customer_profiles.ssn_encrypted BYTEA is missing or wrong type'; END IF;
-  
+
   -- Plaintext users.ssn must not exist (security requirement)
   IF EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ssn'

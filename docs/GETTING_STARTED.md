@@ -1,180 +1,62 @@
-# Getting Started
+# Getting started
 
-This guide provides setup instructions for the lil-leap (NextTrade Platform) project.
+NEXT-193 separates Identity, Holdings, Orders, Quotes and reporting-only Insights.
+Read [service boundaries](architecture/service-boundaries.md) for the diagram,
+route table, migration instructions and remaining product gaps.
 
-## 📋 Prerequisites
+## Run the stack
 
-- **Python 3.12+** (for data-pipeline)
-- **Java 17+** (for insights service)
-- **Maven 3.8+** (for building Java projects)
-- **Docker & Docker Compose** (for database)
-- **PostgreSQL** (runs in Docker)
+Install Docker with Compose v2. From the repository root, copy `env.example` to
+`.env` and set the local credentials and SSN encryption key. Compose reads that
+file automatically. For a new database:
 
-## 🚀 Quick Start
-
-### 1. Start the Database
-
-```bash
-docker-compose up -d
+```sh
+docker compose up --build -d gateway
+docker compose ps
 ```
 
-This starts PostgreSQL with all necessary schemas and seed data.
+For an existing database, follow the [migration steps](architecture/service-boundaries.md#deployment-and-existing-databases)
+before starting the full stack. Init scripts only run on empty volumes; restarting
+does not migrate an existing schema. Preserve the primary data volume.
 
-**Verify it's running:**
-```bash
-docker-compose ps
-```
+| Entry point | URL |
+| --- | --- |
+| Trading client and APIs | http://localhost:4200 |
+| Reporting client and APIs | http://localhost:4201 |
+| Identity Swagger UI | http://localhost:4200/auth/docs |
 
-### 2. Set Up Python Environment (Data Pipeline)
+Only the gateway publishes ports. Internal ports are Holdings 8080, Identity 8081,
+Orders 8082, Quotes 8083, Insights 8084 and PostgreSQL 5432. PostgreSQL has a primary
+and an asynchronous reporting replica. See [database setup](DATABASE_SETUP.md).
 
-```bash
-cd data-pipeline
+## Develop locally
 
-# Create virtual environment
-python -m venv venv
+For native builds use Java 17 and Maven 3.9+, Node 24.15+ (24.x), and Python 3.12+.
+Docker builds supply their own runtimes.
 
-# Activate it
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
+With Compose running, open a terminal in `frontend` or `insights-frontend`:
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Run tests
-pip install -r requirements-coverage.txt
-pytest -v
-```
-
-### 3. Build & Test Java Backend (Insights Service)
-
-```bash
-cd insights
-
-# Build and run tests
-mvn clean test
-
-# Start the application
-mvn spring-boot:run
-```
-
-This starts the Spring Boot backend on `http://localhost:8080`
-
-### 4. Start the Frontend
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start dev server
+```sh
+npm ci
 npm start
 ```
 
-Frontend will be available at `http://localhost:4200`
+The trading development server uses 4300; reporting uses 4301. Their proxies send
+API requests to gateway ports 4200 and 4201 respectively. Authentication is wired
+to Identity; trading and reporting dashboard data still include local fixtures.
 
----
+## Validate changes
 
-## 📊 Viewing Test Coverage
+- In each of `nextTrade-orders`, `nextTrade-holdings`, `insights`: `mvn -B clean verify`.
+- In `auth`: `npm ci`, `npm test`, `npm run build`.
+- In each frontend: `npm ci`, `npm test`, `npm run build`.
+- In `data-pipeline`, use a virtual environment, install `requirements.txt`, then `python -m pytest`.
+- From the root: `docker compose config -q` and `bash scripts/auth-integration-test.sh`.
 
-Test coverage reports are in the `coverage-reports/` folder:
+The integration script starts the real stack and checks Identity tokens, Holdings
+reads, Orders validation, analyst-only reports and gateway isolation. It removes
+its generated users unless `KEEP_DATA=1`. It requires Docker, Bash and curl.
+Use a disposable environment. See [coverage](COVERAGE_REPORTS.md) and the
+[verification details](architecture/service-boundaries.md#verification) for database-dependent tests.
 
-- **Python Coverage**: `coverage-reports/python/index.html`
-- **Java Coverage**: `coverage-reports/java/index.html`
-
-Both are interactive HTML reports showing line-by-line coverage.
-
----
-
-## 🛠️ Development
-
-### Running Tests with Coverage
-
-**Python:**
-```bash
-cd data-pipeline
-pytest -v --cov=src --cov-report=html
-# Report: htmlcov/index.html
-```
-
-**Java:**
-```bash
-cd insights
-mvn clean test
-# Report: target/site/jacoco/index.html
-```
-
-### Key Services
-
-| Service | Port | Command |
-|---------|------|---------|
-| Frontend (Angular) | 4200 | `cd frontend && npm start` |
-| Backend (Spring) | 8080 | `cd insights && mvn spring-boot:run` |
-| Database (PostgreSQL) | 5432 | `docker-compose up` |
-| Data Pipeline | N/A | `cd data-pipeline && python -m src.service_runner --continuous` |
-
----
-
-## 📁 Project Structure
-
-```
-lil-leap/
-├── auth/                    # Authentication service (NestJS)
-├── data-pipeline/           # Python data ingestion service
-├── db/                      # Database schemas & migrations
-├── docs/                    # Documentation (current location)
-├── frontend/                # Angular UI
-├── insights/                # Java Spring Boot backend
-├── coverage-reports/        # Test coverage reports
-└── docker-compose.yml       # Docker setup
-```
-
----
-
-## ❓ Troubleshooting
-
-### Database Connection Issues
-
-```bash
-# Check if PostgreSQL is running
-docker-compose ps
-
-# View logs
-docker-compose logs postgres
-
-# Restart services
-docker-compose restart
-```
-
-### Python Dependency Issues
-
-```bash
-# Clear pip cache and reinstall
-pip install --upgrade pip
-pip install --force-reinstall -r requirements.txt
-```
-
-### Java Build Errors
-
-```bash
-# Clear Maven cache
-mvn clean
-mvn install
-
-# Update dependencies
-mvn dependency:resolve
-```
-
----
-
-## 📚 More Documentation
-
-- [Database Setup](./DATABASE_SETUP.md) - Schema details and migrations
-- [Architecture](./architecture/ADR-quote-storage-and-retrieval.md) - Design decisions
-- [Coverage Reports](../coverage-reports/) - Test coverage details
-
----
-
-**Questions?** Check the main README.md at the repository root.
+`docker compose down` stops the stack while retaining both database volumes.
