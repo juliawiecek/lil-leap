@@ -127,41 +127,19 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidCredentialsException(com.neueda.leap.user.exception.InvalidCredentialsException)" class="member-name-link">handleInvalidCredentialsException</a><wbr>(<a href="../../user/exception/InvalidCredentialsException.html" title="class in com.neueda.leap.user.exception">InvalidCredentialsException</a>&nbsp;exception)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Handles failed login attempts caused by an unknown email address or an
- incorrect password.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidPasswordResetTokenException(com.neueda.leap.passwordreset.InvalidPasswordResetTokenException)" class="member-name-link">handleInvalidPasswordResetTokenException</a><wbr>(<a href="../../passwordreset/InvalidPasswordResetTokenException.html" title="class in com.neueda.leap.passwordreset">InvalidPasswordResetTokenException</a>&nbsp;exception)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Handles invalid or expired password reset tokens.</div>
-</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidRequest(java.lang.Exception)" class="member-name-link">handleInvalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Rejects invalid payloads without rendering or logging rejected values.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleOrderSufficiency(com.neueda.leap.order.service.OrderSufficiencyException)" class="member-name-link">handleOrderSufficiency</a><wbr>(<a href="../../order/service/OrderSufficiencyException.html" title="class in com.neueda.leap.order.service">OrderSufficiencyException</a>&nbsp;exception)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleStatusException(org.springframework.web.server.ResponseStatusException)" class="member-name-link">handleStatusException</a><wbr>(org.springframework.web.server.ResponseStatusException&nbsp;exception)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Rejects an order with a fixed rule code without exposing financial data.</div>
-</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleStatusException(org.springframework.web.server.ResponseStatusException)" class="member-name-link">handleStatusException</a><wbr>(org.springframework.web.server.ResponseStatusException&nbsp;exception)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Preserves an explicit HTTP failure status while hiding exception details.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleUnexpectedException(java.lang.Exception)" class="member-name-link">handleUnexpectedException</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Converts unhandled failures into safe responses without exposing exception messages.</div>
-</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleUserAlreadyExistsException(com.neueda.leap.user.exception.UserAlreadyExistsException)" class="member-name-link">handleUserAlreadyExistsException</a><wbr>(<a href="../../user/exception/UserAlreadyExistsException.html" title="class in com.neueda.leap.user.exception">UserAlreadyExistsException</a>&nbsp;exception)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleUnexpectedException(java.lang.Exception)" class="member-name-link">handleUnexpectedException</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Handles attempts to register a user with an email address
- that already exists in the system.</div>
+<div class="block">Converts unhandled failures into safe responses without exposing exception messages.</div>
 </div>
 </div>
 </div>
@@ -195,20 +173,6 @@ loadScripts(document, 'script');</script>
 <section class="method-details" id="method-detail">
 <h2>Method Details</h2>
 <ul class="member-list">
-<li>
-<section class="detail" id="handleOrderSufficiency(com.neueda.leap.order.service.OrderSufficiencyException)">
-<h3>handleOrderSufficiency</h3>
-<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../order/service/OrderSufficiencyException.html" title="class in com.neueda.leap.order.service">OrderSufficiencyException.class</a>)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleOrderSufficiency</span><wbr><span class="parameters">(<a href="../../order/service/OrderSufficiencyException.html" title="class in com.neueda.leap.order.service">OrderSufficiencyException</a>&nbsp;exception)</span></div>
-<div class="block">Rejects an order with a fixed rule code without exposing financial data.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>exception</code> - sufficiency rule rejection</dd>
-<dt>Returns:</dt>
-<dd>HTTP 422 with a safe reason code and message</dd>
-</dl>
-</section>
-</li>
 <li>
 <section class="detail" id="handleStatusException(org.springframework.web.server.ResponseStatusException)">
 <h3>handleStatusException</h3>
@@ -250,56 +214,6 @@ loadScripts(document, 'script');</script>
 <dd><code>exception</code> - validation or parsing failure that may contain credentials</dd>
 <dt>Returns:</dt>
 <dd>HTTP 400 with a fixed INVALID_REQUEST response</dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="handleUserAlreadyExistsException(com.neueda.leap.user.exception.UserAlreadyExistsException)">
-<h3>handleUserAlreadyExistsException</h3>
-<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../user/exception/UserAlreadyExistsException.html" title="class in com.neueda.leap.user.exception">UserAlreadyExistsException.class</a>)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleUserAlreadyExistsException</span><wbr><span class="parameters">(<a href="../../user/exception/UserAlreadyExistsException.html" title="class in com.neueda.leap.user.exception">UserAlreadyExistsException</a>&nbsp;exception)</span></div>
-<div class="block">Handles attempts to register a user with an email address
- that already exists in the system.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>exception</code> - the exception describing the duplicate user condition</dd>
-<dt>Returns:</dt>
-<dd>a <code>ResponseEntity</code> with HTTP 409 Conflict status and
-         a body containing an error code and descriptive message</dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="handleInvalidCredentialsException(com.neueda.leap.user.exception.InvalidCredentialsException)">
-<h3>handleInvalidCredentialsException</h3>
-<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../user/exception/InvalidCredentialsException.html" title="class in com.neueda.leap.user.exception">InvalidCredentialsException.class</a>)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleInvalidCredentialsException</span><wbr><span class="parameters">(<a href="../../user/exception/InvalidCredentialsException.html" title="class in com.neueda.leap.user.exception">InvalidCredentialsException</a>&nbsp;exception)</span></div>
-<div class="block">Handles failed login attempts caused by an unknown email address or an
- incorrect password.
-
- <p>Both cases are reported identically, by design: revealing which one
- occurred would let a caller enumerate registered email addresses.</p></div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>exception</code> - the exception describing the failed login attempt</dd>
-<dt>Returns:</dt>
-<dd>a <code>ResponseEntity</code> with HTTP 401 Unauthorized status and
-         a body containing a generic error code and message</dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="handleInvalidPasswordResetTokenException(com.neueda.leap.passwordreset.InvalidPasswordResetTokenException)">
-<h3>handleInvalidPasswordResetTokenException</h3>
-<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../passwordreset/InvalidPasswordResetTokenException.html" title="class in com.neueda.leap.passwordreset">InvalidPasswordResetTokenException.class</a>)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleInvalidPasswordResetTokenException</span><wbr><span class="parameters">(<a href="../../passwordreset/InvalidPasswordResetTokenException.html" title="class in com.neueda.leap.passwordreset">InvalidPasswordResetTokenException</a>&nbsp;exception)</span></div>
-<div class="block">Handles invalid or expired password reset tokens.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>exception</code> - the exception describing the invalid reset token</dd>
-<dt>Returns:</dt>
-<dd>a <code>ResponseEntity</code> with HTTP 400 Bad Request status and
-         a body containing an error code and descriptive message</dd>
 </dl>
 </section>
 </li>

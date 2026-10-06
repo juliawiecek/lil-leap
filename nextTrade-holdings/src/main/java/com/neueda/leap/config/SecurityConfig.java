@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/clients/*/orders").hasRole("TRADER")
-                        .requestMatchers(HttpMethod.GET, "/clients/*/portfolio-summary", "/accounts", "/holdings", "/cash", "/orders", "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*", "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*").hasAnyRole("TRADER", "ANALYST")
+                        .requestMatchers(HttpMethod.GET, "/clients/*/portfolio-summary", "/accounts", "/holdings", "/holdings/**", "/cash", "/orders", "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*", "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*").hasAnyRole("TRADER", "ANALYST")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {
