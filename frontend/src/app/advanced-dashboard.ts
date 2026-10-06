@@ -1,11 +1,14 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
+import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import { AuthService } from './auth.service';
 
 interface Quote {
+  instrumentId: string;  // ← NOW PRESERVED
   symbol: string;
   name: string;
   price: number;
@@ -47,11 +50,21 @@ interface NewsItem {
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
-export class AdvancedDashboard {
+export class AdvancedDashboard implements OnInit {
+  orderSubmissionClient: OrderSubmissionClient;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');
+  readonly submitting = signal(false);
+  readonly submittedOrderId = signal<string | null>(null);
+  readonly clientReference = signal<string>('');
+  readonly accounts = signal<Account[]>([]);
+  readonly instruments = signal<Instrument[]>([]);
+  readonly selectedAccount = signal<Account | null>(null);
+  readonly loadingAccounts = signal(false);
+  readonly loadingInstruments = signal(false);
+  readonly dataReady = computed(() => this.accounts().length > 0 && this.instruments().length > 0);
   readonly nav = [
     { name: 'Overview', icon: 'home' },
     { name: 'Watchlist', icon: 'star' },
@@ -75,14 +88,14 @@ export class AdvancedDashboard {
   readonly marketTab = signal('Sectors');
   readonly filter = signal('All stocks');
   readonly quotes: Quote[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
-    { symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.14, change: 3.21, volume: '36.1M' },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -1.24, volume: '45.7M' },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37, volume: '12.6M' },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
+    { instrumentId: 'aapl-uuid', symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
+    { instrumentId: 'nvda-uuid', symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
+    { instrumentId: 'msft-uuid', symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
+    { instrumentId: 'amd-uuid', symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.14, change: 3.21, volume: '36.1M' },
+    { instrumentId: 'tsla-uuid', symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -1.24, volume: '45.7M' },
+    { instrumentId: 'meta-uuid', symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37, volume: '12.6M' },
+    { instrumentId: 'amzn-uuid', symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
+    { instrumentId: 'googl-uuid', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
   ];
   readonly selected = signal(this.quotes[0]);
   readonly results = computed(() =>
@@ -293,6 +306,11 @@ export class AdvancedDashboard {
   }
   openModal(kind: string): void {
     this.modal.set(kind);
+    // Generate a new clientReference for this order intent, so retry uses the same one
+    if (kind === 'review') {
+      this.clientReference.set(OrderSubmissionClient.generateClientReference());
+      this.submittedOrderId.set(null);
+    }
     this.dialog()?.nativeElement.showModal();
   }
   closeModal(): void {
@@ -340,79 +358,51 @@ export class AdvancedDashboard {
     this.message.set(this.validate());
     if (!this.message()) this.openModal('review');
   }
-  confirmOrder(): void {
+  async confirmOrder(): Promise<void> {
     const error = this.validate();
     if (error) {
       this.message.set(error);
       this.closeModal();
       return;
     }
-    const quote = this.selected(),
-      count = Number(this.quantity()),
-      price = quote.price;
-    const filled =
-      this.orderType() === 'Market' ||
-      (this.side() === 'Buy'
-        ? Number(this.limitPrice()) >= price
-        : Number(this.limitPrice()) <= price);
-    const order: Order = {
-      id: Date.now(),
-      time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      symbol: quote.symbol,
-      side: this.side(),
-      quantity: count,
-      price: filled ? price : Number(this.limitPrice()),
-      status: filled ? 'Filled' : 'Open',
-      type: this.orderType(),
-      tif: this.tif(),
-      takeProfit: this.takeProfit() ? Number(this.profitPrice()) : undefined,
-      stopLoss: this.stopLoss() ? Number(this.stopPrice()) : undefined,
-    };
-    if (filled) {
-      const amount = count * price,
-        fees = Math.floor(amount * 0.01) / 100,
-        direction = this.side() === 'Buy' ? 1 : -1;
-      this.buyingPower.update((v) => Math.round((v - direction * amount - fees) * 100) / 100);
-      this.portfolio.update((v) => Math.round((v - fees) * 100) / 100);
-      this.positions.update((list) => {
-        const existing = list.find((p) => p.symbol === quote.symbol);
-        if (!existing)
-          return [
-            ...list,
-            {
-              symbol: quote.symbol,
-              quantity: count,
-              cost: price,
-              value: amount,
-              day: 0,
-              total: 0,
-              weight: (amount / this.portfolio()) * 100,
-            },
-          ];
-        return list
-          .map((p) =>
-            p.symbol !== quote.symbol
-              ? p
-              : {
-                  ...p,
-                  quantity: p.quantity + direction * count,
-                  value: (p.quantity + direction * count) * price,
-                  cost:
-                    direction === 1
-                      ? (p.cost * p.quantity + amount) / (p.quantity + count)
-                      : p.cost,
-                },
-          )
-          .filter((p) => p.quantity > 0);
-      });
+    // Check data is loaded before submitting
+    if (!this.dataReady()) {
+      this.message.set('Loading accounts and instruments. Please wait.');
+      return;
     }
-    this.orders.update((list) => [order, ...list]);
-    this.closeModal();
-    this.message.set(
-      filled
-        ? 'Order filled. Positions and balances updated.'
-        : 'Limit order is open. The quote has not reached your limit.',
-    );
+    // Prevent double-click while submission is in flight
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    try {
+      const quote = this.selected();
+      const count = Number(this.quantity());
+      const account = this.selectedAccount();
+      if (!account) {
+        this.message.set('No active account selected.');
+        return;
+      }
+      const response = await this.orderSubmissionClient.submit({
+        accountId: account.account_id,
+        instrumentId: quote.instrumentId,
+        side: this.side() === 'Buy' ? 'BUY' : 'SELL',
+        quantity: count,
+        orderType: 'MARKET',
+        clientReference: this.clientReference(),
+      });
+      // Store orderId for display
+      this.submittedOrderId.set(response.orderId);
+      this.message.set(
+        `Order ${response.orderId} submitted. Status: ${response.status}. Awaiting execution.`
+      );
+      // Do NOT update local positions, buyingPower, or cash - let the backend and scheduler handle it
+      // Close the modal after a brief delay so user sees the message
+      setTimeout(() => this.closeModal(), 1500);
+    } catch (error) {
+      const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
+      this.message.set(msg);
+    } finally {
+      this.submitting.set(false);
+    }
   }
   cancelOrder(id: number): void {
     this.orders.update((list) =>
@@ -427,5 +417,41 @@ export class AdvancedDashboard {
     }
     this.alerts.update((list) => [...list, { symbol: this.selected().symbol, price }]);
     this.message.set('Price alert added.');
+  }
+  constructor(private auth: AuthService) {
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+  }
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.loadingAccounts.set(true);
+      const accountsData = await this.orderSubmissionClient.getAccounts();
+      const activeAccount = accountsData.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled);
+      this.accounts.set(accountsData);
+      this.selectedAccount.set(activeAccount || null);
+    } catch (error) {
+      console.error('Failed to load accounts:', error);
+      this.message.set('Failed to load accounts.');
+    } finally {
+      this.loadingAccounts.set(false);
+    }
+
+    try {
+      this.loadingInstruments.set(true);
+      const instrumentsData = await this.orderSubmissionClient.getInstruments();
+      this.instruments.set(instrumentsData);
+      // Update quotes with real instrumentIds from backend
+      for (const quote of this.quotes) {
+        const instrument = instrumentsData.find((i) => i.symbol === quote.symbol);
+        if (instrument) {
+          quote.instrumentId = instrument.instrumentId;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load instruments:', error);
+      this.message.set('Failed to load instruments.');
+    } finally {
+      this.loadingInstruments.set(false);
+    }
   }
 }
