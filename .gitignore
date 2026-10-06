@@ -79,6 +79,7 @@ yarn-error.log*
 .settings
 .vscode
 node_modules/
+.scannerwork/
 auth/coverage/
 frontend/coverage/
 insights-frontend/coverage/
