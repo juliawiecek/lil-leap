@@ -229,7 +229,6 @@
                       <th>Price</th>
                       <th>Type</th>
                       <th>Status</th>
-                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -242,22 +241,15 @@
                             {{ o.side }}
                           </td>
                           <td>{{ o.quantity }}</td>
-                          <td>{{ o.price | currency }}</td>
+                          <td>{{ o.price === null ? '—' : (o.price | currency) }}</td>
                           <td>{{ o.type }}</td>
-                          <td [class.gain]="o.status === 'Filled'">{{ o.status }}</td>
-                          <td>
-                            @if (o.status === 'Open') {
-                              <button
-                                type="button"
-                                class="cancel-order"
-                                (click)="cancelOrder(o.id)"
-                              >
-                                Cancel
-                              </button>
-                            }
+                          <td [class.gain]="o.status === 'Filled'" [class.loss]="o.status === 'Rejected'">
+                            {{ o.status }}
                           </td>
                         </tr>
                       }
+                    } @empty {
+                      <tr><td colspan="7">No orders yet.</td></tr>
                     }
                   </tbody>
                 </table>
@@ -437,7 +429,7 @@
                           {{ o.side }}
                         </td>
                         <td>{{ o.quantity }}</td>
-                        <td>{{ o.price | number: '1.2-2' }}</td>
+                        <td>{{ o.price === null ? '—' : (o.price | number: '1.2-2') }}</td>
                         <td class="gain">{{ o.status }}</td>
                       </tr>
                     }
@@ -616,6 +608,6 @@
       Select a symbol from the watchlist to link its chart and order ticket. Configure the order,
       then select Review Order.
     </p>
-    <p>Use the Orders tab to view and cancel open orders. Chat support is not connected yet.</p>
+    <p>Use the Orders tab to follow your orders as they fill. Chat support is not connected yet.</p>
   }
 </dialog>
