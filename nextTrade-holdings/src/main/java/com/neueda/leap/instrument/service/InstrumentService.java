@@ -52,4 +52,15 @@ public class InstrumentService {
     public Optional<InstrumentResponse> findInstrumentBySymbol(String symbol) {
         return repository.findBySymbol(symbol.trim().toUpperCase(Locale.ROOT));
     }
+
+    /**
+     * Searches for instruments by partial symbol or name match (case-insensitive).
+     * Returns up to 100 results. Empty query returns empty list (AC3).
+     * 
+     * @param query search query string (symbol or name, case-insensitive, partial match)
+     * @return matching instruments ordered by symbol
+     */
+    public List<InstrumentResponse> searchInstruments(String query) {
+        return repository.searchBySymbolOrName(query);
+    }
 }

@@ -64,4 +64,23 @@ public class JdbcInstrumentRepository implements InstrumentRepository {
                 rowMapper, symbol
         ).stream().findFirst();
     }
+
+    @Override
+    public List<InstrumentResponse> searchBySymbolOrName(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        String searchPattern = "%" + query.trim() + "%";
+        return jdbcTemplate.query(
+                SELECT_COLUMNS + """ 
+                WHERE UPPER(symbol) ILIKE ? 
+                   OR UPPER(instrument_name) ILIKE ?
+                ORDER BY symbol, market_code
+                LIMIT 100
+                """,
+                rowMapper,
+                searchPattern,
+                searchPattern
+        );
+    }
 }

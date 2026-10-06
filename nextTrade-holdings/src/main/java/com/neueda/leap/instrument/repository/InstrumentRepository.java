@@ -30,4 +30,14 @@ public interface InstrumentRepository {
      * @return matching instrument, or empty when absent
      */
     Optional<InstrumentResponse> findBySymbol(String symbol);
+
+    /**
+     * Searches for instruments by partial symbol or name match (case-insensitive).
+     * Returns up to 100 results to avoid overwhelming the API.
+     * Empty query returns an empty list, not an error.
+     * 
+     * @param query search query: partial symbol or name match (case-insensitive)
+     * @return matching instruments ordered by symbol, limited to 100 results
+     */
+    List<InstrumentResponse> searchBySymbolOrName(String query);
 }

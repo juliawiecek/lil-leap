@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -50,6 +51,20 @@ public class InstrumentController {
     @GetMapping("/{instrumentId}")
     public InstrumentResponse getInstrument(@PathVariable UUID instrumentId) {
         return service.getInstrument(instrumentId);
+    }
+
+    /**
+     * Searches for instruments by partial symbol or name match (AC1, AC3).
+     * Case-insensitive, supports partial matching. Empty query returns empty list.
+     * Bounded to 100 results to avoid overwhelming the client.
+     *
+     * @param query search query string (symbol or name, optional)
+     * @return matching instruments ordered by symbol, or empty list if no matches
+     */
+    @GetMapping("/search")
+    public List<InstrumentResponse> searchInstruments(
+            @RequestParam(required = false) String query) {
+        return service.searchInstruments(query);
     }
 
     /**
