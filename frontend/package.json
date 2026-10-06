@@ -6,7 +6,7 @@
     "ng": "ng",
     "start": "ng serve --port 4300",
     "test": "node --test tests/*.test.mjs",
-    "test:coverage": "nyc --reporter=text-summary --reporter=lcov --reporter=html --report-dir=coverage node --test tests/*.test.mjs",
+    "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=html --reports-dir=coverage node --enable-source-maps --test tests/*.test.mjs",
     "pretest:ci": "node -e \"require('node:fs').mkdirSync('test-results', { recursive: true })\"",
     "test:ci": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
     "build": "ng build",
@@ -27,7 +27,6 @@
     "@angular/compiler-cli": "^22.1.0",
     "c8": "^12.0.0",
     "happy-dom": "^20.14.5",
-    "nyc": "^18.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2"
   },

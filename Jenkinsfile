@@ -123,6 +123,50 @@ pipeline {
       }
     }
 
+    stage('Unit Tests - auth (NestJS)') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/auth:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:cov'
+        '''
+      }
+    }
+
+    stage('Unit Tests - frontend (Angular)') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/frontend:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:coverage
+            npm run build'
+        '''
+      }
+    }
+
+    stage('Unit Tests - insights-frontend (Angular)') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE/insights-frontend:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:coverage
+            npm run build'
+        '''
+      }
+    }
+
     stage('Publish Coverage - nextTrade-orders') {
       steps {
         archiveArtifacts(
@@ -143,14 +187,24 @@ pipeline {
       }
     }
 
+    stage('Publish Coverage - insights-service') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'insights/target/site/jacoco/**',
+          fingerprint: true,
+          allowEmptyArchive: true
+        )
+      }
+    }
+
 
     stage('Run Python Tests With Coverage') {
       steps {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
-            -v "$WORKSPACE/data-pipeline:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/data-pipeline" \
             python:3.12-slim \
             sh -ec 'python -m venv /tmp/python-venv
             /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
@@ -158,7 +212,8 @@ pipeline {
             --cov=src \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
-            --cov-report=xml:coverage.xml'
+            --cov-report=xml:coverage.xml
+            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py'
             '''
           }
         }
@@ -172,6 +227,42 @@ pipeline {
       }
     }
 
+    stage('Archive Node Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**',
+          fingerprint: true,
+          allowEmptyArchive: true
+        )
+      }
+    }
+
+
+    stage('SonarQube Analysis') {
+      steps {
+        script {
+          def scannerHome = tool 'SonarScanner'
+          withSonarQubeEnv(installationName: 'SonarQube', credentialsId: 'sonarqube-token') {
+            withEnv(["SCANNER_HOME=${scannerHome}"]) {
+              sh '''
+                set +x
+                export SONAR_TOKEN="$SONAR_AUTH_TOKEN"
+                "$SCANNER_HOME/bin/sonar-scanner" \
+                  -Dsonar.projectVersion="$BUILD_NUMBER"
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage('SonarQube Quality Gate') {
+      steps {
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
 
     stage('Build Compose Services') {
       steps {

@@ -21,6 +21,7 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 1. **[Getting Started](docs/GETTING_STARTED.md)** - Local environment setup
 2. **[Database Setup](docs/DATABASE_SETUP.md)** - PostgreSQL + Docker configuration
 3. **[Code Coverage](docs/coverage/README.md)** - How to generate each service's coverage report, and the latest figures
+4. **[Jenkins + SonarQube](docs/SONARQUBE_SETUP.md)** - Classroom server, Jenkins credentials, coverage, and Quality Gate setup
 
 **All systems running?** Access the apps:
 - NextTrade: http://localhost:4200

@@ -26,7 +26,9 @@ describe('OpenAPI docs (NEXT-152)', () => {
   afterAll(() => app?.close());
 
   it('committed openapi.json matches the code -- run `npm run docs:openapi` if this fails', async () => {
-    expect(fs.readFileSync(OPENAPI_FILE, 'utf-8').replace(/\r\n/g, '\n')).toBe(await renderOpenApiJson());
+    // JSON object-key order can differ between Swagger/compiler versions.
+    // Compare every value without treating serialization order as API drift.
+    expect(JSON.parse(fs.readFileSync(OPENAPI_FILE, 'utf-8'))).toEqual(JSON.parse(await renderOpenApiJson()));
   });
 
   it('covers every endpoint at the path it is actually served on', () => {
