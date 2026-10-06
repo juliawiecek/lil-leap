@@ -124,10 +124,12 @@ pipeline {
     }
 
     stage('Unit Tests - auth (NestJS)') {
+      // The numeric Jenkins UID has no container home; use a writable npm cache.
       steps {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
             -v "$WORKSPACE/auth:/app" \
             -w /app \
             node:24-alpine \
@@ -142,6 +144,7 @@ pipeline {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
             -v "$WORKSPACE/frontend:/app" \
             -w /app \
             node:24-alpine \
@@ -157,6 +160,7 @@ pipeline {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
             -v "$WORKSPACE/insights-frontend:/app" \
             -w /app \
             node:24-alpine \

@@ -39,6 +39,12 @@ Docker with Compose, and permission to run containers. Node tests use
 `node:24-alpine`; the Angular tests rely on Node's TypeScript support and module
 hooks. Python tests use `python:3.12-slim`.
 
+The Node containers run as the Jenkins agent's numeric UID/GID and set
+`npm_config_cache=/tmp/npm-cache`. This keeps the npm cache writable even when
+that UID has no home directory inside the image; otherwise `npm ci` can fail
+with `EACCES: permission denied, mkdir '/.npm'`. The cache is discarded with
+each test container, while coverage remains in the mounted workspace.
+
 Never put tokens in Git, this document, scanner properties, Docker images, or
 application configuration. The pipeline obtains the token through
 `withSonarQubeEnv` and passes it through the process environment without Groovy
