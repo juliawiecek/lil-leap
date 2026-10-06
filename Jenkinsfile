@@ -244,7 +244,12 @@ pipeline {
 
     stage('SonarQube Analysis') {
       when {
-        branch 'main'
+        expression {
+          return (env.BRANCH_NAME ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
+                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
+        }
       }
       steps {
         echo "Running SonarQube analysis on main branch"
@@ -266,7 +271,12 @@ pipeline {
 
     stage('SonarQube Quality Gate') {
       when {
-        branch 'main'
+        expression {
+          return (env.BRANCH_NAME ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
+                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
+        }
       }
       steps {
         echo "Waiting for SonarQube quality gate on main branch"
