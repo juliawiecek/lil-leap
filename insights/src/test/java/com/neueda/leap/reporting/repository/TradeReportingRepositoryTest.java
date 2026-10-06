@@ -1,13 +1,7 @@
 package com.neueda.leap.reporting.repository;
 
-import com.neueda.leap.onboarding.entity.Account;
-import com.neueda.leap.onboarding.enums.AccountType;
-import com.neueda.leap.onboarding.enums.TraderLevel;
-import com.neueda.leap.onboarding.repository.AccountRepository;
 import com.neueda.leap.reporting.entity.TradeFillEntity;
 import com.neueda.leap.reporting.model.ReportDateRange;
-import com.neueda.leap.user.entity.User;
-import com.neueda.leap.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,36 +30,49 @@ class TradeReportingRepositoryTest {
     private TradeReportingRepository repository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private AccountRepository accountRepository;
-
-    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUpSchemaAndData() {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS accounts (
+                    account_id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL
+                )
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id UUID PRIMARY KEY,
+                    email VARCHAR(255)
+                )
+                """);
+
         jdbcTemplate.update("DELETE FROM fills");
         jdbcTemplate.update("DELETE FROM orders");
         jdbcTemplate.update("DELETE FROM instruments");
-        accountRepository.deleteAll();
-        userRepository.deleteAll();
+        jdbcTemplate.update("DELETE FROM accounts");
+        jdbcTemplate.update("DELETE FROM users");
 
-        User alice = userRepository.saveAndFlush(user("alice@example.test"));
-        User bob = userRepository.saveAndFlush(user("bob@example.test"));
-        Account aliceAccount = accountRepository.saveAndFlush(account(alice, "ACC-001"));
-        Account bobAccount = accountRepository.saveAndFlush(account(bob, "ACC-002"));
+        UUID aliceUserId = UUID.randomUUID();
+        UUID bobUserId = UUID.randomUUID();
+        UUID aliceAccountId = UUID.randomUUID();
+        UUID bobAccountId = UUID.randomUUID();
+
+        jdbcTemplate.update("INSERT INTO users (user_id, email) VALUES (?, ?)", aliceUserId, "alice@example.test");
+        jdbcTemplate.update("INSERT INTO users (user_id, email) VALUES (?, ?)", bobUserId, "bob@example.test");
+        jdbcTemplate.update("INSERT INTO accounts (account_id, user_id) VALUES (?, ?)", aliceAccountId, aliceUserId);
+        jdbcTemplate.update("INSERT INTO accounts (account_id, user_id) VALUES (?, ?)", bobAccountId, bobUserId);
 
         UUID aaplId = UUID.randomUUID();
         UUID tslaId = UUID.randomUUID();
         jdbcTemplate.update("INSERT INTO instruments (instrument_id, symbol) VALUES (?, ?)", aaplId, "AAPL");
         jdbcTemplate.update("INSERT INTO instruments (instrument_id, symbol) VALUES (?, ?)", tslaId, "TSLA");
 
-        insertTrade(aliceAccount.getAccountId(), aaplId, 100, "10.00", Instant.parse("2026-10-01T09:15:00Z"));
-        insertTrade(bobAccount.getAccountId(), aaplId, 50, "12.00", Instant.parse("2026-10-01T09:45:00Z"));
-        insertTrade(bobAccount.getAccountId(), tslaId, 200, "20.00", Instant.parse("2026-10-01T13:00:00Z"));
-        insertTrade(aliceAccount.getAccountId(), tslaId, 75, "30.00", Instant.parse("2026-09-30T22:00:00Z"));
+        insertTrade(aliceAccountId, aaplId, 100, "10.00", Instant.parse("2026-10-01T09:15:00Z"));
+        insertTrade(bobAccountId, aaplId, 50, "12.00", Instant.parse("2026-10-01T09:45:00Z"));
+        insertTrade(bobAccountId, tslaId, 200, "20.00", Instant.parse("2026-10-01T13:00:00Z"));
+        insertTrade(aliceAccountId, tslaId, 75, "30.00", Instant.parse("2026-09-30T22:00:00Z"));
     }
 
     @Test
@@ -119,25 +126,5 @@ class TradeReportingRepositoryTest {
                 filledAt);
     }
 
-    private static User user(String email) {
-        User user = new User();
-        user.setEmail(email);
-        user.setPasswordHash("hash");
-        user.setUserRole("TRADER");
-        return user;
-    }
-
-    private static Account account(User user, String accountNumber) {
-        Account account = new Account();
-        account.setUser(user);
-        account.setAccountNumber(accountNumber);
-        account.setAccountName(accountNumber + " Name");
-        account.setAccountType(AccountType.INDIVIDUAL_CASH);
-        account.setAccountStatus("ACTIVE");
-        account.setTraderLevel(TraderLevel.NOVICE);
-        account.setMinBalanceRequirement(new BigDecimal("5000.00"));
-        account.setTradingEnabled(true);
-        return account;
-    }
 }
 

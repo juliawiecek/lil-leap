@@ -33,6 +33,7 @@ logging:
     # Never enable HTTP payload, security debug, or SQL bind-value logging.
     org.springframework.security: INFO
     org.springframework.web: WARN
+    org.springframework.jdbc: WARN
     org.springframework.web.filter.CommonsRequestLoggingFilter: OFF
     org.hibernate: INFO
     org.hibernate.SQL: OFF
@@ -63,8 +64,3 @@ server:
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
-logging:
-  level:
-    root: INFO
-    org.springframework.web: WARN
-    org.springframework.jdbc: WARN

@@ -1,6 +1,5 @@
 package com.neueda.leap.reporting.entity;
 
-import com.neueda.leap.onboarding.entity.Account;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,9 +21,8 @@ public class TradeOrderEntity {
     @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+    @Column(name = "account_id", nullable = false)
+    private UUID accountId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "instrument_id", nullable = false)
@@ -37,9 +35,10 @@ public class TradeOrderEntity {
         return orderId;
     }
 
-    public Account getAccount() {
-        return account;
+    public UUID getAccountId() {
+        return accountId;
     }
+
 
     public InstrumentEntity getInstrument() {
         return instrument;
