@@ -243,7 +243,11 @@ pipeline {
 
 
     stage('SonarQube Analysis') {
+      when {
+        branch 'main'
+      }
       steps {
+        echo "Running SonarQube analysis on main branch"
         script {
           def scannerHome = tool 'SonarScanner'
           withSonarQubeEnv(installationName: 'SonarQube', credentialsId: 'sonarqube-token') {
@@ -261,7 +265,11 @@ pipeline {
     }
 
     stage('SonarQube Quality Gate') {
+      when {
+        branch 'main'
+      }
       steps {
+        echo "Waiting for SonarQube quality gate on main branch"
         timeout(time: 5, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
         }
