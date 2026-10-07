@@ -45,6 +45,20 @@ test('balances and holdings come from the backend, valued at average cost', asyn
     [['AAPL', 42, 6476.4, 'apple'], ['MSFT', 18, 4470.48, 'microsoft'], ['NVDA', 12, 2744.88, 'nvidia']]);
 });
 
+test('holdings are re-priced at the latest bid every 5 seconds, so portfolio value moves', async t => {
+  const aapl = { instrumentId: 'aapl-id', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 10, averageCost: 200 };
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 500, holdings: [aapl] }] });
+  const bids = [205.5, 198];
+  desk.portfolioClient.latestBids = async ids => new Map(ids.map(id => [id, bids[0]]));
+  await desk.refreshPortfolio();
+  assert.deepEqual([desk.portfolioValue(), desk.invested()], [2555, 2055]);
+  assert.deepEqual(desk.holdings().map(h => [h.value, h.total, h.totalPercent]), [[2055, 55, 2.75]]);
+  bids.shift();
+  t.mock.timers.tick(5000); await flush();
+  assert.deepEqual([desk.portfolioValue(), desk.invested()], [2480, 1980]);
+  assert.deepEqual(desk.holdings().map(h => [h.total, h.totalPercent]), [[-20, -1]]);
+});
+
 test('the trade dialog offers only tradable stocks and switching stock resets the review', async t => {
   const { desk, submitted } = await tradingDesk(t);
   assert.deepEqual(desk.tradableQuotes().map(q => q.symbol), ['AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NVDA']);

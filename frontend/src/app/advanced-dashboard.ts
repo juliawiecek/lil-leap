@@ -12,7 +12,7 @@ import {
   OrderHistoryClient,
   OrderHistoryRow,
 } from './order-history-api';
-import { Portfolio, PortfolioClient } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 
 interface Quote {
@@ -25,6 +25,8 @@ interface Quote {
 }
 interface Position {
   symbol: string;
+  /** Latest bid, or average cost when no quote is available. */
+  price: number;
   quantity: number;
   cost: number;
   value: number;
@@ -62,6 +64,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   orderHistoryClient: OrderHistoryClient;
   portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
+  #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #portfolio: Portfolio = { cash: 0, holdings: [] };
+  #bids = new Map<string, number>();
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
@@ -126,6 +131,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly positions = signal<Position[]>([]);
   readonly buyingPower = signal(0);
   readonly portfolio = signal(0);
+  /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
+  readonly totalReturn = signal(0);
+  readonly totalReturnPercent = signal(0);
   readonly markets = [
     { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
     { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
@@ -353,29 +361,58 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return false;
     }
   }
-  /** Reloads cash, positions and total value from the backend. */
+  /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
   async refreshPortfolio(): Promise<void> {
     try {
       this.applyPortfolio(await this.portfolioClient.load());
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
+      return;
+    }
+    await this.refreshPrices();
+    this.#schedulePrices();
+  }
+  /** Shows a loaded portfolio, valued at the latest bids already known. */
+  applyPortfolio(portfolio: Portfolio): void {
+    this.#portfolio = portfolio;
+    this.#render();
+  }
+  /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
+  async refreshPrices(): Promise<void> {
+    const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
+    if (!ids.length) return;
+    try {
+      const bids = await this.portfolioClient.latestBids(ids);
+      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      this.#render();
+    } catch {
+      // Keep showing the last known values; the next tick retries.
     }
   }
-  /** Shows a loaded portfolio. Positions are valued at average cost until live prices are wired in. */
-  applyPortfolio({ cash, holdings }: Portfolio): void {
-    const values = holdings.map((h) => Math.round(h.quantity * h.averageCost * 100) / 100);
-    const total = Math.round((cash + values.reduce((sum, v) => sum + v, 0)) * 100) / 100;
-    this.buyingPower.set(cash);
-    this.portfolio.set(total);
+  #schedulePrices(): void {
+    clearTimeout(this.#priceTimer);
+    if (!this.#portfolio.holdings.length) return;
+    this.#priceTimer = setTimeout(async () => {
+      await this.refreshPrices();
+      this.#schedulePrices();
+    }, QUOTE_REFRESH_MS);
+  }
+  #render(): void {
+    const valuation = valuePortfolio(this.#portfolio, this.#bids);
+    this.buyingPower.set(valuation.cash);
+    this.portfolio.set(valuation.total);
+    this.totalReturn.set(valuation.gain);
+    this.totalReturnPercent.set(valuation.gainPercent);
     this.positions.set(
-      holdings.map((h, i) => ({
+      valuation.holdings.map((h) => ({
         symbol: h.symbol,
+        price: h.price,
         quantity: h.quantity,
         cost: h.averageCost,
-        value: values[i],
+        value: h.value,
         day: 0,
-        total: 0,
-        weight: total ? Math.round((values[i] / total) * 1000) / 10 : 0,
+        total: h.gain,
+        weight: valuation.total ? Math.round((h.value / valuation.total) * 1000) / 10 : 0,
       })),
     );
   }
@@ -413,6 +450,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearTimeout(this.#trackTimer);
+    clearTimeout(this.#priceTimer);
   }
 
   async ngOnInit(): Promise<void> {

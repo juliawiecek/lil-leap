@@ -121,8 +121,12 @@
               ><b class="gain">+4.73%</b>
             </div>
             <div>
-              <span>Total Return</span><strong class="gain">+$56,721.18</strong
-              ><b class="gain">+24.86%</b>
+              <span>Total Return</span
+              ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
+                >{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+              ><b [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
+                >{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b
+              >
             </div>
             <div>
               <span>Cash</span
@@ -186,7 +190,7 @@
                           </button>
                         </td>
                         <td class="muted">{{ quote(p.symbol).name }}</td>
-                        <td>{{ quote(p.symbol).price | number: '1.2-2' }}</td>
+                        <td>{{ p.price | number: '1.2-2' }}</td>
                         <td
                           [class.gain]="quote(p.symbol).change > 0"
                           [class.loss]="quote(p.symbol).change < 0"
@@ -267,8 +271,18 @@
               } @else {
                 <div class="balance-details">
                   <div><span>Day P&amp;L</span><strong class="gain">+$12,842.31</strong></div>
-                  <div><span>Total Return</span><strong class="gain">+$56,721.18</strong></div>
-                  <div><span>Return %</span><strong class="gain">+24.86%</strong></div>
+                  <div>
+                    <span>Total Return</span
+                    ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
+                      >{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                    >
+                  </div>
+                  <div>
+                    <span>Return %</span
+                    ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
+                      >{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</strong
+                    >
+                  </div>
                 </div>
               }
             </div>

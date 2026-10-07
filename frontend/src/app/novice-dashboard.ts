@@ -10,7 +10,7 @@ import {
   ORDER_TRACK_LIMIT_MS,
   OrderHistoryClient,
 } from './order-history-api';
-import { Portfolio, PortfolioClient } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 
 /** Company logos the template knows how to draw. */
@@ -46,6 +46,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   orderHistoryClient: OrderHistoryClient;
   portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
+  #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #portfolio: Portfolio = { cash: 0, holdings: [] };
+  #bids = new Map<string, number>();
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
@@ -271,34 +274,66 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void {
     clearTimeout(this.#trackTimer);
+    clearTimeout(this.#priceTimer);
   }
-  /** Reloads buying power, invested value and holdings; a failure keeps the last values shown. */
+  /**
+   * Reloads buying power and holdings, prices them, and keeps re-pricing them while any are
+   * held. A failure keeps the last values shown.
+   */
   async refreshPortfolio(): Promise<void> {
     try {
       this.applyPortfolio(await this.portfolioClient.load());
     } catch {
       // The trade dialog already reports order problems; balances refresh again after the next fill.
+      return;
+    }
+    await this.refreshPrices();
+    this.#schedulePrices();
+  }
+  /** Shows a loaded portfolio, valued at the latest bids already known. */
+  applyPortfolio(portfolio: Portfolio): void {
+    this.#portfolio = portfolio;
+    this.#render();
+  }
+  /** Re-values holdings at their latest bids; a failed quote keeps the last price. */
+  async refreshPrices(): Promise<void> {
+    const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
+    if (!ids.length) return;
+    try {
+      const bids = await this.portfolioClient.latestBids(ids);
+      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      this.#render();
+    } catch {
+      // Keep showing the last known values; the next tick retries.
     }
   }
-  /** Shows a loaded portfolio. Holdings are valued at average cost until live prices are wired in. */
-  applyPortfolio({ cash, holdings }: Portfolio): void {
-    const rows = holdings.map((h) => ({
-      symbol: h.symbol,
-      name: h.instrumentName,
-      value: Math.round(h.quantity * h.averageCost * 100) / 100,
-      shares: h.quantity,
-      average: h.averageCost,
-      today: 0,
-      change: 0,
-      total: 0,
-      totalPercent: 0,
-      logo: LOGOS[h.symbol] ?? '',
-    }));
-    const invested = Math.round(rows.reduce((sum, h) => sum + h.value, 0) * 100) / 100;
-    this.holdings.set(rows);
-    this.buyingPower.set(cash);
-    this.invested.set(invested);
-    this.portfolioValue.set(Math.round((cash + invested) * 100) / 100);
+  #schedulePrices(): void {
+    clearTimeout(this.#priceTimer);
+    if (!this.#portfolio.holdings.length) return;
+    this.#priceTimer = setTimeout(async () => {
+      await this.refreshPrices();
+      this.#schedulePrices();
+    }, QUOTE_REFRESH_MS);
+  }
+  #render(): void {
+    const valuation = valuePortfolio(this.#portfolio, this.#bids);
+    this.holdings.set(
+      valuation.holdings.map((h) => ({
+        symbol: h.symbol,
+        name: h.instrumentName,
+        value: h.value,
+        shares: h.quantity,
+        average: h.averageCost,
+        today: 0,
+        change: 0,
+        total: h.gain,
+        totalPercent: h.gainPercent,
+        logo: LOGOS[h.symbol] ?? '',
+      })),
+    );
+    this.buyingPower.set(valuation.cash);
+    this.invested.set(valuation.holdingsValue);
+    this.portfolioValue.set(valuation.total);
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   async ngOnInit(): Promise<void> {

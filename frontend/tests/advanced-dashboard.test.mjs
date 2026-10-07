@@ -180,9 +180,23 @@ test('a submitted order is re-read until it fills, then tracking stops', async t
   assert.match(desk.message(), /Order o1 filled/);
 });
 
+test('positions are re-priced at the latest bid every 5 seconds and returns follow the market', async t => {
+  const desk = tradingDesk(t);
+  const portfolio = { cash: 1000, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 10, averageCost: 200 }] };
+  const bids = [210, 190];
+  desk.portfolioClient = { load: async () => portfolio, latestBids: async ids => new Map(ids.map(id => [id, bids[0]])) };
+  await desk.refreshPortfolio();
+  assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [3100, 100, 5]);
+  assert.deepEqual(desk.positions().map(p => [p.price, p.value, p.total]), [[210, 2100, 100]]);
+  bids.shift();
+  t.mock.timers.tick(5000); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [2900, -100, -5]);
+});
+
 test('cash, positions and portfolio value come from the backend and reload after a fill', async t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
-  assert.equal(desk.buyingPower(), 0); assert.deepEqual(desk.positions(), []);
+  const fresh = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  assert.equal(fresh.buyingPower(), 0); assert.deepEqual(fresh.positions(), []);
+  const desk = tradingDesk(t);
   const before = { cash: 1000, holdings: [{ symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 2, averageCost: 200 }] };
   const after = { cash: 1450, holdings: [] };
   const loads = [before, after];

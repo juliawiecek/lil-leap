@@ -275,9 +275,12 @@
                             +{{ holding.today | currency
                             }}<span>+{{ holding.change | number: '1.2-2' }}%</span>
                           </td>
-                          <td class="positive">
-                            +{{ holding.total | currency
-                            }}<span>+{{ holding.totalPercent | number: '1.2-2' }}%</span>
+                          <td [class.positive]="holding.total >= 0" [class.negative]="holding.total < 0">
+                            {{ holding.total >= 0 ? '+' : '' }}{{ holding.total | currency
+                            }}<span
+                              >{{ holding.totalPercent >= 0 ? '+' : ''
+                              }}{{ holding.totalPercent | number: '1.2-2' }}%</span
+                            >
                           </td>
                           <td>
                             <button
