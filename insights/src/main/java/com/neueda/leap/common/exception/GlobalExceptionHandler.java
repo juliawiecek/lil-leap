@@ -1,10 +1,16 @@
 package com.neueda.leap.common.exception;
 
+
+import com.neueda.leap.reporting.model.InvalidReportDateRangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.ErrorResponse;
@@ -68,5 +74,44 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
     }
+
+
+    /**
+     * Returns 403 when method security (for example {@code @PreAuthorize}) denies
+     * an authenticated caller. Without this, the catch-all handler above would
+     * intercept the denial before Spring Security and turn it into a 500.
+     * @param exception authorization failure raised by method security
+     * @return HTTP 403 with the same body as the security filter chain's access-denied handler
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "ACCESS_DENIED", "message", "Access is denied."));
+    }
+
+    /**
+     * Rejects missing, malformed, or out-of-bounds query parameters without
+     * echoing the rejected values.
+     * @param exception parameter binding or method validation failure
+     * @return HTTP 400 with a fixed INVALID_REQUEST response
+     */
+    @ExceptionHandler({MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class, HandlerMethodValidationException.class})
+    public ResponseEntity<Map<String, String>> handleInvalidParameter(Exception exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing parameters."));
+    }
+
+    /**
+     * Rejects a report request whose date range is inverted or too long.
+     * @param exception date range rule violation with a fixed, caller-safe message
+     * @return HTTP 400 with INVALID_DATE_RANGE and the rule that was violated
+     */
+    @ExceptionHandler(InvalidReportDateRangeException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidDateRange(InvalidReportDateRangeException exception) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "INVALID_DATE_RANGE", "message", exception.getMessage()));
+    }
+
 
 }

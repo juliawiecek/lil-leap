@@ -14,7 +14,6 @@ pipeline {
   environment {
     COMPOSE_FILE = 'docker-compose.yml'
     NEXTTRADE_POM = 'nextTrade-orders/pom.xml'
-    INSIGHTS_POM = 'insights/pom.xml'
   }
 
   stages {
@@ -119,7 +118,18 @@ pipeline {
 
     stage('Unit Tests - insights-service') {
       steps {
-        sh "mvn -f ${INSIGHTS_POM} -B -ntp clean verify"
+        dir('insights') {
+          sh 'mvn -B -ntp clean verify'
+        }
+      }
+    }
+
+    stage('Publish Coverage - insights') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'insights/target/site/jacoco/**',
+          fingerprint: true
+        )
       }
     }
 
