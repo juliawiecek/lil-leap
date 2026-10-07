@@ -65,7 +65,11 @@ def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> N
     while not should_stop():
         started=time.monotonic()
         try:
-            frame=generate_current(1, seed + batch)
+            # Generate 3 prices per interval to get GBM variation (periods must be > 1 for price movement)
+            # We take the last price to show market movement over time
+            frame=generate_current(3, seed + batch)
+            # Keep only the most recent price for this interval
+            frame = frame.groupby('symbol', as_index=False).tail(1)
             with connect() as conn: inserted, skipped=ingest_frame(frame, conn)
             print(f"quote batch inserted={inserted} skipped={skipped} symbols={len(frame)}")
             attempt=0; batch += 1
