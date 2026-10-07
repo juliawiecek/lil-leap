@@ -5,14 +5,14 @@ import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
 import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
-import { OrderHistoryClient, OrderHistoryRow } from './order-history-api';
+import {
+  FINAL_ORDER_STATUSES,
+  ORDER_TRACK_INTERVAL_MS,
+  ORDER_TRACK_LIMIT_MS,
+  OrderHistoryClient,
+  OrderHistoryRow,
+} from './order-history-api';
 import { AuthService } from './auth.service';
-
-/** Statuses after which an order no longer changes. */
-const FINAL_STATUSES = new Set(['FILLED', 'REJECTED']);
-/** How often, and for how long, a just-submitted order is re-read while it executes. */
-const TRACK_INTERVAL_MS = 2000;
-const TRACK_LIMIT_MS = 30000;
 
 interface Quote {
   instrumentId: string;  // ← NOW PRESERVED
@@ -404,12 +404,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#trackTimer);
     if (!(await this.refreshOrders())) return;
     const order = this.orders().find((o) => o.id === orderId);
-    if (order && FINAL_STATUSES.has(order.status.toUpperCase())) {
+    if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }
-    if (Date.now() - startedAt >= TRACK_LIMIT_MS) return;
-    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), TRACK_INTERVAL_MS);
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
+    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   createAlert(): void {
     const price = Number(this.alertPrice());

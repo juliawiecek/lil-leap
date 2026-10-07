@@ -1,8 +1,16 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
+import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import {
+  FINAL_ORDER_STATUSES,
+  ORDER_TRACK_INTERVAL_MS,
+  ORDER_TRACK_LIMIT_MS,
+  OrderHistoryClient,
+} from './order-history-api';
+import { AuthService } from './auth.service';
 
 interface Holding {
   symbol: string;
@@ -29,7 +37,10 @@ interface Quote {
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
-export class NoviceDashboard {
+export class NoviceDashboard implements OnInit, OnDestroy {
+  orderSubmissionClient: OrderSubmissionClient;
+  orderHistoryClient: OrderHistoryClient;
+  #trackTimer: ReturnType<typeof setTimeout> | undefined;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
@@ -117,9 +128,11 @@ export class NoviceDashboard {
   readonly quantity = signal('');
   readonly reviewing = signal(false);
   readonly tradeMessage = signal('');
-  readonly orderHistory = signal<
-    { id: number; symbol: string; side: string; shares: number; price: number }[]
-  >([]);
+  readonly submitting = signal(false);
+  /** Idempotency key for the order being reviewed; a retried confirm reuses it. */
+  readonly clientReference = signal('');
+  readonly selectedAccount = signal<Account | null>(null);
+  readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
   readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
@@ -192,64 +205,92 @@ export class NoviceDashboard {
           : this.side() === 'Sell' && count > held
             ? 'You can only sell shares you hold.'
             : '';
+    const startingReview = !this.reviewing();
     this.tradeMessage.set(error);
     this.reviewing.set(!error);
+    if (!error && startingReview) this.clientReference.set(OrderSubmissionClient.generateClientReference());
   }
-  confirmTrade(): void {
+  /**
+   * Sends the reviewed order to the backend. Holdings and buying power are not changed
+   * here: the backend fills the order, and its progress is shown until it settles.
+   */
+  async confirmTrade(): Promise<void> {
     this.reviewTrade();
-    if (!this.reviewing()) return;
-    const quote = this.tradeQuote(),
-      count = Number(this.quantity()),
-      direction = this.side() === 'Buy' ? 1 : -1;
-    const amount = Math.round(this.tradeTotal() * 100) / 100;
-    this.buyingPower.update((v) => Math.round((v - amount * direction) * 100) / 100);
-    this.invested.update((v) => Math.round((v + amount * direction) * 100) / 100);
-    this.holdings.update((list) => {
-      const existing = list.find((h) => h.symbol === quote.symbol);
-      if (!existing)
-        return [
-          ...list,
-          {
-            symbol: quote.symbol,
-            name: quote.name,
-            value: amount,
-            shares: count,
-            average: quote.price,
-            today: 0,
-            change: 0,
-            total: 0,
-            totalPercent: 0,
-            logo: '',
-          },
-        ];
-      return list
-        .map((h) =>
-          h.symbol !== quote.symbol
-            ? h
-            : {
-                ...h,
-                shares: h.shares + count * direction,
-                value: h.value + amount * direction,
-                average:
-                  direction === 1
-                    ? (h.average * h.shares + amount) / (h.shares + count)
-                    : h.average,
-              },
-        )
-        .filter((h) => h.shares > 0);
-    });
-    this.orderHistory.update((list) => [
-      {
-        id: Date.now(),
-        symbol: quote.symbol,
-        side: this.side(),
-        shares: count,
-        price: quote.price,
-      },
-      ...list,
-    ]);
-    this.reviewing.set(false);
-    this.quantity.set('');
-    this.tradeMessage.set('Order filled. Your holdings and buying power have been updated.');
+    if (!this.reviewing() || this.submitting()) return;
+    const quote = this.tradeQuote();
+    const account = this.selectedAccount();
+    const instrument = this.instruments().find((i) => i.symbol === quote.symbol);
+    if (!account) {
+      this.tradeMessage.set('We could not find an active trading account for you.');
+      return;
+    }
+    if (!instrument) {
+      this.tradeMessage.set(`${quote.symbol} is not available to trade yet.`);
+      return;
+    }
+    this.submitting.set(true);
+    try {
+      const response = await this.orderSubmissionClient.submit({
+        accountId: account.account_id,
+        instrumentId: instrument.instrumentId,
+        side: this.side() === 'Buy' ? 'BUY' : 'SELL',
+        quantity: Number(this.quantity()),
+        orderType: 'MARKET',
+        clientReference: this.clientReference(),
+      });
+      this.reviewing.set(false);
+      this.quantity.set('');
+      this.tradeMessage.set('Order sent. Waiting for it to fill…');
+      void this.trackOrder(response.orderId);
+    } catch (error) {
+      this.tradeMessage.set(
+        error instanceof OrderSubmissionError ? error.userMessage : 'Your order could not be sent. Please try again.',
+      );
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+  /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
+  async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
+    clearTimeout(this.#trackTimer);
+    let row;
+    try {
+      row = (await this.orderHistoryClient.list()).find((r) => r.orderId === orderId);
+    } catch (error) {
+      this.tradeMessage.set(error instanceof Error ? error.message : 'Could not check your order.');
+      return;
+    }
+    if (row && FINAL_ORDER_STATUSES.has(row.status)) {
+      const action = row.side === 'SELL' ? 'Sold' : 'Bought';
+      this.tradeMessage.set(
+        row.status === 'FILLED'
+          ? `${action} ${row.filledQuantity ?? row.quantity} ${row.symbol} at $${row.fillPrice?.toFixed(2)}. You can see it under Orders.`
+          : 'Your order was not filled. You can see why under Orders.',
+      );
+      return;
+    }
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
+      this.tradeMessage.set('Your order is still being processed. Check Orders for its status.');
+      return;
+    }
+    if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
+    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+  }
+  constructor(private auth: AuthService) {
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth);
+  }
+  ngOnDestroy(): void {
+    clearTimeout(this.#trackTimer);
+  }
+  /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
+  async ngOnInit(): Promise<void> {
+    try {
+      const accounts = await this.orderSubmissionClient.getAccounts();
+      this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);
+      this.instruments.set(await this.orderSubmissionClient.getInstruments());
+    } catch {
+      // confirmTrade reports the missing account or instrument in plain words.
+    }
   }
 }
