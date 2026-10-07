@@ -4,6 +4,8 @@ import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
 import { QuoteService } from './quote.service';
+import { HoldingsService } from './holdings.service';
+import { AuthService } from './auth.service';
 import { interval, Subject, takeUntil, switchMap, startWith } from 'rxjs';
 
 interface Holding {
@@ -38,6 +40,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   
   private readonly quoteService = inject(QuoteService);
+  private readonly holdingsService = inject(HoldingsService);
+  private readonly authService = inject(AuthService);
   private readonly destroy$ = new Subject<void>();
   
   // Supported instruments: AAPL, TSLA, AMZN, GOOGL, META, MSFT, NVDA
@@ -66,47 +70,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly showBalance = signal(true);
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
-  readonly portfolioValue = signal(24680.42);
-  readonly buyingPower = signal(6420.18);
-  readonly invested = signal(18260.24);
-  readonly holdings = signal<Holding[]>([
-    {
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      value: 7415.6,
-      shares: 42,
-      average: 154.2,
-      today: 144.06,
-      change: 1.98,
-      total: 1312.6,
-      totalPercent: 21.54,
-      logo: 'apple',
-    },
-    {
-      symbol: 'MSFT',
-      name: 'Microsoft Corporation',
-      value: 4978.2,
-      shares: 18,
-      average: 248.36,
-      today: 96.48,
-      change: 1.98,
-      total: 489.76,
-      totalPercent: 10.91,
-      logo: 'microsoft',
-    },
-    {
-      symbol: 'NVDA',
-      name: 'NVIDIA Corporation',
-      value: 3337.12,
-      shares: 12,
-      average: 228.74,
-      today: 169.2,
-      change: 5.34,
-      total: 392.12,
-      totalPercent: 13.32,
-      logo: 'nvidia',
-    },
-  ]);
+  // Portfolio values fetched from API (TS-11.3: Live portfolio summary)
+  readonly portfolioValue = signal(0);
+  readonly buyingPower = signal(0);
+  readonly invested = signal(0);
+  // Holdings fetched from API with live prices (BR-13 + TS-11.3)
+  readonly holdings = signal<Holding[]>([]);
   
   // Signal for live quotes fetched from API (BR-13: Indicative pricing)
   readonly quotes = signal<Quote[]>([
@@ -273,10 +242,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
 
   /**
-   * BR-13 Compliance: Fetch live indicative quotes from API
-   * Sets up polling to refresh every 5 seconds
+   * BR-13 & TS-11.3 Compliance: Fetch live quotes and portfolio data
+   * Sets up polling to refresh both every 5 seconds
    */
   ngOnInit(): void {
+    // Get client ID from auth service for portfolio API calls
+    const clientId = this.authService.getUserId();
+    
     // Fetch quotes immediately and every 5 seconds
     interval(5000)
       .pipe(
@@ -297,6 +269,27 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         error: (err) => {
           console.error('Failed to fetch live quotes:', err);
           // Keep showing stale quotes on error, don't break the UI
+        },
+      });
+
+    // Fetch portfolio/holdings immediately and every 5 seconds (TS-11.3 AC1)
+    interval(5000)
+      .pipe(
+        startWith(0), // Fetch immediately on init
+        switchMap(() => this.fetchPortfolioData(clientId)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (portfolioData) => {
+          // Update signals with real portfolio data
+          this.portfolioValue.set(portfolioData.totalPortfolioValue);
+          this.invested.set(portfolioData.investedValue);
+          this.buyingPower.set(portfolioData.availableBalance);
+          this.holdings.set(portfolioData.holdings);
+        },
+        error: (err) => {
+          console.error('Failed to fetch portfolio data:', err);
+          // Keep showing stale portfolio on error, don't break the UI
         },
       });
   }
@@ -340,5 +333,70 @@ export class NoviceDashboard implements OnInit, OnDestroy {
 
       Promise.all(quotePromises).then((quotes) => resolve(quotes));
     });
+  }
+
+  /**
+   * TS-11.3 AC1: Fetch portfolio summary from backend
+   * Returns holdings with current market prices and portfolio value calculated from live quotes
+   * 
+   * @param clientId - authenticated user ID
+   * @returns Promise with portfolio data (holdings, portfolio value, cash balance)
+   */
+  private fetchPortfolioData(clientId: string): Promise<{
+    totalPortfolioValue: number;
+    investedValue: number;
+    availableBalance: number;
+    holdings: Holding[];
+  }> {
+    return new Promise((resolve) => {
+      this.holdingsService
+        .getPortfolioSummary(clientId)
+        .toPromise()
+        .then(
+          (portfolio: any) => {
+            // Transform API response to Holding[] format
+            const holdings: Holding[] = portfolio.holdings.map((h: any) => {
+              const currentPrice = this.findCurrentPrice(h.symbol);
+              const holdingValue = currentPrice * h.quantity;
+              return {
+                symbol: h.symbol,
+                name: h.instrumentName,
+                value: holdingValue,
+                shares: h.quantity,
+                average: h.avgCost,
+                today: currentPrice - h.avgCost, // Price difference since purchase
+                change: h.avgCost > 0 ? ((currentPrice - h.avgCost) / h.avgCost) * 100 : 0,
+                total: holdingValue - (h.avgCost * h.quantity), // P&L
+                totalPercent: h.avgCost > 0 ? ((currentPrice - h.avgCost) / h.avgCost) * 100 : 0,
+                logo: h.symbol.toLowerCase(),
+              };
+            });
+
+            resolve({
+              totalPortfolioValue: portfolio.totalPortfolioValue,
+              investedValue: holdings.reduce((sum: number, h) => sum + h.value, 0),
+              availableBalance: portfolio.cash?.availableBalance || 0,
+              holdings,
+            });
+          },
+          (error: any) => {
+            console.warn('Failed to fetch portfolio data:', error);
+            // Return current portfolio state on error
+            resolve({
+              totalPortfolioValue: this.portfolioValue(),
+              investedValue: this.invested(),
+              availableBalance: this.buyingPower(),
+              holdings: this.holdings(),
+            });
+          }
+        );
+    });
+  }
+
+  /**
+   * Helper: Find current price of a symbol from quotes signal
+   */
+  private findCurrentPrice(symbol: string): number {
+    return this.quotes().find((q) => q.symbol === symbol)?.price || 0;
   }
 }
