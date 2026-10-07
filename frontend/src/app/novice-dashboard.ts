@@ -1,8 +1,10 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit, OnDestroy, effect } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
+import { QuoteService } from './quote.service';
+import { interval, Subject, takeUntil, switchMap, startWith } from 'rxjs';
 
 interface Holding {
   symbol: string;
@@ -29,11 +31,26 @@ interface Quote {
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
-export class NoviceDashboard {
+export class NoviceDashboard implements OnInit, OnDestroy {
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
+  
+  private readonly quoteService = inject(QuoteService);
+  private readonly destroy$ = new Subject<void>();
+  
+  // Supported instruments: AAPL, TSLA, AMZN, GOOGL, META, MSFT, NVDA
+  // All from NASDAQ market
+  private readonly supportedInstruments = [
+    { symbol: 'AAPL', name: 'Apple Inc.', market: 'NASDAQ' },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', market: 'NASDAQ' },
+    { symbol: 'AMZN', name: 'Amazon.com, Inc.', market: 'NASDAQ' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', market: 'NASDAQ' },
+    { symbol: 'META', name: 'Meta Platforms, Inc.', market: 'NASDAQ' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', market: 'NASDAQ' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', market: 'NASDAQ' },
+  ];
   readonly activeTab = signal('Overview');
   readonly navigation = [
     { label: 'Overview', icon: 'home' },
@@ -90,15 +107,17 @@ export class NoviceDashboard {
       logo: 'nvidia',
     },
   ]);
-  readonly quotes: Quote[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.98 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -0.84 },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62 },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37 },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 276.57, change: 1.98 },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 278.09, change: 5.34 },
-  ];
+  
+  // Signal for live quotes fetched from API (BR-13: Indicative pricing)
+  readonly quotes = signal<Quote[]>([
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 0, change: 0 },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 0, change: 0 },
+    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 0, change: 0 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 0, change: 0 },
+    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 0, change: 0 },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 0, change: 0 },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 0, change: 0 },
+  ]);
   readonly watched = signal(['AAPL', 'TSLA', 'AMZN', 'GOOGL', 'META']);
   readonly watchlist = computed(() => this.quotes.filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
@@ -251,5 +270,75 @@ export class NoviceDashboard {
     this.reviewing.set(false);
     this.quantity.set('');
     this.tradeMessage.set('Order filled. Your holdings and buying power have been updated.');
+  }
+
+  /**
+   * BR-13 Compliance: Fetch live indicative quotes from API
+   * Sets up polling to refresh every 5 seconds
+   */
+  ngOnInit(): void {
+    // Fetch quotes immediately and every 5 seconds
+    interval(5000)
+      .pipe(
+        startWith(0), // Fetch immediately on init
+        switchMap(() => this.fetchAllQuotes()),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (quotes) => {
+          this.quotes.set(quotes);
+          // Update tradeQuote if it's still showing old data
+          const current = this.tradeQuote();
+          const updated = quotes.find((q) => q.symbol === current.symbol);
+          if (updated && updated.price !== current.price) {
+            this.tradeQuote.set(updated);
+          }
+        },
+        error: (err) => {
+          console.error('Failed to fetch live quotes:', err);
+          // Keep showing stale quotes on error, don't break the UI
+        },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Fetch all live quotes from the API (BR-13: Indicative Pricing)
+   * Calls quote API for each supported instrument and updates the quotes signal
+   * If API fails, returns current quotes to keep UI functional
+   */
+  private fetchAllQuotes() {
+    return new Promise<Quote[]>((resolve) => {
+      const quotePromises = this.supportedInstruments.map((inst) =>
+        this.quoteService
+          .getLatestByMarketSymbol(inst.market, inst.symbol)
+          .toPromise()
+          .then(
+            (apiQuote) => ({
+              symbol: inst.symbol,
+              name: inst.name,
+              // Use midpoint from API quote (already calculated bid + ask / 2)
+              price: apiQuote?.midpoint ? parseFloat(apiQuote.midpoint.toString()) : 0,
+              change: 0, // Change calculation can be added from price history later
+            }),
+            (error) => {
+              // On API error, fall back to current price
+              console.warn(`Failed to fetch ${inst.symbol}:`, error);
+              return {
+                symbol: inst.symbol,
+                name: inst.name,
+                price: this.quotes().find((q) => q.symbol === inst.symbol)?.price || 0,
+                change: 0,
+              };
+            }
+          )
+      );
+
+      Promise.all(quotePromises).then((quotes) => resolve(quotes));
+    });
   }
 }
