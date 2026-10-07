@@ -265,12 +265,16 @@ pipeline {
         echo "Running SonarQube analysis on main branch"
         script {
           def scannerHome = tool 'SonarScanner'
-          withSonarQubeEnv(installationName: 'SonarQube', credentialsId: 'sonarqube-token') {
+          withSonarQubeEnv(installationName: 'SonarQube') {
             withEnv(["SCANNER_HOME=${scannerHome}"]) {
               sh '''
                 set +x
-                export SONAR_TOKEN="$SONAR_AUTH_TOKEN"
+                if [ -z "${SONAR_AUTH_TOKEN:-}" ]; then
+                  echo "ERROR: SONAR_AUTH_TOKEN is empty. Check SonarQube server credentials in Jenkins."
+                  exit 1
+                fi
                 "$SCANNER_HOME/bin/sonar-scanner" \
+                  -Dsonar.token="$SONAR_AUTH_TOKEN" \
                   -Dsonar.projectVersion="$BUILD_NUMBER"
               '''
             }
