@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit, OnDestroy, effect, inject } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
@@ -121,7 +121,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly watched = signal(['AAPL', 'TSLA', 'AMZN', 'GOOGL', 'META']);
   readonly watchlist = computed(() => this.quotes.filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
-    this.quotes.filter((q) =>
+    this.quotes().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
@@ -131,7 +131,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
   ];
   readonly modal = signal('trade');
-  readonly tradeQuote = signal(this.quotes[0]);
+  readonly tradeQuote = signal(this.quotes()[0]);
   readonly side = signal('Buy');
   readonly quantity = signal('');
   readonly reviewing = signal(false);
@@ -186,7 +186,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (event.target === this.dialog()?.nativeElement) this.closeModal();
   }
   openTrade(side = 'Buy', symbol = 'AAPL'): void {
-    this.tradeQuote.set(this.quotes.find((q) => q.symbol === symbol) || this.quotes[0]);
+    this.tradeQuote.set(this.quotes().find((q) => q.symbol === symbol) || this.quotes()[0]);
     this.side.set(side);
     this.quantity.set('');
     this.reviewing.set(false);
@@ -318,20 +318,20 @@ export class NoviceDashboard implements OnInit, OnDestroy {
           .getLatestByMarketSymbol(inst.market, inst.symbol)
           .toPromise()
           .then(
-            (apiQuote) => ({
+            (apiQuote: any) => ({
               symbol: inst.symbol,
               name: inst.name,
               // Use midpoint from API quote (already calculated bid + ask / 2)
               price: apiQuote?.midpoint ? parseFloat(apiQuote.midpoint.toString()) : 0,
               change: 0, // Change calculation can be added from price history later
             }),
-            (error) => {
+            (error: any) => {
               // On API error, fall back to current price
               console.warn(`Failed to fetch ${inst.symbol}:`, error);
               return {
                 symbol: inst.symbol,
                 name: inst.name,
-                price: this.quotes().find((q) => q.symbol === inst.symbol)?.price || 0,
+                price: this.quotes().find((q: Quote) => q.symbol === inst.symbol)?.price || 0,
                 change: 0,
               };
             }
