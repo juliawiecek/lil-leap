@@ -528,6 +528,14 @@
       </button>
     </div>
     <form (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+      <label for="novice-stock">Stock</label
+      ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
+        @for (q of tradableQuotes(); track q.symbol) {
+          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol">
+            {{ q.symbol }} · {{ q.name }}
+          </option>
+        }
+      </select>
       <div class="side-picker">
         @for (action of ['Buy', 'Sell']; track action) {
           <button

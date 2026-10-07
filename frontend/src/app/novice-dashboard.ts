@@ -10,7 +10,11 @@ import {
   ORDER_TRACK_LIMIT_MS,
   OrderHistoryClient,
 } from './order-history-api';
+import { Portfolio, PortfolioClient } from './portfolio-api';
 import { AuthService } from './auth.service';
+
+/** Company logos the template knows how to draw. */
+const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
 
 interface Holding {
   symbol: string;
@@ -40,6 +44,7 @@ interface Quote {
 export class NoviceDashboard implements OnInit, OnDestroy {
   orderSubmissionClient: OrderSubmissionClient;
   orderHistoryClient: OrderHistoryClient;
+  portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
@@ -60,47 +65,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly showBalance = signal(true);
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
-  readonly portfolioValue = signal(24680.42);
-  readonly buyingPower = signal(6420.18);
-  readonly invested = signal(18260.24);
-  readonly holdings = signal<Holding[]>([
-    {
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      value: 7415.6,
-      shares: 42,
-      average: 154.2,
-      today: 144.06,
-      change: 1.98,
-      total: 1312.6,
-      totalPercent: 21.54,
-      logo: 'apple',
-    },
-    {
-      symbol: 'MSFT',
-      name: 'Microsoft Corporation',
-      value: 4978.2,
-      shares: 18,
-      average: 248.36,
-      today: 96.48,
-      change: 1.98,
-      total: 489.76,
-      totalPercent: 10.91,
-      logo: 'microsoft',
-    },
-    {
-      symbol: 'NVDA',
-      name: 'NVIDIA Corporation',
-      value: 3337.12,
-      shares: 12,
-      average: 228.74,
-      today: 169.2,
-      change: 5.34,
-      total: 392.12,
-      totalPercent: 13.32,
-      logo: 'nvidia',
-    },
-  ]);
+  /** Balances and holdings, loaded from the backend and reloaded after each fill. */
+  readonly portfolioValue = signal(0);
+  readonly buyingPower = signal(0);
+  readonly invested = signal(0);
+  readonly holdings = signal<Holding[]>([]);
   readonly quotes: Quote[] = [
     { symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.98 },
     { symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -0.84 },
@@ -179,14 +148,32 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   onDialogClick(event: MouseEvent): void {
     if (event.target === this.dialog()?.nativeElement) this.closeModal();
   }
-  openTrade(side = 'Buy', symbol = 'AAPL'): void {
-    this.tradeQuote.set(this.quotes.find((q) => q.symbol === symbol) || this.quotes[0]);
+  /** Stocks the trade dialog offers: those the backend can trade, or every quote until instruments load. */
+  readonly tradableQuotes = computed(() => {
+    const symbols = new Set(this.instruments().map((i) => i.symbol));
+    return symbols.size ? this.quotes.filter((q) => symbols.has(q.symbol)) : this.quotes;
+  });
+  /**
+   * Opens the trade dialog. Without a symbol, a sell starts on the first stock the user holds
+   * and a buy on the first tradable stock; the dialog's picker can change it.
+   */
+  openTrade(side = 'Buy', symbol?: string): void {
+    const start = symbol ?? (side === 'Sell' ? this.holdings()[0]?.symbol : undefined) ?? this.tradableQuotes()[0]?.symbol;
+    this.tradeQuote.set(this.quotes.find((q) => q.symbol === start) || this.quotes[0]);
     this.side.set(side);
     this.quantity.set('');
     this.reviewing.set(false);
     this.tradeMessage.set('');
     this.query.set('');
     this.openModal('trade');
+  }
+  /** Switches the open trade to another stock and drops any review of the previous one. */
+  chooseTradeSymbol(symbol: string): void {
+    const quote = this.quotes.find((q) => q.symbol === symbol);
+    if (!quote) return;
+    this.tradeQuote.set(quote);
+    this.reviewing.set(false);
+    this.tradeMessage.set('');
   }
   toggleWatch(): void {
     const symbol = this.tradeQuote().symbol;
@@ -261,6 +248,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return;
     }
     if (row && FINAL_ORDER_STATUSES.has(row.status)) {
+      if (row.status === 'FILLED') await this.refreshPortfolio();
       const action = row.side === 'SELL' ? 'Sold' : 'Bought';
       this.tradeMessage.set(
         row.status === 'FILLED'
@@ -279,12 +267,42 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   constructor(private auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
+    this.portfolioClient = new PortfolioClient(this.auth);
   }
   ngOnDestroy(): void {
     clearTimeout(this.#trackTimer);
   }
+  /** Reloads buying power, invested value and holdings; a failure keeps the last values shown. */
+  async refreshPortfolio(): Promise<void> {
+    try {
+      this.applyPortfolio(await this.portfolioClient.load());
+    } catch {
+      // The trade dialog already reports order problems; balances refresh again after the next fill.
+    }
+  }
+  /** Shows a loaded portfolio. Holdings are valued at average cost until live prices are wired in. */
+  applyPortfolio({ cash, holdings }: Portfolio): void {
+    const rows = holdings.map((h) => ({
+      symbol: h.symbol,
+      name: h.instrumentName,
+      value: Math.round(h.quantity * h.averageCost * 100) / 100,
+      shares: h.quantity,
+      average: h.averageCost,
+      today: 0,
+      change: 0,
+      total: 0,
+      totalPercent: 0,
+      logo: LOGOS[h.symbol] ?? '',
+    }));
+    const invested = Math.round(rows.reduce((sum, h) => sum + h.value, 0) * 100) / 100;
+    this.holdings.set(rows);
+    this.buyingPower.set(cash);
+    this.invested.set(invested);
+    this.portfolioValue.set(Math.round((cash + invested) * 100) / 100);
+  }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   async ngOnInit(): Promise<void> {
+    void this.refreshPortfolio();
     try {
       const accounts = await this.orderSubmissionClient.getAccounts();
       this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);

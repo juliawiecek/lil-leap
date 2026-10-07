@@ -12,6 +12,7 @@ import {
   OrderHistoryClient,
   OrderHistoryRow,
 } from './order-history-api';
+import { Portfolio, PortfolioClient } from './portfolio-api';
 import { AuthService } from './auth.service';
 
 interface Quote {
@@ -59,6 +60,7 @@ interface NewsItem {
 export class AdvancedDashboard implements OnInit, OnDestroy {
   orderSubmissionClient: OrderSubmissionClient;
   orderHistoryClient: OrderHistoryClient;
+  portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
@@ -120,55 +122,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
           : true,
     ),
   );
-  readonly positions = signal<Position[]>([
-    {
-      symbol: 'AAPL',
-      quantity: 250,
-      cost: 142.2,
-      value: 44140,
-      day: 1925,
-      total: 8590,
-      weight: 15.5,
-    },
-    {
-      symbol: 'NVDA',
-      quantity: 120,
-      cost: 640.18,
-      value: 107174.4,
-      day: 2944.32,
-      total: 30352.8,
-      weight: 37.7,
-    },
-    {
-      symbol: 'MSFT',
-      quantity: 80,
-      cost: 390.14,
-      value: 33944.8,
-      day: 192.8,
-      total: 2733.6,
-      weight: 11.9,
-    },
-    {
-      symbol: 'AMD',
-      quantity: 200,
-      cost: 118.05,
-      value: 32428,
-      day: 1010,
-      total: 8817,
-      weight: 11.4,
-    },
-    {
-      symbol: 'TSLA',
-      quantity: 60,
-      cost: 178.45,
-      value: 8532,
-      day: -107.4,
-      total: -2175,
-      weight: 3,
-    },
-  ]);
-  readonly buyingPower = signal(48230.12);
-  readonly portfolio = signal(284650.17);
+  /** Positions, cash and total value, loaded from the backend and reloaded after each fill. */
+  readonly positions = signal<Position[]>([]);
+  readonly buyingPower = signal(0);
+  readonly portfolio = signal(0);
   readonly markets = [
     { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
     { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
@@ -396,6 +353,32 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return false;
     }
   }
+  /** Reloads cash, positions and total value from the backend. */
+  async refreshPortfolio(): Promise<void> {
+    try {
+      this.applyPortfolio(await this.portfolioClient.load());
+    } catch (error) {
+      this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
+    }
+  }
+  /** Shows a loaded portfolio. Positions are valued at average cost until live prices are wired in. */
+  applyPortfolio({ cash, holdings }: Portfolio): void {
+    const values = holdings.map((h) => Math.round(h.quantity * h.averageCost * 100) / 100);
+    const total = Math.round((cash + values.reduce((sum, v) => sum + v, 0)) * 100) / 100;
+    this.buyingPower.set(cash);
+    this.portfolio.set(total);
+    this.positions.set(
+      holdings.map((h, i) => ({
+        symbol: h.symbol,
+        quantity: h.quantity,
+        cost: h.averageCost,
+        value: values[i],
+        day: 0,
+        total: 0,
+        weight: total ? Math.round((values[i] / total) * 1000) / 10 : 0,
+      })),
+    );
+  }
   /**
    * Re-reads orders every few seconds until the submitted one is filled or rejected,
    * so its status moves from Submitted to Accepted to Filled without a page refresh.
@@ -405,6 +388,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     if (!(await this.refreshOrders())) return;
     const order = this.orders().find((o) => o.id === orderId);
     if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
+      // Reload balances first so a load error never replaces the fill message.
+      if (order.status === 'Filled') await this.refreshPortfolio();
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }
@@ -423,6 +408,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   constructor(private auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
+    this.portfolioClient = new PortfolioClient(this.auth);
   }
 
   ngOnDestroy(): void {
@@ -431,6 +417,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     void this.refreshOrders();
+    void this.refreshPortfolio();
     try {
       this.loadingAccounts.set(true);
       const accountsData = await this.orderSubmissionClient.getAccounts();

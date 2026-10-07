@@ -13,11 +13,16 @@ const historyRow = (status, extra = {}) => ({
 });
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-// A dashboard wired to fake backends: records submitted orders, returns scripted order history.
-// Timers are mocked so order tracking never waits in real time.
-async function tradingDesk(t, { history = [[]], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'] } = {}) {
+const holding = (symbol, quantity, averageCost) => ({ symbol, instrumentName: symbol, quantity, averageCost });
+const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), holding('MSFT', 18, 248.36), holding('NVDA', 12, 228.74)] };
+
+// A dashboard wired to fake backends: records submitted orders, returns scripted order history
+// and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
+async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'] } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
   const desk = component(t, NoviceDashboard);
+  let loads = 0;
+  desk.portfolioClient = { load: async () => portfolios[Math.min(loads++, portfolios.length - 1)] };
   const submitted = [];
   let historyCalls = 0;
   desk.orderSubmissionClient = {
@@ -27,9 +32,50 @@ async function tradingDesk(t, { history = [[]], account = true, symbols = ['AAPL
     submit: async (request) => { submitted.push(request); return { orderId: 'o1', status: 'SUBMITTED' }; },
   };
   desk.orderHistoryClient = { list: async () => history[Math.min(historyCalls++, history.length - 1)] };
-  await desk.ngOnInit();
+  await desk.ngOnInit(); await flush();
   return { desk, submitted, historyCalls: () => historyCalls };
 }
+
+test('balances and holdings come from the backend, valued at average cost', async t => {
+  const { desk } = await tradingDesk(t);
+  assert.equal(desk.buyingPower(), 6420.18);
+  assert.equal(desk.invested(), 13691.76);
+  assert.equal(desk.portfolioValue(), 20111.94);
+  assert.deepEqual(desk.holdings().map(h => [h.symbol, h.shares, h.value, h.logo]),
+    [['AAPL', 42, 6476.4, 'apple'], ['MSFT', 18, 4470.48, 'microsoft'], ['NVDA', 12, 2744.88, 'nvidia']]);
+});
+
+test('the trade dialog offers only tradable stocks and switching stock resets the review', async t => {
+  const { desk, submitted } = await tradingDesk(t);
+  assert.deepEqual(desk.tradableQuotes().map(q => q.symbol), ['AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NVDA']);
+  desk.openTrade('Buy'); desk.quantity.set('1'); desk.reviewTrade();
+  assert.equal(desk.reviewing(), true);
+  desk.chooseTradeSymbol('GOOGL');
+  assert.equal(desk.tradeQuote().symbol, 'GOOGL');
+  assert.equal(desk.reviewing(), false);
+  desk.reviewTrade(); await desk.confirmTrade();
+  assert.equal(submitted[0].instrumentId, 'googl-id');
+});
+
+test('the generic Sell button starts on a stock the user holds', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 100, holdings: [holding('NVDA', 3, 200)] }] });
+  desk.openTrade('Sell');
+  assert.equal(desk.tradeQuote().symbol, 'NVDA');
+  desk.openTrade('Buy');
+  assert.equal(desk.tradeQuote().symbol, 'AAPL');
+});
+
+test('a filled sell reloads balances so cash goes up and the shares go down', async t => {
+  const afterSell = { cash: 6870.38, holdings: [holding('AAPL', 40, 154.2), holding('MSFT', 18, 248.36), holding('NVDA', 12, 228.74)] };
+  const { desk } = await tradingDesk(t, {
+    portfolios: [samplePortfolio, afterSell],
+    history: [[historyRow('FILLED', { side: 'SELL', fillPrice: 225.1, filledQuantity: 2 })]],
+  });
+  desk.openTrade('Sell', 'AAPL'); desk.quantity.set('2'); await desk.confirmTrade(); await flush();
+  assert.equal(desk.buyingPower(), 6870.38);
+  assert.equal(desk.holdings().find(h => h.symbol === 'AAPL').shares, 40);
+  assert.match(desk.tradeMessage(), /Sold 2 AAPL at \$225\.10/);
+});
 
 test('quote search matches symbols and company names regardless of case or surrounding spaces', t => {
   const desk = component(t, NoviceDashboard);
