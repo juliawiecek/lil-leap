@@ -173,7 +173,7 @@ With `docker-compose.yml`, services run behind nginx on fixed ports. Access Swag
 
 ### OpenAPI Specs
 
-- **auth:** Spec auto-generated at `[auth/openapi.json](auth/openapi.json)` from decorators in [auth/src/docs/](auth/src/docs/)
+- **auth:** Spec auto-generated at [auth/openapi.json](auth/openapi.json) from decorators in `auth/src/docs/`
 - **insights:** Spec auto-generated at `/v3/api-docs` from `@Tag`, `@Operation`, `@ApiResponse` annotations
 | Service | Swagger UI (with the stack running) |
 |---|---|
@@ -308,7 +308,7 @@ npm ci
 npm run start:dev
 ```
 
-See [auth/README.md](auth/README.md#environment-variables) for the required
+See [auth/README.md](auth/README.md#configuration) for the required
 environment variables.
 
 ### 4) Run a Frontend Locally
@@ -475,6 +475,6 @@ Key files:
   `db/init-app-role.sh`) with secrets or environment variables.
 - Set a strong JWT secret via `APP_JWT_SECRET` (the in-code default, and the
   value hardcoded in `docker-compose.yml`, are dev-only).
-- Add a CI stage for frontend tests and a deploy stage that binds a real TLS
-  keystore from Jenkins credentials, per the placeholders already wired into
-  the Compose validation stage.
+- Add a CI stage for frontend tests and a production deployment stage that
+  publishes the HTTP gateway configuration through your target environment's
+  secret and release management process.

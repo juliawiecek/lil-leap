@@ -134,15 +134,8 @@ The slot retains at most 1 GB of WAL; if a prolonged outage invalidates it, an
 operator must rebuild the reporting replica. Bootstrap refuses to overwrite a
 partial or non-standby data directory. Primary data is never deleted automatically.
 
-For TLS termination, supply certificate paths and use:
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
-```
-
-Set `TLS_CERTIFICATE_PATH` and `TLS_PRIVATE_KEY_PATH`. Both client listeners then
-use HTTPS on their existing ports. The default Compose configuration uses HTTP
-for local development. No backend ports are published.
+The default Compose configuration serves both clients over HTTP on their existing
+ports through the gateway. No backend ports are published.
 
 ## Bugs corrected during consolidation
 
