@@ -119,7 +119,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 0, change: 0 },
   ]);
   readonly watched = signal(['AAPL', 'TSLA', 'AMZN', 'GOOGL', 'META']);
-  readonly watchlist = computed(() => this.quotes.filter((q) => this.watched().includes(q.symbol)));
+  readonly watchlist = computed(() => this.quotes().filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
     this.quotes().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
