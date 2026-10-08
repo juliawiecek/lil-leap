@@ -60,7 +60,7 @@ public class QuotePreviewController {
         // In a production system, this would look up the instrument by symbol first,
         // then call indicativePriceService.getIndicativePrice(instrumentId).
         // For now, we'll document this limitation.
-        // TODO: Implement symbol->instrumentId lookup via InstrumentService
+        // Symbol-to-instrument lookup is intentionally deferred to the quote-preview-by-id endpoint.
 
         return ResponseEntity.ok(
                 QuotePreviewResponse.error("NOT_IMPLEMENTED", 

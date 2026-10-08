@@ -5,10 +5,8 @@
 
 /** Generate a random UUID for client reference */
 function generateUUID(): string {
-  const randomUUID = globalThis.crypto?.randomUUID;
-  if (randomUUID) {
-    return randomUUID.call(globalThis.crypto);
-  }
+  const randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto);
+  if (randomUUID) return randomUUID();
   const getRandomValues = globalThis.crypto?.getRandomValues;
   if (!getRandomValues) {
     throw new Error('Secure random generator is unavailable for UUID creation.');

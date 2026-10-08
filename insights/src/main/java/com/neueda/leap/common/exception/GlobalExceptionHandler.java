@@ -28,9 +28,15 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final String ERROR_KEY = "error";
+    private static final String MESSAGE_KEY = "message";
     private static final String REQUEST_FAILED = "REQUEST_FAILED";
     private static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    private static final String INVALID_REQUEST = "INVALID_REQUEST";
+    private static final String ACCESS_DENIED = "ACCESS_DENIED";
     private static final String REQUEST_FAILED_MESSAGE = "The request could not be completed.";
+    private static final String INVALID_FIELDS_MESSAGE = "The request contains invalid or missing fields.";
+    private static final String INVALID_PARAMS_MESSAGE = "The request contains invalid or missing parameters.";
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -42,7 +48,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
-                "error", REQUEST_FAILED, "message", REQUEST_FAILED_MESSAGE));
+                ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -57,12 +63,12 @@ public class GlobalExceptionHandler {
         // Preserve framework statuses such as 404/405/415 without their request-derived messages.
         if (exception instanceof ErrorResponse error) {
             return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(
-                    "error", REQUEST_FAILED, "message", REQUEST_FAILED_MESSAGE));
+                    ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
         }
         // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
         log.error("Request failed exceptionType={}", exception.getClass().getSimpleName());
         return ResponseEntity.internalServerError().body(Map.of(
-                "error", INTERNAL_ERROR, "message", REQUEST_FAILED_MESSAGE));
+                ERROR_KEY, INTERNAL_ERROR, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -73,7 +79,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
-                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_FIELDS_MESSAGE));
     }
 
 
@@ -87,7 +93,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                "error", "ACCESS_DENIED", "message", "Access is denied."));
+                ERROR_KEY, ACCESS_DENIED, MESSAGE_KEY, "Access is denied."));
     }
 
     /**
@@ -100,7 +106,7 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException.class, HandlerMethodValidationException.class})
     public ResponseEntity<Map<String, String>> handleInvalidParameter(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
-                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing parameters."));
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_PARAMS_MESSAGE));
     }
 
     /**
@@ -111,7 +117,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidReportDateRangeException.class)
     public ResponseEntity<Map<String, String>> handleInvalidDateRange(InvalidReportDateRangeException exception) {
         return ResponseEntity.badRequest().body(Map.of(
-                "error", "INVALID_DATE_RANGE", "message", exception.getMessage()));
+                ERROR_KEY, "INVALID_DATE_RANGE", MESSAGE_KEY, exception.getMessage()));
     }
 
 

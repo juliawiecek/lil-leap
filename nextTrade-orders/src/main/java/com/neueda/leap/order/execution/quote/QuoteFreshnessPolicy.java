@@ -9,7 +9,8 @@ import java.util.Objects;
  * inclusive; this policy does not inspect quote prices.
  */
 public class QuoteFreshnessPolicy {
-    private final Duration maximumAge, allowedFutureSkew;
+    private final Duration maximumAge;
+    private final Duration allowedFutureSkew;
 
     /**
      * Creates a quote timestamp policy with explicit age and future-skew limits.

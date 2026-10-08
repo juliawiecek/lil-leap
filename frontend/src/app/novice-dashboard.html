@@ -71,7 +71,8 @@
         <button
           type="button"
           class="profile-avatar"
-          aria-label="Account settings"
+          [attr.aria-label]="(name() || 'A').slice(0, 1).toUpperCase() + ' account settings'"
+          title="Account settings"
           (click)="navigate('Settings')"
         >
           {{ (name() || 'A').slice(0, 1).toUpperCase() }}
@@ -139,7 +140,6 @@
                   <svg
                     viewBox="0 0 780 155"
                     preserveAspectRatio="none"
-                    role="img"
                     [attr.aria-label]="period() + ' portfolio value chart'"
                   >
                     <defs>
@@ -404,7 +404,7 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <svg class="allocation-donut" role="img" aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent">
+                <svg class="allocation-donut" aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent">
                   <foreignObject width="100%" height="100%">
                     <div xmlns="http://www.w3.org/1999/xhtml"><strong>$24,680</strong><span>Total</span></div>
                   </foreignObject>
@@ -472,7 +472,6 @@
                       <td>
                         <svg
                           viewBox="0 0 100 28"
-                          role="img"
                           [attr.aria-label]="
                             quote.symbol + (quote.change > 0 ? ' rising' : ' falling')
                           "

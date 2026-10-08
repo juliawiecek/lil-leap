@@ -87,7 +87,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
 {
   "id": "apartment",
   "label": "Apartment / suite (optional)",
-  "pattern": "[0-9\\p{P}\\p{S}]*",
+  "pattern": String.raw`[0-9\p{P}\p{S}]*`,
   "autocomplete": "address-line2",
   "optional": true
 },
@@ -422,52 +422,71 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   update(field: ProfileField, event: Event): void {
     const input = event.target as HTMLInputElement | HTMLSelectElement;
     if (input instanceof HTMLInputElement) {
-      input.setCustomValidity('');
-      if (field.id === 'apartment') {
-        const disallowed = /[^0-9\p{P}\p{S}]/gu;
-        const caret = input.value.slice(0, input.selectionStart ?? input.value.length).replace(disallowed, '').length;
-        input.value = input.value.replace(disallowed, '');
-        input.setSelectionRange(caret, caret);
-      }
-      if (field.id === 'postal_code') {
-        const caret = input.value.slice(0, input.selectionStart ?? input.value.length).replace(/\D/g, '').length;
-        input.value = input.value.replace(/\D/g, '');
-        input.setSelectionRange(caret, caret);
-      }
-      if (field.id === 'phone' || field.id === 'ssn') {
-        this.formatInput(field.id, input, event as InputEvent);
-      }
-      if (field.id === 'annual_income' || field.id === 'liquidity_position') {
-        const raw = input.value;
-        const caret = input.selectionStart ?? raw.length;
-        const position = raw.slice(0, caret).replace(/[^\d.]/g, '').length;
-        const cleaned = raw.replace(/[^\d.]/g, '');
-        const [integer, ...decimals] = cleaned.split('.');
-        const whole = integer.slice(0, 16);
-        const groups: string[] = [];
-        for (let end = whole.length; end > 0; end -= 3) {
-          groups.push(whole.slice(Math.max(0, end - 3), end));
-        }
-        const formatted = groups.reverse().join(',') +
-          (decimals.length ? '.' + decimals.join('').slice(0, 2) : '');
-        input.value = formatted;
-        let nextCaret = 0;
-        let seen = 0;
-        while (nextCaret < formatted.length && seen < position) {
-          if (formatted[nextCaret] !== ',') seen++;
-          nextCaret++;
-        }
-        input.setSelectionRange(nextCaret, nextCaret);
-      }
+      this.normalizeInput(field.id, input, event as InputEvent);
     }
+    this.updateValues(field.id, input.value);
+    this.status.set('');
+  }
+
+
+  private normalizeInput(fieldId: string, input: HTMLInputElement, event: InputEvent): void {
+    input.setCustomValidity('');
+    if (fieldId === 'apartment') {
+      this.stripCharacters(input, /[^0-9\p{P}\p{S}]/gu);
+      return;
+    }
+    if (fieldId === 'postal_code') {
+      this.stripCharacters(input, /\D/g);
+      return;
+    }
+    if (fieldId === 'phone' || fieldId === 'ssn') {
+      this.formatInput(fieldId, input, event);
+      return;
+    }
+    if (fieldId === 'annual_income' || fieldId === 'liquidity_position') {
+      this.formatCurrencyLikeInput(input);
+    }
+  }
+
+  private stripCharacters(input: HTMLInputElement, disallowed: RegExp): void {
+    const caret = input.value.slice(0, input.selectionStart ?? input.value.length).replace(disallowed, '').length;
+    input.value = input.value.replace(disallowed, '');
+    input.setSelectionRange(caret, caret);
+  }
+
+  private formatCurrencyLikeInput(input: HTMLInputElement): void {
+    const raw = input.value;
+    const caret = input.selectionStart ?? raw.length;
+    const position = raw.slice(0, caret).replace(/[^\d.]/g, '').length;
+    const cleaned = raw.replace(/[^\d.]/g, '');
+    const [integer, ...decimals] = cleaned.split('.');
+    const whole = integer.slice(0, 16);
+    const chunks = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const formatted = chunks + (decimals.length ? `.${decimals.join('').slice(0, 2)}` : '');
+    input.value = formatted;
+    input.setSelectionRange(this.findCaretPosition(formatted, position), this.findCaretPosition(formatted, position));
+  }
+
+  private findCaretPosition(formatted: string, digitsBeforeCaret: number): number {
+    let caret = 0;
+    let seen = 0;
+    while (caret < formatted.length && seen < digitsBeforeCaret) {
+      if (formatted[caret] !== ',') {
+        seen++;
+      }
+      caret++;
+    }
+    return caret;
+  }
+
+  private updateValues(fieldId: string, value: string): void {
     this.values.update(values => {
-      const next = { ...values, [field.id]: input.value };
+      const next = { ...values, [fieldId]: value };
       // Keep the single SQL address column compatible with the separate form fields.
       next['address'] = ['street_address', 'apartment', 'city', 'state_province', 'postal_code']
         .map(key => next[key]?.trim()).filter(Boolean).join(', ');
       return next;
     });
-    this.status.set('');
   }
 
 
@@ -475,38 +494,14 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const raw = input.value;
     let digitPosition = raw.slice(0, input.selectionStart ?? raw.length).replace(/\D/g, '').length;
     let digits = raw.replace(/\D/g, '');
-    const previous = this.values()[id] ?? '';
-    // Deleting a separator also removes the adjacent digit, so backspace never gets stuck.
-    if (event.inputType?.startsWith('delete') && digits === previous.replace(/\D/g, '') && raw !== previous) {
-      const index = event.inputType === 'deleteContentBackward' ? digitPosition - 1 : digitPosition;
-      if (index >= 0 && index < digits.length) {
-        digits = digits.slice(0, index) + digits.slice(index + 1);
-        digitPosition = Math.max(0, event.inputType === 'deleteContentBackward' ? digitPosition - 1 : digitPosition);
-      }
-    }
+    digits = this.applyDeleteFix(id, raw, digits, event, (nextDigitPosition) => {
+      digitPosition = nextDigitPosition;
+    }, digitPosition);
+
     const international = id === 'phone' && raw.trimStart().startsWith('+');
-    let groups: number[];
-    if (id === 'ssn') {
-      digits = digits.slice(0, 9);
-      groups = [3, 2, 4];
-    } else if ((international && digits.startsWith('1')) || (!international && digits.startsWith('1') && digits.length > 10)) {
-      digits = digits.slice(0, 11);
-      groups = [1, 3, 3, 4];
-    } else if (international) {
-      // Country calling codes vary in length; preserve international digits without guessing.
-      digits = digits.slice(0, 15);
-      groups = [15];
-    } else {
-      digits = digits.slice(0, 10);
-      groups = [3, 3, 4];
-    }
-    let offset = 0;
-    const parts = groups.map(size => {
-      const part = digits.slice(offset, offset + size);
-      offset += size;
-      return part;
-    }).filter(Boolean);
-    const formatted = (international ? '+' : '') + parts.join('-');
+    const shape = this.formatShape(id, international, digits);
+    digits = digits.slice(0, shape.maxDigits);
+    const formatted = `${shape.prefix}${this.groupDigits(digits, shape.groups).join('-')}`;
     input.value = formatted;
     let caret = international ? 1 : 0;
     let seen = 0;
@@ -517,44 +512,127 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     input.setSelectionRange(caret, caret);
   }
 
+  private applyDeleteFix(
+    id: string,
+    raw: string,
+    digits: string,
+    event: InputEvent,
+    setDigitPosition: (value: number) => void,
+    digitPosition: number,
+  ): string {
+    const previous = this.values()[id] ?? '';
+    const deletingSeparator = event.inputType?.startsWith('delete') && digits === previous.replace(/\D/g, '') && raw !== previous;
+    if (!deletingSeparator) {
+      return digits;
+    }
+    const index = event.inputType === 'deleteContentBackward' ? digitPosition - 1 : digitPosition;
+    if (index < 0 || index >= digits.length) {
+      return digits;
+    }
+    const nextDigits = digits.slice(0, index) + digits.slice(index + 1);
+    if (event.inputType === 'deleteContentBackward') {
+      setDigitPosition(Math.max(0, digitPosition - 1));
+    }
+    return nextDigits;
+  }
+
+  private formatShape(id: string, international: boolean, digits: string): { groups: number[]; maxDigits: number; prefix: string } {
+    if (id === 'ssn') {
+      return { groups: [3, 2, 4], maxDigits: 9, prefix: '' };
+    }
+    if ((international && digits.startsWith('1')) || (!international && digits.startsWith('1') && digits.length > 10)) {
+      return { groups: [1, 3, 3, 4], maxDigits: 11, prefix: international ? '+' : '' };
+    }
+    if (international) {
+      // Country calling codes vary in length; preserve international digits without guessing.
+      return { groups: [15], maxDigits: 15, prefix: '+' };
+    }
+    return { groups: [3, 3, 4], maxDigits: 10, prefix: '' };
+  }
+
+  private groupDigits(digits: string, groups: number[]): string[] {
+    let offset = 0;
+    return groups
+      .map(size => {
+        const part = digits.slice(offset, offset + size);
+        offset += size;
+        return part;
+      })
+      .filter(Boolean);
+  }
+
   advance(event: Event, form: HTMLFormElement): void {
     event.preventDefault();
-    for (const field of this.sections[this.step()].fields) {
-      const control = form.elements.namedItem(field.id);
-      if (this.visible(field) && !field.optional && control instanceof HTMLInputElement) {
-        control.setCustomValidity(control.value.trim() ? '' : 'Please fill out this field.');
-      }
-    }
-    for (const field of this.sections[this.step()].fields) {
-      const control = form.elements.namedItem(field.id);
-      if (!(control instanceof HTMLInputElement) || !this.visible(field)) continue;
-      const value = control.value.trim();
-        if ((field.id === 'annual_income' || field.id === 'liquidity_position') && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replaceAll(',', ''))) {
-        control.setCustomValidity('Enter a nonnegative amount with up to two decimal places.');
-      }
-      if (field.id === 'country' && value) {
-        const country = this.countries.find(name => name.toLowerCase() === value.toLowerCase());
-        if (!country) {
-          control.setCustomValidity('Choose a country or territory from the suggestions.');
-        } else {
-          control.value = country;
-          this.values.update(values => ({ ...values, country }));
-        }
-      }
-      if (field.id === 'date_of_birth' && value > this.latestBirthDate) {
-        control.setCustomValidity('You must be at least 21 years old to apply.');
-      }
-      if (field.id === 'phone' && value && !/^\+?[0-9() .-]{7,20}$/.test(value)) {
-        control.setCustomValidity('Enter a valid phone number, up to 20 characters.');
-      } else if (field.id === 'phone' && value.replace(/\D/g, '').length < 7) {
-        control.setCustomValidity('Enter a phone number with at least 7 digits.');
-      }
-      if (field.id === 'ssn' && value && !/^(?:\d{9}|\d{3}-\d{2}-\d{4})$/.test(value)) {
-        control.setCustomValidity('Enter 9 digits or use the format 123-45-6789.');
-      }
-    }
+    const fields = this.sections[this.step()].fields;
+    fields.forEach((field) => this.applyRequiredValidation(field, form));
+    fields.forEach((field) => this.applyBusinessValidation(field, form));
     if (!form.reportValidity()) return;
     this.goTo(this.step() + 1);
+  }
+
+  private applyRequiredValidation(field: ProfileField, form: HTMLFormElement): void {
+    const control = form.elements.namedItem(field.id);
+    if (this.visible(field) && !field.optional && control instanceof HTMLInputElement) {
+      control.setCustomValidity(control.value.trim() ? '' : 'Please fill out this field.');
+    }
+  }
+
+  private applyBusinessValidation(field: ProfileField, form: HTMLFormElement): void {
+    const control = form.elements.namedItem(field.id);
+    if (!(control instanceof HTMLInputElement) || !this.visible(field)) {
+      return;
+    }
+    const value = control.value.trim();
+    this.validateMoneyField(field.id, value, control);
+    this.validateCountry(value, control, field.id);
+    this.validateAge(value, control, field.id);
+    this.validatePhone(value, control, field.id);
+    this.validateSsn(value, control, field.id);
+  }
+
+  private validateMoneyField(fieldId: string, value: string, control: HTMLInputElement): void {
+    const isMoneyField = fieldId === 'annual_income' || fieldId === 'liquidity_position';
+    if (isMoneyField && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replaceAll(',', ''))) {
+      control.setCustomValidity('Enter a nonnegative amount with up to two decimal places.');
+    }
+  }
+
+  private validateCountry(value: string, control: HTMLInputElement, fieldId: string): void {
+    if (fieldId !== 'country' || !value) {
+      return;
+    }
+    const country = this.countries.find(name => name.toLowerCase() === value.toLowerCase());
+    if (!country) {
+      control.setCustomValidity('Choose a country or territory from the suggestions.');
+      return;
+    }
+    control.value = country;
+    this.values.update(values => ({ ...values, country }));
+  }
+
+  private validateAge(value: string, control: HTMLInputElement, fieldId: string): void {
+    if (fieldId === 'date_of_birth' && value > this.latestBirthDate) {
+      control.setCustomValidity('You must be at least 21 years old to apply.');
+    }
+  }
+
+  private validatePhone(value: string, control: HTMLInputElement, fieldId: string): void {
+    if (fieldId !== 'phone' || !value) {
+      return;
+    }
+    if (!/^\+?[0-9() .-]{7,20}$/.test(value)) {
+      control.setCustomValidity('Enter a valid phone number, up to 20 characters.');
+      return;
+    }
+    if (value.replace(/\D/g, '').length < 7) {
+      control.setCustomValidity('Enter a phone number with at least 7 digits.');
+    }
+  }
+
+  private validateSsn(value: string, control: HTMLInputElement, fieldId: string): void {
+    if (fieldId === 'ssn' && value && !/^(?:\d{9}|\d{3}-\d{2}-\d{4})$/.test(value)) {
+      control.setCustomValidity('Enter 9 digits or use the format 123-45-6789.');
+    }
   }
 
   goTo(step: number): void {
