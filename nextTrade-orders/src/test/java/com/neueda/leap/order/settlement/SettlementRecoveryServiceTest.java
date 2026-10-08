@@ -39,8 +39,11 @@ class SettlementRecoveryServiceTest {
     void buyWithOnlyAFillIsReportedOnceAndRecoveredFromTheFill() {
         UUID fill = fill("BUY", 10, "25.005", "ACCEPTED");
 
-        assertThat(service.reportIncomplete()).containsExactly(fill);
-        assertThat(service.reportIncomplete()).containsExactly(fill);
+        var firstCheck = service.reportIncomplete();
+        var secondCheck = service.reportIncomplete();
+
+        assertThat(firstCheck).containsExactly(fill);
+        assertThat(secondCheck).containsExactly(fill);
         assertThat(events(SettlementRecoveryService.INCOMPLETE)).isEqualTo(1);
 
         var result = service.recover(fill);

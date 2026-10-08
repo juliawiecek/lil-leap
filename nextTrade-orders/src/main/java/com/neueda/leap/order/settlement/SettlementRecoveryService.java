@@ -156,30 +156,24 @@ public class SettlementRecoveryService {
         return jdbc.queryForObject(SELECT_ONE, SETTLEMENT, settlementId);
     }
 
-    private void apply(Settlement settlement, SettlementPart part) {
-        switch (part) {
+    /** Writes one missing part; the switch expression must cover every part, so none can be skipped. */
+    private int apply(Settlement settlement, SettlementPart part) {
+        return switch (part) {
             case HOLDING_MOVEMENT -> jdbc.update("""
                     INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """, settlement.accountId(), settlement.instrumentId(), settlement.fillId(),
                     settlement.buy() ? settlement.quantity() : -settlement.quantity(), settlement.price(), settlement.side());
             case CASH_TRANSACTION -> applyCash(settlement);
-            case ORDER_STATUS -> {
-                jdbc.update("""
-                        UPDATE orders SET status = 'FILLED', last_execution_error = NULL, updated_at = CURRENT_TIMESTAMP
-                        WHERE order_id = ?
-                        """, settlement.orderId());
-                jdbc.update("INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, 'FILLED', ?)",
-                        settlement.orderId(), RECOVERED);
-            }
+            case ORDER_STATUS -> markFilled(settlement);
             case COMPLETION_AUDIT -> audit(settlement, COMPLETED,
                     tradePayload(settlement) + ",\"cashDelta\":" + settlement.cashDelta().toPlainString() + "}");
-        }
+        };
     }
 
-    private void applyCash(Settlement settlement) {
+    private int applyCash(Settlement settlement) {
         BigDecimal delta = settlement.cashDelta();
-        jdbc.update("""
+        int written = jdbc.update("""
                 INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
                 VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
                 """, settlement.accountId(), settlement.fillId(), settlement.side(), delta);
@@ -187,13 +181,23 @@ public class SettlementRecoveryService {
                 UPDATE cash_balances SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ?
                 """, delta, settlement.accountId());
         if (updated == 0) {
-            jdbc.update("INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)",
+            updated = jdbc.update("INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)",
                     settlement.accountId(), delta);
         }
+        return written + updated;
     }
 
-    private void audit(Settlement settlement, String event, String payload) {
-        jdbc.update("""
+    private int markFilled(Settlement settlement) {
+        return jdbc.update("""
+                UPDATE orders SET status = 'FILLED', last_execution_error = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+                """, settlement.orderId())
+                + jdbc.update("INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, 'FILLED', ?)",
+                        settlement.orderId(), RECOVERED);
+    }
+
+    private int audit(Settlement settlement, String event, String payload) {
+        return jdbc.update("""
                 INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
                 VALUES (?, ?, 'SYSTEM', ?, CAST(? AS jsonb))
                 """, settlement.accountId(), settlement.orderId(), event, payload);

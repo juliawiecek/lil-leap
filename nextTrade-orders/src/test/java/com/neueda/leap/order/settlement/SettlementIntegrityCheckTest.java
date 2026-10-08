@@ -21,8 +21,11 @@ class SettlementIntegrityCheckTest {
     void reportsHowManySettlementsAreIncomplete() {
         when(settlements.reportIncomplete()).thenReturn(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of());
 
-        assertThat(check.run()).isEqualTo(2);
-        assertThat(check.run()).isZero();
+        int firstRun = check.run();
+        int secondRun = check.run();
+
+        assertThat(firstRun).isEqualTo(2);
+        assertThat(secondRun).isZero();
     }
 
     @Test
