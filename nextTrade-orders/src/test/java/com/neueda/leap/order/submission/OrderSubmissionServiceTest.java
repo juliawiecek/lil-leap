@@ -125,7 +125,7 @@ class OrderSubmissionServiceTest {
         when(repository.findByAccountAndClientReference(accountId, clientReference))
                 .thenReturn(Optional.empty(), Optional.of(response("AAPL")));
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
-        when(repository.insert(accountId, instrumentId, "AAPL", clientReference, "SELL", 10, "MARKET", null))
+        when(repository.insert(request, instrumentId, "AAPL"))
                 .thenReturn(Optional.empty());
 
         assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request));
