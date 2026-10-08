@@ -15,6 +15,7 @@ import java.util.UUID;
 /** Fills or rejects a locked order; settlement participates in the worker transaction. */
 @Service
 public class JdbcOrderExecutor implements OrderExecutor {
+    private static final String PRICE_OUT_OF_TOLERANCE = "PRICE_OUT_OF_TOLERANCE";
     private final JdbcTemplate jdbc;
     private final ExecutionQuoteService quotes;
     private final long maxAttempts;
@@ -49,7 +50,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public Outcome execute(UUID orderId) {
+    public Result execute(UUID orderId) {
         var order = jdbc.queryForObject("""
                 SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent
                 FROM orders WHERE order_id = ?
@@ -70,7 +71,9 @@ public class JdbcOrderExecutor implements OrderExecutor {
         if (!Boolean.TRUE.equals(tradable)) return reject(orderId, "INSTRUMENT_NOT_TRADABLE");
 
         var decision = quotes.selectForExecution(orderId);
-        if (decision.action() == ExecutionQuoteDecision.Action.REQUEUE) return Outcome.PENDING;
+        if (decision.action() == ExecutionQuoteDecision.Action.REQUEUE) {
+            return Result.requeue(decision.reason().name());
+        }
         if (decision.action() == ExecutionQuoteDecision.Action.REJECT)
             return reject(orderId, decision.reason().name());
         var quote = decision.quote();
@@ -85,8 +88,9 @@ public class JdbcOrderExecutor implements OrderExecutor {
         BigDecimal price = buy ? quote.ask() : quote.bid();
         BigDecimal buffer = (order.buffer() == null ? account.buffer() : order.buffer()).movePointLeft(2);
         BigDecimal limit = quote.midpoint().multiply(buy ? BigDecimal.ONE.add(buffer) : BigDecimal.ONE.subtract(buffer));
-        if (buy ? price.compareTo(limit) > 0 : price.compareTo(limit) < 0)
-            return order.attempts() >= maxAttempts ? reject(orderId, "PRICE_OUT_OF_TOLERANCE") : Outcome.PENDING;
+        if (buy ? price.compareTo(limit) > 0 : price.compareTo(limit) < 0) {
+            return order.attempts() >= maxAttempts ? reject(orderId, PRICE_OUT_OF_TOLERANCE) : Result.requeue(PRICE_OUT_OF_TOLERANCE);
+        }
 
         BigDecimal cash = jdbc.query("SELECT balance FROM cash_balances WHERE account_id = ? FOR UPDATE",
                 (rs, n) -> rs.getBigDecimal(1), order.account()).stream().findFirst().orElse(BigDecimal.ZERO);
@@ -128,10 +132,10 @@ public class JdbcOrderExecutor implements OrderExecutor {
                                           'executionPrice', CAST(? AS numeric), 'cashDelta', CAST(? AS numeric))
                 FROM (VALUES ('ORDER_FILLED'), ('SETTLEMENT_COMPLETED')) events(event_type)
                 """, order.account(), orderId, fill, order.quantity(), price, cashChange);
-        return Outcome.FILLED;
+        return Result.filled();
     }
 
-    private Outcome reject(UUID orderId, String reason) {
+    private Result reject(UUID orderId, String reason) {
         jdbc.update("UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
                 reason, orderId);
         history(orderId, "REJECTED", reason);
@@ -141,7 +145,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
                        jsonb_build_object('reasonCode', last_execution_error, 'attemptNumber', execution_attempts)
                 FROM orders WHERE order_id = ?
                 """, orderId);
-        return Outcome.REJECTED;
+        return Result.rejected(reason);
     }
 
     private void history(UUID orderId, String status, String reason) {
