@@ -68,9 +68,7 @@ public class SettlementRecoveryService {
         // Apply "ledger wins" rule to holdings
         for (var mismatch : holdingMismatches.values()) {
             if (mismatch.ledgerQuantity() != mismatch.cachedQuantity() ||
-                (mismatch.ledgerAvgCost() != null &&
-                 mismatch.cachedAvgCost() != null &&
-                 !mismatch.ledgerAvgCost().equals(mismatch.cachedAvgCost()))) {
+                isDifferentAmount(mismatch.ledgerAvgCost(), mismatch.cachedAvgCost())) {
 
                 // Update cache to match ledger
                 jdbc.update("""
@@ -93,7 +91,7 @@ public class SettlementRecoveryService {
         // Apply "ledger wins" rule to cash balance
         if (cashMismatch.isPresent()) {
             var mismatch = cashMismatch.get();
-            if (!mismatch.cachedBalance().equals(mismatch.ledgerBalance())) {
+            if (isDifferentAmount(mismatch.cachedBalance(), mismatch.ledgerBalance())) {
                 // Update cache to match ledger
                 jdbc.update("""
                     INSERT INTO cash_balances(account_id, currency, balance, updated_at)
@@ -136,5 +134,12 @@ public class SettlementRecoveryService {
                 holdingsDeleted, balanceDeleted);
 
         return new RecoveryResult(accountId, "RECOVERED", holdingsDeleted, balanceDeleted, details);
+    }
+
+    private static boolean isDifferentAmount(BigDecimal left, BigDecimal right) {
+        if (left == null || right == null) {
+            return left != right;
+        }
+        return left.compareTo(right) != 0;
     }
 }

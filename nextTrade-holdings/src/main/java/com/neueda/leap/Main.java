@@ -13,9 +13,6 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class Main {
 
-    /** Creates the application configuration instantiated by Spring Boot. */
-    public Main() {
-    }
 
     /**
      * Starts the Spring Boot application.

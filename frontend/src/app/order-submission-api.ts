@@ -22,7 +22,7 @@ function generateUUID(): string {
 
   let byteIndex = 0;
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.trunc(bytes[byteIndex++] / 16);
+    const r = bytes[byteIndex++] >>> 4;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });

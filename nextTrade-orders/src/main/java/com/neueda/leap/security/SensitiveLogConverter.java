@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
  */
 public class SensitiveLogConverter extends CompositeConverter<ILoggingEvent> {
 
-    /** Creates the credential-masking converter instantiated by Logback. */
     public SensitiveLogConverter() {
     }
     private static final Pattern HEADERS = Pattern.compile(
