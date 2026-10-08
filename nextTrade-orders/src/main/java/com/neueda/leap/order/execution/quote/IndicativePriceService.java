@@ -4,82 +4,73 @@ import com.neueda.leap.marketdata.MarketQuote;
 import com.neueda.leap.marketdata.QuoteRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Provides pre-trade indicative prices (TS-14.1, BR-13).
- * Reads from the cached quote without calling a fresh provider, so it's cheap to call
- * on every instrument/quantity change in the UI.
+ * Estimates what an order would cost before it is submitted (TS-14.1, BR-13).
+ * Reads the latest stored quote rather than calling a provider, so it is cheap enough to
+ * call on every quantity change. Buys are priced at the ask and sells at the bid, the same
+ * sides execution fills at, but the result is never a guaranteed fill price.
  */
 @Service
 public class IndicativePriceService {
-    private final QuoteRepository quoteRepository;
+    private final QuoteRepository quotes;
+    private final QuoteFreshnessPolicy freshness;
+    private final Clock clock;
 
     /**
-     * Creates an IndicativePriceService with the supplied dependencies.
-     * @param quoteRepository quote repository (returns cached quotes only)
-     */
-    public IndicativePriceService(QuoteRepository quoteRepository) {
-        this.quoteRepository = quoteRepository;
-    }
-
-    /**
-     * Returns an indicative (not binding) price for an instrument (AC1, AC3).
-     * Reads from cache only; does NOT call a fresh quote provider.
-     * If no cached quote exists, returns a "no quote available" result.
+     * Creates the service.
      *
-     * @param instrumentId persistent instrument identifier
-     * @return indicative price response (never guaranteed fill price)
+     * @param quotes latest stored quotes
+     * @param freshness the age limit execution applies, used to flag stale estimates
+     * @param clock UTC clock shared with execution
      */
-    public IndicativePriceResponse getIndicativePrice(UUID instrumentId) {
-        Optional<MarketQuote> quote = quoteRepository.findLatestByInstrumentId(instrumentId);
-        
-        if (quote.isEmpty()) {
-            return IndicativePriceResponse.noQuoteAvailable(instrumentId);
-        }
-
-        MarketQuote q = quote.get();
-        return IndicativePriceResponse.indicativePrice(
-                q.symbol(),
-                q.midpoint(),  // Midpoint as indicative price
-                q.quotedAt(),
-                true
-        );
+    public IndicativePriceService(QuoteRepository quotes, QuoteFreshnessPolicy freshness, Clock clock) {
+        this.quotes = quotes;
+        this.freshness = freshness;
+        this.clock = clock;
     }
 
     /**
-     * Response object for indicative price queries.
+     * Estimates the price and total for an order from the latest stored quote.
+     *
+     * @param instrumentId instrument to price
+     * @param side {@code BUY} or {@code SELL}
+     * @param quantity positive number of shares
+     * @return the estimate, or empty when no quote has been stored for the instrument
      */
-    public record IndicativePriceResponse(
-            String symbol,
-            java.math.BigDecimal price,
-            java.time.OffsetDateTime quotedAt,
-            String error,
-            boolean indicative
-    ) {
-        /**
-         * Creates a successful indicative price response.
-         */
-        public static IndicativePriceResponse indicativePrice(
-                String symbol,
-                java.math.BigDecimal price,
-                java.time.OffsetDateTime quotedAt,
-                boolean indicative) {
-            return new IndicativePriceResponse(symbol, price, quotedAt, null, indicative);
-        }
-
-        /**
-         * Creates a "no quote available" response (AC3).
-         */
-        public static IndicativePriceResponse noQuoteAvailable(UUID instrumentId) {
-            return new IndicativePriceResponse(
-                    null,
-                    null,
-                    null,
-                    "NO_QUOTE_AVAILABLE",
-                    false
-            );
-        }
+    public Optional<IndicativePrice> estimate(UUID instrumentId, String side, long quantity) {
+        return quotes.findLatestByInstrumentId(instrumentId).map(quote -> price(quote, side, quantity));
     }
+
+    private IndicativePrice price(MarketQuote quote, String side, long quantity) {
+        BigDecimal price = "BUY".equals(side) ? quote.ask() : quote.bid();
+        BigDecimal total = price.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+        boolean stale = freshness.evaluate(quote.quotedAt(), OffsetDateTime.now(clock))
+                != QuoteFreshnessPolicy.Freshness.FRESH;
+        return new IndicativePrice(quote.symbol(), quote.instrumentId(), side, quantity,
+                price, total, quote.quotedAt(), stale, true);
+    }
+
+    /**
+     * An estimate for an order that has not been submitted.
+     *
+     * @param symbol instrument symbol
+     * @param instrumentId instrument identifier
+     * @param side {@code BUY} or {@code SELL}
+     * @param quantity number of shares
+     * @param indicativePrice ask for a buy, bid for a sell
+     * @param estimatedTotal price multiplied by quantity, rounded to cents
+     * @param quotedAt when the quote was taken
+     * @param stale true when the quote is too old for execution to use
+     * @param indicative always true; this is an estimate, not a guaranteed fill price
+     */
+    public record IndicativePrice(String symbol, UUID instrumentId, String side, long quantity,
+                                  BigDecimal indicativePrice, BigDecimal estimatedTotal,
+                                  OffsetDateTime quotedAt, boolean stale, boolean indicative) {}
 }

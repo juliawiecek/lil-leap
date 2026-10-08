@@ -2,202 +2,88 @@ package com.neueda.leap.order.execution.quote;
 
 import com.neueda.leap.marketdata.MarketQuote;
 import com.neueda.leap.marketdata.QuoteRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for IndicativePriceService (TS-14.1, BR-13).
- * Verifies that indicative prices are read from cache, not fresh provider.
- */
-@ExtendWith(MockitoExtension.class)
+/** Pre-trade estimate (TS-14.1, BR-13): side-correct price, total and staleness from the stored quote. */
 class IndicativePriceServiceTest {
+    private static final Instant NOW = Instant.parse("2026-10-08T15:00:00Z");
 
-    @Mock
-    QuoteRepository quoteRepository;
+    private final QuoteRepository quotes = mock(QuoteRepository.class);
+    private final UUID instrumentId = UUID.randomUUID();
+    private IndicativePriceService service;
 
-    @InjectMocks
-    IndicativePriceService service;
-
-    /**
-     * AC1: The calculation reads from the quote cache (NEXT-94), not a fresh provider call.
-     */
-    @Test
-    void returnsIndicativePriceFromCache() {
-        UUID instrumentId = UUID.randomUUID();
-        OffsetDateTime quotedAt = OffsetDateTime.now(ZoneOffset.UTC);
-        var quote = new MarketQuote(
-                UUID.randomUUID(),
-                instrumentId,
-                "AAPL",
-                "NASDAQ",
-                new BigDecimal("224.50"),
-                new BigDecimal("225.50"),
-                new BigDecimal("225.00"),
-                quotedAt,
-                "CACHED",
-                false
-        );
-
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
-
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.symbol()).isEqualTo("AAPL");
-        assertThat(response.price()).isEqualByComparingTo(new BigDecimal("225.00")); // midpoint
-        assertThat(response.quotedAt()).isEqualTo(quotedAt);
-        assertThat(response.indicative()).isTrue();
-        assertThat(response.error()).isNull();
+    @BeforeEach
+    void setUp() {
+        service = new IndicativePriceService(quotes,
+                new QuoteFreshnessPolicy(Duration.ofSeconds(60), Duration.ofSeconds(2)),
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
-    /**
-     * AC2: The result is tagged as indicative (indicative: true) so the frontend can never mistake
-     * it for a guaranteed fill price.
-     */
     @Test
-    void resultIsTaggedAsIndicative() {
-        UUID instrumentId = UUID.randomUUID();
-        var quote = new MarketQuote(
-                UUID.randomUUID(),
-                instrumentId,
-                "MSFT",
-                "NASDAQ",
-                new BigDecimal("100.00"),
-                new BigDecimal("101.00"),
-                new BigDecimal("100.50"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                "TEST",
-                false
-        );
+    void buyIsPricedAtTheAskTimesQuantity() {
+        when(quotes.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote(10)));
 
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
+        var estimate = service.estimate(instrumentId, "BUY", 10).orElseThrow();
 
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.indicative()).isTrue();
+        assertThat(estimate.indicativePrice()).isEqualByComparingTo("225.50");
+        assertThat(estimate.estimatedTotal()).isEqualByComparingTo("2255.00");
+        assertThat(estimate.indicative()).isTrue();
+        assertThat(estimate.stale()).isFalse();
+        assertThat(estimate.symbol()).isEqualTo("AAPL");
     }
 
-    /**
-     * AC3: If no cached quote exists for the instrument, the calculation returns a specific
-     * "no quote available" result rather than a stale or zero price.
-     */
     @Test
-    void returnsNoQuoteAvailableWhenMissing() {
-        UUID instrumentId = UUID.randomUUID();
+    void sellIsPricedAtTheBid() {
+        when(quotes.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote(10)));
 
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.empty());
+        var estimate = service.estimate(instrumentId, "SELL", 3).orElseThrow();
 
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.error()).isEqualTo("NO_QUOTE_AVAILABLE");
-        assertThat(response.price()).isNull();
-        assertThat(response.quotedAt()).isNull();
-        assertThat(response.indicative()).isFalse();
+        assertThat(estimate.indicativePrice()).isEqualByComparingTo("224.50");
+        assertThat(estimate.estimatedTotal()).isEqualByComparingTo("673.50");
     }
 
-    /**
-     * Midpoint is calculated as (bid + ask) / 2 for the indicative price.
-     */
     @Test
-    void usesQuoteMidpointAsIndicativePrice() {
-        UUID instrumentId = UUID.randomUUID();
-        var quote = new MarketQuote(
-                UUID.randomUUID(),
-                instrumentId,
-                "GOOGL",
-                "NASDAQ",
-                new BigDecimal("200.00"),
-                new BigDecimal("210.00"),
-                new BigDecimal("205.00"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                "TEST",
-                false
-        );
+    void totalIsRoundedToCents() {
+        var odd = new MarketQuote(UUID.randomUUID(), instrumentId, "AAPL", "NASDAQ",
+                new BigDecimal("1.00"), new BigDecimal("1.333333"), new BigDecimal("1.1666665"),
+                OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC), "TEST", false);
+        when(quotes.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(odd));
 
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
-
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.price()).isEqualByComparingTo(new BigDecimal("205.00"));
+        assertThat(service.estimate(instrumentId, "BUY", 2).orElseThrow().estimatedTotal())
+                .isEqualByComparingTo("2.67");
     }
 
-    /**
-     * Repository is called with correct instrument ID.
-     */
     @Test
-    void queriesRepositoryWithCorrectInstrumentId() {
-        UUID instrumentId = UUID.randomUUID();
+    void quoteOlderThanTheExecutionLimitIsFlaggedStale() {
+        when(quotes.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote(61)));
 
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.empty());
-
-        service.getIndicativePrice(instrumentId);
-
-        verify(quoteRepository).findLatestByInstrumentId(instrumentId);
+        assertThat(service.estimate(instrumentId, "BUY", 1).orElseThrow().stale()).isTrue();
     }
 
-    /**
-     * Response includes symbol from quote.
-     */
     @Test
-    void responseIncludesSymbolFromQuote() {
-        UUID instrumentId = UUID.randomUUID();
-        var quote = new MarketQuote(
-                UUID.randomUUID(),
-                instrumentId,
-                "TSLA",
-                "NASDAQ",
-                new BigDecimal("250.00"),
-                new BigDecimal("260.00"),
-                new BigDecimal("255.00"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                "TEST",
-                false
-        );
+    void missingQuoteGivesNoEstimate() {
+        when(quotes.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.empty());
 
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
-
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.symbol()).isEqualTo("TSLA");
+        assertThat(service.estimate(instrumentId, "BUY", 1)).isEmpty();
     }
 
-    /**
-     * Response includes quote timestamp.
-     */
-    @Test
-    void responseIncludesQuoteTimestamp() {
-        UUID instrumentId = UUID.randomUUID();
-        OffsetDateTime timestamp = OffsetDateTime.of(2026, 10, 6, 12, 30, 0, 0, ZoneOffset.UTC);
-        var quote = new MarketQuote(
-                UUID.randomUUID(),
-                instrumentId,
-                "AAPL",
-                "NASDAQ",
-                new BigDecimal("224.00"),
-                new BigDecimal("226.00"),
-                new BigDecimal("225.00"),
-                timestamp,
-                "TEST",
-                false
-        );
-
-        when(quoteRepository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(quote));
-
-        IndicativePriceService.IndicativePriceResponse response = service.getIndicativePrice(instrumentId);
-
-        assertThat(response.quotedAt()).isEqualTo(timestamp);
+    private MarketQuote quote(long ageSeconds) {
+        return new MarketQuote(UUID.randomUUID(), instrumentId, "AAPL", "NASDAQ",
+                new BigDecimal("224.50"), new BigDecimal("225.50"), new BigDecimal("225.00"),
+                OffsetDateTime.ofInstant(NOW.minusSeconds(ageSeconds), ZoneOffset.UTC), "TEST", false);
     }
 }

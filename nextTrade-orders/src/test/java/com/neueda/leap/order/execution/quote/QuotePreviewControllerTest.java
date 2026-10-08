@@ -1,194 +1,129 @@
 package com.neueda.leap.order.execution.quote;
 
+import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.instrument.dto.InstrumentResponse;
+import com.neueda.leap.instrument.service.InstrumentService;
+import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Unit tests for QuotePreviewController (TS-14.3, BR-13).
- * Tests the /orders/quote-preview endpoint.
- */
-@ExtendWith(MockitoExtension.class)
+/** GET /orders/quote-preview through the real security chain (TS-14.3, BR-13). */
+@WebMvcTest(QuotePreviewController.class)
+@Import({SecurityConfig.class, JwtServiceImpl.class})
 class QuotePreviewControllerTest {
+    @Autowired MockMvc mvc;
+    @Autowired JwtServiceImpl tokens;
+    @MockBean IndicativePriceService prices;
+    @MockBean InstrumentService instruments;
 
-    @Mock
-    IndicativePriceService indicativePriceService;
+    private final UUID instrumentId = UUID.randomUUID();
 
-    @InjectMocks
-    QuotePreviewController controller;
-
-    /**
-     * AC1: GET endpoint accepts symbol + side + quantity, returns an estimated price.
-     * Note: Current implementation returns NOT_IMPLEMENTED for symbol-based lookup.
-     */
     @Test
-    void getQuotePreviewBySymbolReturnsNotImplemented() {
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreview("AAPL", "BUY", 10L);
+    void traderGetsAnIndicativeEstimateBySymbol() throws Exception {
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument()));
+        when(prices.estimate(instrumentId, "BUY", 10)).thenReturn(Optional.of(estimate()));
 
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody().error()).isEqualTo("NOT_IMPLEMENTED");
+        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+                        .param("symbol", "aapl").param("side", "buy").param("quantity", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.side").value("BUY"))
+                .andExpect(jsonPath("$.indicativePrice").value(225.50))
+                .andExpect(jsonPath("$.estimatedTotal").value(2255.00))
+                .andExpect(jsonPath("$.indicative").value(true))
+                .andExpect(jsonPath("$.stale").value(false));
     }
 
-    /**
-     * AC1 (Alternative): Accepts instrumentId + side + quantity for preview.
-     */
     @Test
-    void getQuotePreviewByIdReturnsEstimatedPrice() {
-        UUID instrumentId = UUID.randomUUID();
-        OffsetDateTime quotedAt = OffsetDateTime.now(ZoneOffset.UTC);
-        var indicativeResponse = IndicativePriceService.IndicativePriceResponse.indicativePrice(
-                "AAPL",
-                new BigDecimal("225.00"),
-                quotedAt,
-                true
-        );
+    void traderCanPreviewByInstrumentId() throws Exception {
+        when(instruments.findInstrumentById(instrumentId)).thenReturn(Optional.of(instrument()));
+        when(prices.estimate(instrumentId, "SELL", 2)).thenReturn(Optional.of(estimate()));
 
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(indicativeResponse);
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(instrumentId, "BUY", 10L);
-
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        QuotePreviewController.QuotePreviewResponse body = response.getBody();
-        assertThat(body.symbol()).isEqualTo("AAPL");
-        assertThat(body.side()).isEqualTo("BUY");
-        assertThat(body.quantity()).isEqualTo(10L);
-        assertThat(body.indicativePrice()).isEqualByComparingTo(new BigDecimal("225.00"));
+        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+                        .param("instrumentId", instrumentId.toString()).param("side", "SELL").param("quantity", "2"))
+                .andExpect(status().isOk());
     }
 
-    /**
-     * AC2: Response is clearly marked as indicative, not a guaranteed fill price.
-     */
     @Test
-    void responseIsMarkedAsIndicative() {
-        UUID instrumentId = UUID.randomUUID();
-        var indicativeResponse = IndicativePriceService.IndicativePriceResponse.indicativePrice(
-                "MSFT",
-                new BigDecimal("100.50"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                true
-        );
-
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(indicativeResponse);
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(instrumentId, "BUY", 5L);
-
-        assertThat(response.getBody().indicative()).isTrue();
+    void missingAuthenticationIsRejected() throws Exception {
+        mvc.perform(get("/orders/quote-preview").param("symbol", "AAPL").param("side", "BUY").param("quantity", "1"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(prices, instruments);
     }
 
-    /**
-     * AC3: Returns a reasonable error if no cached quote exists for the symbol.
-     */
-    @Test
-    void returnsErrorWhenNoQuoteAvailable() {
-        UUID instrumentId = UUID.randomUUID();
-        var noQuoteResponse = IndicativePriceService.IndicativePriceResponse.noQuoteAvailable(instrumentId);
-
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(noQuoteResponse);
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(instrumentId, "BUY", 1L);
-
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody().error()).isEqualTo("NO_QUOTE_AVAILABLE");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "side=BUY&quantity=1",
+            "symbol=AAPL&instrumentId=00000000-0000-0000-0000-000000000000&side=BUY&quantity=1",
+            "symbol=AAPL&side=HOLD&quantity=1",
+            "symbol=AAPL&side=BUY&quantity=0",
+            "symbol=AAPL&side=BUY&quantity=ten",
+            "symbol=AAPL&side=BUY",
+            "instrumentId=not-a-uuid&side=BUY&quantity=1",
+            "symbol=AA%20PL&side=BUY&quantity=1"})
+    void invalidInputIsABadRequest(String query) throws Exception {
+        mvc.perform(get("/orders/quote-preview?" + query).header("Authorization", bearer()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
+        verifyNoInteractions(prices);
     }
 
-    /**
-     * Missing instrumentId returns 400 error.
-     */
     @Test
-    void missingInstrumentIdReturnsBadRequest() {
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(null, "BUY", 10L);
+    void unknownSymbolIsNotFound() throws Exception {
+        when(instruments.findInstrumentBySymbol("NOPE")).thenReturn(Optional.empty());
 
-        assertThat(response.getStatusCode().is4xxClientError()).isTrue();
-        assertThat(response.getBody().error()).isEqualTo("MISSING_INSTRUMENT_ID");
+        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+                        .param("symbol", "NOPE").param("side", "BUY").param("quantity", "1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("INSTRUMENT_NOT_FOUND"));
     }
 
-    /**
-     * Side parameter is optional and preserved in response.
-     */
     @Test
-    void sideParameterIsOptionalAndPreserved() {
-        UUID instrumentId = UUID.randomUUID();
-        var indicativeResponse = IndicativePriceService.IndicativePriceResponse.indicativePrice(
-                "GOOGL",
-                new BigDecimal("200.00"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                true
-        );
+    void missingQuoteIsNotFoundWithASpecificCode() throws Exception {
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument()));
+        when(prices.estimate(instrumentId, "BUY", 1)).thenReturn(Optional.empty());
 
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(indicativeResponse);
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> responseBuy = 
-                controller.getQuotePreviewById(instrumentId, "BUY", 5L);
-        assertThat(responseBuy.getBody().side()).isEqualTo("BUY");
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> responseSell = 
-                controller.getQuotePreviewById(instrumentId, "SELL", 5L);
-        assertThat(responseSell.getBody().side()).isEqualTo("SELL");
+        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+                        .param("symbol", "AAPL").param("side", "BUY").param("quantity", "1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NO_QUOTE_AVAILABLE"));
     }
 
-    /**
-     * Quantity parameter is optional.
-     */
     @Test
-    void quantityParameterIsOptional() {
-        UUID instrumentId = UUID.randomUUID();
-        var indicativeResponse = IndicativePriceService.IndicativePriceResponse.indicativePrice(
-                "AMZN",
-                new BigDecimal("180.00"),
-                OffsetDateTime.now(ZoneOffset.UTC),
-                true
-        );
-
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(indicativeResponse);
-
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(instrumentId, "BUY", null);
-
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody().quantity()).isEqualTo(0L);
+    void otherOrderRoutesStayClosed() throws Exception {
+        mvc.perform(get("/orders/quote-preview-by-id").header("Authorization", bearer())
+                        .param("instrumentId", instrumentId.toString()))
+                .andExpect(status().isForbidden());
     }
 
-    /**
-     * Response includes quote timestamp from indicative price service.
-     */
-    @Test
-    void responseIncludesQuoteTimestamp() {
-        UUID instrumentId = UUID.randomUUID();
-        OffsetDateTime timestamp = OffsetDateTime.of(2026, 10, 6, 15, 30, 0, 0, ZoneOffset.UTC);
-        var indicativeResponse = IndicativePriceService.IndicativePriceResponse.indicativePrice(
-                "TSLA",
-                new BigDecimal("250.00"),
-                timestamp,
-                true
-        );
+    private String bearer() {
+        return "Bearer " + tokens.issueToken(UUID.randomUUID(), "trader@example.test");
+    }
 
-        when(indicativePriceService.getIndicativePrice(instrumentId))
-                .thenReturn(indicativeResponse);
+    private InstrumentResponse instrument() {
+        return new InstrumentResponse(instrumentId, "AAPL", "Apple Inc.", "COMMON_STOCK",
+                "NASDAQ", "USD", "Technology", true, true);
+    }
 
-        ResponseEntity<QuotePreviewController.QuotePreviewResponse> response = 
-                controller.getQuotePreviewById(instrumentId, "SELL", 2L);
-
-        assertThat(response.getBody().quotedAt()).isEqualTo(timestamp);
+    private IndicativePriceService.IndicativePrice estimate() {
+        return new IndicativePriceService.IndicativePrice("AAPL", instrumentId, "BUY", 10,
+                new BigDecimal("225.50"), new BigDecimal("2255.00"),
+                OffsetDateTime.now(ZoneOffset.UTC), false, true);
     }
 }
