@@ -1,5 +1,6 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.cash.CashMovementAdapter;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteDecision;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteService;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,19 +18,22 @@ import java.util.UUID;
 public class JdbcOrderExecutor implements OrderExecutor {
     private final JdbcTemplate jdbc;
     private final ExecutionQuoteService quotes;
+    private final CashMovementAdapter cash;
     private final long maxAttempts;
 
     /**
      * Creates the execution handler.
      * @param jdbc transactional database access
      * @param quotes latest quote and freshness contract
+     * @param cash settlement-only cash movements, joined to this transaction
      * @param maxAttempts maximum attempts for out-of-tolerance prices
      */
-    public JdbcOrderExecutor(JdbcTemplate jdbc, ExecutionQuoteService quotes,
+    public JdbcOrderExecutor(JdbcTemplate jdbc, ExecutionQuoteService quotes, CashMovementAdapter cash,
             @Value("${orders.execution.max-price-attempts:10}") long maxAttempts) {
         if (maxAttempts < 1) throw new IllegalArgumentException("Attempt limit must be positive");
         this.jdbc = jdbc;
         this.quotes = quotes;
+        this.cash = cash;
         this.maxAttempts = maxAttempts;
     }
 
@@ -88,15 +92,14 @@ public class JdbcOrderExecutor implements OrderExecutor {
         if (buy ? price.compareTo(limit) > 0 : price.compareTo(limit) < 0)
             return order.attempts() >= maxAttempts ? reject(orderId, "PRICE_OUT_OF_TOLERANCE") : Outcome.PENDING;
 
-        BigDecimal cash = jdbc.query("SELECT balance FROM cash_balances WHERE account_id = ? FOR UPDATE",
-                (rs, n) -> rs.getBigDecimal(1), order.account()).stream().findFirst().orElse(BigDecimal.ZERO);
-        if (cash.compareTo(account.minimum()) < 0) return reject(orderId, "ACCOUNT_NOT_SUITABLE");
+        BigDecimal balance = cash.lockBalance(order.account());
+        if (balance.compareTo(account.minimum()) < 0) return reject(orderId, "ACCOUNT_NOT_SUITABLE");
         var position = jdbc.query("""
                 SELECT quantity, avg_cost FROM holdings WHERE account_id = ? AND instrument_id = ? FOR UPDATE
                 """, (rs, n) -> new Position(rs.getLong(1), rs.getBigDecimal(2)), order.account(), order.instrument())
                 .stream().findFirst().orElse(new Position(0, BigDecimal.ZERO));
         BigDecimal amount = price.multiply(BigDecimal.valueOf(order.quantity())).setScale(2, RoundingMode.HALF_UP);
-        if (buy && cash.compareTo(amount) < 0) return reject(orderId, "INSUFFICIENT_CASH");
+        if (buy && balance.compareTo(amount) < 0) return reject(orderId, "INSUFFICIENT_CASH");
         if (!buy && position.quantity() < order.quantity()) return reject(orderId, "INSUFFICIENT_HOLDINGS");
 
         UUID fill = UUID.randomUUID();
@@ -109,17 +112,10 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """, order.account(), order.instrument(), fill, change, price, order.side());
-        BigDecimal cashChange = buy ? amount.negate() : amount;
-        jdbc.update("""
-                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
-                VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
-                """, order.account(), fill, order.side(), cashChange);
-
         // holding_movements invokes the transactional holdings projection trigger.
-        jdbc.update("""
-                INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)
-                ON CONFLICT (account_id) DO UPDATE SET balance = EXCLUDED.balance, updated_at = CURRENT_TIMESTAMP
-                """, order.account(), cash.add(cashChange));
+        BigDecimal cashChange = buy ? amount.negate() : amount;
+        if (buy) cash.buy(order.account(), fill, amount);
+        else cash.sell(order.account(), fill, amount);
         history(orderId, "FILLED", "EXECUTION_SUCCESS");
         jdbc.update("""
                 INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
