@@ -76,6 +76,7 @@ class QuotePreviewControllerTest {
             "symbol=AAPL&side=BUY&quantity=ten",
             "symbol=AAPL&side=BUY",
             "instrumentId=not-a-uuid&side=BUY&quantity=1",
+            "instrumentId=------------------------------------&side=BUY&quantity=1",
             "symbol=AA%20PL&side=BUY&quantity=1"})
     void invalidInputIsABadRequest(String query) throws Exception {
         mvc.perform(get("/orders/quote-preview?" + query).header("Authorization", bearer()))

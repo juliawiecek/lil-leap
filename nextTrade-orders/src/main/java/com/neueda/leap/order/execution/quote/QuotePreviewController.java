@@ -23,7 +23,9 @@ import java.util.regex.Pattern;
 @RequestMapping("/orders")
 public class QuotePreviewController {
     private static final Pattern SYMBOL = Pattern.compile("^[A-Za-z0-9.-]{1,20}$");
-    private static final Pattern UUID_TEXT = Pattern.compile("^[0-9a-fA-F-]{36}$");
+    private static final Pattern UUID_TEXT =
+            Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+    private static final Pattern QUANTITY = Pattern.compile("^[0-9]{1,12}$");
 
     private final IndicativePriceService prices;
     private final InstrumentService instruments;
@@ -51,7 +53,7 @@ public class QuotePreviewController {
      * @return 200 with the estimate, 400 for invalid input, or 404 when the instrument or its quote is unknown
      */
     @GetMapping("/quote-preview")
-    public ResponseEntity<?> preview(@RequestParam(required = false) String symbol,
+    public ResponseEntity<Object> preview(@RequestParam(required = false) String symbol,
                                      @RequestParam(required = false) String instrumentId,
                                      @RequestParam(required = false) String side,
                                      @RequestParam(required = false) String quantity) {
@@ -75,18 +77,20 @@ public class QuotePreviewController {
             return error(404, "INSTRUMENT_NOT_FOUND", "The requested instrument is not supported.");
         }
         return prices.estimate(instrument.get().instrumentId(), normalizedSide, shares)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> error(404, "NO_QUOTE_AVAILABLE",
                         "No market quote is available for this instrument yet."));
     }
 
     private static Long parseQuantity(String quantity) {
-        if (quantity == null || !quantity.trim().matches("^[0-9]{1,12}$")) return null;
+        if (quantity == null || !QUANTITY.matcher(quantity.trim()).matches()) {
+            return null;
+        }
         long value = Long.parseLong(quantity.trim());
         return value > 0 ? value : null;
     }
 
-    private static ResponseEntity<?> error(int status, String code, String message) {
+    private static ResponseEntity<Object> error(int status, String code, String message) {
         return ResponseEntity.status(status).body(Map.of("error", code, "message", message));
     }
 }
