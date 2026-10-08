@@ -1,31 +1,8 @@
 spring:
   application:
     name: insights
-  datasource:
-    url: jdbc:postgresql://${REPORTING_DB_HOST:reporting-db}:${DB_PORT:5432}/${DB_NAME:nexttrade}
-    username: ${REPORTING_DB_USERNAME:reporting_user}
-    password: ${REPORTING_DB_PASSWORD:reporting_dev_password}
-    hikari:
-      read-only: true
-      maximum-pool-size: 10
-
-      minimum-idle: 2
-      connection-timeout: 20000
-      idle-timeout: 300000
-      max-lifetime: 1200000
-
-  jpa:
-    hibernate:
-      # ddl-auto: validate - do not create/update schema; admin role handles migrations
-      ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: false
-        use_sql_comments: false
-
-  # Suppress sensitive datasource information in logs
-  jpa.show-sql: false
+  # Datasource removed; reports are generated from local CSV data.
+  # If database connectivity is re-added, configure datasource here.
 
 logging:
   level:

@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import 'reflect-metadata';
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
