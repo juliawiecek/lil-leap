@@ -591,9 +591,9 @@
     <button
       type="button"
       class="secondary-button"
-      (click)="quote(news[article()]?.symbol) && (choose(quote(news[article()].symbol)), closeModal())"
+      (click)="news[article()] && quote(news[article()].symbol)! && (choose(quote(news[article()].symbol)!), closeModal())"
     >
-      View {{ news[article()].symbol }} chart
+      View {{ news[article()]?.symbol }} chart
     </button>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
