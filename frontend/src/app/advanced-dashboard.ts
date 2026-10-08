@@ -60,7 +60,6 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  readonly orderSubmissionClient: OrderSubmissionClient;
   orderSubmissionClient: OrderSubmissionClient;
   orderHistoryClient: OrderHistoryClient;
   portfolioClient: PortfolioClient;
