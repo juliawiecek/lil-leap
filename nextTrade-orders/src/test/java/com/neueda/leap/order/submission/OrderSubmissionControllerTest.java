@@ -5,6 +5,7 @@ import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.order.submission.controller.OrderSubmissionController;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import com.neueda.leap.security.JwtService;
 import com.neueda.leap.security.JwtServiceImpl;
@@ -45,6 +46,18 @@ class OrderSubmissionControllerTest {
                 .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
                         "error", reason.name(), "message", rejection.getMessage())), true));
         verify(service).submit(user, request);
+    }
+
+    @Test
+    void changedRetryOfAClientReferenceReturnsConflict() throws Exception {
+        var request = request();
+        when(service.submit(user, request)).thenThrow(new IdempotencyConflictException());
+
+        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .contentType("application/json").content(json.writeValueAsBytes(request)))
+                .andExpect(status().isConflict())
+                .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
+                        "error", "IDEMPOTENCY_CONFLICT", "message", IdempotencyConflictException.MESSAGE)), true));
     }
 
     @Test

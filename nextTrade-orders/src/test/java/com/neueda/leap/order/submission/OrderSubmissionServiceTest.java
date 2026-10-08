@@ -4,6 +4,7 @@ import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.AccountTradingProfile;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.instrument.dto.InstrumentResponse;
@@ -90,6 +91,45 @@ class OrderSubmissionServiceTest {
         assertEquals(existing.orderId(), result.order().orderId());
         verifyNoInteractions(sufficiency);
         verify(repository, never()).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
+    }
+
+    @Test
+    void identicalRetryByInstrumentIdReturnsExistingOrder() {
+        var request = new SubmitOrderRequest(accountId, null, clientReference, "buy", 10, null, null, instrumentId);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(response("AAPL")));
+
+        assertFalse(service.submit(userId, request).created());
+    }
+
+    @Test
+    void retryThatChangesTheOrderIsAConflict() {
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(response("AAPL")));
+
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request("AAPL", "SELL", 10)));
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request("AAPL", "BUY", 11)));
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request("MSFT", "BUY", 10)));
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId,
+                new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", BigDecimal.ONE)));
+        verifyNoInteractions(sufficiency);
+    }
+
+    @Test
+    void concurrentInsertWithAChangedOrderIsAConflict() {
+        var request = request("AAPL", "SELL", 10);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.empty(), Optional.of(response("AAPL")));
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
+        when(repository.insert(accountId, instrumentId, "AAPL", clientReference, "SELL", 10, "MARKET", null))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request));
     }
 
     @Test

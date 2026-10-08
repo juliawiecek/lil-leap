@@ -1,6 +1,7 @@
 package com.neueda.leap.order.submission;
 
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionResult;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import org.junit.jupiter.api.AfterAll;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Verifies account-scoped idempotency key behavior (BR-04, BR-05).
@@ -115,23 +117,17 @@ class OrderIdempotencyPostgresTest {
      * Note: The API doesn't explicitly return 409 yet, but the service prevents duplicate creation.
      */
     @Test
-    void differentPayloadWithSameReferenceDoesNotCreateSecondOrder() {
+    void differentPayloadWithSameReferenceIsAConflict() {
         UUID reference = UUID.randomUUID();
         var request1 = new SubmitOrderRequest(account, "AAPL", reference, "BUY", 10, "MARKET", null);
         var request2 = new SubmitOrderRequest(account, "AAPL", reference, "SELL", 10, "MARKET", null);
 
-        // First submission
         OrderSubmissionResult firstResult = submissions.submit(user, request1);
         assertThat(firstResult.created()).isTrue();
-        UUID firstOrderId = firstResult.order().orderId();
 
-        // Attempt to submit with different payload but same reference
-        OrderSubmissionResult secondResult = submissions.submit(user, request2);
-        
-        // Should return the existing order, not create a new one
-        assertThat(secondResult.created()).isFalse();
-        assertThat(secondResult.order().orderId()).isEqualTo(firstOrderId);
-        assertThat(secondResult.order().side()).isEqualTo("BUY"); // Original side
+        // AC2: a changed payload must be reported, never silently answered with the original order
+        assertThatThrownBy(() -> submissions.submit(user, request2))
+                .isInstanceOf(IdempotencyConflictException.class);
 
         // Verify only one order in database
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE account_id = ?", Integer.class, account);
