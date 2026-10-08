@@ -23,8 +23,9 @@ public class OrderExecutionConfiguration {
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             OrderExecutor executor,
-            @Value("${orders.execution.retry-seconds:30}") int retrySeconds) {
-        return new OrderExecutionWorker(jdbc, manager, executor, retrySeconds);
+            @Value("${orders.execution.retry-seconds:30}") int retrySeconds,
+            @Value("${orders.execution.max-failure-attempts:10}") long maxAttempts) {
+        return new OrderExecutionWorker(jdbc, manager, executor, retrySeconds, maxAttempts);
     }
 
     @Bean

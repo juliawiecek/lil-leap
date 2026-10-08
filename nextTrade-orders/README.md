@@ -41,6 +41,15 @@ with 200. Execution accepts in a separate committed transaction, then claims and
 fills/rejects with database locks. Failed attempts roll back settlement and remain
 retryable. Quote and price-tolerance limits default to ten attempts.
 
+Requeue and rejection reasons are kept distinct. A transient failure keeps the order PENDING and
+records `RETRY_` plus its cause (`RETRY_QUOTE_UNAVAILABLE`, `RETRY_STALE_QUOTE`,
+`RETRY_INVALID_QUOTE_TIMESTAMP`, `RETRY_PRICE_OUT_OF_TOLERANCE`, `RETRY_EXECUTION_FAILED`) on the
+ORDER_REQUEUED event and in `last_execution_error`. A rejection records the bare cause. Every cause
+is bounded: quotes by `orders.execution.max-quote-attempts`, price tolerance by
+`orders.execution.max-price-attempts`, and unexpected failures by
+`orders.execution.max-failure-attempts` (all default 10, retried every `orders.execution.retry-seconds`).
+Requeue is internal to the worker; there is no external requeue route.
+
 Set `TEST_POSTGRES_URL`, `TEST_POSTGRES_USER`, and `TEST_POSTGRES_PASSWORD` for a
 disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submission
 contracts. Run Maven from this directory so the production schema can be loaded.
