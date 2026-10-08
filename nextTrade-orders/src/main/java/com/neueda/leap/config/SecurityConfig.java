@@ -42,6 +42,7 @@ public class SecurityConfig {
                                 (authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                                     context.getRequest().getQueryString() == null
                                         && context.getRequest().getParameterMap().isEmpty())))
+                        .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {
