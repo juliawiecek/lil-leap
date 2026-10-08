@@ -31,7 +31,7 @@
             [value]="desk().selected()?.symbol"
             (change)="desk().choose(desk().quote($any($event.target).value))"
           >
-            @for (q of desk().quotes; track q.symbol) {
+            @for (q of desk().quotesList(); track q.symbol) {
               <option>{{ q.symbol }}</option>
             }</select
           ><span>{{ desk().selected()?.name }}</span
