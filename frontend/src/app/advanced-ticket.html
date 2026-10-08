@@ -29,7 +29,7 @@
           <select
             id="pro-symbol"
             [value]="desk().selected()?.symbol"
-            (change)="desk().choose(desk().quote($any($event.target).value))"
+            (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
           >
             @for (q of desk().quotesList(); track q.symbol) {
               <option>{{ q.symbol }}</option>
