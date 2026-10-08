@@ -32,7 +32,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   readonly step = signal(0);
   readonly values = signal<Record<string, string>>({});
   readonly status = signal('');
-  readonly states = ('Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|American Samoa|Guam|Northern Mariana Islands|Puerto Rico|U.S. Virgin Islands').split('|').sort();
+  readonly states = ('Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|American Samoa|Guam|Northern Mariana Islands|Puerto Rico|U.S. Virgin Islands').split('|').sort((a, b) => a.localeCompare(b, 'en'));
   // ISO 3166-1 countries and territories, displayed in English.
   readonly countries = (() => {
     const names = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -529,7 +529,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       const control = form.elements.namedItem(field.id);
       if (!(control instanceof HTMLInputElement) || !this.visible(field)) continue;
       const value = control.value.trim();
-      if ((field.id === 'annual_income' || field.id === 'liquidity_position') && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replace(/,/g, ''))) {
+        if ((field.id === 'annual_income' || field.id === 'liquidity_position') && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replaceAll(',', ''))) {
         control.setCustomValidity('Enter a nonnegative amount with up to two decimal places.');
       }
       if (field.id === 'country' && value) {

@@ -145,5 +145,5 @@ export function buckets(rows: Trade[], cadence: string) {
 export function csvCell(value: unknown) {
   let text = String(value ?? '');
   if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
-  return '"' + text.replace(/"/g, '""') + '"';
+  return '"' + text.replaceAll('"', '""') + '"';
 }

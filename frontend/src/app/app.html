@@ -30,7 +30,7 @@
   </div>
   <div class="market-scan" aria-hidden="true"></div>
   <main class="chart-stage" aria-label="Animated stock market chart">
-    <canvas #marketChart id="market-chart" inert aria-hidden="true"></canvas>
+    <canvas #marketChart id="market-chart" inert></canvas>
   </main>
   <div class="edge-shade" aria-hidden="true"></div>
 
@@ -91,7 +91,7 @@
         </div>
 
         <form #authForm novalidate (submit)="onSubmit($event, authForm)">
-          
+
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
             <div class="field-row"><label for="full-name">Full name</label></div>
@@ -134,8 +134,8 @@
             </div>
           }
           <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Continue securely' }}</button>
-          
-          
+
+
           <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
         </form>
       </section>

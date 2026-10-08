@@ -501,6 +501,7 @@
   class="detail-dialog"
   aria-labelledby="novice-dialog-title"
   (click)="onDialogClick($event)"
+  (keydown.escape)="closeModal()"
 >
   <div class="dialog-heading">
     <h2 id="novice-dialog-title">
