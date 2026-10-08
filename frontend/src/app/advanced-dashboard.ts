@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit, OnDestroy, inject } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
@@ -6,6 +6,9 @@ import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
 import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
 import { AuthService } from './auth.service';
+import { QuoteService } from './quote.service';
+import { HoldingsService } from './holdings.service';
+import { interval, Subject, takeUntil, switchMap, startWith } from 'rxjs';
 
 interface Quote {
   instrumentId: string;  // ← NOW PRESERVED
@@ -50,7 +53,11 @@ interface NewsItem {
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
-export class AdvancedDashboard implements OnInit {
+export class AdvancedDashboard implements OnInit, OnDestroy {
+  private readonly quoteService = inject(QuoteService);
+  private readonly holdingsService = inject(HoldingsService);
+  private readonly destroy$ = new Subject<void>();
+  
   orderSubmissionClient: OrderSubmissionClient;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
@@ -65,6 +72,18 @@ export class AdvancedDashboard implements OnInit {
   readonly loadingAccounts = signal(false);
   readonly loadingInstruments = signal(false);
   readonly dataReady = computed(() => this.accounts().length > 0 && this.instruments().length > 0);
+  
+  // Supported instruments: AAPL, TSLA, AMZN, GOOGL, META, MSFT, NVDA (all NASDAQ)
+  private readonly supportedInstruments = [
+    { symbol: 'AAPL', name: 'Apple Inc.', market: 'NASDAQ' },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', market: 'NASDAQ' },
+    { symbol: 'AMZN', name: 'Amazon.com, Inc.', market: 'NASDAQ' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', market: 'NASDAQ' },
+    { symbol: 'META', name: 'Meta Platforms, Inc.', market: 'NASDAQ' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', market: 'NASDAQ' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', market: 'NASDAQ' },
+  ];
+  
   readonly nav = [
     { name: 'Overview', icon: 'home' },
     { name: 'Watchlist', icon: 'star' },
@@ -87,24 +106,25 @@ export class AdvancedDashboard implements OnInit {
   readonly ticketTab = signal('Trade');
   readonly marketTab = signal('Sectors');
   readonly filter = signal('All stocks');
-  readonly quotes: Quote[] = [
-    { instrumentId: 'aapl-uuid', symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
-    { instrumentId: 'nvda-uuid', symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
-    { instrumentId: 'msft-uuid', symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
-    { instrumentId: 'amd-uuid', symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.14, change: 3.21, volume: '36.1M' },
-    { instrumentId: 'tsla-uuid', symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -1.24, volume: '45.7M' },
-    { instrumentId: 'meta-uuid', symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37, volume: '12.6M' },
-    { instrumentId: 'amzn-uuid', symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
-    { instrumentId: 'googl-uuid', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
-  ];
-  readonly selected = signal(this.quotes[0]);
+  
+  // LIVE QUOTE DATA - fetched from API every 5 seconds
+  readonly quotesList = signal<Quote[]>([]);
+  readonly selected = signal<Quote | null>(null);
+  
+  // LIVE PORTFOLIO DATA - fetched from API every 5 seconds
+  readonly portfolioValue = signal(0);
+  readonly buyingPower = signal(0);
+  readonly invested = signal(0);
+  readonly positions = signal<Position[]>([]);
+  
   readonly results = computed(() =>
-    this.quotes.filter((q) =>
+    this.quotesList().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
+  
   readonly screened = computed(() =>
-    this.quotes.filter((q) =>
+    this.quotesList().filter((q) =>
       this.filter() === 'Gainers'
         ? q.change > 0
         : this.filter() === 'Decliners'
@@ -112,55 +132,6 @@ export class AdvancedDashboard implements OnInit {
           : true,
     ),
   );
-  readonly positions = signal<Position[]>([
-    {
-      symbol: 'AAPL',
-      quantity: 250,
-      cost: 142.2,
-      value: 44140,
-      day: 1925,
-      total: 8590,
-      weight: 15.5,
-    },
-    {
-      symbol: 'NVDA',
-      quantity: 120,
-      cost: 640.18,
-      value: 107174.4,
-      day: 2944.32,
-      total: 30352.8,
-      weight: 37.7,
-    },
-    {
-      symbol: 'MSFT',
-      quantity: 80,
-      cost: 390.14,
-      value: 33944.8,
-      day: 192.8,
-      total: 2733.6,
-      weight: 11.9,
-    },
-    {
-      symbol: 'AMD',
-      quantity: 200,
-      cost: 118.05,
-      value: 32428,
-      day: 1010,
-      total: 8817,
-      weight: 11.4,
-    },
-    {
-      symbol: 'TSLA',
-      quantity: 60,
-      cost: 178.45,
-      value: 8532,
-      day: -107.4,
-      total: -2175,
-      weight: 3,
-    },
-  ]);
-  readonly buyingPower = signal(48230.12);
-  readonly portfolio = signal(284650.17);
   readonly markets = [
     { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
     { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
@@ -179,6 +150,7 @@ export class AdvancedDashboard implements OnInit {
     { name: 'Utilities', change: -0.42 },
     { name: 'Real Estate', change: -0.58 },
   ];
+  // Orders are kept as-is since they're historical; they won't be live-fetched for now
   readonly orders = signal<Order[]>([
     {
       id: 4,
@@ -240,46 +212,82 @@ export class AdvancedDashboard implements OnInit {
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
   readonly cost = computed(
-    () =>
-      Number(this.quantity()) *
-      (this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price),
+    () => {
+      const sel = this.selected();
+      if (!sel) return 0;
+      return Number(this.quantity()) *
+        (this.orderType() === 'Limit' ? Number(this.limitPrice()) : sel.price);
+    }
   );
   readonly fees = computed(() => Math.floor(Math.max(0, this.cost()) * 0.01) / 100);
   readonly total = computed(() => this.cost() + this.fees());
+  
+  // Generate candles based on current selected quote price
   readonly candles = computed(() => {
+    const sel = this.selected();
+    if (!sel) return [];
+    
+    const basePrice = sel.price;
     const anchors = [
-      179.8, 172, 167.5, 171, 167.2, 169.9, 166.5, 170.5, 165.9, 171, 172.9, 169.6, 170.8, 170.1,
-      172.5, 172.9, 173.1, 175.4, 173.5, 174.6, 177.4, 174.5, 177, 175.2, 176.56,
+      basePrice * 0.98,
+      basePrice * 0.97,
+      basePrice * 0.96,
+      basePrice * 0.97,
+      basePrice * 0.96,
+      basePrice * 0.97,
+      basePrice * 0.98,
+      basePrice * 0.99,
+      basePrice * 0.98,
+      basePrice * 0.99,
+      basePrice * 1.00,
+      basePrice * 0.99,
+      basePrice * 1.01,
+      basePrice * 1.00,
+      basePrice * 1.02,
+      basePrice * 1.01,
+      basePrice * 1.02,
+      basePrice * 1.03,
+      basePrice * 1.02,
+      basePrice * 1.03,
+      basePrice * 1.04,
+      basePrice * 1.03,
+      basePrice * 1.04,
+      basePrice * 1.03,
+      basePrice,
     ];
-    const seed = this.periods.indexOf(this.period()) + this.quotes.indexOf(this.selected()) * 2;
+    
+    const seed = this.periods.indexOf(this.period()) + this.quotesList().indexOf(sel) * 2;
     return Array.from({ length: 108 }, (_, i) => {
       const step = (i / 107) * (anchors.length - 1),
         j = Math.floor(step);
       const close =
         anchors[j] +
         (anchors[Math.min(j + 1, anchors.length - 1)] - anchors[j]) * (step - j) +
-        Math.sin(i * 1.71 + seed) * 0.35;
-      const open = close + Math.sin(i * 2.3 + seed) * 0.95;
-      const y = (price: number) => 12 + (181.5 - price) * 8.55;
+        Math.sin(i * 1.71 + seed) * basePrice * 0.002;
+      const open = close + Math.sin(i * 2.3 + seed) * basePrice * 0.005;
+      const y = (price: number) => 12 + (basePrice * 1.015 - price) * (133 / (basePrice * 0.08));
       return {
         x: 5 + i * 7.55,
         open: y(open),
         close: y(close),
-        high: y(Math.max(open, close) + 0.35 + Math.abs(Math.sin(i)) * 0.5),
-        low: y(Math.min(open, close) - 0.45),
+        high: y(Math.max(open, close) + basePrice * 0.002),
+        low: y(Math.min(open, close) - basePrice * 0.003),
         up: close >= open,
         volume: 9 + Math.abs(Math.sin(i * 1.4)) * 12 + (i < 12 ? 30 * Math.abs(Math.cos(i)) : 0),
       };
     });
   });
-  readonly rsiPath = computed(() =>
-    this.candles()
+  readonly rsiPath = computed(() => {
+    const candles = this.candles();
+    if (!candles.length) return '';
+    return candles
       .map(
         (c, i) =>
           `${i ? 'L' : 'M'}${c.x},${(24 + Math.sin(i * 0.17) * 6 + Math.sin(i * 1.8) * 3 + (i < 20 ? 5 : -i * 0.07)).toFixed(1)}`,
       )
-      .join(' '),
-  );
+      .join(' ');
+  });
+  
   readonly chartTimes = computed(() =>
     this.period() === '1D'
       ? ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
@@ -287,9 +295,11 @@ export class AdvancedDashboard implements OnInit {
         ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
         : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
   );
-  quote(symbol: string): Quote {
-    return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
+  
+  quote(symbol: string): Quote | undefined {
+    return this.quotesList().find((q) => q.symbol === symbol);
   }
+  
   choose(quote: Quote): void {
     this.selected.set(quote);
     this.limitPrice.set(quote.price.toFixed(2));
@@ -327,8 +337,11 @@ export class AdvancedDashboard implements OnInit {
     ).join(' ');
   }
   validate(): string {
+    const sel = this.selected();
+    if (!sel) return 'Select a stock to trade.';
+    
     const count = Number(this.quantity()),
-      price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price;
+      price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : sel.price;
     if (!Number.isSafeInteger(count) || count <= 0)
       return 'Enter a whole number of shares greater than zero.';
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total()))
@@ -337,7 +350,7 @@ export class AdvancedDashboard implements OnInit {
       return 'This order exceeds your buying power.';
     if (
       this.side() === 'Sell' &&
-      count > (this.positions().find((p) => p.symbol === this.selected().symbol)?.quantity || 0)
+      count > (this.positions().find((p) => p.symbol === sel.symbol)?.quantity || 0)
     )
       return 'You can only sell shares you hold.';
     if (
@@ -375,6 +388,10 @@ export class AdvancedDashboard implements OnInit {
     this.submitting.set(true);
     try {
       const quote = this.selected();
+      if (!quote) {
+        this.message.set('No stock selected.');
+        return;
+      }
       const count = Number(this.quantity());
       const account = this.selectedAccount();
       if (!account) {
@@ -404,6 +421,12 @@ export class AdvancedDashboard implements OnInit {
       this.submitting.set(false);
     }
   }
+      const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
+      this.message.set(msg);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
   cancelOrder(id: number): void {
     this.orders.update((list) =>
       list.map((o) => (o.id === id && o.status === 'Open' ? { ...o, status: 'Canceled' } : o)),
@@ -422,7 +445,126 @@ export class AdvancedDashboard implements OnInit {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private extractClientIdFromJWT(): string | null {
+    const token = this.auth.accessToken;
+    if (!token) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const decoded = JSON.parse(atob(parts[1]));
+      return decoded.sub || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private extractRiskProfileFromJWT(): string | null {
+    const token = this.auth.accessToken;
+    if (!token) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const decoded = JSON.parse(atob(parts[1]));
+      return decoded.risk_profile || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private getStartingCashForRiskProfile(riskProfile: string | null): number {
+    if (!riskProfile) return 0;
+    switch (riskProfile.toUpperCase()) {
+      case 'CONSERVATIVE':
+        return 30000;
+      case 'MODERATE':
+        return 100000;
+      case 'AGGRESSIVE':
+        return 40000000;
+      default:
+        return 0;
+    }
+  }
+
+  private async fetchAllQuotes(): Promise<void> {
+    try {
+      const quotesList: Quote[] = [];
+      for (const inst of this.supportedInstruments) {
+        try {
+          const quote = await this.quoteService.getLatestByMarketSymbol(inst.market, inst.symbol).toPromise();
+          if (quote) {
+            quotesList.push({
+              instrumentId: quote.instrumentId || '',
+              symbol: quote.symbol,
+              name: inst.name,
+              price: quote.midpoint,
+              change: 0, // Backend doesn't provide change, would need to track historical
+              volume: '0', // Backend doesn't provide volume
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch quote for ${inst.symbol}:`, err);
+        }
+      }
+      this.quotesList.set(quotesList);
+      // Set selected to first quote if not set
+      if (!this.selected() && quotesList.length > 0) {
+        this.selected.set(quotesList[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching quotes:', err);
+    }
+  }
+
+  private async fetchPortfolioData(clientId: string): Promise<void> {
+    try {
+      const portfolioData = await this.holdingsService.getPortfolioSummary(clientId).toPromise();
+      if (portfolioData) {
+        const holdings = portfolioData.holdings || [];
+        this.invested.set(holdings.reduce((sum, h) => sum + (h.quantity * h.avgCost), 0));
+
+        // Build positions from holdings with live prices
+        const positions = holdings.map((h) => {
+          const quote = this.quotesList().find((q) => q.symbol === h.symbol);
+          const currentPrice = quote?.price || h.avgCost;
+          const positionValue = h.quantity * currentPrice;
+          const unrealizedGain = positionValue - (h.quantity * h.avgCost);
+          const weight = 0; // Would need total portfolio value
+
+          return {
+            symbol: h.symbol,
+            quantity: h.quantity,
+            cost: h.avgCost,
+            value: positionValue,
+            day: unrealizedGain, // Today's P&L (simplified)
+            total: unrealizedGain,
+            weight,
+          };
+        });
+        this.positions.set(positions);
+
+        // Initialize buying power for new accounts from risk profile
+        let buyingPower = portfolioData.cash || 0;
+        const riskProfile = this.extractRiskProfileFromJWT();
+        if (buyingPower === 0 && riskProfile) {
+          buyingPower = this.getStartingCashForRiskProfile(riskProfile);
+        }
+        this.buyingPower.set(buyingPower);
+
+        const totalValue = positions.reduce((sum, p) => sum + p.value, 0) + buyingPower;
+        this.portfolioValue.set(totalValue);
+      }
+    } catch (err) {
+      console.error('Error fetching portfolio:', err);
+    }
+  }
+
   async ngOnInit(): Promise<void> {
+    // Load accounts
     try {
       this.loadingAccounts.set(true);
       const accountsData = await this.orderSubmissionClient.getAccounts();
@@ -436,22 +578,49 @@ export class AdvancedDashboard implements OnInit {
       this.loadingAccounts.set(false);
     }
 
+    // Load instruments
     try {
       this.loadingInstruments.set(true);
       const instrumentsData = await this.orderSubmissionClient.getInstruments();
       this.instruments.set(instrumentsData);
-      // Update quotes with real instrumentIds from backend
-      for (const quote of this.quotes) {
-        const instrument = instrumentsData.find((i) => i.symbol === quote.symbol);
-        if (instrument) {
-          quote.instrumentId = instrument.instrumentId;
-        }
-      }
     } catch (error) {
       console.error('Failed to load instruments:', error);
       this.message.set('Failed to load instruments.');
     } finally {
       this.loadingInstruments.set(false);
+    }
+
+    // Fetch initial quotes
+    await this.fetchAllQuotes();
+
+    // Setup 5-second polling for quotes
+    interval(5000)
+      .pipe(
+        startWith(0),
+        switchMap(() => {
+          this.fetchAllQuotes();
+          return [];
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe();
+
+    // Fetch initial portfolio and setup polling
+    const clientId = this.extractClientIdFromJWT();
+    if (clientId) {
+      await this.fetchPortfolioData(clientId);
+
+      // Setup 5-second polling for portfolio
+      interval(5000)
+        .pipe(
+          startWith(0),
+          switchMap(() => {
+            this.fetchPortfolioData(clientId);
+            return [];
+          }),
+          takeUntil(this.destroy$)
+        )
+        .subscribe();
     }
   }
 }
