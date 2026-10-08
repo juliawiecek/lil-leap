@@ -141,6 +141,26 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   });
 
   /**
+   * Formatted display strings for return values
+   * Shows sign (+/-), value, and percentage for UI display
+   */
+  readonly todayReturnDisplay = computed(() => {
+    const val = this.todayReturn();
+    const pct = this.todayReturnPercent();
+    if (val === 0) return '$0.00 (0.00%)';
+    const sign = val > 0 ? '+' : '';
+    return `${sign}$${Math.abs(val).toFixed(2)} (${pct.toFixed(2)}%)`;
+  });
+
+  readonly totalReturnDisplay = computed(() => {
+    const val = this.totalReturn();
+    const pct = this.totalReturnPercent();
+    if (val === 0) return '$0.00 (0.00%)';
+    const sign = val > 0 ? '+' : '';
+    return `${sign}$${Math.abs(val).toFixed(2)} (${pct.toFixed(2)}%)`;
+  });
+
+  /**
    * Asset allocation computed from actual holdings
    * Shows only owned instruments, not all supported instruments
    */
