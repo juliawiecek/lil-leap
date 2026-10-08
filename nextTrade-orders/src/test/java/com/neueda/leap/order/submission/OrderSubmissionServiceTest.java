@@ -117,6 +117,21 @@ class OrderSubmissionServiceTest {
     }
 
     @Test
+    void retryBufferIsComparedByValue() {
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(new OrderSubmissionResponse(UUID.randomUUID(), accountId, instrumentId, "AAPL",
+                        clientReference, "BUY", 10, "MARKET", "SUBMITTED", Instant.now(), new BigDecimal("5.00"))));
+
+        var replayed = service.submit(userId,
+                new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", new BigDecimal("5")));
+        assertFalse(replayed.created());
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId,
+                new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", new BigDecimal("6"))));
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request("AAPL", "BUY", 10)));
+    }
+
+    @Test
     void concurrentInsertWithAChangedOrderIsAConflict() {
         var request = request("AAPL", "SELL", 10);
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);

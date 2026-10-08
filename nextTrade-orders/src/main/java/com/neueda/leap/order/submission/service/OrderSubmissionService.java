@@ -88,7 +88,9 @@ public class OrderSubmissionService {
 
     /** Returns the stored order for an identical retry; a changed payload must not be silently dropped. */
     private static OrderSubmissionResult replay(OrderSubmissionResponse existing, SubmitOrderRequest request) {
-        if (!sameOrder(existing, request)) throw new IdempotencyConflictException();
+        if (!sameOrder(existing, request)) {
+            throw new IdempotencyConflictException();
+        }
         return new OrderSubmissionResult(existing, false);
     }
 
@@ -96,16 +98,18 @@ public class OrderSubmissionService {
         boolean sameInstrument = request.instrumentId() != null
                 ? request.instrumentId().equals(existing.instrumentId())
                 : request.normalizedSymbol().equalsIgnoreCase(existing.symbol());
-        BigDecimal requestedBuffer = request.bufferPercent();
-        BigDecimal storedBuffer = existing.bufferPercent();
-        boolean sameBuffer = requestedBuffer == null || storedBuffer == null
-                ? requestedBuffer == storedBuffer
-                : requestedBuffer.compareTo(storedBuffer) == 0;
-        return sameInstrument
-                && request.normalizedSide().equals(existing.side())
+        boolean sameTerms = request.normalizedSide().equals(existing.side())
                 && request.quantity() == existing.quantity()
-                && request.normalizedOrderType().equals(existing.orderType())
-                && sameBuffer;
+                && request.normalizedOrderType().equals(existing.orderType());
+        return sameInstrument && sameTerms && sameBuffer(request.bufferPercent(), existing.bufferPercent());
+    }
+
+    /** Compares buffers by value, so 5 and 5.00 match; two absent buffers also match. */
+    private static boolean sameBuffer(BigDecimal requested, BigDecimal stored) {
+        if (requested == null || stored == null) {
+            return requested == null && stored == null;
+        }
+        return requested.compareTo(stored) == 0;
     }
 
     private static void validateAccount(AccountTradingProfile account) {
