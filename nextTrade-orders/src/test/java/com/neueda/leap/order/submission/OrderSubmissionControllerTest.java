@@ -7,7 +7,6 @@ import com.neueda.leap.order.submission.controller.OrderSubmissionController;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
-import com.neueda.leap.security.JwtService;
 import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
