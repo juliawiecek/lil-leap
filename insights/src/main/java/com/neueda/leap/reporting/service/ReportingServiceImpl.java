@@ -403,11 +403,13 @@ public class ReportingServiceImpl implements ReportingService {
 
     private String escapeCsvValue(String value) {
         String safeValue = Objects.toString(value, "");
-        boolean requiresQuoting = safeValue.contains(",") || safeValue.contains("\"") || safeValue.contains("\n") || safeValue.contains("\r");
-        if (!requiresQuoting) {
-            return safeValue;
-        }
-        return '"' + safeValue.replace("\"", "\"\"") + '"';
+        return requiresCsvQuoting(safeValue)
+                ? '"' + safeValue.replace("\"", "\"\"") + '"'
+                : safeValue;
+    }
+
+    private boolean requiresCsvQuoting(String value) {
+        return value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r");
     }
 
     private List<String> parseCsvLine(String line) {

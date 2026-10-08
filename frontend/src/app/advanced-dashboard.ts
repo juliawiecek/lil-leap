@@ -60,9 +60,9 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  orderSubmissionClient: OrderSubmissionClient;
-  orderHistoryClient: OrderHistoryClient;
-  portfolioClient: PortfolioClient;
+  readonly orderSubmissionClient: OrderSubmissionClient;
+  readonly orderHistoryClient: OrderHistoryClient;
+  readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -120,8 +120,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   );
   readonly screened = computed(() =>
     this.quotes.filter((q) => {
-      if (this.filter() === 'Gainers') return q.change > 0;
-      return this.filter() !== 'Decliners' || q.change < 0;
+      const filter = this.filter();
+      if (filter === 'Gainers') return q.change > 0;
+      if (filter === 'Decliners') return q.change < 0;
+      return true;
     }),
   );
   /** Positions, cash and total value, loaded from the backend and reloaded after each fill. */
@@ -217,13 +219,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() => {
-    if (this.period() === '1D')
+  readonly chartTimes = computed(() => this.chartLabelsFor(this.period()));
+
+  private chartLabelsFor(period: string): string[] {
+    if (period === '1D') {
       return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-    return this.period() === '1W'
-      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  });
+    }
+    if (period === '1W') {
+      return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    }
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  }
   quote(symbol: string): Quote {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }

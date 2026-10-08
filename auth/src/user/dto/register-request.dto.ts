@@ -34,80 +34,113 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
   validate(_: unknown, args?: ValidationArguments): boolean {
     const r = args!.object as RegisterRequestDto;
 
-    if (r.userRole === UserRole.TRADER) {
-      if (
-        !(
-          notBlank(r.firstName) &&
-          notBlank(r.lastName) &&
-          r.dateOfBirth != null &&
-          notBlank(r.phone) &&
-          notBlank(r.streetAddress) &&
-          notBlank(r.city) &&
-          notBlank(r.stateProvince) &&
-          notBlank(r.postalCode) &&
-          notBlank(r.country) &&
-          r.citizenshipStatus != null
-        )
-      ) {
-        this.failureMessage =
-          'firstName, lastName, dateOfBirth, phone, streetAddress, city, stateProvince, postalCode, country and citizenshipStatus are required for TRADER registration';
-        return false;
-      }
-
-      if (
-        !(
-          r.employmentStatus != null &&
-          notBlank(r.annualIncome) &&
-          r.netWorthBracket != null &&
-          r.riskProfile != null &&
-          notBlank(r.liquidityPosition) &&
-          r.accreditedInvestor != null &&
-          r.politicallyExposedPerson != null
-        )
-      ) {
-        this.failureMessage =
-          'employmentStatus, annualIncome, netWorthBracket, riskProfile, liquidityPosition, accreditedInvestor and isPoliticallyExposedPerson are required for TRADER registration';
-        return false;
-      }
-
-      if (!(notBlank(r.accountName) && r.accountType != null)) {
-        this.failureMessage = 'accountName and accountType are required for TRADER registration';
-        return false;
-      }
-
-      const needsEmploymentDetails =
-        r.employmentStatus === EmploymentStatus.EMPLOYED || r.employmentStatus === EmploymentStatus.SELF_EMPLOYED;
-      if (needsEmploymentDetails && !(notBlank(r.employerName) && notBlank(r.occupation))) {
-        this.failureMessage = 'Employer name and occupation are required for employed or self-employed status';
-        return false;
-      }
-    }
-
-    if (r.userRole === UserRole.ANALYST && !notBlank(r.employeeId)) {
-      this.failureMessage = 'employeeId is required for ANALYST registration';
+    if (!this.validateTraderRules(r)) {
       return false;
     }
 
-    if (r.brokerAffiliation === true && !(notBlank(r.brokerFirmName) && notBlank(r.brokerAffiliationDetails))) {
-      this.failureMessage = 'Broker firm name and affiliation details are required when broker affiliation is true';
-      return false;
-    }
+    return this.validateAnalystRules(r) && this.validateAffiliationRules(r);
+  }
 
-    if (r.controlPerson === true && !(notBlank(r.controlCompanyName) && notBlank(r.controlCompanyRole))) {
-      this.failureMessage = 'Control company name and role are required when control person is true';
-      return false;
+  private validateAnalystRules(r: RegisterRequestDto): boolean {
+    if (r.userRole !== UserRole.ANALYST) {
+      return true;
     }
+    return notBlank(r.employeeId) || this.fail('employeeId is required for ANALYST registration');
+  }
 
-    if (
-      r.otherBeneficialOwner === true &&
-      !(notBlank(r.beneficialOwnerName) && notBlank(r.beneficialOwnerRelationship))
-    ) {
-      this.failureMessage = 'Beneficial owner name and relationship are required when other beneficial owner is true';
-      return false;
+  private validateAffiliationRules(r: RegisterRequestDto): boolean {
+    const affiliationRules: Array<{ enabled: boolean; valid: boolean; message: string }> = [
+      {
+        enabled: r.brokerAffiliation === true,
+        valid: this.hasPair(r.brokerFirmName, r.brokerAffiliationDetails),
+        message: 'Broker firm name and affiliation details are required when broker affiliation is true',
+      },
+      {
+        enabled: r.controlPerson === true,
+        valid: this.hasPair(r.controlCompanyName, r.controlCompanyRole),
+        message: 'Control company name and role are required when control person is true',
+      },
+      {
+        enabled: r.otherBeneficialOwner === true,
+        valid: this.hasPair(r.beneficialOwnerName, r.beneficialOwnerRelationship),
+        message: 'Beneficial owner name and relationship are required when other beneficial owner is true',
+      },
+    ];
+    for (const rule of affiliationRules) {
+      if (rule.enabled && !rule.valid) {
+        return this.fail(rule.message);
+      }
     }
 
     return true;
   }
+
+  private validateTraderRules(r: RegisterRequestDto): boolean {
+    if (r.userRole !== UserRole.TRADER) {
+      return true;
+    }
+
+    if (!this.hasTraderIdentity(r)) {
+      return this.fail(
+        'firstName, lastName, dateOfBirth, phone, streetAddress, city, stateProvince, postalCode, country and citizenshipStatus are required for TRADER registration',
+      );
+    }
+
+    if (!this.hasTraderFinancials(r)) {
+      return this.fail(
+        'employmentStatus, annualIncome, netWorthBracket, riskProfile, liquidityPosition, accreditedInvestor and isPoliticallyExposedPerson are required for TRADER registration',
+      );
+    }
+
+    if (!this.hasPair(r.accountName, r.accountType)) {
+      return this.fail('accountName and accountType are required for TRADER registration');
+    }
+
+    const employed =
+      r.employmentStatus === EmploymentStatus.EMPLOYED || r.employmentStatus === EmploymentStatus.SELF_EMPLOYED;
+    if (employed && !this.hasPair(r.employerName, r.occupation)) {
+      return this.fail('Employer name and occupation are required for employed or self-employed status');
+    }
+
+    return true;
+  }
+
+  private hasTraderIdentity(r: RegisterRequestDto): boolean {
+    return (
+      notBlank(r.firstName) &&
+      notBlank(r.lastName) &&
+      r.dateOfBirth != null &&
+      notBlank(r.phone) &&
+      notBlank(r.streetAddress) &&
+      notBlank(r.city) &&
+      notBlank(r.stateProvince) &&
+      notBlank(r.postalCode) &&
+      notBlank(r.country) &&
+      r.citizenshipStatus != null
+    );
+  }
+
+  private hasTraderFinancials(r: RegisterRequestDto): boolean {
+    return (
+      r.employmentStatus != null &&
+      notBlank(r.annualIncome) &&
+      r.netWorthBracket != null &&
+      r.riskProfile != null &&
+      notBlank(r.liquidityPosition) &&
+      r.accreditedInvestor != null &&
+      r.politicallyExposedPerson != null
+    );
+  }
+
+  private hasPair(left?: string | null, right?: unknown): boolean {
+    return notBlank(left) && right != null;
+  }
+
+  private fail(message: string): boolean {
+    this.failureMessage = message;
+    return false;
+  }
+
 
   defaultMessage(): string {
     return this.failureMessage;

@@ -206,15 +206,13 @@
           <section class="panel trend-panel">
             <div class="panel-heading">
               <h2>Trading volume over time</h2>
-              <select
-                aria-label="Chart grouping"
-                [ngModel]="cadence()"
-                (ngModelChange)="cadence.set($event)"
+              <label
+                >Chart grouping<select [ngModel]="cadence()" (ngModelChange)="cadence.set($event)">
+                  @for (p of ['Daily', 'Weekly', 'Monthly', 'Yearly']; track p) {
+                    <option>{{ p }}</option>
+                  }
+                </select></label
               >
-                @for (p of ['Daily', 'Weekly', 'Monthly', 'Yearly']; track p) {
-                  <option>{{ p }}</option>
-                }
-              </select>
             </div>
             <app-insights-chart [points]="trend()" />
             <div class="chart-foot">
@@ -231,7 +229,6 @@
               <svg
                 class="donut"
                 [style.background]="totals().volume ? donut() : 'var(--line)'"
-                role="img"
                 aria-label="Volume split shown in the adjacent legend"
               >
                 <foreignObject width="100%" height="100%">
