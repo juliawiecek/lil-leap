@@ -529,7 +529,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         this.positions.set(positions);
 
         // Initialize buying power for new accounts from risk profile
-        let buyingPower = portfolioData.cash || 0;
+        let buyingPower = portfolioData.cash?.availableBalance || 0;
         const riskProfile = this.extractRiskProfileFromJWT();
         if (buyingPower === 0 && riskProfile) {
           buyingPower = this.getStartingCashForRiskProfile(riskProfile);
