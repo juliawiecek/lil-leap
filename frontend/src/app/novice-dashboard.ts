@@ -1,7 +1,6 @@
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
-import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
 import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
 import {
@@ -37,7 +36,7 @@ interface Quote {
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, OrderHistory],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -59,7 +58,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { label: 'Watchlist', icon: 'star' },
     { label: 'Portfolio', icon: 'chart' },
     { label: 'Orders', icon: 'orders' },
-    { label: 'Learn', icon: 'learn' },
     { label: 'Settings', icon: 'settings' },
   ];
   readonly query = signal('');

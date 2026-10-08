@@ -118,20 +118,41 @@ test('password visibility, recovery, and restored-page reload work through app a
   app.onPageShow({ persisted: true }); assert.equal(reload.mock.callCount(), 1);
 });
 
-test('canvas startup draws candles, responds to resize, reveals auth, and cleans body classes', async t => {
+test('canvas startup transitions directly to login without a centered logo phase', async t => {
   const calls = [];
   const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect'].map(name =>
     [name, (...args) => calls.push([name, ...args])]));
   t.mock.method(browser.HTMLCanvasElement.prototype, 'getContext', () => context);
   t.mock.method(browser, 'matchMedia', () => ({ matches: true }));
   const { fixture, app } = await setup(t);
+  assert.equal(fixture.nativeElement.querySelector('#brand-lockup'), null);
   animateFrame(performance.now() + 32);
   await new Promise(resolve => setTimeout(resolve, 5)); fixture.detectChanges();
   assert.equal(app.pageReady(), true); assert.ok(document.body.classList.contains('auth-phase'));
+  assert.equal(document.body.classList.contains('brand-phase'), false);
+  assert.ok(fixture.nativeElement.querySelector('#brand-lockup'));
   assert.ok(calls.some(([name]) => name === 'fillRect'));
   assert.ok(calls.every(call => call.slice(1).every(Number.isFinite)));
   assert.ok(app.volumeBars().length >= 34 && app.volumeBars().length <= 72);
   app.onResize(); assert.ok(calls.filter(([name]) => name === 'setTransform').length >= 2);
   fixture.destroy();
   assert.equal(document.body.classList.contains('auth-phase'), false);
+});
+
+test('opening candles finish morphing before the login form is revealed', async t => {
+  const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect'].map(name => [name, () => {}]));
+  t.mock.method(browser.HTMLCanvasElement.prototype, 'getContext', () => context);
+  t.mock.method(browser, 'matchMedia', () => ({ matches: false }));
+  const { fixture, app } = await setup(t);
+  app.reveal = 1;
+  const start = performance.now();
+  animateFrame(start + 32); fixture.detectChanges();
+  assert.ok(app.chartMorph > 0 && app.chartMorph < 1);
+  assert.equal(app.pageReady(), false);
+  assert.equal(fixture.nativeElement.querySelector('#brand-lockup'), null);
+  for (let frame = 2; frame <= 50; frame += 1) animateFrame(start + frame * 32);
+  fixture.detectChanges();
+  assert.equal(app.chartMorph, 1);
+  assert.equal(app.pageReady(), true);
+  assert.equal(document.body.classList.contains('brand-phase'), false);
 });

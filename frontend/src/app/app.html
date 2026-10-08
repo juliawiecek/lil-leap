@@ -1,20 +1,18 @@
-<div [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
+<div class="login-screen" [class.auth-visible]="pageReady() && !profileOpen()" [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
 <div class="market-grid" aria-hidden="true"></div>
   <div class="ambient-light" aria-hidden="true"></div>
   <div class="market-tape" aria-hidden="true">
     <div class="tape-track">
-      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      @for (copy of [0, 1]; track copy) {
+      <div class="tape-group">
       <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
       <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
       <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
       <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
-      <span>EUR/USD 1.1062</span><span class="divider">/</span>
       <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
-      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
-      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
-      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
-      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
       <span>EUR/USD 1.1062</span><span class="divider">/</span>
+      </div>
+      }
     </div>
   </div>
   <div class="volume-field" aria-hidden="true">
@@ -36,25 +34,30 @@
 
   @if (pageReady() && !profileOpen()) {
     <div class="signin-stock-background" aria-hidden="true">
-      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" focusable="false">
+      <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
         <defs>
           <linearGradient id="signin-chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#78a85f" stop-opacity="0.18" />
+            <stop offset="0%" stop-color="#78a85f" stop-opacity="0.06" />
             <stop offset="100%" stop-color="#78a85f" stop-opacity="0" />
           </linearGradient>
-          <pattern id="signin-chart-grid" width="80" height="80" patternUnits="userSpaceOnUse">
-            <path d="M80 0H0V80" fill="none" stroke="#a6bd98" stroke-opacity="0.09" />
+          <pattern id="signin-chart-grid" width="52" height="26" patternUnits="userSpaceOnUse">
+            <path d="M52 0H0V26" fill="none" stroke="#ffffff" stroke-opacity="0.035" />
           </pattern>
         </defs>
-        <rect width="1440" height="900" fill="url(#signin-chart-grid)" />
-        <path d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51 V900 H-40Z" fill="url(#signin-chart-fill)" />
-        <path class="signin-stock-line" d="M-40 770 20 742 60 759 105 701 145 717 190 653 230 674 275 635 315 659 355 590 390 618 430 559 465 574 510 520 550 550 595 476 630 493 675 423 715 458 755 395 795 416 835 342 875 371 920 304 965 326 1010 267 1050 290 1090 213 1130 243 1170 179 1215 202 1260 139 1300 162 1345 100 1390 119 1480 51" />
+        <rect width="420" height="500" fill="url(#signin-chart-grid)" />
+        <g class="login-candles">
+          @for (candle of loginCandles; track $index) {
+            <g [attr.opacity]="candle.opacity" [class.falling]="candle.falling">
+              <path [attr.d]="'M' + candle.x + ' ' + candle.high + 'V' + candle.low" />
+              <rect [attr.x]="candle.x - 1.8" [attr.y]="candle.top" width="3.6" [attr.height]="candle.height" />
+            </g>
+          }
+        </g>
       </svg>
     </div>
   }
 
-  <div class="transition-beam" aria-hidden="true"></div>
-
+  @if (pageReady()) {
   <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
     <div class="brand-mark" aria-hidden="true">
       <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -66,6 +69,7 @@
       <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
     </div>
   </div>
+  }
   <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
@@ -85,12 +89,7 @@
           Your next move starts here.
         </p>
 
-        <div class="auth-tabs" role="tablist" aria-label="Account access">
-          <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
-          <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
-        </div>
-
-        <form #authForm novalidate (submit)="onSubmit($event, authForm)">
+        <form id="auth-form" #authForm novalidate (submit)="onSubmit($event, authForm)">
           
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
@@ -133,11 +132,15 @@
               </ul>
             </div>
           }
-          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Continue securely' }}</button>
+          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Sign in' }}</button>
           
           
           <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
         </form>
+        <div class="auth-alternative">
+          <div class="auth-divider"><span>or</span></div>
+          <button class="secondary-action" type="button" (click)="setAuthMode(authMode() === 'signin' ? 'signup' : 'signin')">{{ authMode() === 'signin' ? 'Create account' : 'Back to sign in' }}</button>
+        </div>
       </section>
     </div>
 

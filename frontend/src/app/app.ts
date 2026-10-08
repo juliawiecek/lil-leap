@@ -53,12 +53,28 @@ export class App implements AfterViewInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private readonly candleStep = 30;
-  private readonly riseColor = '#78a85f';
-  private readonly neutralColor = '#eeeeee';
+  private readonly riseColor = '#87bb66';
+  private readonly neutralColor = '#c4cbbf';
 
   readonly authMode = signal<AuthMode>('signin');
   readonly pageReady = signal(false);
+  // Decorative login chart; independent of the opening animation and market data.
+  readonly loginCandles = Array.from({ length: 44 }, (_, index) => {
+    const progress = index / 43;
+    const priceAt = (step: number) => 440 - 340 * (step / 43)
+      + Math.sin(step * 0.63) * 35 + Math.sin(step * 1.81) * 12;
+    const close = priceAt(index);
+    const open = priceAt(index - 1);
+    return {
+      x: 10 + index * 9.2,
+      high: Math.min(open, close) - 6 - (index * 7 % 17),
+      low: Math.max(open, close) + 5 + (index * 11 % 14),
+      top: Math.min(open, close),
+      height: Math.max(3, Math.abs(open - close)),
+      falling: open < close,
+      opacity: (0.15 + (Math.sin(index * 2.41 + 0.8) + 1) * 0.3) * (0.65 + progress * 0.35),
+    };
+  });
   readonly profileOpen = signal(false);
   readonly dashboardOpen = signal(false);
   readonly traderLevel = signal<Experience>('NOVICE');
@@ -122,10 +138,9 @@ export class App implements AfterViewInit, OnDestroy {
   private dpr = 1;
   private candles: Candle[] = [];
   private reveal = this.reduceMotion ? 1 : 0.025;
+  private chartMorph = 0;
   private lastFrameTime = performance.now();
-  private brandStarted = false;
   private randomSeed = 918273;
-  private brandTimer?: ReturnType<typeof setTimeout>;
   private focusTimer?: ReturnType<typeof setTimeout>;
   private animationFrameId = 0;
 
@@ -140,7 +155,6 @@ export class App implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationFrameId);
-    if (this.brandTimer) clearTimeout(this.brandTimer);
     if (this.focusTimer) clearTimeout(this.focusTimer);
     this.renderer.removeClass(document.body, 'brand-phase');
     this.renderer.removeClass(document.body, 'auth-phase');
@@ -292,18 +306,7 @@ export class App implements AfterViewInit, OnDestroy {
   private showAuthPage(): void {
     if (this.pageReady()) return;
     this.pageReady.set(true);
-    this.renderer.addClass(document.body, 'brand-phase');
     this.renderer.addClass(document.body, 'auth-phase');
-  }
-
-  private beginBrandTransition(): void {
-    if (this.brandStarted) return;
-    this.brandStarted = true;
-    this.renderer.addClass(document.body, 'brand-phase');
-    this.brandTimer = setTimeout(
-      () => this.showAuthPage(),
-      this.reduceMotion ? 0 : 1650,
-    );
   }
 
   private resizeChart(): void {
@@ -342,11 +345,9 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private seedChart(): void {
-    const sidePadding = Math.max(24, this.width * 0.04);
-    const total = Math.floor((this.width - sidePadding * 2) / this.candleStep) + 1;
+    const total = this.loginCandles.length;
     const anchors = [
-      0.08, 0.26, 0.17, 0.4, 0.29, 0.53, 0.41, 0.66, 0.53, 0.77, 0.65, 0.87,
-      0.77, 0.93,
+      0.08, 0.25, 0.17, 0.40, 0.29, 0.62, 0.45, 0.86, 0.60, 0.87,
     ];
 
     this.randomSeed = 918273;
@@ -368,9 +369,9 @@ export class App implements AfterViewInit, OnDestroy {
         0.93,
       );
 
-      if (Math.abs(close - open) < 0.05) {
+      if (Math.abs(close - open) < 0.035) {
         const direction = Math.sign(target - open) || (this.random() > 0.5 ? 1 : -1);
-        close = this.clamp(open + direction * (0.05 + this.random() * 0.025), 0.07, 0.93);
+        close = this.clamp(open + direction * (0.035 + this.random() * 0.025), 0.07, 0.93);
       }
 
       const volatility = 0.03 + Math.abs(end - start) * 0.1;
@@ -381,9 +382,13 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private priceY(price: number): number {
-    const chartHeight = Math.min(this.height * 0.78, 740);
-    const top = (this.height - chartHeight) / 2;
+    const chartHeight = Math.min(this.height * 0.63, 660);
+    const top = this.height * 0.22;
     return top + (1 - price) * chartHeight;
+  }
+
+  private get candleStep(): number {
+    return (this.width * 0.8 - Math.max(24, this.width * 0.035)) / (this.loginCandles.length - 1);
   }
 
   private drawCandle(candle: Candle, x: number, progress = 1, opacity = 1): void {
@@ -398,7 +403,7 @@ export class App implements AfterViewInit, OnDestroy {
       Math.min(candle.open, animatedClose) -
       (Math.min(candle.open, candle.close) - candle.low) * progress;
     const color = animatedClose >= candle.open ? this.riseColor : this.neutralColor;
-    const bodyWidth = Math.max(5, this.candleStep * 0.22);
+    const bodyWidth = Math.max(2, Math.min(10, this.candleStep * 0.32));
     const openY = this.priceY(candle.open);
     const closeY = this.priceY(animatedClose);
     const highY = this.priceY(animatedHigh);
@@ -413,8 +418,18 @@ export class App implements AfterViewInit, OnDestroy {
     context.moveTo(x, highY);
     context.lineTo(x, lowY);
     context.stroke();
+    const rising = animatedClose >= candle.open;
+    const highlighted = rising && Math.floor(x / this.candleStep) % 6 === 2;
+    context.shadowColor = rising ? 'rgba(125, 180, 90, 0.3)' : 'transparent';
+    context.shadowBlur = highlighted ? 5 : 0;
     context.fillStyle = color;
     context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+    if (highlighted) {
+      context.fillStyle = '#aed08e';
+      context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.min(3, bodyHeight));
+    }
+    context.shadowBlur = 0;
+    context.shadowColor = 'transparent';
     context.globalAlpha = 1;
   }
 
@@ -424,10 +439,14 @@ export class App implements AfterViewInit, OnDestroy {
 
     context.clearRect(0, 0, this.width, this.height);
     context.shadowColor = 'transparent';
+    if (this.chartMorph > 0) {
+      this.drawChartMorph();
+      return;
+    }
     const revealed = this.candles.length * this.reveal;
     const fullyVisible = Math.floor(revealed);
     const partialProgress = revealed - fullyVisible;
-    const startX = Math.max(24, this.width * 0.04);
+    const startX = Math.max(24, this.width * 0.035);
 
     for (let index = 0; index < fullyVisible; index += 1) {
       const x = startX + index * this.candleStep;
@@ -441,16 +460,54 @@ export class App implements AfterViewInit, OnDestroy {
     }
   }
 
+  private drawChartMorph(): void {
+    const context = this.context;
+    if (!context) return;
+    // Smoothstep settles with zero velocity at both ends. The final geometry
+    // matches the login SVG, so fading between the renderers does not jump.
+    const t = this.chartMorph ** 2 * (3 - 2 * this.chartMorph);
+    const mix = (from: number, to: number) => from + (to - from) * t;
+    const mobile = this.width <= 900;
+    const left = mobile ? 5 : 10;
+    const scaleX = (mobile ? this.width - 10 : (this.width - 20) * 0.6) / 420;
+    const scaleY = (mobile ? 340 : this.height - 49) / 500;
+    const startX = Math.max(24, this.width * 0.035);
+    const introWidth = Math.max(2, Math.min(10, this.candleStep * 0.32));
+    for (let index = 0; index < this.candles.length; index += 1) {
+      const candle = this.candles[index];
+      const target = this.loginCandles[index];
+      const x = mix(startX + index * this.candleStep, left + target.x * scaleX);
+      const top = mix(Math.min(this.priceY(candle.open), this.priceY(candle.close)), 39 + target.top * scaleY);
+      const height = mix(Math.max(8, Math.abs(this.priceY(candle.close) - this.priceY(candle.open))), target.height * scaleY);
+      const width = mix(introWidth, 3.6 * scaleX);
+      const fromColor = candle.close >= candle.open ? [135, 187, 102] : [196, 203, 191];
+      const toColor = target.falling ? [75, 91, 66] : [127, 164, 89];
+      const color = `rgb(${fromColor.map((value, channel) => Math.round(mix(value, toColor[channel]))).join(',')})`;
+      context.globalAlpha = mix(this.clamp((startX + index * this.candleStep) / 90, 0.18, 1), target.opacity);
+      context.strokeStyle = color;
+      context.lineWidth = mix(1, 0.4 * scaleX);
+      context.beginPath();
+      context.moveTo(x, mix(this.priceY(candle.high), 39 + target.high * scaleY));
+      context.lineTo(x, mix(this.priceY(candle.low), 39 + target.low * scaleY));
+      context.stroke();
+      context.fillStyle = color;
+      context.fillRect(x - width / 2, top, width, height);
+    }
+    context.globalAlpha = 1;
+  }
+
   private animate(now: number): void {
     const delta = Math.min(now - this.lastFrameTime, 32);
     this.lastFrameTime = now;
 
     if (this.reveal < 1) {
       this.reveal = Math.min(1, this.reveal + delta / 2500);
+    } else {
+      this.chartMorph = this.reduceMotion ? 1 : Math.min(1, this.chartMorph + delta / 1500);
     }
 
-    if (!this.brandStarted && this.reveal >= 0.68) {
-      this.beginBrandTransition();
+    if (!this.pageReady() && this.chartMorph >= 1) {
+      this.showAuthPage();
     }
 
     this.drawChart();
