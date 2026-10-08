@@ -275,9 +275,12 @@
                             +{{ holding.today | currency
                             }}<span>+{{ holding.change | number: '1.2-2' }}%</span>
                           </td>
-                          <td class="positive">
-                            +{{ holding.total | currency
-                            }}<span>+{{ holding.totalPercent | number: '1.2-2' }}%</span>
+                          <td [class.positive]="holding.total >= 0" [class.negative]="holding.total < 0">
+                            {{ holding.total >= 0 ? '+' : '' }}{{ holding.total | currency
+                            }}<span
+                              >{{ holding.totalPercent >= 0 ? '+' : ''
+                              }}{{ holding.totalPercent | number: '1.2-2' }}%</span
+                            >
                           </td>
                           <td>
                             <button
@@ -528,6 +531,14 @@
       </button>
     </div>
     <form (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+      <label for="novice-stock">Stock</label
+      ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
+        @for (q of tradableQuotes(); track q.symbol) {
+          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol">
+            {{ q.symbol }} · {{ q.name }}
+          </option>
+        }
+      </select>
       <div class="side-picker">
         @for (action of ['Buy', 'Sell']; track action) {
           <button

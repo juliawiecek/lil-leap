@@ -1,10 +1,18 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
 import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import {
+  FINAL_ORDER_STATUSES,
+  ORDER_TRACK_INTERVAL_MS,
+  ORDER_TRACK_LIMIT_MS,
+  OrderHistoryClient,
+  OrderHistoryRow,
+} from './order-history-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 
 interface Quote {
@@ -17,6 +25,8 @@ interface Quote {
 }
 interface Position {
   symbol: string;
+  /** Latest bid, or average cost when no quote is available. */
+  price: number;
   quantity: number;
   cost: number;
   value: number;
@@ -24,18 +34,17 @@ interface Position {
   total: number;
   weight: number;
 }
+/** One row of the Orders/Executions tabs, built from the backend's order history. */
 interface Order {
-  id: number;
+  id: string;
   time: string;
   symbol: string;
   side: string;
   quantity: number;
-  price: number;
+  /** Fill price; null until the order fills. */
+  price: number | null;
   status: string;
   type: string;
-  tif: string;
-  takeProfit?: number;
-  stopLoss?: number;
 }
 interface NewsItem {
   symbol: string;
@@ -50,8 +59,14 @@ interface NewsItem {
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
-export class AdvancedDashboard implements OnInit {
+export class AdvancedDashboard implements OnInit, OnDestroy {
   orderSubmissionClient: OrderSubmissionClient;
+  orderHistoryClient: OrderHistoryClient;
+  portfolioClient: PortfolioClient;
+  #trackTimer: ReturnType<typeof setTimeout> | undefined;
+  #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #portfolio: Portfolio = { cash: 0, holdings: [] };
+  #bids = new Map<string, number>();
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
@@ -112,55 +127,13 @@ export class AdvancedDashboard implements OnInit {
           : true,
     ),
   );
-  readonly positions = signal<Position[]>([
-    {
-      symbol: 'AAPL',
-      quantity: 250,
-      cost: 142.2,
-      value: 44140,
-      day: 1925,
-      total: 8590,
-      weight: 15.5,
-    },
-    {
-      symbol: 'NVDA',
-      quantity: 120,
-      cost: 640.18,
-      value: 107174.4,
-      day: 2944.32,
-      total: 30352.8,
-      weight: 37.7,
-    },
-    {
-      symbol: 'MSFT',
-      quantity: 80,
-      cost: 390.14,
-      value: 33944.8,
-      day: 192.8,
-      total: 2733.6,
-      weight: 11.9,
-    },
-    {
-      symbol: 'AMD',
-      quantity: 200,
-      cost: 118.05,
-      value: 32428,
-      day: 1010,
-      total: 8817,
-      weight: 11.4,
-    },
-    {
-      symbol: 'TSLA',
-      quantity: 60,
-      cost: 178.45,
-      value: 8532,
-      day: -107.4,
-      total: -2175,
-      weight: 3,
-    },
-  ]);
-  readonly buyingPower = signal(48230.12);
-  readonly portfolio = signal(284650.17);
+  /** Positions, cash and total value, loaded from the backend and reloaded after each fill. */
+  readonly positions = signal<Position[]>([]);
+  readonly buyingPower = signal(0);
+  readonly portfolio = signal(0);
+  /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
+  readonly totalReturn = signal(0);
+  readonly totalReturnPercent = signal(0);
   readonly markets = [
     { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
     { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
@@ -179,41 +152,8 @@ export class AdvancedDashboard implements OnInit {
     { name: 'Utilities', change: -0.42 },
     { name: 'Real Estate', change: -0.58 },
   ];
-  readonly orders = signal<Order[]>([
-    {
-      id: 4,
-      time: '09:41:32',
-      symbol: 'AAPL',
-      side: 'Buy',
-      quantity: 100,
-      price: 176.12,
-      status: 'Filled',
-      type: 'Limit',
-      tif: 'Day',
-    },
-    {
-      id: 3,
-      time: '09:38:17',
-      symbol: 'NVDA',
-      side: 'Sell',
-      quantity: 50,
-      price: 892.4,
-      status: 'Filled',
-      type: 'Market',
-      tif: 'Day',
-    },
-    {
-      id: 2,
-      time: '09:35:04',
-      symbol: 'MSFT',
-      side: 'Buy',
-      quantity: 75,
-      price: 423.1,
-      status: 'Filled',
-      type: 'Market',
-      tif: 'Day',
-    },
-  ]);
+  /** The signed-in user's orders, newest first, loaded from the backend. */
+  readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
   readonly news: NewsItem[] = [
     { symbol: 'AAPL', time: '2:45 PM', title: 'Apple releases new M4 chip', source: 'Reuters' },
@@ -381,6 +321,11 @@ export class AdvancedDashboard implements OnInit {
         this.message.set('No active account selected.');
         return;
       }
+      // Some listed quotes have no backend instrument yet; the server would reject them.
+      if (!this.instruments().some((i) => i.instrumentId === quote.instrumentId)) {
+        this.message.set(`${quote.symbol} is not available to trade yet.`);
+        return;
+      }
       const response = await this.orderSubmissionClient.submit({
         accountId: account.account_id,
         instrumentId: quote.instrumentId,
@@ -397,6 +342,7 @@ export class AdvancedDashboard implements OnInit {
       // Do NOT update local positions, buyingPower, or cash - let the backend and scheduler handle it
       // Close the modal after a brief delay so user sees the message
       setTimeout(() => this.closeModal(), 1500);
+      void this.trackOrder(response.orderId);
     } catch (error) {
       const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
       this.message.set(msg);
@@ -404,10 +350,88 @@ export class AdvancedDashboard implements OnInit {
       this.submitting.set(false);
     }
   }
-  cancelOrder(id: number): void {
-    this.orders.update((list) =>
-      list.map((o) => (o.id === id && o.status === 'Open' ? { ...o, status: 'Canceled' } : o)),
+  /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
+  async refreshOrders(): Promise<boolean> {
+    try {
+      const rows = await this.orderHistoryClient.list();
+      this.orders.set(rows.map(toOrder));
+      return true;
+    } catch (error) {
+      this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
+      return false;
+    }
+  }
+  /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
+  async refreshPortfolio(): Promise<void> {
+    try {
+      this.applyPortfolio(await this.portfolioClient.load());
+    } catch (error) {
+      this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
+      return;
+    }
+    await this.refreshPrices();
+    this.#schedulePrices();
+  }
+  /** Shows a loaded portfolio, valued at the latest bids already known. */
+  applyPortfolio(portfolio: Portfolio): void {
+    this.#portfolio = portfolio;
+    this.#render();
+  }
+  /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
+  async refreshPrices(): Promise<void> {
+    const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
+    if (!ids.length) return;
+    try {
+      const bids = await this.portfolioClient.latestBids(ids);
+      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      this.#render();
+    } catch {
+      // Keep showing the last known values; the next tick retries.
+    }
+  }
+  #schedulePrices(): void {
+    clearTimeout(this.#priceTimer);
+    if (!this.#portfolio.holdings.length) return;
+    this.#priceTimer = setTimeout(async () => {
+      await this.refreshPrices();
+      this.#schedulePrices();
+    }, QUOTE_REFRESH_MS);
+  }
+  #render(): void {
+    const valuation = valuePortfolio(this.#portfolio, this.#bids);
+    this.buyingPower.set(valuation.cash);
+    this.portfolio.set(valuation.total);
+    this.totalReturn.set(valuation.gain);
+    this.totalReturnPercent.set(valuation.gainPercent);
+    this.positions.set(
+      valuation.holdings.map((h) => ({
+        symbol: h.symbol,
+        price: h.price,
+        quantity: h.quantity,
+        cost: h.averageCost,
+        value: h.value,
+        day: 0,
+        total: h.gain,
+        weight: valuation.total ? Math.round((h.value / valuation.total) * 1000) / 10 : 0,
+      })),
     );
+  }
+  /**
+   * Re-reads orders every few seconds until the submitted one is filled or rejected,
+   * so its status moves from Submitted to Accepted to Filled without a page refresh.
+   */
+  async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
+    clearTimeout(this.#trackTimer);
+    if (!(await this.refreshOrders())) return;
+    const order = this.orders().find((o) => o.id === orderId);
+    if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
+      // Reload balances first so a load error never replaces the fill message.
+      if (order.status === 'Filled') await this.refreshPortfolio();
+      this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
+      return;
+    }
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
+    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   createAlert(): void {
     const price = Number(this.alertPrice());
@@ -420,9 +444,18 @@ export class AdvancedDashboard implements OnInit {
   }
   constructor(private auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth);
+    this.portfolioClient = new PortfolioClient(this.auth);
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.#trackTimer);
+    clearTimeout(this.#priceTimer);
   }
 
   async ngOnInit(): Promise<void> {
+    void this.refreshOrders();
+    void this.refreshPortfolio();
     try {
       this.loadingAccounts.set(true);
       const accountsData = await this.orderSubmissionClient.getAccounts();
@@ -454,4 +487,22 @@ export class AdvancedDashboard implements OnInit {
       this.loadingInstruments.set(false);
     }
   }
+}
+
+/** Maps a backend order-history row onto a dashboard row ("FILLED" → "Filled", "BUY" → "Buy"). */
+function toOrder(row: OrderHistoryRow): Order {
+  return {
+    id: row.orderId,
+    time: new Date(row.submittedAt).toLocaleTimeString('en-US', { hour12: false }),
+    symbol: row.symbol,
+    side: titleCase(row.side),
+    quantity: row.quantity,
+    price: row.fillPrice,
+    status: titleCase(row.status),
+    type: 'Market',
+  };
+}
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }

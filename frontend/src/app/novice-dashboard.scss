@@ -1088,7 +1088,8 @@ th {
   display: block;
   margin: 12px 0 8px;
 }
-.detail-dialog input {
+.detail-dialog input,
+.detail-dialog select {
   width: 100%;
   padding: 12px;
   border: 1px solid #344039;
