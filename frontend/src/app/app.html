@@ -57,6 +57,8 @@
     </div>
   }
 
+  <div class="transition-beam" aria-hidden="true"></div>
+
   @if (pageReady()) {
   <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
     <div class="brand-mark" aria-hidden="true">
@@ -70,7 +72,7 @@
     </div>
   </div>
   }
-  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>
@@ -89,8 +91,13 @@
           Your next move starts here.
         </p>
 
-        <form id="auth-form" #authForm novalidate (submit)="onSubmit($event, authForm)">
-          
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+          <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
+          <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
+        </div>
+
+        <form #authForm novalidate (submit)="onSubmit($event, authForm)">
+
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
             <div class="field-row"><label for="full-name">Full name</label></div>
@@ -132,9 +139,9 @@
               </ul>
             </div>
           }
-          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Sign in' }}</button>
-          
-          
+          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Continue securely' }}</button>
+
+
           <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
         </form>
         <div class="auth-alternative">
