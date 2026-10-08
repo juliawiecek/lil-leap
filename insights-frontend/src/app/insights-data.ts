@@ -53,6 +53,9 @@ const names = [
 ];
 export const clients: Client[] = names.map((name, i) => {
   const value = [86421.23, 7250, 186300, 43000, 6900, 245000, 52000, 18000][i % 8];
+  let segment = 'Over $100K';
+  if (value < 10000) segment = 'Under $10K';
+  else if (value <= 100000) segment = '$10K–$100K';
   return {
     id: `C-${104982 + i}`,
     name,
@@ -60,11 +63,18 @@ export const clients: Client[] = names.map((name, i) => {
     joined: i % 4 === 0 ? `2026-09-${String(i + 1).padStart(2, '0')}` : '2025-03-12',
     value,
     cash: Math.round(value * 0.145 * 100) / 100,
-    segment: value < 10000 ? 'Under $10K' : value <= 100000 ? '$10K–$100K' : 'Over $100K',
+    segment,
   };
 });
 export const trades: Trade[] = Array.from({ length: 240 }, (_, i) => {
   const item = instruments[i % 6];
+  let quantity = ((i % 9) + 1) * 10;
+  if (item.asset === 'Crypto') quantity = 0.05 * ((i % 5) + 1);
+  else if (item.asset === 'FX') quantity = 1000 * ((i % 7) + 1);
+  let status = 'Filled';
+  if (i % 17 === 0) status = 'Rejected';
+  else if (i % 19 === 0) status = 'Accepted';
+  else if (i % 23 === 0) status = 'Submitted';
   return {
     id: `ORD-${10078400 + i}`,
     clientId: clients[i % 12].id,
@@ -72,15 +82,9 @@ export const trades: Trade[] = Array.from({ length: 240 }, (_, i) => {
     asset: item.asset,
     market: item.market,
     side: i % 3 ? 'Buy' : 'Sell',
-    quantity:
-      item.asset === 'Crypto'
-        ? 0.05 * ((i % 5) + 1)
-        : item.asset === 'FX'
-          ? 1000 * ((i % 7) + 1)
-          : ((i % 9) + 1) * 10,
+    quantity,
     price: item.price,
-    status:
-      i % 17 === 0 ? 'Rejected' : i % 19 === 0 ? 'Accepted' : i % 23 === 0 ? 'Submitted' : 'Filled',
+    status,
     submitted: `2026-${i < 120 ? '08' : '09'}-${String((i % 22) + 1).padStart(2, '0')}T${String(9 + (i % 7)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:22Z`,
   };
 })
@@ -118,11 +122,8 @@ export function activityFor(id: string, start: string, end: string) {
   const fills = trades.filter(
     (t) => t.clientId === id && t.status === 'Filled' && t.submitted.slice(0, 10) <= end,
   );
-  return fills.some((t) => t.submitted.slice(0, 10) >= start)
-    ? 'Active'
-    : fills.length
-      ? 'Occasional'
-      : 'Dormant';
+  if (fills.some((t) => t.submitted.slice(0, 10) >= start)) return 'Active';
+  return fills.length ? 'Occasional' : 'Dormant';
 }
 export function buckets(rows: Trade[], cadence: string) {
   const result = new Map<string, number>();

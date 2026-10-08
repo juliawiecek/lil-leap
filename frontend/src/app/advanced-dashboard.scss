@@ -571,9 +571,6 @@ td .icon-button app-dashboard-icon {
 .positions-panel .table-scroll {
   max-height: 183px;
 }
-.cancel-order {
-  color: #e4bb73;
-}
 .balance-details {
   display: flex;
   gap: 30px;
@@ -603,13 +600,12 @@ td .icon-button app-dashboard-icon {
 }
 .watch-table th {
   height: 26px;
+  padding: 2px 6px;
 }
 .watch-table td {
   height: 29px;
   padding: 2px 6px;
-}
-.watch-table th {
-  padding: 2px 6px;
+  font-size: 10px;
 }
 .watch-table td:first-child,
 .watch-table th:first-child {
@@ -626,9 +622,6 @@ td .icon-button app-dashboard-icon {
 }
 .watch-table td:nth-child(4) {
   font-size: 9px;
-}
-.watch-table td {
-  font-size: 10px;
 }
 .watch-table svg {
   width: 66px;
@@ -800,19 +793,15 @@ td .icon-button app-dashboard-icon {
   position: relative;
   width: 90px;
   height: 90px;
+  padding: 11px;
   border-radius: 50%;
   background: conic-gradient(#24b874 0deg 296deg, #64cc98 296deg 316deg, #a8b6bd 316deg 360deg);
 }
-.exposure-ring::before {
-  content: '';
-  position: absolute;
-  inset: 11px;
+.exposure-ring div {
+  width: 100%;
+  height: 100%;
   background: #101b20;
   border-radius: 50%;
-}
-.exposure-ring > span {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

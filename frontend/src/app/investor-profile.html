@@ -77,7 +77,7 @@
           <button type="button" class="continue-button" [disabled]="submitting()" (click)="finish()">{{ submitting() ? 'Opening your account…' : 'Explore my workspace →' }}</button>
         </div>
       }
-      <p class="profile-status" role="status">{{ submitError() || status() }}</p>
+      <output class="profile-status">{{ submitError() || status() }}</output>
     </section>
   </div>
 </main>

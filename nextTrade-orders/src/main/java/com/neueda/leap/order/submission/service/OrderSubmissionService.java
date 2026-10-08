@@ -78,9 +78,7 @@ public class OrderSubmissionService {
         if (!instrument.tradable()) throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);
 
         sufficiency.validate(request, instrument.instrumentId());
-        var saved = repository.insert(request.accountId(), instrument.instrumentId(), symbol,
-                request.clientReference(), request.normalizedSide(), request.quantity(),
-                request.normalizedOrderType(), request.bufferPercent());
+        var saved = repository.insert(request, instrument.instrumentId(), symbol);
         return saved.map(order -> new OrderSubmissionResult(order, true))
                 .orElseGet(() -> repository.findByAccountAndClientReference(
                                 request.accountId(), request.clientReference())

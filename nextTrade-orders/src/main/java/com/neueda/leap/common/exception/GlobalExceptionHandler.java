@@ -25,9 +25,10 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** Creates the application-wide REST exception handler. */
-    public GlobalExceptionHandler() {
-    }
+    private static final String REQUEST_FAILED = "REQUEST_FAILED";
+    private static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    private static final String REQUEST_FAILED_MESSAGE = "The request could not be completed.";
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
@@ -71,7 +72,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
-                "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                "error", REQUEST_FAILED, "message", REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -86,12 +87,12 @@ public class GlobalExceptionHandler {
         // Preserve framework statuses such as 404/405/415 without their request-derived messages.
         if (exception instanceof ErrorResponse error) {
             return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(
-                    "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                    "error", REQUEST_FAILED, "message", REQUEST_FAILED_MESSAGE));
         }
         // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
         log.error("Request failed exceptionType={}", exception.getClass().getSimpleName());
         return ResponseEntity.internalServerError().body(Map.of(
-                "error", "INTERNAL_ERROR", "message", "The request could not be completed."));
+                "error", INTERNAL_ERROR, "message", REQUEST_FAILED_MESSAGE));
     }
 
     /**
