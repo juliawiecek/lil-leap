@@ -28,6 +28,15 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 - Insights (reporting): http://localhost:4201
 - API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
+## 📊 Code Coverage Status
+
+| Service | Coverage | Tests | Goal |
+|---|---|---|---|
+| Python Data Pipeline | **79.67%** | 72 ✓ | 85% |
+| Java Insights | **77.79%** | 320 ✓ | 85% |
+
+👉 **[View detailed coverage reports →](docs/coverage/README.md)**
+
 ## Project Structure
 
 ```text
