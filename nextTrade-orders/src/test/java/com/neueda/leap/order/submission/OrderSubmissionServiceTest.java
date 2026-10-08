@@ -52,6 +52,7 @@ class OrderSubmissionServiceTest {
         accountId = UUID.randomUUID();
         instrumentId = UUID.randomUUID();
         clientReference = UUID.randomUUID();
+        when(repository.findClientCountry(any())).thenReturn(Optional.of("US"));
     }
 
     @Test

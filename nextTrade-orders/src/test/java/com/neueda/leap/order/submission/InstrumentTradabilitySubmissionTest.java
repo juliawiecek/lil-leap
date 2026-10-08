@@ -62,10 +62,11 @@ class InstrumentTradabilitySubmissionTest {
 
     @BeforeEach
     void seed() {
-        for (String table : new String[]{"order_status_history", "fills", "orders", "holdings", "cash_balances", "quotes", "accounts", "instruments"}) {
+        for (String table : new String[]{"order_status_history", "fills", "orders", "holdings", "cash_balances", "quotes", "accounts", "instruments", "customer_profiles"}) {
             jdbc.update("DELETE FROM " + table);
         }
         jdbc.update("INSERT INTO accounts VALUES (?, ?, 'ACTIVE', TRUE, 'NOVICE', 0, 2)", account, user);
+        jdbc.update("INSERT INTO customer_profiles VALUES (?, 'US')", user);
         jdbc.update("INSERT INTO instruments VALUES (?, 'AAPL', 'Apple Inc.', 'COMMON_STOCK', 'NASDAQ', 'USD', 'Technology', TRUE, TRUE)", instrument);
         jdbc.update("INSERT INTO cash_balances VALUES (?, 'USD', 10000)", account);
         jdbc.update("INSERT INTO holdings VALUES (?, ?, 100)", account, instrument);
@@ -95,6 +96,25 @@ class InstrumentTradabilitySubmissionTest {
         submit(request("BUY", UUID.randomUUID())).andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error").value("INSTRUMENT_NOT_TRADABLE"))
                 .andExpect(jsonPath("$.message").value("The requested instrument is halted or restricted."));
+        assertNoTradeEffects(0);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"CA,NASDAQ", "NULL,NASDAQ", "US,LSE", "United States,CRYPTO"}, nullValues = "NULL")
+    void restrictedLocationIsRejectedWithoutTradeEffects(String country, String market) throws Exception {
+        jdbc.update("UPDATE customer_profiles SET country = ? WHERE user_id = ?", country, user);
+        jdbc.update("UPDATE instruments SET market_code = ? WHERE instrument_id = ?", market, instrument);
+        submit(request("BUY", UUID.randomUUID())).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_RESTRICTED"))
+                .andExpect(jsonPath("$.message").value("Trading this instrument is not permitted from the client's location."));
+        assertNoTradeEffects(0);
+    }
+
+    @Test
+    void clientWithoutProfileIsRejected() throws Exception {
+        jdbc.update("DELETE FROM customer_profiles");
+        submit(request("SELL", UUID.randomUUID())).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("LOCATION_RESTRICTED"));
         assertNoTradeEffects(0);
     }
 

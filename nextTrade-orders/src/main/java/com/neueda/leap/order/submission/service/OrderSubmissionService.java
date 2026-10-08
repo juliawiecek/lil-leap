@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission.service;
 
+import com.neueda.leap.order.rules.LocationPolicy;
 import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.instrument.dto.InstrumentResponse;
 import com.neueda.leap.instrument.service.InstrumentService;
@@ -72,6 +73,8 @@ public class OrderSubmissionService {
         String symbol = instrument.symbol();
         if (!instrument.enabled()) throw new OrderRuleException(INSTRUMENT_DISABLED);
         if (!instrument.tradable()) throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);
+        String country = repository.findClientCountry(request.accountId()).orElse(null);
+        if (!LocationPolicy.permits(country, instrument.marketCode())) throw new OrderRuleException(LOCATION_RESTRICTED);
 
         sufficiency.validate(request, instrument.instrumentId());
         var saved = repository.insert(request, instrument.instrumentId(), symbol);

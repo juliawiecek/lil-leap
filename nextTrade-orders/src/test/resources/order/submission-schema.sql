@@ -9,6 +9,7 @@ CREATE TABLE accounts (
     trading_enabled BOOLEAN, trader_level VARCHAR(20), min_balance_requirement NUMERIC(18,2),
     execution_buffer_percent NUMERIC(5,2)
 );
+CREATE TABLE customer_profiles (user_id UUID PRIMARY KEY, country VARCHAR(100));
 CREATE TABLE cash_balances (account_id UUID REFERENCES accounts, currency CHAR(3), balance NUMERIC(18,2));
 CREATE TABLE holdings (account_id UUID REFERENCES accounts, instrument_id UUID REFERENCES instruments, quantity BIGINT);
 CREATE TABLE quotes (
