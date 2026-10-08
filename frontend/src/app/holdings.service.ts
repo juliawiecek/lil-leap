@@ -13,18 +13,20 @@ export interface HoldingResponse {
   updatedAt: string;
 }
 
+export interface CashBalanceDetailResponse {
+  accountId: string;
+  currency: string;
+  settledBalance: number;
+  pendingBalance: number;
+  availableBalance: number;
+  totalBalance: number;
+  updatedAt: string;
+}
+
 export interface PortfolioSummaryResponse {
   accountId: string;
   holdings: HoldingResponse[];
-  cash: {
-    accountId: string;
-    currency: string;
-    settledBalance: number;
-    pendingBalance: number;
-    availableBalance: number;
-    totalBalance: number;
-    updatedAt: string;
-  };
+  cash: CashBalanceDetailResponse;
   totalPortfolioValue: number;
   timestamp: string;
 }
@@ -42,40 +44,43 @@ export interface PortfolioSummaryResponse {
 export class HoldingsService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly apiUrl = '/api/v1/clients';
+  private readonly apiUrl = '/api/v1';
+
+  /**
+   * Get list of holdings for authenticated user (scoped by JWT)
+   * No path parameter needed - server uses the JWT principal
+   * 
+   * @returns Observable<HoldingResponse[]>
+   */
+  getHoldings(): Observable<HoldingResponse[]> {
+    return this.http.get<HoldingResponse[]>(
+      `${this.apiUrl}/holdings`,
+      { headers: this.getHeaders() }
+    );
+  }
 
   /**
    * Get portfolio summary for the authenticated user
-   * Returns holdings, cash balance, and total portfolio value
-   * calculated from CURRENT market prices
+   * Gets the user's default account and returns holdings + cash + total value
+   * Note: This endpoint requires extracting the clientId from JWT, or we can
+   * implement an alternative endpoint on the backend
    * 
-   * @param clientId - user ID (typically from auth context)
    * @returns Observable<PortfolioSummaryResponse>
    */
   getPortfolioSummary(clientId: string): Observable<PortfolioSummaryResponse> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.auth.getToken()}`
-    });
-    
     return this.http.get<PortfolioSummaryResponse>(
-      `${this.apiUrl}/${clientId}/portfolio-summary`,
-      { headers }
+      `${this.apiUrl}/clients/${clientId}/portfolio-summary`,
+      { headers: this.getHeaders() }
     );
   }
 
   /**
-   * Get list of holdings for authenticated user
-   * @param clientId - user ID
-   * @returns Observable<HoldingResponse[]>
+   * Helper: Build auth headers with Bearer token
+   * Mimics the pattern used by QuoteService
    */
-  getHoldings(clientId: string): Observable<HoldingResponse[]> {
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.auth.getToken()}`
-    });
-    
-    return this.http.get<HoldingResponse[]>(
-      `${this.apiUrl}/${clientId}/holdings`,
-      { headers }
-    );
+  private getHeaders(): Record<string, string> {
+    const token = this.auth.accessToken;
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 }
+

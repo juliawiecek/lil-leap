@@ -109,6 +109,70 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { id: number; symbol: string; side: string; shares: number; price: number }[]
   >([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
+
+  /**
+   * BR-13 & TS-11.3: Dynamically calculated financial metrics from actual holdings
+   * These replace hardcoded values to show real account data
+   */
+  readonly todayReturn = computed(() => {
+    const holdings = this.holdings();
+    if (!holdings.length) return 0;
+    return holdings.reduce((sum, h) => sum + (h.today * h.shares), 0);
+  });
+
+  readonly todayReturnPercent = computed(() => {
+    const invested = this.invested();
+    const todayReturn = this.todayReturn();
+    if (invested === 0) return 0;
+    return (todayReturn / invested) * 100;
+  });
+
+  readonly totalReturn = computed(() => {
+    const holdings = this.holdings();
+    if (!holdings.length) return 0;
+    return holdings.reduce((sum, h) => sum + h.total, 0);
+  });
+
+  readonly totalReturnPercent = computed(() => {
+    const invested = this.invested();
+    const totalReturn = this.totalReturn();
+    if (invested === 0) return 0;
+    return (totalReturn / invested) * 100;
+  });
+
+  /**
+   * Asset allocation computed from actual holdings
+   * Shows only owned instruments, not all supported instruments
+   */
+  readonly assetAllocation = computed(() => {
+    const holdings = this.holdings();
+    const stocksValue = holdings.reduce((sum, h) => sum + h.value, 0);
+    const cashValue = this.buyingPower();
+    const totalValue = stocksValue + cashValue;
+
+    if (totalValue === 0) {
+      return {
+        total: 0,
+        stocksValue: 0,
+        stocksPercent: 0,
+        cashValue: 0,
+        cashPercent: 100, // Empty account shows 100% cash
+      };
+    }
+
+    return {
+      total: totalValue,
+      stocksValue,
+      stocksPercent: Math.round((stocksValue / totalValue) * 100),
+      cashValue,
+      cashPercent: Math.round((cashValue / totalValue) * 100),
+    };
+  });
+
+  readonly ownedSymbols = computed(() => {
+    return this.holdings().map(h => h.symbol);
+  });
+
   readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
     () =>
@@ -246,8 +310,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    * Sets up polling to refresh both every 5 seconds
    */
   ngOnInit(): void {
-    // Get client ID from auth service for portfolio API calls
-    const clientId = this.authService.getUserId();
+    // Extract client ID from JWT token
+    const clientId = this.extractClientIdFromJWT();
     
     // Fetch quotes immediately and every 5 seconds
     interval(5000)
@@ -273,25 +337,28 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       });
 
     // Fetch portfolio/holdings immediately and every 5 seconds (TS-11.3 AC1)
-    interval(5000)
-      .pipe(
-        startWith(0), // Fetch immediately on init
-        switchMap(() => this.fetchPortfolioData(clientId)),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (portfolioData) => {
-          // Update signals with real portfolio data
-          this.portfolioValue.set(portfolioData.totalPortfolioValue);
-          this.invested.set(portfolioData.investedValue);
-          this.buyingPower.set(portfolioData.availableBalance);
-          this.holdings.set(portfolioData.holdings);
-        },
-        error: (err) => {
-          console.error('Failed to fetch portfolio data:', err);
-          // Keep showing stale portfolio on error, don't break the UI
-        },
-      });
+    // Only if we have a valid client ID
+    if (clientId) {
+      interval(5000)
+        .pipe(
+          startWith(0), // Fetch immediately on init
+          switchMap(() => this.fetchPortfolioData(clientId)),
+          takeUntil(this.destroy$)
+        )
+        .subscribe({
+          next: (portfolioData) => {
+            // Update signals with real portfolio data
+            this.portfolioValue.set(portfolioData.totalPortfolioValue);
+            this.invested.set(portfolioData.investedValue);
+            this.buyingPower.set(portfolioData.availableBalance);
+            this.holdings.set(portfolioData.holdings);
+          },
+          error: (err) => {
+            console.error('Failed to fetch portfolio data:', err);
+            // Keep showing stale portfolio on error, don't break the UI
+          },
+        });
+    }
   }
 
   ngOnDestroy(): void {
@@ -398,5 +465,38 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   private findCurrentPrice(symbol: string): number {
     return this.quotes().find((q) => q.symbol === symbol)?.price || 0;
+  }
+
+  /**
+   * Helper: Extract client ID from JWT access token
+   * Parses the JWT payload to get the 'sub' claim (subject/user ID)
+   * Returns null if token is not available or invalid
+   */
+  private extractClientIdFromJWT(): string | null {
+    const token = this.authService.accessToken;
+    if (!token) {
+      console.warn('No access token available');
+      return null;
+    }
+
+    try {
+      // JWT format: header.payload.signature
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.warn('Invalid JWT format');
+        return null;
+      }
+
+      // Decode payload (add padding if needed for base64)
+      const payload = parts[1];
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = JSON.parse(atob(padded)) as { sub?: string; user_id?: string };
+
+      // Return the 'sub' claim (standard JWT subject) or 'user_id' claim
+      return decoded.sub || decoded.user_id || null;
+    } catch (error) {
+      console.warn('Failed to parse JWT token:', error);
+      return null;
+    }
   }
 }
