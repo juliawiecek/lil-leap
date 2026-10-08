@@ -417,7 +417,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.message.set('Enter a positive alert price.');
       return;
     }
-    this.alerts.update((list) => [...list, { symbol: this.selected().symbol, price }]);
+    const selected = this.selected();
+    if (!selected) {
+      this.message.set('Please select a symbol first.');
+      return;
+    }
+    this.alerts.update((list) => [...list, { symbol: selected.symbol, price }]);
     this.message.set('Price alert added.');
   }
   constructor(private auth: AuthService) {
