@@ -19,9 +19,6 @@ public class SensitiveLogConverter extends CompositeConverter<ILoggingEvent> {
     private static final Pattern FIELD_PREFIX = Pattern.compile(
             "(?i)([\"']?\\b[a-z_][a-z0-9_]*[\"']?\\s*[:=]\\s*)"
     );
-    private static final Pattern VALUE = Pattern.compile(
-            "\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|[^\r\n]+"
-    );
     private static final Pattern AUTH_SCHEME = Pattern.compile("(?i)\\b(Bearer|Basic)\\s+[A-Z0-9._~+/=-]+");
     private static final Pattern FIELD_NAME = Pattern.compile("(?i)[a-z_][a-z0-9_]*");
     private static final Set<String> SENSITIVE_FIELDS = Set.of(
@@ -39,21 +36,62 @@ public class SensitiveLogConverter extends CompositeConverter<ILoggingEvent> {
 
     private static String redactFields(String input) {
         Matcher fields = FIELD_PREFIX.matcher(input);
-        Matcher value = VALUE.matcher(input);
         StringBuilder masked = new StringBuilder();
         int offset = 0;
         while (fields.find()) {
-            value.region(fields.end(), input.length());
-            if (!value.lookingAt()) {
+            int valueEnd = findValueEnd(input, fields.end());
+            if (valueEnd <= fields.end()) {
                 continue;
             }
             if (isSensitiveField(fields.group(1))) {
                 masked.append(input, offset, fields.end()).append("[REDACTED]");
-                offset = value.end();
+                offset = valueEnd;
                 fields.region(offset, input.length());
             }
         }
         return masked.append(input, offset, input.length()).toString();
+    }
+
+    private static int findValueEnd(String input, int valueStart) {
+        if (valueStart >= input.length()) {
+            return valueStart;
+        }
+        char first = input.charAt(valueStart);
+        if (first == '"' || first == '\'') {
+            return findQuotedValueEnd(input, valueStart, first);
+        }
+        return findUnquotedValueEnd(input, valueStart);
+    }
+
+    private static int findQuotedValueEnd(String input, int valueStart, char quote) {
+        int index = valueStart + 1;
+        while (index < input.length()) {
+            char ch = input.charAt(index);
+            if (ch == '\\') {
+                index = Math.min(index + 2, input.length());
+                continue;
+            }
+            if (ch == quote) {
+                return index + 1;
+            }
+            if (ch == '\r' || ch == '\n') {
+                return index;
+            }
+            index++;
+        }
+        return input.length();
+    }
+
+    private static int findUnquotedValueEnd(String input, int valueStart) {
+        int index = valueStart;
+        while (index < input.length()) {
+            char ch = input.charAt(index);
+            if (ch == '\r' || ch == '\n' || ch == ',' || ch == '&') {
+                break;
+            }
+            index++;
+        }
+        return index;
     }
 
     private static boolean isSensitiveField(String prefix) {
