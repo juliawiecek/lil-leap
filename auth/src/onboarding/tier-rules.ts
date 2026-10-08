@@ -27,7 +27,7 @@ export interface TierAssignment {
 
 /** capacity = net_worth_floor + annual_income x 10%. A missing or unparseable income counts as 0. */
 export function investableCapacity(netWorthBracket: NetWorthBracket, annualIncome?: string | null): number {
-  const income = Number((annualIncome ?? '').replace(/,/g, ''));
+  const income = Number((annualIncome ?? '').replaceAll(',', ''));
   return NET_WORTH_FLOOR[netWorthBracket] + (Number.isFinite(income) ? income : 0) * INCOME_WEIGHT;
 }
 

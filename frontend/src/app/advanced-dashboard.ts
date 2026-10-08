@@ -455,8 +455,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#priceTimer);
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadTradingData();
+  ngOnInit(): void {
+    void this.loadTradingData();
   }
 
   async loadTradingData(): Promise<void> {

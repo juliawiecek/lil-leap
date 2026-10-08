@@ -123,7 +123,7 @@ export class AuthClient {
     const payload = accessToken?.split('.')[1];
     if (!payload) return;
     try {
-      const { exp, iat, trader_level } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      const { exp, iat, trader_level } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         exp?: unknown;
         iat?: unknown;
         trader_level?: unknown;

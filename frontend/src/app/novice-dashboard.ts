@@ -337,8 +337,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.portfolioValue.set(valuation.total);
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     void this.refreshPortfolio();
+    void this.loadTradingData();
+  }
+
+  private async loadTradingData(): Promise<void> {
     try {
       const accounts = await this.orderSubmissionClient.getAccounts();
       this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);

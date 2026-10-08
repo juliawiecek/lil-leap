@@ -113,7 +113,7 @@ export class PortfolioClient {
     );
     const bids = new Map<string, number>();
     results.forEach((result, i) => {
-      const bid = result.status === 'fulfilled' ? Number(result.value.bid) : NaN;
+      const bid = result.status === 'fulfilled' ? Number(result.value.bid) : Number.NaN;
       if (Number.isFinite(bid) && bid > 0) bids.set(instrumentIds[i], bid);
     });
     return bids;

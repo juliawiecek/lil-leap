@@ -234,7 +234,7 @@ test('a listed stock with no backend instrument is not submitted', async t => {
   client.submit = async () => { submitted++; throw new Error('should not submit'); };
   desk.orderSubmissionClient = client;
   desk.orderHistoryClient = new ScriptedOrderHistory([]);
-  await desk.ngOnInit();
+  await desk.loadTradingData();
   desk.choose(desk.quote('TSLA')); desk.orderType.set('Market'); desk.quantity.set('1');
   await desk.confirmOrder();
   assert.equal(submitted, 0);

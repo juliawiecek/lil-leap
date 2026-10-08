@@ -526,7 +526,7 @@
     </main>
   </div>
 </div>
-<dialog #detailDialog aria-labelledby="pro-dialog-title" (click)="backdrop($event)">
+<dialog #detailDialog aria-labelledby="pro-dialog-title" (click)="backdrop($event)" (keydown.escape)="closeModal()">
   <div class="dialog-heading">
     <h2 id="pro-dialog-title">
       {{
