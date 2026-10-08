@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from './entities/account.entity';
+import { FinancialProfile } from './entities/financial-profile.entity';
 import { TraderLevel } from './enums/trader-level.enum';
+import { RiskProfile } from './enums/risk-profile.enum';
 
 /** One row of v_trader_tier_eligibility; numeric columns arrive from pg as strings. */
 export interface TierEligibilityRow {
@@ -21,6 +23,8 @@ export class TierService {
   constructor(
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
+    @InjectRepository(FinancialProfile)
+    private readonly financialProfileRepository: Repository<FinancialProfile>,
   ) {}
 
   /** The tier for the JWT claim, or null for a user without an account (analysts). */
@@ -30,6 +34,14 @@ export class TierService {
       order: { createdAt: 'ASC' },
     });
     return account?.traderLevel ?? null;
+  }
+
+  /** The risk profile for the JWT claim, or null if not set. */
+  async findRiskProfile(userId: string): Promise<RiskProfile | null> {
+    const profile = await this.financialProfileRepository.findOne({
+      where: { user: { userId } },
+    });
+    return profile?.riskProfile ?? null;
   }
 
   /** Eligibility of the user's account against its tier's minimum balance, or null without an account. */

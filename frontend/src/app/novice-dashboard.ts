@@ -332,6 +332,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Extract client ID from JWT token
     const clientId = this.extractClientIdFromJWT();
+    const riskProfile = this.extractRiskProfileFromJWT();
     
     // Fetch quotes immediately and every 5 seconds
     interval(5000)
@@ -370,7 +371,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
             // Update signals with real portfolio data
             this.portfolioValue.set(portfolioData.totalPortfolioValue);
             this.invested.set(portfolioData.investedValue);
-            this.buyingPower.set(portfolioData.availableBalance);
+            
+            // If this is a new account with no buying power, initialize with risk-profile-based cash
+            let buyingPower = portfolioData.availableBalance;
+            if (buyingPower === 0 && riskProfile) {
+              buyingPower = this.getStartingCashForRiskProfile(riskProfile);
+            }
+            this.buyingPower.set(buyingPower);
             this.holdings.set(portfolioData.holdings);
           },
           error: (err) => {
@@ -517,6 +524,50 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     } catch (error) {
       console.warn('Failed to parse JWT token:', error);
       return null;
+    }
+  }
+
+  private extractRiskProfileFromJWT(): string | null {
+    const token = this.authService.accessToken;
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      const payload = parts[1];
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = JSON.parse(atob(padded)) as { risk_profile?: string };
+
+      return decoded.risk_profile || null;
+    } catch (error) {
+      console.warn('Failed to extract risk profile from JWT:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Maps risk profile to starting cash amount
+   * CONSERVATIVE: $30,000
+   * MODERATE: $100,000
+   * AGGRESSIVE: $40,000,000
+   */
+  private getStartingCashForRiskProfile(riskProfile: string | null): number {
+    if (!riskProfile) return 0;
+    
+    switch (riskProfile.toUpperCase()) {
+      case 'CONSERVATIVE':
+        return 30000;
+      case 'MODERATE':
+        return 100000;
+      case 'AGGRESSIVE':
+        return 40000000;
+      default:
+        return 0;
     }
   }
 }

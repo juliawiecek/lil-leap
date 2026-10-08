@@ -71,7 +71,8 @@ export class AuthController {
     const user = await this.userService.login(request);
 
     const traderLevel = await this.tierService.findTraderLevel(user.userId);
-    const accessToken = this.jwtService.issueToken(user.userId, user.email, traderLevel, user.userRole);
+    const riskProfile = await this.tierService.findRiskProfile(user.userId);
+    const accessToken = this.jwtService.issueToken(user.userId, user.email, traderLevel, user.userRole, riskProfile);
     const refreshToken = await this.refreshTokenService.issue(user);
 
     return new LoginResponseDto(accessToken, refreshToken, UserResponseDto.from(user));
@@ -92,7 +93,8 @@ export class AuthController {
 
     // Re-read rather than copied from the old token, so a tier change shows up on the next refresh.
     const traderLevel = await this.tierService.findTraderLevel(rotation.user.userId);
-    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, traderLevel, rotation.user.userRole);
+    const riskProfile = await this.tierService.findRiskProfile(rotation.user.userId);
+    const accessToken = this.jwtService.issueToken(rotation.user.userId, rotation.user.email, traderLevel, rotation.user.userRole, riskProfile);
 
     return new RefreshResponseDto(accessToken, rotation.newRawRefreshToken);
   }
