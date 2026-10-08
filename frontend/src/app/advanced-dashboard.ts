@@ -406,12 +406,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.submitting.set(false);
     }
   }
-      const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
-      this.message.set(msg);
-    } finally {
-      this.submitting.set(false);
-    }
-  }
   cancelOrder(id: number): void {
     this.orders.update((list) =>
       list.map((o) => (o.id === id && o.status === 'Open' ? { ...o, status: 'Canceled' } : o)),
