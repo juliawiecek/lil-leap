@@ -181,18 +181,18 @@
                     @for (p of positions(); track p.symbol) {
                       <tr>
                         <td>
-                          <button type="button" (click)="choose(quote(p.symbol))">
+                          <button type="button" (click)="quote(p.symbol) && choose(quote(p.symbol))">
                             <b>{{ p.symbol }}</b>
                           </button>
                         </td>
-                        <td class="muted">{{ quote(p.symbol).name }}</td>
-                        <td>{{ quote(p.symbol).price | number: '1.2-2' }}</td>
+                        <td class="muted">{{ quote(p.symbol)?.name }}</td>
+                        <td>{{ quote(p.symbol)?.price | number: '1.2-2' }}</td>
                         <td
-                          [class.gain]="quote(p.symbol).change > 0"
-                          [class.loss]="quote(p.symbol).change < 0"
+                          [class.gain]="(quote(p.symbol)?.change ?? 0) > 0"
+                          [class.loss]="(quote(p.symbol)?.change ?? 0) < 0"
                         >
-                          {{ quote(p.symbol).change > 0 ? '+' : ''
-                          }}{{ quote(p.symbol).change | number: '1.2-2' }}%
+                          {{ (quote(p.symbol)?.change ?? 0) > 0 ? '+' : ''
+                          }}{{ quote(p.symbol)?.change | number: '1.2-2' }}%
                         </td>
                         <td>{{ p.quantity }}</td>
                         <td>{{ p.cost | currency }}</td>
@@ -209,7 +209,7 @@
                             type="button"
                             class="icon-button"
                             [attr.aria-label]="'Trade ' + p.symbol"
-                            (click)="choose(quote(p.symbol)); ticketTab.set('Trade')"
+                            (click)="quote(p.symbol) && (choose(quote(p.symbol)), ticketTab.set('Trade'))"
                           >
                             <app-dashboard-icon name="more" />
                           </button>
@@ -591,7 +591,7 @@
     <button
       type="button"
       class="secondary-button"
-      (click)="choose(quote(news[article()].symbol)); closeModal()"
+      (click)="quote(news[article()]?.symbol) && (choose(quote(news[article()].symbol)), closeModal())"
     >
       View {{ news[article()].symbol }} chart
     </button>
