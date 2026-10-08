@@ -60,7 +60,6 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  readonly orderSubmissionClient: OrderSubmissionClient;
   orderSubmissionClient: OrderSubmissionClient;
   orderHistoryClient: OrderHistoryClient;
   portfolioClient: PortfolioClient;
@@ -298,6 +297,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   async confirmOrder(): Promise<void> {
     const error = this.validate();
+    const quote = this.selected();
     if (error) {
       this.message.set(error);
       this.closeModal();
@@ -308,11 +308,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.message.set('Loading accounts and instruments. Please wait.');
       return;
     }
+    const instrument = this.instruments().find((item) => item.symbol === quote.symbol);
+    if (!instrument) {
+      this.message.set(`${quote.symbol} is not available to trade yet.`);
+      return;
+    }
     // Prevent double-click while submission is in flight
     if (this.submitting()) return;
     this.submitting.set(true);
     try {
-      const quote = this.selected();
       const count = Number(this.quantity());
       const account = this.selectedAccount();
       if (!account) {
@@ -326,7 +330,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }
       const response = await this.orderSubmissionClient.submit({
         accountId: account.account_id,
-        instrumentId: quote.instrumentId,
+        instrumentId: instrument.instrumentId,
         side: this.side() === 'Buy' ? 'BUY' : 'SELL',
         quantity: count,
         orderType: 'MARKET',
@@ -451,8 +455,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#priceTimer);
   }
 
-  ngOnInit(): void {
-    void this.loadTradingData();
+  async ngOnInit(): Promise<void> {
+    await this.loadTradingData();
   }
 
   async loadTradingData(): Promise<void> {
