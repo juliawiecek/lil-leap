@@ -596,26 +596,5 @@ class TestIngestFrameEdgeCases:
         assert conn.rolled_back
 
 
-# ============================================================================
-# SERVICE_RUNNER TESTS - Lines 2-46 (100% untested module)
-# ============================================================================
-
-class TestServiceRunner:
-    """Test service_runner process management."""
-    
-    def test_main_returns_zero_on_normal_flow(self, monkeypatch):
-        """Test main() entry point basic functionality."""
-        # Note: Full integration testing of subprocess handling requires
-        # complex mocking of subprocess and signal handling
-        # This is a placeholder for the structure
-        pass
-    
-    def test_main_registers_signal_handlers(self, monkeypatch):
-        """Test main() registers SIGTERM and SIGINT handlers."""
-        # Verifying signal handler registration requires inspecting signal module state
-        # This would need integration testing
-        pass
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

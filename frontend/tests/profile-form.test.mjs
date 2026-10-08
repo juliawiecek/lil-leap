@@ -70,3 +70,84 @@ test('profile blocks missing or invalid personal information and advances valid 
   assert.equal(profile.values().country, 'United States');
   assert.equal(document.activeElement.id, 'profile-heading');
 });
+
+test('forward deletion removes the digit after a phone separator', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const phone = input(fixture, '#profile-phone', '3125550123');
+  phone.value = '312555-0123'; phone.setSelectionRange(3, 3);
+  phone.dispatchEvent(new browser.InputEvent('input', { bubbles: true, inputType: 'deleteContentForward' }));
+  assert.equal(fixture.componentInstance.values().phone, '312-550-123');
+});
+
+test('deleting an international prefix at the boundaries preserves digits', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const phone = input(fixture, '#profile-phone', '+442071234567');
+  phone.value = '442071234567'; phone.setSelectionRange(0, 0);
+  phone.dispatchEvent(new browser.InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+  assert.equal(fixture.componentInstance.values().phone, '442-071-2345');
+  input(fixture, '#profile-phone', '+442071234567');
+  phone.value = '442071234567'; phone.setSelectionRange(phone.value.length, phone.value.length);
+  phone.dispatchEvent(new browser.InputEvent('input', { bubbles: true, inputType: 'deleteContentForward' }));
+  assert.equal(fixture.componentInstance.values().phone, '442-071-2345');
+});
+
+test('domestic eleven-digit phones retain the leading country code', async t => {
+  const fixture = await render(t, InvestorProfile);
+  input(fixture, '#profile-phone', '13125550123');
+  assert.equal(fixture.componentInstance.values().phone, '1-312-555-0123');
+});
+
+test('validation rejects malformed money and phones with too few digits', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const profile = fixture.componentInstance;
+  const phone = fixture.nativeElement.querySelector('#profile-phone');
+  phone.value = '(12) 34';
+  submit(fixture);
+  assert.match(phone.validationMessage, /at least 7 digits/);
+  profile.goTo(1); fixture.detectChanges();
+  const salary = fixture.nativeElement.querySelector('#profile-annual_income');
+  salary.value = '12.345';
+  submit(fixture);
+  assert.match(salary.validationMessage, /up to two decimal places/);
+});
+
+test('formatting falls back to the end when a control has no caret position', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const profile = fixture.componentInstance;
+  for (const [id, raw, expected] of [
+    ['postal_code', '60a601', '60601'], ['phone', '3125550123', '312-555-0123'],
+    ['annual_income', '12345.6', '12,345.6'],
+  ]) {
+    const control = document.createElement('input');
+    control.value = raw;
+    Object.defineProperty(control, 'selectionStart', { configurable: true, get: () => null });
+    control.setSelectionRange = () => {};
+    profile.update({ id }, { target: control });
+    assert.equal(profile.values()[id], expected);
+  }
+});
+
+test('currency grouping preserves leading zeros, precision limits and the editing caret', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const profile = fixture.componentInstance;
+  profile.goTo(1); fixture.detectChanges();
+  const control = fixture.nativeElement.querySelector('#profile-annual_income');
+  for (const [raw, expected] of [
+    ['', ''], ['123', '123'], ['1234', '1,234'], ['123456', '123,456'],
+    ['000123', '000,123'], ['.5', '.5'], ['1234.', '1,234.'],
+    ['12345678901234567.987', '1,234,567,890,123,456.98'],
+  ]) {
+    control.value = raw;
+    control.setSelectionRange(raw.length, raw.length);
+    control.dispatchEvent(new browser.InputEvent('input', { bubbles: true }));
+    assert.equal(profile.values().annual_income, expected);
+    assert.equal(control.selectionStart, expected.length);
+    assert.equal(control.selectionEnd, expected.length);
+  }
+  control.value = '12345.67';
+  control.setSelectionRange(3, 3);
+  control.dispatchEvent(new browser.InputEvent('input', { bubbles: true }));
+  assert.equal(control.value, '12,345.67');
+  assert.equal(control.selectionStart, 4);
+  assert.equal(control.selectionEnd, 4);
+});

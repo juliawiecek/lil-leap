@@ -33,3 +33,77 @@ def test_ingestion_rolls_back_on_failure(monkeypatch):
     with pytest.raises(ValueError):
         ingest_frame(quotes, connection)
     assert connection.rolled_back
+
+
+def test_continuous_cli_signal_stops_ingestion(monkeypatch):
+    from src import quote_ingestor
+    import signal
+    handlers = {}
+    monkeypatch.setattr("sys.argv", ["quote_ingestor", "--continuous", "--seed", "12"])
+    monkeypatch.setenv("QUOTE_INTERVAL_SECONDS", "2.5")
+    monkeypatch.setattr(signal, "signal", lambda signum, handler: handlers.setdefault(signum, handler))
+    def run(interval, seed, stop):
+        assert (interval, seed) == (2.5, 12)
+        assert not stop()
+        handlers[signal.SIGINT](signal.SIGINT, None)
+        assert stop()
+        handlers[signal.SIGTERM](signal.SIGTERM, None)
+        assert stop()
+    monkeypatch.setattr(quote_ingestor, "run_continuous", run)
+    quote_ingestor.main()
+
+
+def test_run_once_reports_committed_batch_counts(monkeypatch, capsys):
+    from contextlib import nullcontext
+    from unittest.mock import Mock
+    from src import quote_ingestor as ingestor
+    connection = object()
+    quotes = frame()
+    generate = Mock(return_value=quotes)
+    ingest = Mock(return_value=(1, 0))
+    monkeypatch.setattr(ingestor, "generate_current", generate)
+    monkeypatch.setattr(ingestor, "connect", lambda: nullcontext(connection))
+    monkeypatch.setattr(ingestor, "ingest_frame", ingest)
+    assert ingestor.run_once(1, 42) == (1, 1, 0)
+    generate.assert_called_once_with(1, 42)
+    ingest.assert_called_once_with(quotes, connection)
+    assert capsys.readouterr().out == "Generated: 1\nInserted: 1\nSkipped: 0\nSymbols: 1\nSource: SYNTHETIC_GBM\n"
+
+
+def test_continuous_retries_then_advances_seed_and_respects_interval(monkeypatch):
+    from contextlib import nullcontext
+    from unittest.mock import Mock
+    from src import quote_ingestor as ingestor
+    generate = Mock(return_value=frame())
+    connect = Mock(side_effect=[ingestor.DatabaseUnavailableError("offline"), nullcontext(object()), nullcontext(object())])
+    monkeypatch.setattr(ingestor, "generate_current", generate)
+    monkeypatch.setattr(ingestor, "connect", connect)
+    monkeypatch.setattr(ingestor, "ingest_frame", Mock(return_value=(1, 0)))
+    monkeypatch.setattr(ingestor.time, "monotonic", Mock(side_effect=[0, 1, 3, 4, 10]))
+    sleeps = []
+    ingestor.run_continuous(5, 42, stop=lambda: len(sleeps) == 3, sleep=sleeps.append)
+    assert sleeps == [1, 3, 0]
+    assert [c.args for c in generate.call_args_list] == [(1, 42), (1, 42), (1, 43)]
+
+
+def test_continuous_stops_after_bounded_database_retries(monkeypatch):
+    from unittest.mock import Mock
+    from src import quote_ingestor as ingestor
+    monkeypatch.setattr(ingestor, "generate_current", Mock(return_value=frame()))
+    connect = Mock(side_effect=ingestor.DatabaseUnavailableError("offline"))
+    monkeypatch.setattr(ingestor, "connect", connect)
+    sleeps = []
+    with pytest.raises(ingestor.DatabaseUnavailableError, match="offline"):
+        ingestor.run_continuous(5, 42, sleep=sleeps.append)
+    assert sleeps == [1, 2, 4, 8, 16]
+    assert connect.call_count == 6
+
+
+def test_once_cli_passes_periods_and_seed(monkeypatch):
+    from unittest.mock import Mock
+    from src import quote_ingestor as ingestor
+    once = Mock()
+    monkeypatch.setattr(ingestor, "run_once", once)
+    monkeypatch.setattr("sys.argv", ["quote_ingestor", "--once", "--periods", "3", "--seed", "7"])
+    ingestor.main()
+    once.assert_called_once_with(3, 7)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clients, trades, filterTrades, summarize, buckets, csvCell } from '../src/app/insights-data.ts';
+import { clients, trades, filterTrades, summarize, buckets, csvCell, activityFor } from '../src/app/insights-data.ts';
 const filters={start:'2026-09-01',end:'2026-09-22',asset:'All',market:'All',segment:'All'};
 test('volume excludes nonfilled orders and reconciles across asset classes and chart groupings',()=>{
  const rows=filterTrades(trades,filters), total=summarize(rows);
@@ -26,4 +26,27 @@ test('CSV escapes quotes, commas, newlines and spreadsheet formulas',()=>{
  assert.equal(csvCell('a,"b"\nc'),'"a,""b""\nc"');
  assert.equal(csvCell('=1+1'),'"\'=1+1"');
  assert.equal(csvCell('@SUM(A1)'),'"\'@SUM(A1)"');
+});
+
+
+test('CSV handles absent, structured and scalar values', () => {
+  assert.equal(csvCell(null), '""');
+  assert.equal(csvCell(undefined), '""');
+  assert.equal(csvCell({ amount: 3 }), '"{""amount"":3}"');
+  assert.equal(csvCell(42), '"42"');
+  assert.equal(csvCell(false), '"false"');
+});
+
+test('segment filtering excludes trades whose client is unknown', () => {
+  const row = { ...trades[0], clientId: 'unknown', submitted: '2026-09-10T12:00:00Z' };
+  assert.deepEqual(filterTrades([row], { ...filters, segment: 'Under $10K' }), []);
+  assert.deepEqual(filterTrades([row], filters), [row]);
+});
+
+test('client activity distinguishes recent, past and absent fills', () => {
+  const fill = trades.find(row => row.status === 'Filled');
+  const date = fill.submitted.slice(0, 10);
+  assert.equal(activityFor(fill.clientId, date, date), 'Active');
+  assert.equal(activityFor(fill.clientId, '2027-01-01', '2027-01-31'), 'Occasional');
+  assert.equal(activityFor('unknown', date, date), 'Dormant');
 });
