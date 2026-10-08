@@ -195,24 +195,11 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong class="positive">{{
-                    showBalance()
-                      ? (todayReturn() | currency)
-                        + ' ('
-                        + (todayReturnPercent() | number: '1.2-2')
-                        + '%)'
-                      : '••••••'
-                  }}</strong>
+                  ><strong class="positive">{{ showBalance() ? todayReturnDisplay() : '••••••' }}</strong>
                 </div>
                 <div>
                   <span>Total return</span
-                  ><strong class="positive">{{
-                    showBalance()
-                      ? (totalReturn() | currency)
-                        + ' ('
-                        + (totalReturnPercent() | number: '1.2-2')
-                        + '%)'
-                      : '••••••'
+                  ><strong class="positive">{{ showBalance() ? totalReturnDisplay() : '••••••' }}</strong>
                   }}</strong>
                 </div>
               </div>
