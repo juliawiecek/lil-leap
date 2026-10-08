@@ -152,4 +152,55 @@ class ReportingServiceImplTest {
             throw new IllegalStateException("Expected a ByteArrayResource body", ex);
         }
     }
+
+    @Test
+    void missingOverviewAndNullAggregatesReturnZeroMetrics() {
+        assertThat(service.getOverview()).isEqualTo(new OverviewDto(0, 0, new BigDecimal("0.00")));
+        when(repository.summarize(any(), any())).thenReturn(mock(TradeReportingRepository.OverviewProjection.class));
+        assertThat(service.getOverview()).isEqualTo(new OverviewDto(0, 0, new BigDecimal("0.00")));
+    }
+
+    private ReportingServiceImpl csvService(String csv) {
+        var loader = mock(org.springframework.core.io.ResourceLoader.class);
+        when(loader.getResource("classpath:reports/trades.csv"))
+                .thenReturn(new ByteArrayResource(csv.getBytes(StandardCharsets.UTF_8)));
+        return new ReportingServiceImpl(repository, UTC_CLOCK, loader);
+    }
+
+    private String csvHeader() throws java.io.IOException {
+        try (var stream = new DefaultResourceLoader().getResource("classpath:reports/trades.csv").getInputStream()) {
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8).lines().findFirst().orElseThrow();
+        }
+    }
+
+    @Test
+    void quotedInstrumentNamesRoundTripThroughReport() throws Exception {
+        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,2,10.25";
+        var report = csvService(csvHeader() + "\n\n" + row + "\n").generateInstrumentReport();
+        assertThat(csvBody(report)).contains("AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,1,2,20.50,10.25");
+        assertThat(report.getHeaders().getContentLength()).isEqualTo(report.getBody().contentLength());
+    }
+
+    @Test
+    void quoteAtEndOfLastColumnAndZeroQuantityAreHandled() throws Exception {
+        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,Apple,EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,0,\"10.25\"";
+        assertThat(csvBody(csvService(csvHeader() + "\n" + row).generateInstrumentReport()))
+                .contains("AAPL,Apple,EQUITY,NASDAQ,1,0,0.00,0.00");
+    }
+
+    @Test
+    void malformedDatasetsFailClearly() throws Exception {
+        assertThatThrownBy(() -> csvService("").generateInstrumentReport()).hasMessageContaining("is empty");
+        assertThatThrownBy(() -> csvService("wrong,header").generateInstrumentReport()).hasMessageContaining("header");
+        var shortRow = csvService(csvHeader() + "\nmissing,columns");
+        assertThatThrownBy(shortRow::generateInstrumentReport).hasMessageContaining("column count");
+        var loader = mock(org.springframework.core.io.ResourceLoader.class);
+        var resource = mock(Resource.class);
+        when(loader.getResource(any())).thenReturn(resource);
+        var broken = new ReportingServiceImpl(repository, UTC_CLOCK, loader);
+        assertThatThrownBy(broken::generateInstrumentReport).hasMessageContaining("not found");
+        when(resource.exists()).thenReturn(true);
+        when(resource.getInputStream()).thenThrow(new java.io.IOException("read failure"));
+        assertThatThrownBy(broken::generateInstrumentReport).hasCauseInstanceOf(java.io.IOException.class);
+    }
 }

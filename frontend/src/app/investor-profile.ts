@@ -461,7 +461,11 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const cleaned = raw.replace(/[^\d.]/g, '');
     const [integer, ...decimals] = cleaned.split('.');
     const whole = integer.slice(0, 16);
-    const chunks = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const groups: string[] = [];
+    for (let end = whole.length; end > 0; end -= 3) {
+      groups.push(whole.slice(Math.max(0, end - 3), end));
+    }
+    const chunks = groups.reverse().join(',');
     const formatted = chunks + (decimals.length ? `.${decimals.join('').slice(0, 2)}` : '');
     input.value = formatted;
     input.setSelectionRange(this.findCaretPosition(formatted, position), this.findCaretPosition(formatted, position));

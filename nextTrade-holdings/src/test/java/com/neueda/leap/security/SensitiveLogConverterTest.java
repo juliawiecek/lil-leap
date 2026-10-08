@@ -43,4 +43,27 @@ class SensitiveLogConverterTest {
         assertThat(converter.transform(null, "password=\"" + "x".repeat(100_000)))
                 .isEqualTo("password=[REDACTED]");
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"password=", "password=,status=ok", "password=&status=ok"})
+    void emptyValuesKeepFollowingDiagnostics(String input) {
+        assertThat(converter.transform(null, input)).isEqualTo(input);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\n", "\r"})
+    void quotedAndUnquotedSecretsStopAtLineBoundary(String newline) {
+        assertThat(converter.transform(null, "password=\"canary" + newline + "status=ok"))
+                .isEqualTo("password=[REDACTED]" + newline + "status=ok");
+        assertThat(converter.transform(null, "token=canary" + newline + "status=ok"))
+                .isEqualTo("token=[REDACTED]" + newline + "status=ok");
+    }
+
+    @Test
+    void trailingEscapeAndEmptyQuotedSecretAreMasked() {
+        assertThat(converter.transform(null, "password=\"canary\\"))
+                .isEqualTo("password=[REDACTED]");
+        assertThat(converter.transform(null, "token=''&status=ok"))
+                .isEqualTo("token=[REDACTED]&status=ok");
+    }
 }
