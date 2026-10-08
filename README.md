@@ -446,6 +446,22 @@ The script runs strict Javadoc validation for every service and refreshes
 `mvn -f insights/pom.xml javadoc:javadoc` (substitute the service directory as needed);
 its local report is `insights/target/site/apidocs/index.html`.
 
+The build fails on any missing Javadoc comment. Every public class, constructor, method
+and record component needs one, including `@param` and `@return` tags, so run
+`mvn javadoc:javadoc` in your service before opening a pull request.
+
+If your default Java is not 21, point Maven at JDK 21 for the run. In PowerShell, for
+example:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+python scripts/generate_javadocs.py
+```
+
+Other JDK versions produce a different page layout and change almost every file. To
+confirm the snapshots match the code, run the script a second time; `git status` should
+show no changes.
+
 Open `docs/javadoc/index.html` locally in a browser, or serve the complete site:
 
 ```sh

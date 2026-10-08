@@ -74,17 +74,42 @@ public interface TradeReportingRepository extends JpaRepository<TradeFillEntity,
 
     /** Projection for dashboard overview aggregates. */
     interface OverviewProjection {
+        /**
+         * Returns the number of fills today.
+         *
+         * @return number of fills today
+         */
         Long getTradeVolumeToday();
 
+        /**
+         * Returns the number of distinct accounts that traded today.
+         *
+         * @return number of distinct accounts that traded today
+         */
         Long getActiveClientsToday();
 
+        /**
+         * Returns the total traded value today.
+         *
+         * @return total traded value today
+         */
         BigDecimal getTradeValueToday();
     }
 
     /** Projection for ranked instrument activity. */
     interface TopInstrumentProjection {
+        /**
+         * Returns the instrument symbol.
+         *
+         * @return instrument symbol
+         */
         String getInstrument();
 
+        /**
+         * Returns the number of fills for the instrument.
+         *
+         * @return number of fills for the instrument
+         */
         Long getTradeCount();
     }
 }

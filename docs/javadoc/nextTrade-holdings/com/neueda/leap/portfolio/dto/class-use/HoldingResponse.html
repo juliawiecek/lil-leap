@@ -83,9 +83,16 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Lists the caller's holdings through the client-addressed route.</div>
 </div>
-<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientPortfolioController.</span><code><a href="../../controller/ClientPortfolioController.html#getHolding(java.util.UUID,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getHolding</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last odd-row-color">
+<div class="block">TS-11.1c AC1: Returns detail for one holding by account and instrument.</div>
+</div>
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-last even-row-color">
 <div class="block">Lists holdings owned by the authenticated caller.</div>
 </div>
 </div>
@@ -130,9 +137,16 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialQueryService.</span><code><a href="../../service/ClientFinancialQueryService.html#getHoldings(java.util.UUID)" class="member-name-link">getHoldings</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId)</code></div>
+<div class="col-first even-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">ClientPortfolioQueryService.</span><code><a href="../../service/ClientPortfolioQueryService.html#getHoldingByIdScoped(java.util.UUID,java.util.UUID,java.util.UUID)" class="member-name-link">getHoldingByIdScoped</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;userId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)</code></div>
 <div class="col-last even-row-color">
+<div class="block">Fetches a single holding by account and instrument, scoped to the authenticated caller.</div>
+</div>
+<div class="col-first odd-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialQueryService.</span><code><a href="../../service/ClientFinancialQueryService.html#getHoldings(java.util.UUID)" class="member-name-link">getHoldings</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId)</code></div>
+<div class="col-last odd-row-color">
 <div class="block">Reads holdings across the user's accounts, sorted by symbol and account.</div>
 </div>
 </div>

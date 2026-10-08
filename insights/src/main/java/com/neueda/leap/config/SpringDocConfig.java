@@ -14,6 +14,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringDocConfig {
 
+    /** Creates the API documentation configuration; Spring instantiates it. */
+    public SpringDocConfig() {
+        // No state to initialize.
+    }
+
     /**
      * Customizes the OpenAPI specification with application info and security schemes.
      *

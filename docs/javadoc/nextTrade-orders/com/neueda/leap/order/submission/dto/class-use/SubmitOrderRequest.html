@@ -62,8 +62,12 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.repository">com.neueda.leap.order.submission.repository</a></div>
 <div class="col-last even-row-color">
+<div class="block">PostgreSQL ownership checks and account-scoped idempotent order persistence.</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Transactional order submission with ownership checks and retry handling.</div>
 </div>
 </div>
@@ -99,6 +103,29 @@ loadScripts(document, 'script');</script>
  @Valid <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.repository">
+<h2>Uses of <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a> in <a href="../../repository/package-summary.html">com.neueda.leap.order.submission.repository</a></h2>
+<div class="caption"><span>Methods in <a href="../../repository/package-summary.html">com.neueda.leap.order.submission.repository</a> with parameters of type <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">JdbcOrderSubmissionRepository.</span><code><a href="../../repository/JdbcOrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)" class="member-name-link">insert</a><wbr>(<a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
+<div class="col-last even-row-color">&nbsp;</div>
+<div class="col-first odd-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">OrderSubmissionRepository.</span><code><a href="../../repository/OrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)" class="member-name-link">insert</a><wbr>(<a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.</div>
 </div>
 </div>
 </section>

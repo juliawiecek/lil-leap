@@ -34,6 +34,12 @@ public class SettlementRecoveryService {
 
     /**
      * Record for recovery result details.
+     *
+     * @param accountId account that was checked
+     * @param status CONSISTENT, RECOVERED or FAILED
+     * @param holdingsReconciled number of holdings rows corrected
+     * @param cashReconciled number of cash balance rows corrected
+     * @param details readable summary of what was found or changed
      */
     public record RecoveryResult(
             UUID accountId,

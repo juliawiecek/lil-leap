@@ -18,6 +18,11 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Creates the security configuration; Spring instantiates it. */
+    public SecurityConfig() {
+        // No state to initialize.
+    }
+
     /**
      * Restricts access to the service's explicit routes.
      * @param http Spring Security builder

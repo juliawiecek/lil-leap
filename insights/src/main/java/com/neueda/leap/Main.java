@@ -13,6 +13,11 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class Main {
 
+    /** Creates the application class; Spring Boot starts it through {@link #main(String[])}. */
+    public Main() {
+        // No state to initialize.
+    }
+
 
     /**
      * Starts the Spring Boot application.
