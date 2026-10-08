@@ -86,7 +86,9 @@ class OrderLifecyclePostgresTest {
                         .get("/api/v1/v3/api-docs").contextPath("/api/v1"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/orders'].post").exists())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/clients/{id}/orders']").doesNotExist());
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/clients/{id}/orders']").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/cash/buy']").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/cash/sell']").doesNotExist());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .get("/api/v1/swagger-ui/index.html").contextPath("/api/v1"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
@@ -204,7 +206,7 @@ class OrderLifecyclePostgresTest {
 
     @Test
     void absentProjectionIsRejectedBeforeTheWorkerCanTrade() {
-        var verifier = new JdbcOrderExecutor(jdbc, null, 1);
+        var verifier = new JdbcOrderExecutor(jdbc, null, null, 1);
         verifier.requireHoldingsProjection();
         jdbc.execute("ALTER TABLE holding_movements DISABLE TRIGGER tg_holding_movement_projection");
         try {

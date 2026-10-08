@@ -76,6 +76,17 @@ class OrderSubmissionControllerTest {
     }
 
     @Test
+    void cashMovementsHaveNoExternalRoute() throws Exception {
+        String bearer = "Bearer " + tokens.issueToken(user, "test@example.test", "TRADER");
+        for (String path : new String[]{"/cash/buy", "/cash/sell"}) {
+            mvc.perform(post(path).header("Authorization", bearer)
+                            .contentType("application/json").content("{\"amount\":100}"))
+                    .andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void invalidTokenCannotSubmit() throws Exception {
         mvc.perform(post("/orders").header("Authorization", "Bearer invalid-token")
                         .contentType("application/json").content(json.writeValueAsBytes(request())))
