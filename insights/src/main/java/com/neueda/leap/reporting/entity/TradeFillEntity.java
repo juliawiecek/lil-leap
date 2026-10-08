@@ -36,25 +36,51 @@ public class TradeFillEntity {
 	@Column(name = "filled_at", nullable = false)
 	private Instant filledAt;
 
+	/** Required by JPA; not for application use. */
 	protected TradeFillEntity() {
 	}
 
+	/**
+	 * Returns the persistent fill identifier.
+	 *
+	 * @return persistent fill identifier
+	 */
 	public UUID getFillId() {
 		return fillId;
 	}
 
+	/**
+	 * Returns the order this fill executed.
+	 *
+	 * @return order this fill executed
+	 */
 	public TradeOrderEntity getOrder() {
 		return order;
 	}
 
+	/**
+	 * Returns the executed quantity.
+	 *
+	 * @return executed quantity
+	 */
 	public long getFilledQuantity() {
 		return filledQuantity;
 	}
 
+	/**
+	 * Returns the executed price per unit.
+	 *
+	 * @return executed price per unit
+	 */
 	public BigDecimal getExecutionPrice() {
 		return executionPrice;
 	}
 
+	/**
+	 * Returns the execution time.
+	 *
+	 * @return execution time
+	 */
 	public Instant getFilledAt() {
 		return filledAt;
 	}

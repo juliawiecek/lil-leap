@@ -27,6 +27,13 @@ public class SettlementIntegrityRepository {
 
     /**
      * Record for holding mismatch details.
+     *
+     * @param accountId account whose holding disagrees
+     * @param instrumentId instrument whose holding disagrees
+     * @param cachedQuantity quantity in the holdings cache
+     * @param ledgerQuantity quantity recomputed from holding movements
+     * @param cachedAvgCost average cost in the holdings cache
+     * @param ledgerAvgCost average cost recomputed from holding movements
      */
     public record HoldingMismatch(
             UUID accountId,
@@ -39,6 +46,10 @@ public class SettlementIntegrityRepository {
 
     /**
      * Record for cash balance mismatch details.
+     *
+     * @param accountId account whose balance disagrees
+     * @param cachedBalance balance in the cash balance cache
+     * @param ledgerBalance balance recomputed from cash transactions
      */
     public record CashMismatch(
             UUID accountId,

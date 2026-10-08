@@ -9,6 +9,11 @@ import java.time.Clock;
 @Configuration
 public class ReportingConfiguration {
 
+    /** Creates the reporting configuration; Spring instantiates it. */
+    public ReportingConfiguration() {
+        // No state to initialize.
+    }
+
 
     /** Returns the UTC clock used by reporting date-window calculations. */
     @Bean

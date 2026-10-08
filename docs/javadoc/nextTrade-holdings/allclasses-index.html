@@ -86,13 +86,21 @@ loadScripts(document, 'script');</script>
 <div class="block">Exception thrown when a request names a client id that does not exist or
  does not belong to the caller.</div>
 </div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/portfolio/controller/ClientPortfolioController.html" title="class in com.neueda.leap.portfolio.controller">ClientPortfolioController</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Client-scoped read endpoints for portfolio holdings.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/portfolio/service/ClientPortfolioQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientPortfolioQueryService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Reads holdings for the authenticated client only.</div>
+</div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Global exception handler for REST controllers.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Client-owned holding returned by the portfolio API.</div>
+<div class="block">Single holding owned by a client, returned by the portfolio API.</div>
 </div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/instrument/controller/InstrumentController.html" title="class in com.neueda.leap.instrument.controller">InstrumentController</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
@@ -203,6 +211,30 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/SensitiveLogConverter.html" title="class in com.neueda.leap.security">SensitiveLogConverter</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Defense in depth for accidental structured credential logging, including exception text.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Repository for detecting settlement integrity mismatches (TS-10.3, BR-09, AC1).</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Record for cash balance mismatch details.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Record for holding mismatch details.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryController</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">REST API for settlement recovery and rollback operations (TS-10.3, BR-09).</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Service for settlement recovery and rollback (TS-10.3, BR-09).</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Record for recovery result details.</div>
 </div>
 </div>
 </div>

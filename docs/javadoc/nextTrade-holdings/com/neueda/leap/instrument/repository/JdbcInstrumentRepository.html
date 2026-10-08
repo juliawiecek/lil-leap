@@ -143,6 +143,11 @@ implements <a href="InstrumentRepository.html" title="interface in com.neueda.le
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Resolves a canonical uppercase symbol, including disabled and nontradable entries.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#searchBySymbolOrName(java.lang.String)" class="member-name-link">searchBySymbolOrName</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;query)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Searches for instruments by partial symbol or name match (case-insensitive).</div>
+</div>
 </div>
 </div>
 </div>
@@ -223,6 +228,24 @@ implements <a href="InstrumentRepository.html" title="interface in com.neueda.le
 <dd><code>symbol</code> - uppercase instrument symbol</dd>
 <dt>Returns:</dt>
 <dd>matching instrument, or empty when absent</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="searchBySymbolOrName(java.lang.String)">
+<h3>searchBySymbolOrName</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a>&gt;</span>&nbsp;<span class="element-name">searchBySymbolOrName</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;query)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="InstrumentRepository.html#searchBySymbolOrName(java.lang.String)">InstrumentRepository</a></code></span></div>
+<div class="block">Searches for instruments by partial symbol or name match (case-insensitive).
+ Returns up to 100 results to avoid overwhelming the API.
+ Empty query returns an empty list, not an error.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="InstrumentRepository.html#searchBySymbolOrName(java.lang.String)">searchBySymbolOrName</a></code>&nbsp;in interface&nbsp;<code><a href="InstrumentRepository.html" title="interface in com.neueda.leap.instrument.repository">InstrumentRepository</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>query</code> - search query: partial symbol or name match (case-insensitive)</dd>
+<dt>Returns:</dt>
+<dd>matching instruments ordered by symbol, limited to 100 results</dd>
 </dl>
 </section>
 </li>
