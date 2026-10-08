@@ -26,6 +26,8 @@ import java.time.Instant;
 @Transactional(readOnly = true)
 public class ClientFinancialQueryService {
 
+    private static final String ACCOUNT_NOT_FOUND = "Account not found";
+
     private static final String HOLDINGS_SQL = """
             SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
                    h.quantity, h.avg_cost, h.updated_at
@@ -144,7 +146,7 @@ public class ClientFinancialQueryService {
         return jdbcTemplate.query("SELECT account_id FROM accounts WHERE user_id = ? ORDER BY account_id LIMIT 1",
                 (rs, row) -> rs.getObject(1, UUID.class), authenticatedUserId).stream().findFirst()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Account not found"));
+                        org.springframework.http.HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND));
     }
 
     /**
@@ -187,7 +189,7 @@ public class ClientFinancialQueryService {
         CashBalanceDetailResponse cash = getCashBalancesDetailed(authenticatedUserId).stream()
                 .filter(balance -> balance.accountId().equals(accountId)).findFirst()
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Account not found"));
+                        org.springframework.http.HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND));
 
         // Get latest quotes for valuation
         String quotesSql = """

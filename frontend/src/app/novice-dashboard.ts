@@ -187,15 +187,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   reviewTrade(): void {
     const count = Number(this.quantity());
     const held = this.holdings().find((h) => h.symbol === this.tradeQuote().symbol)?.shares || 0;
-    const error =
-      !Number.isSafeInteger(count) || count < 1
-        ? 'Enter a whole number of shares greater than zero.'
-        : this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()
-          ? 'This order exceeds your buying power.'
-          : this.side() === 'Sell' && count > held
-            ? 'You can only sell shares you hold.'
-            : '';
+    let error = '';
+    if (!Number.isSafeInteger(count) || count < 1) {
+      error = 'Enter a whole number of shares greater than zero.';
+    } else if (this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()) {
+      error = 'This order exceeds your buying power.';
+    } else if (this.side() === 'Sell' && count > held) {
+      error = 'You can only sell shares you hold.';
+    }
     const startingReview = !this.reviewing();
+
     this.tradeMessage.set(error);
     this.reviewing.set(!error);
     if (!error && startingReview) this.clientReference.set(OrderSubmissionClient.generateClientReference());

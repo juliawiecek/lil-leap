@@ -17,7 +17,10 @@ def test_transform_preserves_contract():
     assert row[4:] == ("SYNTHETIC_GBM", True)
 
 def test_currency_mismatch_rejected():
-    with pytest.raises(QuoteIngestionError): transform_batch(frame("EUR"), Instruments())
+    quotes = frame("EUR")
+    instruments = Instruments()
+    with pytest.raises(QuoteIngestionError):
+        transform_batch(quotes, instruments)
 
 class FailingConnection:
     def rollback(self): self.rolled_back=True
@@ -26,5 +29,7 @@ class FailingConnection:
 def test_ingestion_rolls_back_on_failure(monkeypatch):
     connection=FailingConnection()
     monkeypatch.setattr("src.quote_ingestor.transform_batch", lambda *_: (_ for _ in ()).throw(ValueError("bad")))
-    with pytest.raises(ValueError): ingest_frame(frame(), connection)
+    quotes = frame()
+    with pytest.raises(ValueError):
+        ingest_frame(quotes, connection)
     assert connection.rolled_back

@@ -60,6 +60,7 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
+  readonly orderSubmissionClient: OrderSubmissionClient;
   orderSubmissionClient: OrderSubmissionClient;
   orderHistoryClient: OrderHistoryClient;
   portfolioClient: PortfolioClient;
@@ -119,13 +120,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     ),
   );
   readonly screened = computed(() =>
-    this.quotes.filter((q) =>
-      this.filter() === 'Gainers'
-        ? q.change > 0
-        : this.filter() === 'Decliners'
-          ? q.change < 0
-          : true,
-    ),
+    this.quotes.filter((q) => {
+      if (this.filter() === 'Gainers') return q.change > 0;
+      return this.filter() !== 'Decliners' || q.change < 0;
+    }),
   );
   /** Positions, cash and total value, loaded from the backend and reloaded after each fill. */
   readonly positions = signal<Position[]>([]);
@@ -220,13 +218,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() =>
-    this.period() === '1D'
-      ? ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
-      : this.period() === '1W'
-        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-  );
+  readonly chartTimes = computed(() => {
+    if (this.period() === '1D')
+      return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
+    return this.period() === '1W'
+      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  });
   quote(symbol: string): Quote {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }
@@ -442,7 +440,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.alerts.update((list) => [...list, { symbol: this.selected().symbol, price }]);
     this.message.set('Price alert added.');
   }
-  constructor(private auth: AuthService) {
+  constructor(private readonly auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
@@ -453,9 +451,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#priceTimer);
   }
 
-  async ngOnInit(): Promise<void> {
-    void this.refreshOrders();
-    void this.refreshPortfolio();
+  ngOnInit(): void {
+    void this.loadTradingData();
+  }
+
+  async loadTradingData(): Promise<void> {
     try {
       this.loadingAccounts.set(true);
       const accountsData = await this.orderSubmissionClient.getAccounts();

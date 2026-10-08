@@ -36,7 +36,7 @@ public class IndicativePriceService {
         Optional<MarketQuote> quote = quoteRepository.findLatestByInstrumentId(instrumentId);
         
         if (quote.isEmpty()) {
-            return IndicativePriceResponse.noQuoteAvailable(instrumentId);
+            return IndicativePriceResponse.noQuoteAvailable();
         }
 
         MarketQuote q = quote.get();
@@ -72,7 +72,7 @@ public class IndicativePriceService {
         /**
          * Creates a "no quote available" response (AC3).
          */
-        public static IndicativePriceResponse noQuoteAvailable(UUID instrumentId) {
+        public static IndicativePriceResponse noQuoteAvailable() {
             return new IndicativePriceResponse(
                     null,
                     null,

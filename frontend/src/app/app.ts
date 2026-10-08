@@ -43,11 +43,11 @@ interface VolumeBar {
 })
 export class App implements AfterViewInit, OnDestroy {
   @ViewChild('marketChart', { static: true })
-  private marketChart!: ElementRef<HTMLCanvasElement>;
+  private readonly marketChart!: ElementRef<HTMLCanvasElement>;
 
-  @ViewChild('fullName') private fullName!: ElementRef<HTMLInputElement>;
-  @ViewChild('email') private email!: ElementRef<HTMLInputElement>;
-  @ViewChild('password') private password!: ElementRef<HTMLInputElement>;
+  @ViewChild('fullName') private readonly fullName!: ElementRef<HTMLInputElement>;
+  @ViewChild('email') private readonly email!: ElementRef<HTMLInputElement>;
+  @ViewChild('password') private readonly password!: ElementRef<HTMLInputElement>;
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);

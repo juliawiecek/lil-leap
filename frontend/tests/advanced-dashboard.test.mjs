@@ -115,7 +115,7 @@ test('sell quantities and optional bracket prices are validated', t => {
 
 test('market buy submits order with PENDING status to backend, does not mutate local cash or positions', async t => {
   const desk = tradingDesk(t);
-  await desk.ngOnInit();  // Load accounts/instruments
+  await desk.loadTradingData(); // Load accounts/instruments
   desk.orderType.set('Market'); desk.quantity.set('2');
   const cashBefore = desk.buyingPower();
   const positionsBefore = JSON.stringify(desk.positions());
@@ -127,8 +127,9 @@ test('market buy submits order with PENDING status to backend, does not mutate l
 });
 
 test('nonmarketable limit submits with PENDING status and does not change holdings or cash', async t => {
-  const desk = tradingDesk(t);
-  await desk.ngOnInit();
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  desk.orderSubmissionClient = new MockOrderSubmissionClient();
+  await desk.loadTradingData();
   const cash = desk.buyingPower(); const positions = desk.positions();
   desk.quantity.set('2'); desk.limitPrice.set('170');
   await desk.confirmOrder();
@@ -137,8 +138,9 @@ test('nonmarketable limit submits with PENDING status and does not change holdin
 });
 
 test('limit sell submits with PENDING status, does not mutate positions or cash immediately', async t => {
-  const desk = tradingDesk(t);
-  await desk.ngOnInit();
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  desk.orderSubmissionClient = new MockOrderSubmissionClient();
+  await desk.loadTradingData();
   desk.side.set('Sell'); desk.quantity.set('250'); desk.limitPrice.set('170');
   const cashBefore = desk.buyingPower();
   const posBefore = desk.positions().length;

@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class SpringDocConfig {
-    /** Creates reporting API documentation metadata. */
-    public SpringDocConfig() {}
 
     /**
      * Customizes the OpenAPI specification with application info and security schemes.

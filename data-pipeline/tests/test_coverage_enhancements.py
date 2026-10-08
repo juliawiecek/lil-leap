@@ -6,6 +6,7 @@ import subprocess
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4, UUID
+from dataclasses import FrozenInstanceError
 import pytest
 import pandas as pd
 
@@ -477,7 +478,7 @@ class TestQuoteRepositoryQueries:
             datetime.now(timezone.utc),
             "USD", "SYNTHETIC_GBM", True
         )
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             quote.bid = Decimal("99.8")
 
 

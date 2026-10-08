@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/user-role.enum';
 import { UserAlreadyExistsException } from '../user/exceptions/user-already-exists.exception';

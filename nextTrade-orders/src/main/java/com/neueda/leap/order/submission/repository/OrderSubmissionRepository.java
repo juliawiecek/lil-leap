@@ -1,7 +1,7 @@
 package com.neueda.leap.order.submission.repository;
 
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
-import java.math.BigDecimal;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,16 +33,10 @@ public interface OrderSubmissionRepository {
     /**
      * Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.
      *
-     * @param accountId persistent account identifier
-     * @param instrumentId persistent instrument identifier
-     * @param symbol instrument trading symbol
-     * @param clientReference caller-supplied idempotency key, scoped to the account
-     * @param side order side, BUY or SELL
-     * @param quantity number of units in the order
-     * @param orderType order type, such as MARKET
-     * @param bufferPercent order-specific execution tolerance percentage, or null to use the account default
+     * @param request validated order submission, normalized before persistence
+     * @param instrumentId resolved persistent instrument identifier
+     * @param symbol resolved instrument trading symbol
      * @return inserted order, or empty when the idempotency key conflicts
      */
-    Optional<OrderSubmissionResponse> insert(UUID accountId, UUID instrumentId, String symbol,
-            UUID clientReference, String side, long quantity, String orderType, BigDecimal bufferPercent);
+    Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol);
 }

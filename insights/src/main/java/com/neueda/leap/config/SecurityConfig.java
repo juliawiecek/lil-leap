@@ -17,8 +17,6 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-    /** Creates the service security configuration. */
-    public SecurityConfig() {}
 
     /**
      * Restricts access to the service's explicit routes.

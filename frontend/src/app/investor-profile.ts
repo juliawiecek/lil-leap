@@ -40,7 +40,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       .split(' ').map(code => names.of(code) ?? code)
       .sort((a, b) => a.localeCompare(b, 'en'));
   })();
-  @ViewChild('heading') private heading!: ElementRef<HTMLHeadingElement>;
+  @ViewChild('heading') private readonly heading!: ElementRef<HTMLHeadingElement>;
 
   // User-entered columns follow the supplied NextTrade PostgreSQL schema.
   // Disclosure detail fields belong to regulatory_disclosures / beneficial_owner_info JSONB.
@@ -444,7 +444,11 @@ export class InvestorProfile implements OnInit, AfterViewInit {
         const cleaned = raw.replace(/[^\d.]/g, '');
         const [integer, ...decimals] = cleaned.split('.');
         const whole = integer.slice(0, 16);
-        const formatted = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') +
+        const groups: string[] = [];
+        for (let end = whole.length; end > 0; end -= 3) {
+          groups.push(whole.slice(Math.max(0, end - 3), end));
+        }
+        const formatted = groups.reverse().join(',') +
           (decimals.length ? '.' + decimals.join('').slice(0, 2) : '');
         input.value = formatted;
         let nextCaret = 0;

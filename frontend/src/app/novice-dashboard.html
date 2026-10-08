@@ -404,13 +404,11 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <div
-                  class="allocation-donut"
-                  role="img"
-                  aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent"
-                >
-                  <div><strong>$24,680</strong><span>Total</span></div>
-                </div>
+                <svg class="allocation-donut" role="img" aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent">
+                  <foreignObject width="100%" height="100%">
+                    <div xmlns="http://www.w3.org/1999/xhtml"><strong>$24,680</strong><span>Total</span></div>
+                  </foreignObject>
+                </svg>
                 <div class="allocation-legend">
                   <div>
                     <i class="asset-dot stocks"></i><span>Stocks<small>$17,770.15</small></span
@@ -576,7 +574,7 @@
       <button class="green-button submit-trade" type="submit">
         {{ reviewing() ? 'Confirm ' : 'Review ' }}{{ side().toLowerCase() }}
       </button>
-      <p role="status">{{ tradeMessage() }}</p>
+      <output>{{ tradeMessage() }}</output>
     </form>
   } @else if (modal() === 'allocation') {
     <div class="asset-class-list">

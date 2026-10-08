@@ -75,6 +75,7 @@ function historyWith(list) {
 test('history loads the user’s orders as soon as it is shown', async t => {
   const { calls, providers } = historyWith(() => [row({ fillPrice: 225.05 })]);
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   await flush();
 
   assert.deepEqual(calls[0], { from: '', to: '', status: '' });
@@ -85,6 +86,7 @@ test('history loads the user’s orders as soon as it is shown', async t => {
 test('changing a filter reloads the list in place with that filter', async t => {
   const { calls, providers } = historyWith(filters => (filters.status === 'PENDING' ? [] : [row()]));
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   await flush();
 
   history.setStatus('PENDING');
@@ -105,6 +107,7 @@ test('changing a filter reloads the list in place with that filter', async t => 
 test('a start date after the end date shows an error without calling the server', async t => {
   const { calls, providers } = historyWith(() => [row()]);
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   await flush();
   const before = calls.length;
 
@@ -125,6 +128,7 @@ test('a failed load shows the error message and no stale rows', async t => {
     return [row()];
   });
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   await flush();
   fail = true;
 
@@ -139,6 +143,7 @@ test('invalid dates cancel the loading state and ignore an earlier response', as
   let finish;
   const { providers } = historyWith(() => new Promise(resolve => { finish = resolve; }));
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   assert.equal(history.loading(), true);
 
   history.from.set('2026-09-30');
@@ -155,6 +160,7 @@ test('invalid dates cancel the loading state and ignore an earlier response', as
 test('status filters include the durable execution lifecycle', async t => {
   const { providers } = historyWith(() => []);
   const history = component(t, OrderHistory, providers);
+  history.ngOnInit();
   await flush();
   assert.deepEqual(history.statusOptions.map(option => option.value),
     ['', 'SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED', 'FILLED', 'REJECTED']);
