@@ -92,7 +92,7 @@
     </header>
     <main class="pro-content">
       <div class="session-line">
-        <span><i></i>Markets Open</span><span>09:42:17 ET</span><span>Wed, Apr 23, 2025</span>
+        <span><i></i>Markets Open</span><span>{{ formattedTime().time }} ET</span><span>{{ formattedTime().dateStr }}</span>
       </div>
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel">

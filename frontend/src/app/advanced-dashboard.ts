@@ -117,6 +117,26 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly invested = signal(0);
   readonly positions = signal<Position[]>([]);
   
+  // Current time - updated every second
+  readonly currentTime = signal(new Date());
+  readonly formattedTime = computed(() => {
+    const now = this.currentTime();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const mins = now.getMinutes().toString().padStart(2, '0');
+    const secs = now.getSeconds().toString().padStart(2, '0');
+    const time = `${hours}:${mins}:${secs}`;
+    
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[now.getDay()];
+    const month = months[now.getMonth()];
+    const date = now.getDate();
+    const year = now.getFullYear();
+    const dateStr = `${dayName}, ${month} ${date}, ${year}`;
+    
+    return { time, dateStr };
+  });
+  
   readonly results = computed(() =>
     this.quotesList().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
@@ -132,66 +152,31 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
           : true,
     ),
   );
+  // Markets should be fetched from real market data API, not hardcoded
   readonly markets = [
-    { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
-    { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
-    { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
-    { name: 'Russell 2000', value: '2,004.36', change: '+1.08%' },
+    { name: 'S&P 500', value: '—', change: '—' },
+    { name: 'Nasdaq', value: '—', change: '—' },
+    { name: 'Dow Jones', value: '—', change: '—' },
+    { name: 'Russell 2000', value: '—', change: '—' },
   ];
+  // Sectors should be computed from real market data, not hardcoded
   readonly sectors = [
-    { name: 'Technology', change: 1.82 },
-    { name: 'Communication Services', change: 1.26 },
-    { name: 'Consumer Discretionary', change: 1.14 },
-    { name: 'Financials', change: 0.93 },
-    { name: 'Industrials', change: 0.71 },
-    { name: 'Healthcare', change: 0.28 },
-    { name: 'Consumer Staples', change: 0.24 },
-    { name: 'Energy', change: -0.36 },
-    { name: 'Utilities', change: -0.42 },
-    { name: 'Real Estate', change: -0.58 },
+    { name: 'Technology', change: 0 },
+    { name: 'Communication Services', change: 0 },
+    { name: 'Consumer Discretionary', change: 0 },
+    { name: 'Financials', change: 0 },
+    { name: 'Industrials', change: 0 },
+    { name: 'Healthcare', change: 0 },
+    { name: 'Consumer Staples', change: 0 },
+    { name: 'Energy', change: 0 },
+    { name: 'Utilities', change: 0 },
+    { name: 'Real Estate', change: 0 },
   ];
-  // Orders are kept as-is since they're historical; they won't be live-fetched for now
-  readonly orders = signal<Order[]>([
-    {
-      id: 4,
-      time: '09:41:32',
-      symbol: 'AAPL',
-      side: 'Buy',
-      quantity: 100,
-      price: 176.12,
-      status: 'Filled',
-      type: 'Limit',
-      tif: 'Day',
-    },
-    {
-      id: 3,
-      time: '09:38:17',
-      symbol: 'NVDA',
-      side: 'Sell',
-      quantity: 50,
-      price: 892.4,
-      status: 'Filled',
-      type: 'Market',
-      tif: 'Day',
-    },
-    {
-      id: 2,
-      time: '09:35:04',
-      symbol: 'MSFT',
-      side: 'Buy',
-      quantity: 75,
-      price: 423.1,
-      status: 'Filled',
-      type: 'Market',
-      tif: 'Day',
-    },
-  ]);
+  // Orders are fetched from backend for existing accounts or empty for new accounts
+  readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
-  readonly news: NewsItem[] = [
-    { symbol: 'AAPL', time: '2:45 PM', title: 'Apple releases new M4 chip', source: 'Reuters' },
-    { symbol: 'NVDA', time: '1:32 PM', title: 'NVIDIA beats Q3 earnings expectations', source: 'Bloomberg' },
-    { symbol: 'MSFT', time: '12:15 PM', title: 'Microsoft expands cloud services', source: 'CNBC' },
-  ];
+  // News should be fetched from a real news API, not hardcoded
+  readonly news: NewsItem[] = [];
   readonly article = signal(0);
   readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
   readonly filteredOrders = computed(() => {
@@ -443,6 +428,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   constructor(private auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+    // Update current time every second
+    setInterval(() => this.currentTime.set(new Date()), 1000);
   }
 
   ngOnDestroy(): void {
