@@ -104,9 +104,9 @@
         <p class="error" role="alert">{{ dateError() }}</p>
       }
       @if (notice()) {
-        <div class="notice" role="status">
+        <output class="notice">
           {{ notice() }}<button aria-label="Dismiss message" (click)="notice.set('')">×</button>
-        </div>
+        </output>
       }
       @if (page() === 'Overview' || page() === 'Trading Activity' || page() === 'Client Activity') {
         <div class="filter-bar">
@@ -228,17 +228,19 @@
               <app-dashboard-icon name="chart" />
             </div>
             <div class="donut-layout">
-              <div
+              <svg
                 class="donut"
                 [style.background]="totals().volume ? donut() : 'var(--line)'"
                 role="img"
                 aria-label="Volume split shown in the adjacent legend"
               >
-                <div>
-                  <strong>{{ compactMoney(totals().volume) }}</strong
-                  ><small>Total volume</small>
-                </div>
-              </div>
+                <foreignObject width="100%" height="100%">
+                  <div xmlns="http://www.w3.org/1999/xhtml">
+                    <strong>{{ compactMoney(totals().volume) }}</strong
+                    ><small>Total volume</small>
+                  </div>
+                </foreignObject>
+              </svg>
               <div class="legend">
                 @for (m of mix(); track m.label) {
                   <div>

@@ -50,6 +50,19 @@ class MockOrderSubmissionClient extends OrderSubmissionClient {
   }
 }
 
+// The portfolio the sell and submit tests trade against: $48,230.12 cash and 250 AAPL.
+const samplePortfolio = { cash: 48230.12, holdings: [{ symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 250, averageCost: 142.2 }] };
+// Timers are mocked so order tracking never waits in real time.
+function tradingDesk(t) {
+  if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  desk.orderSubmissionClient = new MockOrderSubmissionClient();
+  desk.orderHistoryClient = { list: async () => [] };
+  desk.portfolioClient = { load: async () => samplePortfolio };
+  desk.applyPortfolio(samplePortfolio);
+  return desk;
+}
+
 test('screeners separate gainers and decliners and restore all quotes', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
   desk.filter.set('Gainers');
@@ -89,7 +102,7 @@ for (const [field, value, message] of [
 }
 
 test('sell quantities and optional bracket prices are validated', t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  const desk = tradingDesk(t);
   desk.side.set('Sell'); desk.quantity.set('251');
   assert.match(desk.validate(), /only sell/);
   desk.quantity.set('1'); desk.takeProfit.set(true); desk.profitPrice.set('176.50');
@@ -101,9 +114,8 @@ test('sell quantities and optional bracket prices are validated', t => {
 });
 
 test('market buy submits order with PENDING status to backend, does not mutate local cash or positions', async t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
-  desk.orderSubmissionClient = new MockOrderSubmissionClient();
-  await desk.ngOnInit();  // Load accounts/instruments
+  const desk = tradingDesk(t);
+  await desk.loadTradingData(); // Load accounts/instruments
   desk.orderType.set('Market'); desk.quantity.set('2');
   const cashBefore = desk.buyingPower();
   const positionsBefore = JSON.stringify(desk.positions());
@@ -117,7 +129,7 @@ test('market buy submits order with PENDING status to backend, does not mutate l
 test('nonmarketable limit submits with PENDING status and does not change holdings or cash', async t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
   desk.orderSubmissionClient = new MockOrderSubmissionClient();
-  await desk.ngOnInit();
+  await desk.loadTradingData();
   const cash = desk.buyingPower(); const positions = desk.positions();
   desk.quantity.set('2'); desk.limitPrice.set('170');
   await desk.confirmOrder();
@@ -128,7 +140,7 @@ test('nonmarketable limit submits with PENDING status and does not change holdin
 test('limit sell submits with PENDING status, does not mutate positions or cash immediately', async t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
   desk.orderSubmissionClient = new MockOrderSubmissionClient();
-  await desk.ngOnInit();
+  await desk.loadTradingData();
   desk.side.set('Sell'); desk.quantity.set('250'); desk.limitPrice.set('170');
   const cashBefore = desk.buyingPower();
   const posBefore = desk.positions().length;
@@ -136,6 +148,97 @@ test('limit sell submits with PENDING status, does not mutate positions or cash 
   // Backend will handle fill+settlement, frontend doesn't mutate
   assert.equal(desk.buyingPower(), cashBefore);
   assert.equal(desk.positions().length, posBefore);
+});
+
+// Order history that returns one scripted response per call, repeating the last one.
+class ScriptedOrderHistory {
+  constructor(...responses) { this.responses = responses; this.calls = 0; }
+  async list() { return this.responses[Math.min(this.calls++, this.responses.length - 1)]; }
+}
+const historyRow = (status, fillPrice = null) => ({
+  orderId: 'o1', symbol: 'AAPL', side: 'BUY', quantity: 2, status,
+  submittedAt: '2026-10-06T14:30:05Z', fillPrice, filledQuantity: fillPrice === null ? null : 2, filledAt: null,
+});
+const flush = () => new Promise(resolve => setImmediate(resolve));
+
+test('orders and executions tabs show the backend order history, not sample data', async t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  assert.deepEqual(desk.orders(), []);
+  desk.orderHistoryClient = new ScriptedOrderHistory([historyRow('FILLED', 225.1), { ...historyRow('ACCEPTED'), orderId: 'o2' }]);
+  assert.equal(await desk.refreshOrders(), true);
+  assert.deepEqual(desk.orders().map(o => [o.id, o.side, o.status, o.price]), [['o1', 'Buy', 'Filled', 225.1], ['o2', 'Buy', 'Accepted', null]]);
+  assert.deepEqual(desk.executions().map(o => o.id), ['o1']);
+});
+
+test('a submitted order is re-read until it fills, then tracking stops', async t => {
+  const desk = tradingDesk(t);
+  const history = new ScriptedOrderHistory([historyRow('SUBMITTED')], [historyRow('ACCEPTED')], [historyRow('FILLED', 225.1)]);
+  desk.orderHistoryClient = history;
+  const seen = [];
+  await desk.trackOrder('o1'); seen.push(desk.orders()[0].status);
+  for (let i = 0; i < 3; i++) { t.mock.timers.tick(2000); await flush(); seen.push(desk.orders()[0].status); }
+  assert.deepEqual(seen, ['Submitted', 'Accepted', 'Filled', 'Filled']);
+  assert.equal(history.calls, 3);
+  assert.match(desk.message(), /Order o1 filled/);
+});
+
+test('positions are re-priced at the latest bid every 5 seconds and returns follow the market', async t => {
+  const desk = tradingDesk(t);
+  const portfolio = { cash: 1000, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 10, averageCost: 200 }] };
+  const bids = [210, 190];
+  desk.portfolioClient = { load: async () => portfolio, latestBids: async ids => new Map(ids.map(id => [id, bids[0]])) };
+  await desk.refreshPortfolio();
+  assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [3100, 100, 5]);
+  assert.deepEqual(desk.positions().map(p => [p.price, p.value, p.total]), [[210, 2100, 100]]);
+  bids.shift();
+  t.mock.timers.tick(5000); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [2900, -100, -5]);
+});
+
+test('cash, positions and portfolio value come from the backend and reload after a fill', async t => {
+  const fresh = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  assert.equal(fresh.buyingPower(), 0); assert.deepEqual(fresh.positions(), []);
+  const desk = tradingDesk(t);
+  const before = { cash: 1000, holdings: [{ symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 2, averageCost: 200 }] };
+  const after = { cash: 1450, holdings: [] };
+  const loads = [before, after];
+  desk.portfolioClient = { load: async () => loads.shift() ?? after };
+  await desk.refreshPortfolio();
+  assert.equal(desk.buyingPower(), 1000);
+  assert.equal(desk.portfolio(), 1400);
+  assert.deepEqual(desk.positions().map(p => [p.symbol, p.quantity, p.value, p.weight]), [['AAPL', 2, 400, 28.6]]);
+  desk.orderHistoryClient = new ScriptedOrderHistory([{ ...historyRow('FILLED', 225), side: 'SELL' }]);
+  await desk.trackOrder('o1');
+  assert.equal(desk.buyingPower(), 1450);
+  assert.equal(desk.portfolio(), 1450);
+  assert.deepEqual(desk.positions(), []);
+});
+
+test('tracking stops when the order history cannot be loaded', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
+  let calls = 0;
+  desk.orderHistoryClient = { list: async () => { calls++; throw new Error('Could not load your orders. Please try again.'); } };
+  await desk.trackOrder('o1');
+  t.mock.timers.tick(10000); await flush();
+  assert.equal(calls, 1);
+  assert.match(desk.message(), /Could not load your orders/);
+});
+
+test('a listed stock with no backend instrument is not submitted', async t => {
+  const desk = tradingDesk(t);
+  const client = new MockOrderSubmissionClient();
+  const all = await client.getInstruments();
+  client.getInstruments = async () => all.filter(i => i.symbol !== 'TSLA');
+  let submitted = 0;
+  client.submit = async () => { submitted++; throw new Error('should not submit'); };
+  desk.orderSubmissionClient = client;
+  desk.orderHistoryClient = new ScriptedOrderHistory([]);
+  await desk.ngOnInit();
+  desk.choose(desk.quote('TSLA')); desk.orderType.set('Market'); desk.quantity.set('1');
+  await desk.confirmOrder();
+  assert.equal(submitted, 0);
+  assert.match(desk.message(), /TSLA is not available to trade yet/);
 });
 
 test('price alerts reject invalid prices and retain the selected symbol', t => {

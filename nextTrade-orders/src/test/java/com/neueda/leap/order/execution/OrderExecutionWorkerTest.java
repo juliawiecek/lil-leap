@@ -1,6 +1,5 @@
 package com.neueda.leap.order.execution;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,19 +24,6 @@ class OrderExecutionWorkerTest {
 
     @Mock
     private OrderExecutor orderExecutor;
-
-    private OrderExecutionWorker worker;
-    private static final int RETRY_SECONDS = 30;
-
-    @BeforeEach
-    void setUp() {
-        worker = new OrderExecutionWorker(
-            jdbcTemplate,
-            transactionManager,
-            orderExecutor,
-            RETRY_SECONDS
-        );
-    }
 
     @Test
     @DisplayName("Constructor accepts valid retry seconds")

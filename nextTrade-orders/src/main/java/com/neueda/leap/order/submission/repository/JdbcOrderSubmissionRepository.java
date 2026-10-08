@@ -1,9 +1,9 @@
 package com.neueda.leap.order.submission.repository;
 
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -56,8 +56,7 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
     }
 
     @Override
-    public Optional<OrderSubmissionResponse> insert(UUID accountId, UUID instrumentId, String symbol,
-            UUID clientReference, String side, long quantity, String orderType, BigDecimal bufferPercent) {
+    public Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol) {
         return jdbcTemplate.query("""
                 WITH inserted AS (
                 INSERT INTO orders(account_id, instrument_id, client_reference, side,
@@ -77,7 +76,8 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
                 rs.getObject("client_reference", UUID.class), rs.getString("side"),
                 rs.getLong("quantity"), rs.getString("order_type"), rs.getString("status"),
                 rs.getTimestamp("submitted_at").toInstant(), rs.getBigDecimal("buffer_percent")),
-                accountId, instrumentId, clientReference, side, quantity, orderType, bufferPercent)
+                request.accountId(), instrumentId, request.clientReference(), request.normalizedSide(),
+                request.quantity(), request.normalizedOrderType(), request.bufferPercent())
                 .stream().findFirst();
     }
 

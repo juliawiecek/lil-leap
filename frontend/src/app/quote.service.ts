@@ -38,9 +38,9 @@ export interface QuoteError {
  */
 @Injectable({ providedIn: 'root' })
 export class QuoteService {
-  private baseUrl = '/api/v1/quotes';
+  private readonly baseUrl = '/api/v1/quotes';
 
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
 
   private headers(): Record<string, string> {
     const token = this.auth.accessToken;
@@ -110,9 +110,9 @@ export class QuoteService {
   normalizeQuote(quote: Quote): Quote {
     return {
       ...quote,
-      bid: typeof quote.bid === 'string' ? parseFloat(quote.bid) : quote.bid,
-      ask: typeof quote.ask === 'string' ? parseFloat(quote.ask) : quote.ask,
-      midpoint: typeof quote.midpoint === 'string' ? parseFloat(quote.midpoint) : quote.midpoint
+      bid: typeof quote.bid === 'string' ? Number.parseFloat(quote.bid) : quote.bid,
+      ask: typeof quote.ask === 'string' ? Number.parseFloat(quote.ask) : quote.ask,
+      midpoint: typeof quote.midpoint === 'string' ? Number.parseFloat(quote.midpoint) : quote.midpoint
     };
   }
 
