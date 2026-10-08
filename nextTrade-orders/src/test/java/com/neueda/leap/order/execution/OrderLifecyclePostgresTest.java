@@ -2,6 +2,7 @@ package com.neueda.leap.order.execution;
 
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
+import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 /** Real production schema and transaction manager; no mocks of settlement or persistence. */
 @SpringBootTest(properties = "orders.execution.enabled=false")
@@ -31,6 +35,7 @@ class OrderLifecyclePostgresTest {
     @Autowired OrderExecutor executor;
     @Autowired OrderSubmissionService submissions;
     @Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired JwtServiceImpl tokens;
     private UUID user, account, instrument;
     private OrderExecutionWorker worker;
 
@@ -116,6 +121,43 @@ class OrderLifecyclePostgresTest {
         assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("9000");
         assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(10);
         assertThat(jdbc.queryForList("SELECT status FROM order_status_history ORDER BY occurred_at", String.class)).contains("ACCEPTED", "FILLED");
+    }
+
+    @Test
+    void ownerReadsOrderDetailAndStatusThroughTheLifecycle() throws Exception {
+        UUID id = submit("BUY", 10);
+        String bearer = "Bearer " + tokens.issueToken(user, "trader@example.test");
+        mvc.perform(get("/api/v1/orders/{id}/status", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.status").value("SUBMITTED"))
+                .andExpect(jsonPath("$.reasonCode").value("SUBMISSION_VALIDATED"));
+
+        worker.execute(worker.claimNext());
+        mvc.perform(get("/api/v1/orders/{id}", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.orderId").value(id.toString()))
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.status").value("FILLED"))
+                .andExpect(jsonPath("$.filledQuantity").value(10))
+                .andExpect(jsonPath("$.executionPrice").value(100.0))
+                .andExpect(jsonPath("$.acceptedAt").isNotEmpty());
+        mvc.perform(get("/api/v1/orders/{id}/status", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.status").value("FILLED"))
+                .andExpect(jsonPath("$.reasonCode").value("EXECUTION_SUCCESS"));
+    }
+
+    @Test
+    void anotherClientsOrderIsIndistinguishableFromAnUnknownOne() throws Exception {
+        UUID id = submit("BUY", 1);
+        String stranger = "Bearer " + tokens.issueToken(UUID.randomUUID(), "other@example.test");
+        for (UUID target : new UUID[]{id, UUID.randomUUID()}) {
+            for (String path : new String[]{"/api/v1/orders/{id}", "/api/v1/orders/{id}/status"}) {
+                mvc.perform(get(path, target).contextPath("/api/v1").header("Authorization", stranger))
+                        .andExpect(MockMvcResultMatchers.status().isNotFound())
+                        .andExpect(jsonPath("$.error").value("ORDER_NOT_FOUND"));
+            }
+        }
     }
 
     @Test

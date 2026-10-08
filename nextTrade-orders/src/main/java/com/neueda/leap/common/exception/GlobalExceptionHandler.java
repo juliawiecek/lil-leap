@@ -1,5 +1,6 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.order.query.OrderNotFoundException;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.order.rules.OrderRuleException;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
         return ResponseEntity.unprocessableEntity().body(Map.of(
                 "error", exception.reason().name(), "message", exception.getMessage()));
+    }
+
+    /**
+     * Reports an unknown or unowned order identically, so other users' order ids are not revealed.
+     * @param exception order lookup miss
+     * @return HTTP 404 with a fixed ORDER_NOT_FOUND response
+     */
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleOrderNotFound(OrderNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "error", "ORDER_NOT_FOUND", "message", "The order was not found."));
     }
 
     /**

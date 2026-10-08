@@ -14,9 +14,14 @@ ownership, gateway routing, database setup, known gaps and verification.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
+| GET | `/api/v1/orders/{id}` | One caller-owned order, with its fill once executed (TRADER only) |
+| GET | `/api/v1/orders/{id}/status` | Current status and the latest status-history reason code (TRADER only) |
 
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
+
+The two GET routes return 404 `ORDER_NOT_FOUND` for another client's order, exactly as for
+an unknown id.
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
