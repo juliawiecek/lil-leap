@@ -64,7 +64,9 @@ public class OrderSubmissionService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found");
         }
         var existing = repository.findByAccountAndClientReference(request.accountId(), request.clientReference());
-        if (existing.isPresent()) return replay(existing.get(), request);
+        if (existing.isPresent()) {
+            return replay(existing.get(), request);
+        }
 
         validateAccount(repository.findAccountTradingProfile(request.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")));
