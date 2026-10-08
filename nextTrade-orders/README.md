@@ -4,7 +4,7 @@ Spring Boot service for authenticated, ownership-checked, idempotent order submi
 
 ## Structure
 
-`order.submission`, `order.rules`, `order.service` (sufficiency), `order.execution`, `marketdata` (quote read contract), `instrument` (internal validation reads), `security`, `config`, `common.exception`.
+`order.submission`, `order.rules`, `order.service` (sufficiency), `order.execution`, `order.settlement` (integrity check and recovery), `marketdata` (quote read contract), `instrument` (internal validation reads), `security`, `config`, `common.exception`.
 
 See the [architecture guide](../docs/architecture/service-boundaries.md) for service
 ownership, gateway routing, database setup, known gaps and verification.
@@ -54,3 +54,24 @@ Orders refuses startup if that trigger is missing or disabled. See the
 Swagger UI is available at `/api/v1/swagger-ui.html` and the specification at `/api/v1/v3/api-docs` on the native service port. These documentation routes are public; base Compose does not publish Java ports. See [API access](../docs/api/README.md).
 
 The worker records ORDER_ACCEPTED, PRICE_DECISION, ORDER_FILLED, ORDER_REJECTED, ORDER_REQUEUED and SETTLEMENT_COMPLETED events. Acceptance commits before execution; fill/settlement audit records roll back with their transaction, and requeue diagnostics commit after a rollback. Immediate cash settlement supplies both SETTLED status and a settlement timestamp.
+
+## Settlement integrity and recovery
+
+A settlement is identified by its fill. It is complete when the fill has its holding movement, its
+cash transaction, a FILLED order and a SETTLEMENT_COMPLETED audit entry. Settlement normally writes
+all of these in one transaction; the check below covers anything that breaks that guarantee.
+
+- **Integrity check:** runs at startup and every five minutes (`orders.settlement.integrity-check-ms`).
+  Each incomplete settlement is logged and recorded once as SETTLEMENT_INCOMPLETE in `audit_log`,
+  listing the missing parts. Disable with `orders.settlement.integrity-check.enabled=false`.
+- **`POST /settlements/recover?settlementId={fillId}`:** writes only the missing parts, rebuilt from
+  the fill. The holdings projection updates through its trigger, and the cash balance moves only with
+  the cash transaction that explains it. Returns 409 RECOVERY_FAILED, with nothing written, when a
+  repair would make cash or shares negative.
+- **`POST /settlements/rollback?settlementId={fillId}`:** only for a settlement that has not changed
+  any balance. Removes the fill and rejects the order with SETTLEMENT_ROLLED_BACK. Returns 409
+  SETTLEMENT_APPLIED once balances have changed; recover it instead.
+
+Both commands require the OPERATIONS role, are not routed by the gateway, and write their own
+SETTLEMENT_RECOVERED or SETTLEMENT_ROLLED_BACK audit entry. They lock the account the same way
+execution does. Include `SettlementRecoveryPostgresTest` with the PostgreSQL variables above.
