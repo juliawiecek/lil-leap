@@ -61,11 +61,12 @@ public class QuotePreviewController {
         boolean hasId = instrumentId != null && !instrumentId.isBlank();
         String normalizedSide = side == null ? "" : side.trim().toUpperCase(Locale.ROOT);
         Long shares = parseQuantity(quantity);
-        if (hasSymbol == hasId
-                || (hasSymbol && !SYMBOL.matcher(symbol.trim()).matches())
-                || (hasId && !UUID_TEXT.matcher(instrumentId.trim()).matches())
-                || !(normalizedSide.equals("BUY") || normalizedSide.equals("SELL"))
-                || shares == null) {
+        boolean oneTarget = hasSymbol != hasId;
+        boolean validTarget = hasSymbol
+                ? SYMBOL.matcher(symbol.trim()).matches()
+                : hasId && UUID_TEXT.matcher(instrumentId.trim()).matches();
+        boolean validSide = "BUY".equals(normalizedSide) || "SELL".equals(normalizedSide);
+        if (!oneTarget || !validTarget || !validSide || shares == null) {
             return error(400, "INVALID_REQUEST",
                     "Supply one of symbol or instrumentId, a side of BUY or SELL, and a positive quantity.");
         }

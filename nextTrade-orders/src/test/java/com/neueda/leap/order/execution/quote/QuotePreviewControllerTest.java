@@ -19,14 +19,19 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** GET /orders/quote-preview through the real security chain (TS-14.3, BR-13). */
 @WebMvcTest(QuotePreviewController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class})
 class QuotePreviewControllerTest {
+    private static final String PREVIEW = "/orders/quote-preview";
+    private static final String AUTHORIZATION = "Authorization";
+
     @Autowired MockMvc mvc;
     @Autowired JwtServiceImpl tokens;
     @MockBean IndicativePriceService prices;
@@ -39,7 +44,7 @@ class QuotePreviewControllerTest {
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument()));
         when(prices.estimate(instrumentId, "BUY", 10)).thenReturn(Optional.of(estimate()));
 
-        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+        mvc.perform(get(PREVIEW).header(AUTHORIZATION, bearer())
                         .param("symbol", "aapl").param("side", "buy").param("quantity", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.symbol").value("AAPL"))
@@ -55,14 +60,14 @@ class QuotePreviewControllerTest {
         when(instruments.findInstrumentById(instrumentId)).thenReturn(Optional.of(instrument()));
         when(prices.estimate(instrumentId, "SELL", 2)).thenReturn(Optional.of(estimate()));
 
-        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+        mvc.perform(get(PREVIEW).header(AUTHORIZATION, bearer())
                         .param("instrumentId", instrumentId.toString()).param("side", "SELL").param("quantity", "2"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void missingAuthenticationIsRejected() throws Exception {
-        mvc.perform(get("/orders/quote-preview").param("symbol", "AAPL").param("side", "BUY").param("quantity", "1"))
+        mvc.perform(get(PREVIEW).param("symbol", "AAPL").param("side", "BUY").param("quantity", "1"))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(prices, instruments);
     }
@@ -79,7 +84,7 @@ class QuotePreviewControllerTest {
             "instrumentId=------------------------------------&side=BUY&quantity=1",
             "symbol=AA%20PL&side=BUY&quantity=1"})
     void invalidInputIsABadRequest(String query) throws Exception {
-        mvc.perform(get("/orders/quote-preview?" + query).header("Authorization", bearer()))
+        mvc.perform(get(PREVIEW + "?" + query).header(AUTHORIZATION, bearer()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
         verifyNoInteractions(prices);
@@ -89,7 +94,7 @@ class QuotePreviewControllerTest {
     void unknownSymbolIsNotFound() throws Exception {
         when(instruments.findInstrumentBySymbol("NOPE")).thenReturn(Optional.empty());
 
-        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+        mvc.perform(get(PREVIEW).header(AUTHORIZATION, bearer())
                         .param("symbol", "NOPE").param("side", "BUY").param("quantity", "1"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("INSTRUMENT_NOT_FOUND"));
@@ -100,7 +105,7 @@ class QuotePreviewControllerTest {
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument()));
         when(prices.estimate(instrumentId, "BUY", 1)).thenReturn(Optional.empty());
 
-        mvc.perform(get("/orders/quote-preview").header("Authorization", bearer())
+        mvc.perform(get(PREVIEW).header(AUTHORIZATION, bearer())
                         .param("symbol", "AAPL").param("side", "BUY").param("quantity", "1"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NO_QUOTE_AVAILABLE"));
@@ -108,7 +113,7 @@ class QuotePreviewControllerTest {
 
     @Test
     void otherOrderRoutesStayClosed() throws Exception {
-        mvc.perform(get("/orders/quote-preview-by-id").header("Authorization", bearer())
+        mvc.perform(get("/orders/quote-preview-by-id").header(AUTHORIZATION, bearer())
                         .param("instrumentId", instrumentId.toString()))
                 .andExpect(status().isForbidden());
     }
