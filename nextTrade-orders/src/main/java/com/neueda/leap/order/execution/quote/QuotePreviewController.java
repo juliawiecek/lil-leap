@@ -25,7 +25,7 @@ public class QuotePreviewController {
     private static final Pattern SYMBOL = Pattern.compile("^[A-Za-z0-9.-]{1,20}$");
     private static final Pattern UUID_TEXT =
             Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
-    private static final Pattern QUANTITY = Pattern.compile("^[0-9]{1,12}$");
+    private static final Pattern QUANTITY = Pattern.compile("^\\d{1,12}$");
 
     private final IndicativePriceService prices;
     private final InstrumentService instruments;
