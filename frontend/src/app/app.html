@@ -30,7 +30,7 @@
   </div>
   <div class="market-scan" aria-hidden="true"></div>
   <main class="chart-stage" aria-label="Animated stock market chart">
-    <canvas #marketChart id="market-chart" aria-hidden="true"></canvas>
+    <canvas #marketChart id="market-chart" inert aria-hidden="true"></canvas>
   </main>
   <div class="edge-shade" aria-hidden="true"></div>
 
@@ -55,7 +55,7 @@
 
   <div class="transition-beam" aria-hidden="true"></div>
 
-  <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
+  <div class="brand-lockup" id="brand-lockup">
     <div class="brand-mark" aria-hidden="true">
       <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
@@ -66,7 +66,7 @@
       <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
     </div>
   </div>
-  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>

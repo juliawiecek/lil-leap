@@ -31,7 +31,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyLong;
 
 class OrderSubmissionServiceTest {
 
@@ -64,7 +63,7 @@ class OrderSubmissionServiceTest {
                 new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
-        when(repository.insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null))
+        when(repository.insert(request, instrumentId, "AAPL"))
                 .thenReturn(Optional.of(saved));
 
         var result = service.submit(userId, request);
@@ -73,7 +72,7 @@ class OrderSubmissionServiceTest {
         assertEquals("SUBMITTED", result.order().status());
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrumentId);
-        sequence.verify(repository).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
+        sequence.verify(repository).insert(request, instrumentId, "AAPL");
     }
 
     @Test
@@ -89,7 +88,7 @@ class OrderSubmissionServiceTest {
         assertFalse(result.created());
         assertEquals(existing.orderId(), result.order().orderId());
         verifyNoInteractions(sufficiency);
-        verify(repository, never()).insert(accountId, instrumentId, "AAPL", clientReference, "BUY", 10, "MARKET", null);
+        verify(repository, never()).insert(request, instrumentId, "AAPL");
     }
 
     @Test
@@ -125,7 +124,7 @@ class OrderSubmissionServiceTest {
 
         assertThrows(OrderSufficiencyException.class, () -> service.submit(userId, request));
 
-        verify(repository, never()).insert(any(), any(), any(), any(), any(), anyLong(), any(), any());
+        verify(repository, never()).insert(any(), any(), any());
     }
 
     private SubmitOrderRequest request(String symbol, String side, long quantity) {

@@ -21,9 +21,6 @@ public class OpenApiConfig {
 
     private static final String BEARER_SCHEME = "bearerAuth";
 
-    /** Creates the OpenAPI metadata configuration. */
-    public OpenApiConfig() {
-    }
 
     /**
      * Builds the OpenAPI document's info block and bearer-auth security scheme.

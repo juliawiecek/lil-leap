@@ -265,10 +265,10 @@ export class QuoteDisplayComponent implements OnInit, OnDestroy {
   errorMessage = '';
   lastUpdateAgeMs: Observable<number> = of(0);
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
   private lastUpdateTime = 0;
 
-  constructor(private quoteService: QuoteService) {}
+  constructor(private readonly quoteService: QuoteService) {}
 
   ngOnInit(): void {
     if (!this.instrumentId) {

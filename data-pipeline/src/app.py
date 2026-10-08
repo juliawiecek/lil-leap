@@ -15,13 +15,23 @@ from src.quote_provider import (
     QuoteSourceError,
 )
 
+APP_IMPORT_NAME = __name__
+SERVER_HOST = "0.0.0.0"
+PORT_ENV_VAR = "PORT"
+DEFAULT_PORT = 8083
+
+
+def _port_from_env() -> int:
+    """Read the HTTP port from the environment with a safe integer fallback."""
+    return int(os.getenv(PORT_ENV_VAR, str(DEFAULT_PORT)))
+
 
 def create_app(
     provider: object | None = None,
     service: CachedQuoteService | None = None,
 ) -> Flask:
     """Create and configure the quote API application."""
-    app = Flask(__name__)
+    app = Flask(APP_IMPORT_NAME)
 
     if service is None:
         if provider is not None:
@@ -85,5 +95,5 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8083")))
+    app.run(host=SERVER_HOST, port=_port_from_env())
 

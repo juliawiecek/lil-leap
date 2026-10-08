@@ -50,6 +50,11 @@ public class ReportingServiceImpl implements ReportingService {
     private static final String INSTRUMENT_REPORT_FILENAME = "instrument-report.csv";
     private static final String CLIENT_SEGMENT_REPORT_FILENAME = "client-segment-report.csv";
     private static final String TRADING_ACTIVITY_REPORT_FILENAME = "trading-activity-report.csv";
+    private static final String REPORTING_DATASET = "Reporting dataset";
+    private static final String REPORTING_DATASET_ROW = REPORTING_DATASET + " row";
+    private static final String HEADER_TRADE_COUNT = "trade_count";
+    private static final String HEADER_TOTAL_QUANTITY = "total_quantity";
+    private static final String HEADER_TOTAL_NOTIONAL = "total_notional";
 
     private static final List<String> INPUT_HEADERS = List.of(
             "fill_id",
@@ -75,25 +80,25 @@ public class ReportingServiceImpl implements ReportingService {
             "instrument_name",
             "asset_class",
             "market_code",
-            "trade_count",
-            "total_quantity",
-            "total_notional",
+            HEADER_TRADE_COUNT,
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL,
             "average_execution_price");
 
     private static final List<String> CLIENT_SEGMENT_REPORT_HEADERS = List.of(
             "client_segment",
-            "trade_count",
+            HEADER_TRADE_COUNT,
             "unique_clients",
-            "total_quantity",
-            "total_notional");
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL);
 
     private static final List<String> TRADING_ACTIVITY_REPORT_HEADERS = List.of(
             "trade_date",
             "trade_hour",
-            "trade_count",
+            HEADER_TRADE_COUNT,
             "unique_clients",
-            "total_quantity",
-            "total_notional");
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL);
 
     private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -117,7 +122,6 @@ public class ReportingServiceImpl implements ReportingService {
         this.resourceLoader = resourceLoader;
     }
 
-    /** {@inheritDoc} */
     @Override
     public OverviewDto getOverview() {
         ReportDateRange range = currentUtcDayRange();
@@ -130,7 +134,6 @@ public class ReportingServiceImpl implements ReportingService {
                 scaleMoney(overview == null ? null : overview.getTradeValueToday()));
     }
 
-    /** {@inheritDoc} */
     @Override
     public List<TopInstrumentDto> getTopInstruments() {
         ReportDateRange range = currentUtcDayRange();
@@ -143,7 +146,6 @@ public class ReportingServiceImpl implements ReportingService {
                 .toList();
     }
 
-    /** {@inheritDoc} */
     @Override
     public List<ClientActivityTrendDto> getClientActivityTrend() {
         ReportDateRange range = currentUtcDayRange();
@@ -166,7 +168,6 @@ public class ReportingServiceImpl implements ReportingService {
                 .toList();
     }
 
-    /** {@inheritDoc} */
     @Override
     public ResponseEntity<Resource> generateInstrumentReport() {
         List<TradeRow> trades = loadTrades();
@@ -176,7 +177,6 @@ public class ReportingServiceImpl implements ReportingService {
         return buildCsvAttachment(INSTRUMENT_REPORT_FILENAME, INSTRUMENT_REPORT_HEADERS, rows);
     }
 
-    /** {@inheritDoc} */
     @Override
     public ResponseEntity<Resource> generateClientSegmentReport() {
         List<TradeRow> trades = loadTrades();
@@ -186,7 +186,6 @@ public class ReportingServiceImpl implements ReportingService {
         return buildCsvAttachment(CLIENT_SEGMENT_REPORT_FILENAME, CLIENT_SEGMENT_REPORT_HEADERS, rows);
     }
 
-    /** {@inheritDoc} */
     @Override
     public ResponseEntity<Resource> generateTradingActivityReport() {
         List<TradeRow> trades = loadTrades();
@@ -233,18 +232,18 @@ public class ReportingServiceImpl implements ReportingService {
     private List<TradeRow> loadTrades() {
         Resource resource = resourceLoader.getResource(REPORTS_RESOURCE_PATH);
         if (!resource.exists()) {
-            throw new IllegalStateException("Reporting dataset not found: " + REPORTS_RESOURCE_PATH);
+            throw new IllegalStateException(REPORTING_DATASET + " not found: " + REPORTS_RESOURCE_PATH);
         }
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
             if (headerLine == null) {
-                throw new IllegalStateException("Reporting dataset is empty: " + REPORTS_RESOURCE_PATH);
+                throw new IllegalStateException(REPORTING_DATASET + " is empty: " + REPORTS_RESOURCE_PATH);
             }
 
             List<String> actualHeaders = parseCsvLine(headerLine);
             if (!INPUT_HEADERS.equals(actualHeaders)) {
-                throw new IllegalStateException("Unexpected reporting dataset header: " + actualHeaders);
+                throw new IllegalStateException("Unexpected " + REPORTING_DATASET.toLowerCase(Locale.ROOT) + " header: " + actualHeaders);
             }
 
             List<TradeRow> trades = new ArrayList<>();
@@ -256,7 +255,7 @@ public class ReportingServiceImpl implements ReportingService {
 
                 List<String> columns = parseCsvLine(line);
                 if (columns.size() != INPUT_HEADERS.size()) {
-                    throw new IllegalStateException("Unexpected column count in reporting dataset row: " + columns);
+                    throw new IllegalStateException("Unexpected column count in " + REPORTING_DATASET_ROW.toLowerCase(Locale.ROOT) + ": " + columns);
                 }
 
                 trades.add(mapTradeRow(columns));
@@ -264,7 +263,7 @@ public class ReportingServiceImpl implements ReportingService {
 
             return trades;
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read reporting dataset from " + REPORTS_RESOURCE_PATH, ex);
+            throw new IllegalStateException("Failed to read " + REPORTING_DATASET.toLowerCase(Locale.ROOT) + " from " + REPORTS_RESOURCE_PATH, ex);
         }
     }
 
@@ -414,33 +413,47 @@ public class ReportingServiceImpl implements ReportingService {
     private List<String> parseCsvLine(String line) {
         List<String> values = new ArrayList<>();
         StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
+        boolean[] inQuotes = {false};
 
-        for (int i = 0; i < line.length(); i++) {
-            char character = line.charAt(i);
-            if (inQuotes) {
-                if (character == '"') {
-                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                        current.append('"');
-                        i++;
-                    } else {
-                        inQuotes = false;
-                    }
-                } else {
-                    current.append(character);
-                }
-            } else if (character == ',') {
-                values.add(current.toString());
-                current.setLength(0);
-            } else if (character == '"') {
-                inQuotes = true;
-            } else {
-                current.append(character);
-            }
+        int index = 0;
+        while (index < line.length()) {
+            index = consumeCsvCharacter(line, index, values, current, inQuotes);
         }
 
         values.add(current.toString());
         return values;
+    }
+
+    private boolean isEscapedQuote(String line, int index) {
+        return line.charAt(index) == '"' && index + 1 < line.length() && line.charAt(index + 1) == '"';
+    }
+
+    private int consumeCsvCharacter(String line, int index, List<String> values, StringBuilder current, boolean[] inQuotes) {
+        char character = line.charAt(index);
+        if (inQuotes[0]) {
+            if (isEscapedQuote(line, index)) {
+                current.append('"');
+                return index + 2;
+            }
+            if (character == '"') {
+                inQuotes[0] = false;
+            } else {
+                current.append(character);
+            }
+            return index + 1;
+        }
+
+        if (character == ',') {
+            values.add(current.toString());
+            current.setLength(0);
+            return index + 1;
+        }
+        if (character == '"') {
+            inQuotes[0] = true;
+            return index + 1;
+        }
+        current.append(character);
+        return index + 1;
     }
 
     private record TradeRow(
