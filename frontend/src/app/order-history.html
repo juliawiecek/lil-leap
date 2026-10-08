@@ -1,4 +1,4 @@
-<div class="history-filters" role="group" aria-label="Filter orders">
+<fieldset class="history-filters" aria-label="Filter orders">
   <label>
     From
     <input type="date" [value]="from()" (change)="setFrom($any($event.target).value)" />
@@ -18,7 +18,7 @@
   @if (hasFilters()) {
     <button type="button" class="clear-filters" (click)="clearFilters()">Clear filters</button>
   }
-</div>
+</fieldset>
 
 @if (error()) {
   <p class="history-message error" role="alert">{{ error() }}</p>

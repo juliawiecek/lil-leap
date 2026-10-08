@@ -142,6 +142,8 @@ nav {
   display: grid;
   gap: 10px;
   margin-top: 27px;
+  overflow-y: auto;
+  min-height: 0;
 }
 nav button {
   display: flex;
@@ -155,7 +157,7 @@ nav button {
   text-align: left;
   color: #bec7d5;
   background: transparent;
-  font-size: 12px;
+  font-size: 13px;
 }
 nav button:hover {
   background: #151f1d;
@@ -433,7 +435,7 @@ main {
   justify-content: center;
   flex-shrink: 0;
 }
-.donut > div {
+.donut div {
   background: #0f1415;
   border-radius: 50%;
   width: 100%;
@@ -1097,10 +1099,6 @@ footer {
 /* Shared workspace layout and typography. */
 
 /* Shared navigation and page-specific refinements. */
-nav {
-  overflow-y: auto;
-  min-height: 0;
-}
 .nav-group {
   padding: 12px 12px 6px;
   font-size: 10px;
@@ -1112,9 +1110,6 @@ nav {
 .nav-divider {
   margin: 12px;
   border-top: 1px solid var(--line);
-}
-nav button {
-  font-size: 13px;
 }
 .content {
   padding-top: 24px;
@@ -1241,6 +1236,7 @@ nav button {
   .panel-heading {
     margin-bottom: 24px;
     gap: 12px;
+    flex-wrap: wrap;
   }
   .panel-heading select {
     font-size: 12px;
@@ -1362,9 +1358,6 @@ nav button {
   .mono,
   .badge {
     font-size: 12px;
-  }
-  .panel-heading {
-    flex-wrap: wrap;
   }
   .search-field {
     flex: 0 1 300px;

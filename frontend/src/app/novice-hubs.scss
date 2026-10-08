@@ -313,7 +313,9 @@ progress::-webkit-progress-value {
   background: none;
 }
 .knowledge-check .quiz-feedback {
+  display: block;
   font-size: 12px;
+  line-height: 1.7;
   margin-bottom: 16px;
   color: var(--muted);
 }

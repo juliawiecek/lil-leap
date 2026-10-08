@@ -51,7 +51,7 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit {
-  orderSubmissionClient: OrderSubmissionClient;
+  readonly orderSubmissionClient: OrderSubmissionClient;
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
@@ -104,13 +104,10 @@ export class AdvancedDashboard implements OnInit {
     ),
   );
   readonly screened = computed(() =>
-    this.quotes.filter((q) =>
-      this.filter() === 'Gainers'
-        ? q.change > 0
-        : this.filter() === 'Decliners'
-          ? q.change < 0
-          : true,
-    ),
+    this.quotes.filter((q) => {
+      if (this.filter() === 'Gainers') return q.change > 0;
+      return this.filter() !== 'Decliners' || q.change < 0;
+    }),
   );
   readonly positions = signal<Position[]>([
     {
@@ -280,13 +277,13 @@ export class AdvancedDashboard implements OnInit {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() =>
-    this.period() === '1D'
-      ? ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
-      : this.period() === '1W'
-        ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-        : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-  );
+  readonly chartTimes = computed(() => {
+    if (this.period() === '1D')
+      return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
+    return this.period() === '1W'
+      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  });
   quote(symbol: string): Quote {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }
@@ -418,11 +415,15 @@ export class AdvancedDashboard implements OnInit {
     this.alerts.update((list) => [...list, { symbol: this.selected().symbol, price }]);
     this.message.set('Price alert added.');
   }
-  constructor(private auth: AuthService) {
+  constructor(private readonly auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
+    void this.loadTradingData();
+  }
+
+  async loadTradingData(): Promise<void> {
     try {
       this.loadingAccounts.set(true);
       const accountsData = await this.orderSubmissionClient.getAccounts();

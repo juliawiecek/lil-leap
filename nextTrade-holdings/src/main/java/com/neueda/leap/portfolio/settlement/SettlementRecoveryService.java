@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -67,7 +68,7 @@ public class SettlementRecoveryService {
 
         // Apply "ledger wins" rule to holdings
         for (var mismatch : holdingMismatches.values()) {
-            if (mismatch.ledgerQuantity() != mismatch.cachedQuantity() ||
+            if (!Objects.equals(mismatch.ledgerQuantity(), mismatch.cachedQuantity()) ||
                 isDifferentAmount(mismatch.ledgerAvgCost(), mismatch.cachedAvgCost())) {
 
                 // Update cache to match ledger

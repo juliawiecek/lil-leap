@@ -29,9 +29,9 @@ export interface AccessTokenSource {
 }
 
 export class OrderHistoryClient {
-  #tokens: AccessTokenSource;
-  #fetch: typeof fetch;
-  #baseUrl: string;
+  readonly #tokens: AccessTokenSource;
+  readonly #fetch: typeof fetch;
+  readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,

@@ -39,8 +39,8 @@ const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
 
 export class AuthClient {
-  #fetch: typeof fetch;
-  #baseUrl: string;
+  readonly #fetch: typeof fetch;
+  readonly #baseUrl: string;
   #accessToken: string | null = null;
   #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;

@@ -97,7 +97,7 @@ class QuotePreviewControllerTest {
     @Test
     void returnsErrorWhenNoQuoteAvailable() {
         UUID instrumentId = UUID.randomUUID();
-        var noQuoteResponse = IndicativePriceService.IndicativePriceResponse.noQuoteAvailable(instrumentId);
+        var noQuoteResponse = IndicativePriceService.IndicativePriceResponse.noQuoteAvailable();
 
         when(indicativePriceService.getIndicativePrice(instrumentId))
                 .thenReturn(noQuoteResponse);
