@@ -27,6 +27,7 @@ class OrderTradingRulesTest {
         service = new OrderSubmissionService(repository, sufficiency, instruments);
         when(repository.accountBelongsToUser(account, user)).thenReturn(true);
         when(repository.findByAccountAndClientReference(any(), any())).thenReturn(Optional.empty());
+        when(repository.findClientCountry(account)).thenReturn(Optional.of("US"));
         when(repository.findAccountTradingProfile(account)).thenReturn(Optional.of(
                 new AccountTradingProfile("ACTIVE", true, "NOVICE", new BigDecimal("5000"), new BigDecimal("5000"))));
     }
@@ -55,6 +56,21 @@ class OrderTradingRulesTest {
         when(instruments.findInstrumentBySymbol("AAPL"))
                 .thenReturn(Optional.of(instrument(instrument, true, false)));
         expect(request("AAPL"), INSTRUMENT_NOT_TRADABLE);
+    }
+    @Test void nonUsClientIsRejectedBeforeResourceChecks() {
+        when(repository.findClientCountry(account)).thenReturn(Optional.of("Canada"));
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrument, true, true)));
+        expect(request("AAPL"), LOCATION_RESTRICTED);
+    }
+    @Test void clientWithoutCountryIsRejected() {
+        when(repository.findClientCountry(account)).thenReturn(Optional.empty());
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrument, true, true)));
+        expect(request("AAPL"), LOCATION_RESTRICTED);
+    }
+    @Test void nonUsMarketIsRejectedForUsClient() {
+        when(instruments.findInstrumentBySymbol("BTC")).thenReturn(Optional.of(new InstrumentResponse(instrument,
+                "BTC", "Bitcoin", "CRYPTO", "CRYPTO", "USD", null, true, true)));
+        expect(request("BTC"), LOCATION_RESTRICTED);
     }
     private SubmitOrderRequest request(String symbol) {
         return new SubmitOrderRequest(account, symbol, UUID.randomUUID(), "BUY", 1, "MARKET", BigDecimal.ZERO);

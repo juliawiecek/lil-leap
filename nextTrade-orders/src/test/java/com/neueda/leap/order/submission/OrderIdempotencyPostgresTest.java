@@ -71,6 +71,7 @@ class OrderIdempotencyPostgresTest {
         account = UUID.randomUUID();
         instrument = UUID.randomUUID();
         jdbc.update("INSERT INTO users(user_id,email,password_hash) VALUES (?, 'trader@example.test', 'test-only')", user);
+        jdbc.update("INSERT INTO customer_profiles(user_id,first_name,last_name,phone,address,country,date_of_birth,ssn_encrypted) VALUES (?, 'Test', 'Trader', '555-0100', '1 Main St', 'US', DATE '1990-01-01', decode('00','hex'))", user);
         jdbc.update("""
                 INSERT INTO accounts(account_id,user_id,account_number,account_name,account_status,trading_enabled,min_balance_requirement)
                 VALUES (?, ?, 'TEST', 'Test', 'ACTIVE', TRUE, 1)
