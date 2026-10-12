@@ -13,6 +13,7 @@ import {
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { QuoteService } from './quote.service';
+import { firstValueFrom } from 'rxjs';
 import { interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
 
 /** Company logos the template knows how to draw. */
@@ -395,11 +396,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
 
   private async refreshQuotes(): Promise<void> {
     const next = [...this.quotes()];
-    for (let i = 0; i < next.length; i++) {
-      const current = next[i];
-      try {
-        const apiQuote = await this.quoteService.getLatestByMarketSymbol('NASDAQ', current.symbol).toPromise();
-        if (apiQuote) {
+    await Promise.all(
+      next.map(async (current, i) => {
+        try {
+          const apiQuote = await firstValueFrom(
+            this.quoteService.getLatestByMarketSymbol('NASDAQ', current.symbol),
+          );
           const midpoint = Number(apiQuote.midpoint ?? 0);
           const previousPrice = current.price || midpoint;
           const change = previousPrice > 0 ? ((midpoint - previousPrice) / previousPrice) * 100 : 0;
@@ -408,11 +410,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
             price: midpoint,
             change,
           };
+        } catch {
+          // Keep last visible price when quote fetch fails.
         }
-      } catch {
-        // Keep last visible price when quote fetch fails.
-      }
-    }
+      }),
+    );
     this.quotes.set(next);
     const selected = this.tradeQuote();
     const refreshed = next.find((q) => q.symbol === selected.symbol);
