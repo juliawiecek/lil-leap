@@ -15,6 +15,12 @@ import {
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 
+const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
+  CONSERVATIVE: 7,
+  MODERATE: 5,
+  AGGRESSIVE: 3,
+};
+
 interface Quote {
   instrumentId: string;  // ← NOW PRESERVED
   symbol: string;
@@ -66,6 +72,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
+  #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
   readonly name = input('');
@@ -185,6 +192,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly modal = signal('review');
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
+  readonly executionThresholdDollars = signal(5);
   readonly cost = computed(
     () =>
       Number(this.quantity()) *
@@ -348,6 +356,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: count,
         orderType: 'MARKET',
         clientReference: this.clientReference(),
+        bufferPercent: this.bufferPercentForPrice(quote.price),
       });
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
@@ -364,6 +373,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private bufferPercentForPrice(indicativePrice: number): number {
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) return 0;
+    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
+    return Math.round(percent * 100) / 100;
+  }
+
+  private defaultThresholdDollars(): number {
+    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
+    if (byRisk) return byRisk;
+    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
   }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
@@ -445,8 +466,19 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }
-    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
+      this.message.set('Order is still processing. Status updates continue in Orders.');
+      return;
+    }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+  }
+
+  private async pollOrdersUntilDestroyed(): Promise<void> {
+    clearTimeout(this.#ordersPollTimer);
+    await this.refreshOrders();
+    this.#ordersPollTimer = setTimeout(() => {
+      void this.pollOrdersUntilDestroyed();
+    }, 5000);
   }
   createAlert(): void {
     const price = Number(this.alertPrice());
@@ -466,12 +498,16 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
+    clearTimeout(this.#ordersPollTimer);
     if (this.#clockTimer) clearInterval(this.#clockTimer);
   }
 
   ngOnInit(): void {
+    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.loadTradingData();
+    void this.refreshPortfolio();
+    void this.pollOrdersUntilDestroyed();
   }
 
   async loadTradingData(): Promise<void> {

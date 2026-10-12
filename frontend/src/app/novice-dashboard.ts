@@ -18,6 +18,12 @@ import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } fr
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
 
+const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
+  CONSERVATIVE: 7,
+  MODERATE: 5,
+  AGGRESSIVE: 3,
+};
+
 interface Holding {
   symbol: string;
   name: string;
@@ -109,6 +115,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly selectedAccount = signal<Account | null>(null);
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
+  readonly executionThresholdDollars = signal(5);
   readonly todayReturn = computed(() => this.holdings().reduce((sum, h) => sum + h.today, 0));
   readonly todayReturnPercent = computed(() => {
     const invested = this.invested();
@@ -266,6 +273,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         quantity: Number(this.quantity()),
         orderType: 'MARKET',
         clientReference: this.clientReference(),
+        bufferPercent: this.bufferPercentForPrice(quote.price),
       });
       this.reviewing.set(false);
       this.quantity.set('');
@@ -278,6 +286,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private bufferPercentForPrice(indicativePrice: number): number {
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) return 0;
+    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
+    return Math.round(percent * 100) / 100;
+  }
+
+  private defaultThresholdDollars(): number {
+    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
+    if (byRisk) return byRisk;
+    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
   }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
@@ -378,6 +398,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
+    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     interval(5000)
       .pipe(
         startWith(0),

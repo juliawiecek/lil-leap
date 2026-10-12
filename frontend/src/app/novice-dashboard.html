@@ -565,6 +565,7 @@
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
       <p>Buying power: {{ buyingPower() | currency }}</p>
+      <p>Execution threshold: order is rejected if execution price moves more than ${{ executionThresholdDollars() }} from the indicative price.</p>
       @if (reviewing()) {
         <p class="review-confirmation">
           {{ side() }} {{ quantity() }} shares of {{ tradeQuote().symbol }} at

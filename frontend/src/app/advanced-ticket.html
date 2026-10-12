@@ -126,6 +126,7 @@
             <strong>Total</strong><strong>{{ desk().total() | currency }}</strong>
           </div>
         </div>
+        <p class="ticket-note">Execution threshold: order is rejected if execution price moves more than ${{ desk().executionThresholdDollars() }} from the indicative price.</p>
         <button class="primary-button review-button" type="submit">Review Order</button>
       </form>
     } @else if (desk().ticketTab() === 'Order Book') {
