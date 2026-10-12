@@ -65,6 +65,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #clockTimer: ReturnType<typeof setInterval> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
   readonly name = input('');
@@ -102,13 +103,23 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly ticketTab = signal('Trade');
   readonly marketTab = signal('Sectors');
   readonly filter = signal('All stocks');
+  readonly currentTime = signal(new Date());
+  readonly formattedTime = computed(() => {
+    const now = this.currentTime();
+    return {
+      time: now.toLocaleTimeString('en-US', { hour12: false }),
+      date: now.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    };
+  });
   readonly quotes: Quote[] = [
     { instrumentId: 'aapl-uuid', symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
     { instrumentId: 'nvda-uuid', symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
     { instrumentId: 'msft-uuid', symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
-    { instrumentId: 'amd-uuid', symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.14, change: 3.21, volume: '36.1M' },
-    { instrumentId: 'tsla-uuid', symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -1.24, volume: '45.7M' },
-    { instrumentId: 'meta-uuid', symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37, volume: '12.6M' },
     { instrumentId: 'amzn-uuid', symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
     { instrumentId: 'googl-uuid', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
   ];
@@ -154,11 +165,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
-  readonly news: NewsItem[] = [
-    { symbol: 'AAPL', time: '2:45 PM', title: 'Apple releases new M4 chip', source: 'Reuters' },
-    { symbol: 'NVDA', time: '1:32 PM', title: 'NVIDIA beats Q3 earnings expectations', source: 'Bloomberg' },
-    { symbol: 'MSFT', time: '12:15 PM', title: 'Microsoft expands cloud services', source: 'CNBC' },
-  ];
+  readonly news: NewsItem[] = [];
   readonly article = signal(0);
   readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
   readonly filteredOrders = computed(() => {
@@ -459,9 +466,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
+    if (this.#clockTimer) clearInterval(this.#clockTimer);
   }
 
   ngOnInit(): void {
+    this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.loadTradingData();
   }
 
