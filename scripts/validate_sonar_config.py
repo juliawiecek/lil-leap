@@ -56,6 +56,20 @@ def profile_rules(profile):
     return rules
 
 
+def validate_java_inputs(root, props):
+    for key in ('sonar.java.binaries', 'sonar.java.test.binaries',
+                'sonar.java.libraries', 'sonar.java.test.libraries'):
+        entries = [p.strip() for p in props.get(key, '').split(',') if p.strip()]
+        if not entries:
+            raise ValueError(f'Missing required Java analysis property: {key}')
+        for entry in entries:
+            if key.endswith('binaries'):
+                if not any((root / entry).rglob('*.class')):
+                    raise ValueError(f'Missing compiled Java classes for {key}: {entry}')
+            elif not any(path.is_file() for path in root.glob(entry)):
+                raise ValueError(f'No dependency JARs for {key}: {entry}; run the Maven dependency copy step')
+
+
 def validate_local(root, require_reports=False):
     props = read_properties(root / 'sonar-project.properties')
     split = lambda key: [p.strip() for p in props.get(key, '').split(',') if p.strip()]
@@ -98,9 +112,7 @@ def validate_local(root, require_reports=False):
     print('Files by language (source and test): ' + ', '.join(f'{k}={v}' for k, v in sorted(counts.items())))
 
     if require_reports:
-        for entry in split('sonar.java.binaries'):
-            if not any((root / entry).rglob('*.class')):
-                raise ValueError(f'Missing compiled Java classes: {entry}')
+        validate_java_inputs(root, props)
         for key in ('sonar.coverage.jacoco.xmlReportPaths', 'sonar.python.coverage.reportPaths'):
             for entry in split(key):
                 report = ET.parse(root / entry).getroot()
@@ -118,7 +130,7 @@ def validate_local(root, require_reports=False):
                      if line.startswith('SF:')]
             if not files or any(not (root / file).is_file() for file in files):
                 raise ValueError(f'Empty or unresolvable LCOV report: {entry}; run prepare_sonar_coverage.py')
-        print('Compiled Java classes and coverage reports validated.')
+        print('Compiled Java source/test classes, dependency JARs, and coverage reports validated.')
     return props, profiles
 
 

@@ -110,6 +110,21 @@ stage from running.
 | Insights UI | `insights-frontend/coverage/lcov.info` |
 | Quote pipeline | `data-pipeline/coverage.xml` |
 
+After the Java builds, **Prepare Java Analysis Dependencies** copies each Maven
+service's resolved dependencies, including test dependencies, into its
+`target/sonar-libraries/` directory. Both `sonar.java.libraries` and
+`sonar.java.test.libraries` reference these JARs; `sonar.java.test.binaries`
+references each service's `target/test-classes`. The preflight check requires
+these inputs so a missing classpath cannot silently reduce analysis precision.
+`sonar.python.version=3.12` matches the Python Docker image and Jenkins tests.
+
+For a local scan, after building each Java service, run this command from each
+of `nextTrade-orders`, `nextTrade-holdings`, and `insights` before validation:
+
+```sh
+mvn -B -ntp org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies -DincludeScope=test -DoutputDirectory=target/sonar-libraries
+```
+
 `scripts/prepare_sonar_coverage.py` prefixes each LCOV source path with its
 service directory. This distinguishes files such as `src/main.ts` across the
 three Node services. It runs after all Node coverage reports are generated and

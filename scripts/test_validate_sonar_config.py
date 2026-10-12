@@ -25,6 +25,33 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(validator.matches('a/b/FooTest.java', ['a/*Test.java']))
         self.assertTrue(validator.matches('data-pipeline/tests/test_app.py', ['data-pipeline/tests/**/*.py']))
 
+    def test_java_inputs_require_test_bytecode_and_dependency_jars(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            props = {
+                'sonar.java.binaries': 'target/classes',
+                'sonar.java.test.binaries': 'target/test-classes',
+                'sonar.java.libraries': 'target/sonar-libraries/*.jar',
+                'sonar.java.test.libraries': 'target/sonar-libraries/*.jar',
+            }
+            for path in ('target/classes/App.class', 'target/test-classes/AppTest.class',
+                         'target/sonar-libraries/dependency.jar'):
+                file = root / path
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.touch()
+            validator.validate_java_inputs(root, props)
+            (root / 'target/test-classes/AppTest.class').unlink()
+            with self.assertRaisesRegex(ValueError, 'sonar.java.test.binaries'):
+                validator.validate_java_inputs(root, props)
+            (root / 'target/test-classes/AppTest.class').touch()
+            (root / 'target/sonar-libraries/dependency.jar').unlink()
+            with self.assertRaisesRegex(ValueError, 'No dependency JARs'):
+                validator.validate_java_inputs(root, props)
+            (root / 'target/sonar-libraries/dependency.jar').touch()
+            props.pop('sonar.java.test.libraries')
+            with self.assertRaisesRegex(ValueError, 'Missing required Java analysis property'):
+                validator.validate_java_inputs(root, props)
+
     def test_rejects_placeholder_and_duplicate_rules(self):
         with self.assertRaises(ValueError):
             validator.profile_rules(ET.fromstring('<pending-quality-profile />'))
