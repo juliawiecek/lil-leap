@@ -38,7 +38,7 @@ loadScripts(document, 'script');</script>
 <li>
 <p>Package:</p>
 <ul>
-<li>Description</li>
+<li><a href="#package-description">Description</a></li>
 <li><a href="#related-package-summary">Related Packages</a></li>
 <li><a href="#class-summary">Classes and Interfaces</a></li>
 </ul>
@@ -49,7 +49,7 @@ loadScripts(document, 'script');</script>
 <div id="navbar-sub-list">
 <ul class="sub-nav-list">
 <li>Package:&nbsp;</li>
-<li>Description&nbsp;|&nbsp;</li>
+<li><a href="#package-description">Description</a>&nbsp;|&nbsp;</li>
 <li><a href="#related-package-summary">Related Packages</a>&nbsp;|&nbsp;</li>
 <li><a href="#class-summary">Classes and Interfaces</a></li>
 </ul>
@@ -69,6 +69,13 @@ loadScripts(document, 'script');</script>
 </div>
 <hr>
 <div class="package-signature">package <span class="element-name">com.neueda.leap.reporting</span></div>
+<section class="package-description" id="package-description">
+<div class="block">Internal reporting and insights over aggregated trading activity.
+
+ <p>Reports are read from a reporting store that is populated asynchronously
+ from trading events, so reporting queries never compete with live trading
+ workloads. All endpoints are restricted to internal ANALYST users.</p></div>
+</section>
 <section class="summary">
 <ul class="summary-list">
 <li>
@@ -81,13 +88,32 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Spring Boot entry point for the NextTrade backend.</div>
 </div>
-<div class="col-first odd-row-color"><a href="../config/package-summary.html">com.neueda.leap.config</a></div>
+<div class="col-first odd-row-color"><a href="controller/package-summary.html">com.neueda.leap.reporting.controller</a></div>
 <div class="col-last odd-row-color">
-<div class="block">Spring configuration for stateless authentication and API access.</div>
+<div class="block">Analyst-only REST endpoints for trading reports and dashboard insights.</div>
 </div>
-<div class="col-first even-row-color"><a href="../security/package-summary.html">com.neueda.leap.security</a></div>
+<div class="col-first even-row-color"><a href="dto/package-summary.html">com.neueda.leap.reporting.dto</a></div>
 <div class="col-last even-row-color">
-<div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
+<div class="block">Response DTOs returned by the reporting API.</div>
+</div>
+<div class="col-first odd-row-color"><a href="entity/package-summary.html">com.neueda.leap.reporting.entity</a></div>
+<div class="col-last odd-row-color">&nbsp;</div>
+<div class="col-first even-row-color"><a href="enums/package-summary.html">com.neueda.leap.reporting.enums</a></div>
+<div class="col-last even-row-color">
+<div class="block">Enumerations used by reporting responses.</div>
+</div>
+<div class="col-first odd-row-color"><a href="model/package-summary.html">com.neueda.leap.reporting.model</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Validated value objects shared by the reporting service and repositories.</div>
+</div>
+<div class="col-first even-row-color"><a href="repository/package-summary.html">com.neueda.leap.reporting.repository</a></div>
+<div class="col-last even-row-color">
+<div class="block">Read-only persistence boundary for dashboard insights backed by existing trading
+ tables through JPA entities and Spring Data repositories.</div>
+</div>
+<div class="col-first odd-row-color"><a href="service/package-summary.html">com.neueda.leap.reporting.service</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Reporting use cases built on the read-only reporting repository.</div>
 </div>
 </div>
 </div>

@@ -24,6 +24,11 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** Creates the exception handler; Spring registers it as controller advice. */
+    public GlobalExceptionHandler() {
+        // No state to initialize.
+    }
+
     private static final String ERROR_KEY = "error";
     private static final String MESSAGE_KEY = "message";
     private static final String REQUEST_FAILED = "REQUEST_FAILED";

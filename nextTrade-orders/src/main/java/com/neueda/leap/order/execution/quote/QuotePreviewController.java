@@ -38,7 +38,7 @@ public class QuotePreviewController {
      * Response is cached quote midpoint with indicative=true flag.
      * If no cached quote exists, returns error message (AC3).
      *
-     * Example: GET /api/v1/orders/quote-preview?symbol=AAPL&side=BUY&quantity=10
+     * Example: {@code GET /api/v1/orders/quote-preview?symbol=AAPL&side=BUY&quantity=10}
      *
      * @param symbol instrument symbol
      * @param side BUY or SELL
@@ -113,6 +113,15 @@ public class QuotePreviewController {
 
     /**
      * Response object for quote preview requests.
+     *
+     * @param symbol instrument symbol; null on error
+     * @param side requested side, or N/A when not supplied; null on error
+     * @param quantity requested quantity, or 0 when not supplied; null on error
+     * @param indicativePrice indicative price, not a guaranteed fill price; null on error
+     * @param quotedAt time of the cached quote; null on error
+     * @param indicative true when the price is an indicative estimate
+     * @param error error code; null on success
+     * @param errorMessage readable error description; null on success
      */
     public record QuotePreviewResponse(
             String symbol,
@@ -126,6 +135,14 @@ public class QuotePreviewController {
     ) {
         /**
          * Creates a successful quote preview response.
+         *
+         * @param symbol instrument symbol
+         * @param side requested side
+         * @param quantity requested quantity
+         * @param indicativePrice indicative price from the cached quote
+         * @param quotedAt time of the cached quote
+         * @param indicative true when the price is an indicative estimate
+         * @return success response with no error fields
          */
         public static QuotePreviewResponse success(
                 String symbol,
@@ -142,6 +159,10 @@ public class QuotePreviewController {
 
         /**
          * Creates an error response.
+         *
+         * @param errorCode stable error code
+         * @param errorMessage readable error description
+         * @return error response with no price fields
          */
         public static QuotePreviewResponse error(String errorCode, String errorMessage) {
             return new QuotePreviewResponse(

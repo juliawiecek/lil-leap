@@ -50,6 +50,12 @@ public class IndicativePriceService {
 
     /**
      * Response object for indicative price queries.
+     *
+     * @param symbol instrument symbol; null when no quote is available
+     * @param price indicative price (quote midpoint); null when no quote is available
+     * @param quotedAt time of the cached quote; null when no quote is available
+     * @param error error code; null on success
+     * @param indicative true when the price is an indicative estimate
      */
     public record IndicativePriceResponse(
             String symbol,
@@ -60,6 +66,12 @@ public class IndicativePriceService {
     ) {
         /**
          * Creates a successful indicative price response.
+         *
+         * @param symbol instrument symbol
+         * @param price indicative price
+         * @param quotedAt time of the cached quote
+         * @param indicative true when the price is an indicative estimate
+         * @return success response with no error
          */
         public static IndicativePriceResponse indicativePrice(
                 String symbol,
@@ -71,6 +83,8 @@ public class IndicativePriceService {
 
         /**
          * Creates a "no quote available" response (AC3).
+         *
+         * @return response with the NO_QUOTE_AVAILABLE error and no price
          */
         public static IndicativePriceResponse noQuoteAvailable() {
             return new IndicativePriceResponse(

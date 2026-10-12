@@ -23,13 +23,24 @@ public class InstrumentEntity {
     @Column(name = "symbol", nullable = false, length = 20)
     private String symbol;
 
+    /** Required by JPA; not for application use. */
     protected InstrumentEntity() {
     }
 
+    /**
+     * Returns the persistent instrument identifier.
+     *
+     * @return persistent instrument identifier
+     */
     public UUID getInstrumentId() {
         return instrumentId;
     }
 
+    /**
+     * Returns the instrument trading symbol.
+     *
+     * @return instrument trading symbol
+     */
     public String getSymbol() {
         return symbol;
     }
