@@ -6,3 +6,6 @@ spring:
 orders:
   execution:
     enabled: false
+app:
+  jwt:
+    secret: test-secret-at-least-32-bytes-long-000000

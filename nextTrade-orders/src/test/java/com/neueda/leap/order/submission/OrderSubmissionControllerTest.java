@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -39,7 +40,7 @@ class OrderSubmissionControllerTest {
         var rejection = new OrderSufficiencyException(reason);
         when(service.submit(user, request)).thenThrow(rejection);
 
-        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+        mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .contentType("application/json").content(json.writeValueAsBytes(request)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
@@ -49,14 +50,22 @@ class OrderSubmissionControllerTest {
 
     @Test
     void missingAuthenticationCannotSubmit() throws Exception {
-        mvc.perform(post("/orders").contentType("application/json").content(json.writeValueAsBytes(request())))
+        mvc.perform(post("/orders").with(csrf().asHeader()).contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(service);
     }
 
     @Test
-    void queryScopeCannotOverrideAuthenticatedIdentity() throws Exception {
+    void missingCsrfCannotSubmit() throws Exception {
         mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .contentType("application/json").content(json.writeValueAsBytes(request())))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void queryScopeCannotOverrideAuthenticatedIdentity() throws Exception {
+        mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .param("userId", UUID.randomUUID().toString())
                         .contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isForbidden());
@@ -69,7 +78,7 @@ class OrderSubmissionControllerTest {
 
     @Test
     void analystCannotSubmitThroughTheCanonicalController() throws Exception {
-        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "analyst@example.test", "ANALYST"))
+        mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "analyst@example.test", "ANALYST"))
                         .contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(service);
@@ -77,7 +86,7 @@ class OrderSubmissionControllerTest {
 
     @Test
     void invalidTokenCannotSubmit() throws Exception {
-        mvc.perform(post("/orders").header("Authorization", "Bearer invalid-token")
+        mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer invalid-token")
                         .contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(service);
@@ -87,7 +96,7 @@ class OrderSubmissionControllerTest {
     void malformedSubmissionDoesNotReachService() throws Exception {
         var invalid = new SubmitOrderRequest(UUID.randomUUID(), "AAPL", UUID.randomUUID(),
                 "BUY", 0, "MARKET", null);
-        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+        mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .contentType("application/json").content(json.writeValueAsBytes(invalid)))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(service);
@@ -105,7 +114,7 @@ class OrderSubmissionControllerTest {
                 new com.neueda.leap.order.submission.service.OrderSubmissionResult(order, false));
 
         for (int expectedStatus : new int[]{201, 200, 200}) {
-            mvc.perform(post("/orders").header("Authorization", bearer)
+            mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", bearer)
                             .contentType("application/json").content(json.writeValueAsBytes(request)))
                     .andExpect(status().is(expectedStatus))
                     .andExpect(jsonPath("$.orderId").value(order.orderId().toString()))
