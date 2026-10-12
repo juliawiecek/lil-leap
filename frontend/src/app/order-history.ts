@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
@@ -13,10 +13,11 @@ import { OrderHistoryService } from './order-history.service';
   templateUrl: './order-history.html',
   styleUrl: './order-history.scss',
 })
-export class OrderHistory implements OnInit {
+export class OrderHistory implements OnInit, OnDestroy {
   readonly #orders = inject(OrderHistoryService);
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
+  #refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly statusOptions = [
     { value: '', label: 'All' },
@@ -36,6 +37,11 @@ export class OrderHistory implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    this.#scheduleRefresh();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.#refreshTimer);
   }
 
   setFrom(value: string): void {
@@ -90,5 +96,13 @@ export class OrderHistory implements OnInit {
     } finally {
       if (request === this.#request) this.loading.set(false);
     }
+  }
+
+  #scheduleRefresh(): void {
+    clearTimeout(this.#refreshTimer);
+    this.#refreshTimer = setTimeout(async () => {
+      await this.load();
+      this.#scheduleRefresh();
+    }, 5000);
   }
 }
