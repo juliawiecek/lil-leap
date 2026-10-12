@@ -47,7 +47,7 @@ public class JdbcQuoteRepository implements QuoteRepository {
      * @return latest quote, or empty when no quote exists
      */
     public Optional<MarketQuote> findLatestByInstrumentId(UUID id) {
-        return jdbc.query(SELECT + "WHERE i.instrument_id=?" + ORDER, mapper, id).stream()
+                return jdbc.query(SELECT + "WHERE i.instrument_id=? AND q.quoted_at<=CURRENT_TIMESTAMP" + ORDER, mapper, id).stream()
                 .findFirst();
     }
 
@@ -64,7 +64,7 @@ public class JdbcQuoteRepository implements QuoteRepository {
                 .query(
                         SELECT
                                 + "WHERE i.market_code=? AND i.symbol=? AND i.enabled AND"
-                                + " i.tradable"
+                                + " i.tradable AND q.quoted_at<=CURRENT_TIMESTAMP"
                                 + ORDER,
                         mapper,
                         market.trim().toUpperCase(Locale.ROOT),
