@@ -5,7 +5,6 @@ import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
 import com.neueda.leap.reporting.service.ReportingService;
 import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

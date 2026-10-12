@@ -124,6 +124,21 @@ pipeline {
       }
     }
 
+    stage('Prepare Java Analysis Dependencies') {
+      steps {
+        sh '''
+          set -eu
+          for service in nextTrade-orders nextTrade-holdings insights; do
+            (
+              cd "$service"
+              mvn -B -ntp org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies \
+                -DincludeScope=test -DoutputDirectory=target/sonar-libraries
+            )
+          done
+        '''
+      }
+    }
+
     stage('Publish Coverage - insights') {
       steps {
         archiveArtifacts(
