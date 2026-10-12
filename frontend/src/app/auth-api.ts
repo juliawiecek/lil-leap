@@ -39,8 +39,8 @@ const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
 
 export class AuthClient {
-  #fetch: typeof fetch;
-  #baseUrl: string;
+  readonly #fetch: typeof fetch;
+  readonly #baseUrl: string;
   #accessToken: string | null = null;
   #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;
@@ -123,7 +123,7 @@ export class AuthClient {
     const payload = accessToken?.split('.')[1];
     if (!payload) return;
     try {
-      const { exp, iat, trader_level } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      const { exp, iat, trader_level } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         exp?: unknown;
         iat?: unknown;
         trader_level?: unknown;

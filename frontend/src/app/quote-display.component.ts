@@ -1,7 +1,6 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { interval, Subject, takeUntil, switchMap, startWith, tap, catchError, Observable } from 'rxjs';
-import { of } from 'rxjs';
+import { interval, Subject, takeUntil, switchMap, startWith, tap, catchError, Observable, of } from 'rxjs';
 import { QuoteService, Quote } from './quote.service';
 import { FormatAgePipe } from './format-age.pipe';
 
@@ -265,10 +264,10 @@ export class QuoteDisplayComponent implements OnInit, OnDestroy {
   errorMessage = '';
   lastUpdateAgeMs: Observable<number> = of(0);
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
   private lastUpdateTime = 0;
 
-  constructor(private quoteService: QuoteService) {}
+  constructor(private readonly quoteService: QuoteService) {}
 
   ngOnInit(): void {
     if (!this.instrumentId) {

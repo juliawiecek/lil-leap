@@ -30,8 +30,6 @@ select {
 button {
   cursor: pointer;
   color: inherit;
-}
-button {
   background: none;
   border: 0;
 }
@@ -724,6 +722,7 @@ th {
 .allocation-donut {
   height: 156px;
   width: 156px;
+  padding: 26px;
   border-radius: 50%;
   position: relative;
   margin: 0 auto;
@@ -734,16 +733,11 @@ th {
     #111817 359deg
   );
 }
-.allocation-donut::before {
-  position: absolute;
-  content: '';
-  inset: 26px;
+.allocation-donut div {
+  width: 100%;
+  height: 100%;
   background: #0f1415;
   border-radius: 50%;
-}
-.allocation-donut > div {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1054,7 +1048,9 @@ th {
 .dialog-heading h2 {
   font-size: 20px;
 }
-.detail-dialog p {
+.detail-dialog p,
+.detail-dialog output {
+  display: block;
   color: var(--muted);
   margin: 14px 0;
   line-height: 1.7;
@@ -1176,12 +1172,10 @@ th {
   .allocation-donut {
     width: 135px;
     height: 135px;
+    padding: 23px;
   }
   .allocation-content {
     margin-block: 23px;
-  }
-  .allocation-donut::before {
-    inset: 23px;
   }
   .article-card {
     gap: 8px;
@@ -1406,9 +1400,7 @@ th {
   .allocation-donut {
     width: 105px;
     height: 105px;
-  }
-  .allocation-donut::before {
-    inset: 19px;
+    padding: 19px;
   }
   .allocation-donut strong {
     font-size: 12px;

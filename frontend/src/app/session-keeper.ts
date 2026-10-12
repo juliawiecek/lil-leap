@@ -25,14 +25,14 @@ export interface SessionKeeperOptions {
 }
 
 export class SessionKeeper {
-  #client: SessionClient;
-  #onExpired: () => void;
-  #inactivityMs: number;
-  #refreshAheadMs: number;
-  #checkEveryMs: number;
-  #now: () => number;
-  #setInterval: (callback: () => void, ms: number) => unknown;
-  #clearInterval: (handle: unknown) => void;
+  readonly #client: SessionClient;
+  readonly #onExpired: () => void;
+  readonly #inactivityMs: number;
+  readonly #refreshAheadMs: number;
+  readonly #checkEveryMs: number;
+  readonly #now: () => number;
+  readonly #setInterval: (callback: () => void, ms: number) => unknown;
+  readonly #clearInterval: (handle: unknown) => void;
   #timer: unknown = null;
   #lastActivity = 0;
   #lastRefresh = 0;

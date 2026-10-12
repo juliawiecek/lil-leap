@@ -136,12 +136,14 @@ export class InsightsChart {
   readonly label = input('Trading volume over time');
   readonly prefix = input('$');
   readonly max = computed(() => Math.max(1, ...this.points().map((p) => p.value)) * 1.15);
-  readonly divisor = computed(() =>
-    this.max() >= 1000000 ? 1000000 : this.max() >= 1000 ? 1000 : 1,
-  );
-  readonly suffix = computed(() =>
-    this.divisor() === 1000000 ? 'M' : this.divisor() === 1000 ? 'K' : '',
-  );
+  readonly divisor = computed(() => {
+    if (this.max() >= 1000000) return 1000000;
+    return this.max() >= 1000 ? 1000 : 1;
+  });
+  readonly suffix = computed(() => {
+    if (this.divisor() === 1000000) return 'M';
+    return this.divisor() === 1000 ? 'K' : '';
+  });
   x(i: number) {
     return 54 + (i / Math.max(1, this.points().length - 1)) * 572;
   }

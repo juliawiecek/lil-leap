@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { User } from '../user/entities/user.entity';
 import { UserRole } from '../user/user-role.enum';
 import { UserAlreadyExistsException } from '../user/exceptions/user-already-exists.exception';
@@ -182,11 +182,11 @@ export class RegistrationService {
   /** Removes currency separators; kept as a string for numeric column binding. */
   private normalizeMoney(value?: string | null): string | null {
     const trimmed = trimToNull(value);
-    return trimmed == null ? null : trimmed.replace(/,/g, '');
+    return trimmed == null ? null : trimmed.replaceAll(',', '');
   }
 
   /** Generates a deterministic-length account number with an NT prefix. */
   private generateAccountNumber(): string {
-    return 'NT' + randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase();
+    return 'NT' + randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase();
   }
 }

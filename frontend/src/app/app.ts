@@ -43,11 +43,11 @@ interface VolumeBar {
 })
 export class App implements AfterViewInit, OnDestroy {
   @ViewChild('marketChart', { static: true })
-  private marketChart!: ElementRef<HTMLCanvasElement>;
+  private readonly marketChart!: ElementRef<HTMLCanvasElement>;
 
-  @ViewChild('fullName') private fullName!: ElementRef<HTMLInputElement>;
-  @ViewChild('email') private email!: ElementRef<HTMLInputElement>;
-  @ViewChild('password') private password!: ElementRef<HTMLInputElement>;
+  @ViewChild('fullName') private readonly fullName!: ElementRef<HTMLInputElement>;
+  @ViewChild('email') private readonly email!: ElementRef<HTMLInputElement>;
+  @ViewChild('password') private readonly password!: ElementRef<HTMLInputElement>;
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
@@ -120,7 +120,7 @@ export class App implements AfterViewInit, OnDestroy {
     { label: 'At least 12 characters', test: (value: string) => value.length >= 12 },
     { label: 'An uppercase letter', test: (value: string) => /[A-Z]/.test(value) },
     { label: 'A lowercase letter', test: (value: string) => /[a-z]/.test(value) },
-    { label: 'A number', test: (value: string) => /[0-9]/.test(value) },
+    { label: 'A number', test: (value: string) => /\d/.test(value) },
     { label: 'A symbol (such as !, @, or #)', test: (value: string) => /[^A-Za-z0-9\s]/.test(value) },
   ];
 

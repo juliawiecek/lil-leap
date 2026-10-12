@@ -41,9 +41,9 @@ interface Quote {
   styleUrl: './novice-dashboard.scss',
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
-  orderSubmissionClient: OrderSubmissionClient;
-  orderHistoryClient: OrderHistoryClient;
-  portfolioClient: PortfolioClient;
+  readonly orderSubmissionClient: OrderSubmissionClient;
+  readonly orderHistoryClient: OrderHistoryClient;
+  readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -159,7 +159,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    * and a buy on the first tradable stock; the dialog's picker can change it.
    */
   openTrade(side = 'Buy', symbol?: string): void {
-    const start = symbol ?? (side === 'Sell' ? this.holdings()[0]?.symbol : undefined) ?? this.tradableQuotes()[0]?.symbol;
+    const start = this.resolveTradeStartSymbol(side, symbol);
     this.tradeQuote.set(this.quotes.find((q) => q.symbol === start) || this.quotes[0]);
     this.side.set(side);
     this.quantity.set('');
@@ -167,6 +167,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.tradeMessage.set('');
     this.query.set('');
     this.openModal('trade');
+  }
+
+  private resolveTradeStartSymbol(side: string, symbol?: string): string | undefined {
+    if (symbol) {
+      return symbol;
+    }
+    if (side === 'Sell') {
+      return this.holdings()[0]?.symbol;
+    }
+    return this.tradableQuotes()[0]?.symbol;
   }
   /** Switches the open trade to another stock and drops any review of the previous one. */
   chooseTradeSymbol(symbol: string): void {
@@ -185,15 +195,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   reviewTrade(): void {
     const count = Number(this.quantity());
     const held = this.holdings().find((h) => h.symbol === this.tradeQuote().symbol)?.shares || 0;
-    const error =
-      !Number.isSafeInteger(count) || count < 1
-        ? 'Enter a whole number of shares greater than zero.'
-        : this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()
-          ? 'This order exceeds your buying power.'
-          : this.side() === 'Sell' && count > held
-            ? 'You can only sell shares you hold.'
-            : '';
+    let error = '';
+    if (!Number.isSafeInteger(count) || count < 1) {
+      error = 'Enter a whole number of shares greater than zero.';
+    } else if (this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()) {
+      error = 'This order exceeds your buying power.';
+    } else if (this.side() === 'Sell' && count > held) {
+      error = 'You can only sell shares you hold.';
+    }
     const startingReview = !this.reviewing();
+
     this.tradeMessage.set(error);
     this.reviewing.set(!error);
     if (!error && startingReview) this.clientReference.set(OrderSubmissionClient.generateClientReference());
@@ -265,7 +276,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
-  constructor(private auth: AuthService) {
+  constructor(private readonly auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
@@ -334,8 +345,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.portfolioValue.set(valuation.total);
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     void this.refreshPortfolio();
+    void this.loadTradingData();
+  }
+
+  private async loadTradingData(): Promise<void> {
     try {
       const accounts = await this.orderSubmissionClient.getAccounts();
       this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);
