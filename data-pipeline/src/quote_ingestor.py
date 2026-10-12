@@ -1,7 +1,7 @@
 """Generate and atomically persist synthetic US-equity quotes."""
 from __future__ import annotations
 import argparse, os, signal, time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import pandas as pd
 from src.database import connect, DatabaseUnavailableError
@@ -44,7 +44,9 @@ def ingest_frame(frame: pd.DataFrame, connection) -> tuple[int,int]:
         raise
 
 def generate_current(periods: int, seed: int) -> pd.DataFrame:
-    start=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    # Keep the most recent generated quote at "now" so execution freshness checks pass.
+    latest = datetime.now(timezone.utc).replace(microsecond=0)
+    start = (latest - timedelta(minutes=max(periods - 1, 0))).isoformat()
     return generate_quotes(periods=periods, seed=seed, start_timestamp=start)
 
 def run_once(periods: int, seed: int) -> tuple[int,int,int]:
