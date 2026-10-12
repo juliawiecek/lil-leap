@@ -13,8 +13,7 @@ import {
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { QuoteService } from './quote.service';
-import { firstValueFrom } from 'rxjs';
-import { interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
+import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
