@@ -20,9 +20,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 @ConditionalOnProperty(name = "orders.execution.enabled", havingValue = "true", matchIfMissing = true)
 public class OrderExecutionConfiguration {
 
-    /** Creates the Spring configuration for this component. */
+    /** Creates the execution configuration; Spring instantiates it. */
     public OrderExecutionConfiguration() {
+        // No state to initialize.
     }
+
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             OrderExecutor executor,

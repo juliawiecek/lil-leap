@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /** Analyst reporting API backed exclusively by the reporting datasource. */
-@RestController
+@RestController("reportingSummaryController")
 @RequestMapping("/reports")
 public class ReportingController {
     private final ReportingQueryService reports;

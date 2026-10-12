@@ -123,10 +123,10 @@
         }
       </div>
       @if (answer() !== null) {
-        <p class="quiz-feedback" role="status">
+        <output class="quiz-feedback">
           {{ answer() === current().correct ? 'Correct. ' : 'Try again. '
           }}{{ current().explanation }}
-        </p>
+        </output>
       }
       <button
         class="green-button"

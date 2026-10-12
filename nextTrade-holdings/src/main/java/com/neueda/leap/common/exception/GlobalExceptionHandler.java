@@ -22,6 +22,21 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** Creates the exception handler; Spring registers it as controller advice. */
+    public GlobalExceptionHandler() {
+        // No state to initialize.
+    }
+
+    private static final String ERROR_KEY = "error";
+    private static final String MESSAGE_KEY = "message";
+    private static final String REQUEST_FAILED = "REQUEST_FAILED";
+    private static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    private static final String INVALID_REQUEST = "INVALID_REQUEST";
+    private static final String INVALID_FILTER = "INVALID_FILTER";
+    private static final String CLIENT_NOT_FOUND = "CLIENT_NOT_FOUND";
+    private static final String REQUEST_FAILED_MESSAGE = "The request could not be completed.";
+    private static final String INVALID_FIELDS_MESSAGE = "The request contains invalid or missing fields.";
+
     /**
      * Rejects invalid history filters without echoing request values.
      * @param exception invalid status or date range
@@ -29,7 +44,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(com.neueda.leap.portfolio.service.InvalidFilterException.class)
     public ResponseEntity<Map<String, String>> invalidFilter(Exception exception) {
-        return ResponseEntity.badRequest().body(Map.of("error", "INVALID_FILTER", "message", "Invalid order history filter"));
+        return ResponseEntity.badRequest().body(Map.of(ERROR_KEY, INVALID_FILTER, MESSAGE_KEY, "Invalid order history filter"));
     }
 
     /**
@@ -39,12 +54,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(com.neueda.leap.portfolio.service.ClientNotFoundException.class)
     public ResponseEntity<Map<String, String>> clientNotFound(Exception exception) {
-        return ResponseEntity.status(404).body(Map.of("error", "CLIENT_NOT_FOUND", "message", "Client not found"));
+        return ResponseEntity.status(404).body(Map.of(ERROR_KEY, CLIENT_NOT_FOUND, MESSAGE_KEY, "Client not found"));
     }
 
-    /** Creates the application-wide REST exception handler. */
-    public GlobalExceptionHandler() {
-    }
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
@@ -55,7 +67,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
-                "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -70,12 +82,12 @@ public class GlobalExceptionHandler {
         // Preserve framework statuses such as 404/405/415 without their request-derived messages.
         if (exception instanceof ErrorResponse error) {
             return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(
-                    "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                    ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
         }
         // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
         log.error("Request failed exceptionType={}", exception.getClass().getSimpleName());
         return ResponseEntity.internalServerError().body(Map.of(
-                "error", "INTERNAL_ERROR", "message", "The request could not be completed."));
+                ERROR_KEY, INTERNAL_ERROR, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -86,7 +98,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class, org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
-                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_FIELDS_MESSAGE));
     }
 
 }

@@ -14,7 +14,6 @@ pipeline {
   environment {
     COMPOSE_FILE = 'docker-compose.yml'
     NEXTTRADE_POM = 'nextTrade-orders/pom.xml'
-    INSIGHTS_POM = 'insights/pom.xml'
   }
 
   stages {
@@ -119,7 +118,66 @@ pipeline {
 
     stage('Unit Tests - insights-service') {
       steps {
-        sh "mvn -f ${INSIGHTS_POM} -B -ntp clean verify"
+        dir('insights') {
+          sh 'mvn -B -ntp clean verify'
+        }
+      }
+    }
+
+    stage('Publish Coverage - insights') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'insights/target/site/jacoco/**',
+          fingerprint: true
+        )
+      }
+    }
+
+    stage('Unit Tests - auth (NestJS)') {
+      // The numeric Jenkins UID has no container home; use a writable npm cache.
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
+            -v "$WORKSPACE/auth:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:cov'
+        '''
+      }
+    }
+
+    stage('Unit Tests - frontend (Angular)') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
+            -v "$WORKSPACE/frontend:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:coverage
+            npm run build'
+        '''
+      }
+    }
+
+    stage('Unit Tests - insights-frontend (Angular)') {
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
+            -v "$WORKSPACE/insights-frontend:/app" \
+            -w /app \
+            node:24-alpine \
+            sh -ec 'npm ci --no-audit --no-fund
+            npm run test:coverage
+            npm run build'
+        '''
       }
     }
 
@@ -143,14 +201,24 @@ pipeline {
       }
     }
 
+    stage('Publish Coverage - insights-service') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'insights/target/site/jacoco/**',
+          fingerprint: true,
+          allowEmptyArchive: true
+        )
+      }
+    }
+
 
     stage('Run Python Tests With Coverage') {
       steps {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
-            -v "$WORKSPACE/data-pipeline:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/data-pipeline" \
             python:3.12-slim \
             sh -ec 'python -m venv /tmp/python-venv
             /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
@@ -158,7 +226,8 @@ pipeline {
             --cov=src \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
-            --cov-report=xml:coverage.xml'
+            --cov-report=xml:coverage.xml
+            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py'
             '''
           }
         }
@@ -172,6 +241,64 @@ pipeline {
       }
     }
 
+    stage('Archive Node Coverage') {
+      steps {
+        archiveArtifacts(
+          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**',
+          fingerprint: true,
+          allowEmptyArchive: true
+        )
+      }
+    }
+
+
+    stage('SonarQube Analysis') {
+      when {
+        expression {
+          return (env.BRANCH_NAME ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
+                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
+        }
+      }
+      steps {
+        echo "Running SonarQube analysis on main branch"
+        script {
+          def scannerHome = tool 'SonarScanner'
+          withSonarQubeEnv(installationName: 'SonarQube') {
+            withEnv(["SCANNER_HOME=${scannerHome}"]) {
+              sh '''
+                set +x
+                if [ -z "${SONAR_AUTH_TOKEN:-}" ]; then
+                  echo "ERROR: SONAR_AUTH_TOKEN is empty. Check SonarQube server credentials in Jenkins."
+                  exit 1
+                fi
+                "$SCANNER_HOME/bin/sonar-scanner" \
+                  -Dsonar.token="$SONAR_AUTH_TOKEN" \
+                  -Dsonar.projectVersion="$BUILD_NUMBER"
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage('SonarQube Quality Gate') {
+      when {
+        expression {
+          return (env.BRANCH_NAME ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'main' ||
+                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
+                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
+        }
+      }
+      steps {
+        echo "Waiting for SonarQube quality gate on main branch"
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
 
     stage('Build Compose Services') {
       steps {

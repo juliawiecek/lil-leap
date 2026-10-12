@@ -1,12 +1,20 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnInit, OnDestroy, effect, inject } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
-import { QuoteService } from './quote.service';
-import { HoldingsService } from './holdings.service';
+import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import {
+  FINAL_ORDER_STATUSES,
+  ORDER_TRACK_INTERVAL_MS,
+  ORDER_TRACK_LIMIT_MS,
+  OrderHistoryClient,
+} from './order-history-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
-import { interval, Subject, takeUntil, switchMap, startWith } from 'rxjs';
+
+/** Company logos the template knows how to draw. */
+const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
 
 interface Holding {
   symbol: string;
@@ -34,27 +42,17 @@ interface Quote {
   styleUrl: './novice-dashboard.scss',
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
+  readonly orderSubmissionClient: OrderSubmissionClient;
+  readonly orderHistoryClient: OrderHistoryClient;
+  readonly portfolioClient: PortfolioClient;
+  #trackTimer: ReturnType<typeof setTimeout> | undefined;
+  #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #portfolio: Portfolio = { cash: 0, holdings: [] };
+  #bids = new Map<string, number>();
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  
-  private readonly quoteService = inject(QuoteService);
-  private readonly holdingsService = inject(HoldingsService);
-  private readonly authService = inject(AuthService);
-  private readonly destroy$ = new Subject<void>();
-  
-  // Supported instruments: AAPL, TSLA, AMZN, GOOGL, META, MSFT, NVDA
-  // All from NASDAQ market
-  private readonly supportedInstruments = [
-    { symbol: 'AAPL', name: 'Apple Inc.', market: 'NASDAQ' },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', market: 'NASDAQ' },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', market: 'NASDAQ' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', market: 'NASDAQ' },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', market: 'NASDAQ' },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', market: 'NASDAQ' },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', market: 'NASDAQ' },
-  ];
   readonly activeTab = signal('Overview');
   readonly navigation = [
     { label: 'Overview', icon: 'home' },
@@ -70,27 +68,24 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly showBalance = signal(true);
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
-  // Portfolio values fetched from API (TS-11.3: Live portfolio summary)
+  /** Balances and holdings, loaded from the backend and reloaded after each fill. */
   readonly portfolioValue = signal(0);
   readonly buyingPower = signal(0);
   readonly invested = signal(0);
-  // Holdings fetched from API with live prices (BR-13 + TS-11.3)
   readonly holdings = signal<Holding[]>([]);
-  
-  // Signal for live quotes fetched from API (BR-13: Indicative pricing)
-  readonly quotes = signal<Quote[]>([
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 0, change: 0 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 0, change: 0 },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 0, change: 0 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 0, change: 0 },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 0, change: 0 },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 0, change: 0 },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 0, change: 0 },
-  ]);
+  readonly quotes: Quote[] = [
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.98 },
+    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -0.84 },
+    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62 },
+    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37 },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 276.57, change: 1.98 },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 278.09, change: 5.34 },
+  ];
   readonly watched = signal(['AAPL', 'TSLA', 'AMZN', 'GOOGL', 'META']);
-  readonly watchlist = computed(() => this.quotes().filter((q) => this.watched().includes(q.symbol)));
+  readonly watchlist = computed(() => this.quotes.filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
-    this.quotes().filter((q) =>
+    this.quotes.filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
@@ -100,99 +95,17 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
   ];
   readonly modal = signal('trade');
-  readonly tradeQuote = signal(this.quotes()[0]);
+  readonly tradeQuote = signal(this.quotes[0]);
   readonly side = signal('Buy');
   readonly quantity = signal('');
   readonly reviewing = signal(false);
   readonly tradeMessage = signal('');
-  readonly orderHistory = signal<
-    { id: number; symbol: string; side: string; shares: number; price: number }[]
-  >([]);
+  readonly submitting = signal(false);
+  /** Idempotency key for the order being reviewed; a retried confirm reuses it. */
+  readonly clientReference = signal('');
+  readonly selectedAccount = signal<Account | null>(null);
+  readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
-
-  /**
-   * BR-13 & TS-11.3: Dynamically calculated financial metrics from actual holdings
-   * These replace hardcoded values to show real account data
-   */
-  readonly todayReturn = computed(() => {
-    const holdings = this.holdings();
-    if (!holdings.length) return 0;
-    return holdings.reduce((sum, h) => sum + (h.today * h.shares), 0);
-  });
-
-  readonly todayReturnPercent = computed(() => {
-    const invested = this.invested();
-    const todayReturn = this.todayReturn();
-    if (invested === 0) return 0;
-    return (todayReturn / invested) * 100;
-  });
-
-  readonly totalReturn = computed(() => {
-    const holdings = this.holdings();
-    if (!holdings.length) return 0;
-    return holdings.reduce((sum, h) => sum + h.total, 0);
-  });
-
-  readonly totalReturnPercent = computed(() => {
-    const invested = this.invested();
-    const totalReturn = this.totalReturn();
-    if (invested === 0) return 0;
-    return (totalReturn / invested) * 100;
-  });
-
-  /**
-   * Formatted display strings for return values
-   * Shows sign (+/-), value, and percentage for UI display
-   */
-  readonly todayReturnDisplay = computed(() => {
-    const val = this.todayReturn();
-    const pct = this.todayReturnPercent();
-    if (val === 0) return '$0.00 (0.00%)';
-    const sign = val > 0 ? '+' : '';
-    return `${sign}$${Math.abs(val).toFixed(2)} (${pct.toFixed(2)}%)`;
-  });
-
-  readonly totalReturnDisplay = computed(() => {
-    const val = this.totalReturn();
-    const pct = this.totalReturnPercent();
-    if (val === 0) return '$0.00 (0.00%)';
-    const sign = val > 0 ? '+' : '';
-    return `${sign}$${Math.abs(val).toFixed(2)} (${pct.toFixed(2)}%)`;
-  });
-
-  /**
-   * Asset allocation computed from actual holdings
-   * Shows only owned instruments, not all supported instruments
-   */
-  readonly assetAllocation = computed(() => {
-    const holdings = this.holdings();
-    const stocksValue = holdings.reduce((sum, h) => sum + h.value, 0);
-    const cashValue = this.buyingPower();
-    const totalValue = stocksValue + cashValue;
-
-    if (totalValue === 0) {
-      return {
-        total: 0,
-        stocksValue: 0,
-        stocksPercent: 0,
-        cashValue: 0,
-        cashPercent: 100, // Empty account shows 100% cash
-      };
-    }
-
-    return {
-      total: totalValue,
-      stocksValue,
-      stocksPercent: Math.round((stocksValue / totalValue) * 100),
-      cashValue,
-      cashPercent: Math.round((cashValue / totalValue) * 100),
-    };
-  });
-
-  readonly ownedSymbols = computed(() => {
-    return this.holdings().map(h => h.symbol);
-  });
-
   readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
     () =>
@@ -238,14 +151,42 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   onDialogClick(event: MouseEvent): void {
     if (event.target === this.dialog()?.nativeElement) this.closeModal();
   }
-  openTrade(side = 'Buy', symbol = 'AAPL'): void {
-    this.tradeQuote.set(this.quotes().find((q) => q.symbol === symbol) || this.quotes()[0]);
+  /** Stocks the trade dialog offers: those the backend can trade, or every quote until instruments load. */
+  readonly tradableQuotes = computed(() => {
+    const symbols = new Set(this.instruments().map((i) => i.symbol));
+    return symbols.size ? this.quotes.filter((q) => symbols.has(q.symbol)) : this.quotes;
+  });
+  /**
+   * Opens the trade dialog. Without a symbol, a sell starts on the first stock the user holds
+   * and a buy on the first tradable stock; the dialog's picker can change it.
+   */
+  openTrade(side = 'Buy', symbol?: string): void {
+    const start = this.resolveTradeStartSymbol(side, symbol);
+    this.tradeQuote.set(this.quotes.find((q) => q.symbol === start) || this.quotes[0]);
     this.side.set(side);
     this.quantity.set('');
     this.reviewing.set(false);
     this.tradeMessage.set('');
     this.query.set('');
     this.openModal('trade');
+  }
+
+  private resolveTradeStartSymbol(side: string, symbol?: string): string | undefined {
+    if (symbol) {
+      return symbol;
+    }
+    if (side === 'Sell') {
+      return this.holdings()[0]?.symbol;
+    }
+    return this.tradableQuotes()[0]?.symbol;
+  }
+  /** Switches the open trade to another stock and drops any review of the previous one. */
+  chooseTradeSymbol(symbol: string): void {
+    const quote = this.quotes.find((q) => q.symbol === symbol);
+    if (!quote) return;
+    this.tradeQuote.set(quote);
+    this.reviewing.set(false);
+    this.tradeMessage.set('');
   }
   toggleWatch(): void {
     const symbol = this.tradeQuote().symbol;
@@ -256,318 +197,168 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   reviewTrade(): void {
     const count = Number(this.quantity());
     const held = this.holdings().find((h) => h.symbol === this.tradeQuote().symbol)?.shares || 0;
-    const error =
-      !Number.isSafeInteger(count) || count < 1
-        ? 'Enter a whole number of shares greater than zero.'
-        : this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()
-          ? 'This order exceeds your buying power.'
-          : this.side() === 'Sell' && count > held
-            ? 'You can only sell shares you hold.'
-            : '';
+    let error = '';
+    if (!Number.isSafeInteger(count) || count < 1) {
+      error = 'Enter a whole number of shares greater than zero.';
+    } else if (this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()) {
+      error = 'This order exceeds your buying power.';
+    } else if (this.side() === 'Sell' && count > held) {
+      error = 'You can only sell shares you hold.';
+    }
+    const startingReview = !this.reviewing();
+
     this.tradeMessage.set(error);
     this.reviewing.set(!error);
+    if (!error && startingReview) this.clientReference.set(OrderSubmissionClient.generateClientReference());
   }
-  confirmTrade(): void {
+  /**
+   * Sends the reviewed order to the backend. Holdings and buying power are not changed
+   * here: the backend fills the order, and its progress is shown until it settles.
+   */
+  async confirmTrade(): Promise<void> {
     this.reviewTrade();
-    if (!this.reviewing()) return;
-    const quote = this.tradeQuote(),
-      count = Number(this.quantity()),
-      direction = this.side() === 'Buy' ? 1 : -1;
-    const amount = Math.round(this.tradeTotal() * 100) / 100;
-    this.buyingPower.update((v) => Math.round((v - amount * direction) * 100) / 100);
-    this.invested.update((v) => Math.round((v + amount * direction) * 100) / 100);
-    this.holdings.update((list) => {
-      const existing = list.find((h) => h.symbol === quote.symbol);
-      if (!existing)
-        return [
-          ...list,
-          {
-            symbol: quote.symbol,
-            name: quote.name,
-            value: amount,
-            shares: count,
-            average: quote.price,
-            today: 0,
-            change: 0,
-            total: 0,
-            totalPercent: 0,
-            logo: '',
-          },
-        ];
-      return list
-        .map((h) =>
-          h.symbol !== quote.symbol
-            ? h
-            : {
-                ...h,
-                shares: h.shares + count * direction,
-                value: h.value + amount * direction,
-                average:
-                  direction === 1
-                    ? (h.average * h.shares + amount) / (h.shares + count)
-                    : h.average,
-              },
-        )
-        .filter((h) => h.shares > 0);
-    });
-    this.orderHistory.update((list) => [
-      {
-        id: Date.now(),
-        symbol: quote.symbol,
-        side: this.side(),
-        shares: count,
-        price: quote.price,
-      },
-      ...list,
-    ]);
-    this.reviewing.set(false);
-    this.quantity.set('');
-    this.tradeMessage.set('Order filled. Your holdings and buying power have been updated.');
-  }
-
-  /**
-   * BR-13 & TS-11.3 Compliance: Fetch live quotes and portfolio data
-   * Sets up polling to refresh both every 5 seconds
-   */
-  ngOnInit(): void {
-    // Extract client ID from JWT token
-    const clientId = this.extractClientIdFromJWT();
-    const riskProfile = this.extractRiskProfileFromJWT();
-    
-    // Fetch quotes immediately and every 5 seconds
-    interval(5000)
-      .pipe(
-        startWith(0), // Fetch immediately on init
-        switchMap(() => this.fetchAllQuotes()),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (quotes) => {
-          this.quotes.set(quotes);
-          // Update tradeQuote if it's still showing old data
-          const current = this.tradeQuote();
-          const updated = quotes.find((q) => q.symbol === current.symbol);
-          if (updated && updated.price !== current.price) {
-            this.tradeQuote.set(updated);
-          }
-        },
-        error: (err) => {
-          console.error('Failed to fetch live quotes:', err);
-          // Keep showing stale quotes on error, don't break the UI
-        },
+    if (!this.reviewing() || this.submitting()) return;
+    const quote = this.tradeQuote();
+    const account = this.selectedAccount();
+    const instrument = this.instruments().find((i) => i.symbol === quote.symbol);
+    if (!account) {
+      this.tradeMessage.set('We could not find an active trading account for you.');
+      return;
+    }
+    if (!instrument) {
+      this.tradeMessage.set(`${quote.symbol} is not available to trade yet.`);
+      return;
+    }
+    this.submitting.set(true);
+    try {
+      const response = await this.orderSubmissionClient.submit({
+        accountId: account.account_id,
+        instrumentId: instrument.instrumentId,
+        side: this.side() === 'Buy' ? 'BUY' : 'SELL',
+        quantity: Number(this.quantity()),
+        orderType: 'MARKET',
+        clientReference: this.clientReference(),
       });
-
-    // Fetch portfolio/holdings immediately and every 5 seconds (TS-11.3 AC1)
-    // Only if we have a valid client ID
-    if (clientId) {
-      interval(5000)
-        .pipe(
-          startWith(0), // Fetch immediately on init
-          switchMap(() => this.fetchPortfolioData(clientId)),
-          takeUntil(this.destroy$)
-        )
-        .subscribe({
-          next: (portfolioData) => {
-            // Update signals with real portfolio data
-            this.portfolioValue.set(portfolioData.totalPortfolioValue);
-            this.invested.set(portfolioData.investedValue);
-            
-            // If this is a new account with no buying power, initialize with risk-profile-based cash
-            let buyingPower = portfolioData.availableBalance;
-            if (buyingPower === 0 && riskProfile) {
-              buyingPower = this.getStartingCashForRiskProfile(riskProfile);
-            }
-            this.buyingPower.set(buyingPower);
-            this.holdings.set(portfolioData.holdings);
-          },
-          error: (err) => {
-            console.error('Failed to fetch portfolio data:', err);
-            // Keep showing stale portfolio on error, don't break the UI
-          },
-        });
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  /**
-   * Fetch all live quotes from the API (BR-13: Indicative Pricing)
-   * Calls quote API for each supported instrument and updates the quotes signal
-   * If API fails, returns current quotes to keep UI functional
-   */
-  private fetchAllQuotes() {
-    return new Promise<Quote[]>((resolve) => {
-      const quotePromises = this.supportedInstruments.map((inst) =>
-        this.quoteService
-          .getLatestByMarketSymbol(inst.market, inst.symbol)
-          .toPromise()
-          .then(
-            (apiQuote: any) => ({
-              symbol: inst.symbol,
-              name: inst.name,
-              // Use midpoint from API quote (already calculated bid + ask / 2)
-              price: apiQuote?.midpoint ? parseFloat(apiQuote.midpoint.toString()) : 0,
-              change: 0, // Change calculation can be added from price history later
-            }),
-            (error: any) => {
-              // On API error, fall back to current price
-              console.warn(`Failed to fetch ${inst.symbol}:`, error);
-              return {
-                symbol: inst.symbol,
-                name: inst.name,
-                price: this.quotes().find((q: Quote) => q.symbol === inst.symbol)?.price || 0,
-                change: 0,
-              };
-            }
-          )
+      this.reviewing.set(false);
+      this.quantity.set('');
+      this.tradeMessage.set('Order sent. Waiting for it to fill…');
+      void this.trackOrder(response.orderId);
+    } catch (error) {
+      this.tradeMessage.set(
+        error instanceof OrderSubmissionError ? error.userMessage : 'Your order could not be sent. Please try again.',
       );
-
-      Promise.all(quotePromises).then((quotes) => resolve(quotes));
-    });
-  }
-
-  /**
-   * TS-11.3 AC1: Fetch portfolio summary from backend
-   * Returns holdings with current market prices and portfolio value calculated from live quotes
-   * 
-   * @param clientId - authenticated user ID
-   * @returns Promise with portfolio data (holdings, portfolio value, cash balance)
-   */
-  private fetchPortfolioData(clientId: string): Promise<{
-    totalPortfolioValue: number;
-    investedValue: number;
-    availableBalance: number;
-    holdings: Holding[];
-  }> {
-    return new Promise((resolve) => {
-      this.holdingsService
-        .getPortfolioSummary(clientId)
-        .toPromise()
-        .then(
-          (portfolio: any) => {
-            // Transform API response to Holding[] format
-            const holdings: Holding[] = portfolio.holdings.map((h: any) => {
-              const currentPrice = this.findCurrentPrice(h.symbol);
-              const holdingValue = currentPrice * h.quantity;
-              return {
-                symbol: h.symbol,
-                name: h.instrumentName,
-                value: holdingValue,
-                shares: h.quantity,
-                average: h.avgCost,
-                today: currentPrice - h.avgCost, // Price difference since purchase
-                change: h.avgCost > 0 ? ((currentPrice - h.avgCost) / h.avgCost) * 100 : 0,
-                total: holdingValue - (h.avgCost * h.quantity), // P&L
-                totalPercent: h.avgCost > 0 ? ((currentPrice - h.avgCost) / h.avgCost) * 100 : 0,
-                logo: h.symbol.toLowerCase(),
-              };
-            });
-
-            resolve({
-              totalPortfolioValue: portfolio.totalPortfolioValue,
-              investedValue: holdings.reduce((sum: number, h) => sum + h.value, 0),
-              availableBalance: portfolio.cash?.availableBalance || 0,
-              holdings,
-            });
-          },
-          (error: any) => {
-            console.warn('Failed to fetch portfolio data:', error);
-            // Return current portfolio state on error
-            resolve({
-              totalPortfolioValue: this.portfolioValue(),
-              investedValue: this.invested(),
-              availableBalance: this.buyingPower(),
-              holdings: this.holdings(),
-            });
-          }
-        );
-    });
-  }
-
-  /**
-   * Helper: Find current price of a symbol from quotes signal
-   */
-  private findCurrentPrice(symbol: string): number {
-    return this.quotes().find((q) => q.symbol === symbol)?.price || 0;
-  }
-
-  /**
-   * Helper: Extract client ID from JWT access token
-   * Parses the JWT payload to get the 'sub' claim (subject/user ID)
-   * Returns null if token is not available or invalid
-   */
-  private extractClientIdFromJWT(): string | null {
-    const token = this.authService.accessToken;
-    if (!token) {
-      console.warn('No access token available');
-      return null;
+    } finally {
+      this.submitting.set(false);
     }
-
+  }
+  /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
+  async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
+    clearTimeout(this.#trackTimer);
+    let row;
     try {
-      // JWT format: header.payload.signature
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        console.warn('Invalid JWT format');
-        return null;
-      }
-
-      // Decode payload (add padding if needed for base64)
-      const payload = parts[1];
-      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
-      const decoded = JSON.parse(atob(padded)) as { sub?: string; user_id?: string };
-
-      // Return the 'sub' claim (standard JWT subject) or 'user_id' claim
-      return decoded.sub || decoded.user_id || null;
+      row = (await this.orderHistoryClient.list()).find((r) => r.orderId === orderId);
     } catch (error) {
-      console.warn('Failed to parse JWT token:', error);
-      return null;
+      this.tradeMessage.set(error instanceof Error ? error.message : 'Could not check your order.');
+      return;
     }
+    if (row && FINAL_ORDER_STATUSES.has(row.status)) {
+      if (row.status === 'FILLED') await this.refreshPortfolio();
+      const action = row.side === 'SELL' ? 'Sold' : 'Bought';
+      this.tradeMessage.set(
+        row.status === 'FILLED'
+          ? `${action} ${row.filledQuantity ?? row.quantity} ${row.symbol} at $${row.fillPrice?.toFixed(2)}. You can see it under Orders.`
+          : 'Your order was not filled. You can see why under Orders.',
+      );
+      return;
+    }
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
+      this.tradeMessage.set('Your order is still being processed. Check Orders for its status.');
+      return;
+    }
+    if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
+    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
-
-  private extractRiskProfileFromJWT(): string | null {
-    const token = this.authService.accessToken;
-    if (!token) {
-      return null;
-    }
-
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        return null;
-      }
-
-      const payload = parts[1];
-      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
-      const decoded = JSON.parse(atob(padded)) as { risk_profile?: string };
-
-      return decoded.risk_profile || null;
-    } catch (error) {
-      console.warn('Failed to extract risk profile from JWT:', error);
-      return null;
-    }
+  constructor(private readonly auth: AuthService) {
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth);
+    this.portfolioClient = new PortfolioClient(this.auth);
   }
-
+  ngOnDestroy(): void {
+    clearTimeout(this.#trackTimer);
+    clearTimeout(this.#priceTimer);
+  }
   /**
-   * Maps risk profile to starting cash amount
-   * CONSERVATIVE: $30,000
-   * MODERATE: $100,000
-   * AGGRESSIVE: $40,000,000
+   * Reloads buying power and holdings, prices them, and keeps re-pricing them while any are
+   * held. A failure keeps the last values shown.
    */
-  private getStartingCashForRiskProfile(riskProfile: string | null): number {
-    if (!riskProfile) return 0;
-    
-    switch (riskProfile.toUpperCase()) {
-      case 'CONSERVATIVE':
-        return 30000;
-      case 'MODERATE':
-        return 100000;
-      case 'AGGRESSIVE':
-        return 40000000;
-      default:
-        return 0;
+  async refreshPortfolio(): Promise<void> {
+    try {
+      this.applyPortfolio(await this.portfolioClient.load());
+    } catch {
+      // The trade dialog already reports order problems; balances refresh again after the next fill.
+      return;
+    }
+    await this.refreshPrices();
+    this.#schedulePrices();
+  }
+  /** Shows a loaded portfolio, valued at the latest bids already known. */
+  applyPortfolio(portfolio: Portfolio): void {
+    this.#portfolio = portfolio;
+    this.#render();
+  }
+  /** Re-values holdings at their latest bids; a failed quote keeps the last price. */
+  async refreshPrices(): Promise<void> {
+    const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
+    if (!ids.length) return;
+    try {
+      const bids = await this.portfolioClient.latestBids(ids);
+      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      this.#render();
+    } catch {
+      // Keep showing the last known values; the next tick retries.
+    }
+  }
+  #schedulePrices(): void {
+    clearTimeout(this.#priceTimer);
+    if (!this.#portfolio.holdings.length) return;
+    this.#priceTimer = setTimeout(async () => {
+      await this.refreshPrices();
+      this.#schedulePrices();
+    }, QUOTE_REFRESH_MS);
+  }
+  #render(): void {
+    const valuation = valuePortfolio(this.#portfolio, this.#bids);
+    this.holdings.set(
+      valuation.holdings.map((h) => ({
+        symbol: h.symbol,
+        name: h.instrumentName,
+        value: h.value,
+        shares: h.quantity,
+        average: h.averageCost,
+        today: 0,
+        change: 0,
+        total: h.gain,
+        totalPercent: h.gainPercent,
+        logo: LOGOS[h.symbol] ?? '',
+      })),
+    );
+    this.buyingPower.set(valuation.cash);
+    this.invested.set(valuation.holdingsValue);
+    this.portfolioValue.set(valuation.total);
+  }
+  /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
+  ngOnInit(): void {
+    void this.refreshPortfolio();
+    void this.loadTradingData();
+  }
+
+  private async loadTradingData(): Promise<void> {
+    try {
+      const accounts = await this.orderSubmissionClient.getAccounts();
+      this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);
+      this.instruments.set(await this.orderSubmissionClient.getInstruments());
+    } catch {
+      // confirmTrade reports the missing account or instrument in plain words.
     }
   }
 }

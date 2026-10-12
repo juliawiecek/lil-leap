@@ -16,6 +16,12 @@ export interface OrderHistoryRow {
   filledAt: string | null;
 }
 
+/** Statuses after which an order no longer changes. */
+export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED']);
+/** How often, and for how long, a dashboard re-reads a just-submitted order while it executes. */
+export const ORDER_TRACK_INTERVAL_MS = 2000;
+export const ORDER_TRACK_LIMIT_MS = 30000;
+
 /** Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status. */
 export interface OrderHistoryFilters {
   from?: string;
@@ -29,9 +35,9 @@ export interface AccessTokenSource {
 }
 
 export class OrderHistoryClient {
-  #tokens: AccessTokenSource;
-  #fetch: typeof fetch;
-  #baseUrl: string;
+  readonly #tokens: AccessTokenSource;
+  readonly #fetch: typeof fetch;
+  readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
@@ -83,7 +89,7 @@ function subjectOf(token: string): string | null {
   const payload = token.split('.')[1];
   if (!payload) return null;
   try {
-    const { sub } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { sub?: unknown };
+    const { sub } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as { sub?: unknown };
     return typeof sub === 'string' && sub ? sub : null;
   } catch {
     return null;

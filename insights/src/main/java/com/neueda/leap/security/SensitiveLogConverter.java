@@ -10,15 +10,16 @@ import java.util.regex.Pattern;
  */
 public class SensitiveLogConverter extends CompositeConverter<ILoggingEvent> {
 
-    /** Creates the credential-masking converter instantiated by Logback. */
+    /** Creates the converter; Logback instantiates it from the logging configuration. */
     public SensitiveLogConverter() {
+        // No state to initialize.
     }
     private static final Pattern HEADERS = Pattern.compile(
-            "(?im)\\b(authorization|proxy-authorization|cookie|set-cookie)([\\\"']?\\s*[:=]\\s*)[^\\r\\n]+"
+            "(?im)\\b(authorization|proxy-authorization|cookie|set-cookie)([\"']?\\s*[:=]\\s*)[^\\r\\n]+"
     );
     private static final Pattern FIELDS = Pattern.compile(
-            "(?i)([\\\"']?\\b(?:password|password_hash|passwordHash|passwd|pwd|token|access_token|accessToken|refresh_token|refreshToken|id_token|secret|client_secret|ssn)[\\\"']?\\s*[:=]\\s*)"
-                    + "(?:\\\"(?:\\\\.|[^\\\"\\\\])*\\\"|'(?:\\\\.|[^'\\\\])*'|[^\\r\\n]+)"
+            "(?i)([\"']?\\b(?:password|password_hash|passwordHash|passwd|pwd|token|access_token|accessToken|refresh_token|refreshToken|id_token|secret|client_secret|ssn)[\"']?\\s*[:=]\\s*)"
+                    + "(?:\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|[^\\r\\n]+)"
     );
     private static final Pattern AUTH_SCHEME = Pattern.compile("(?i)\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+/=-]+");
 

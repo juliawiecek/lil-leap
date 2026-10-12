@@ -6,6 +6,7 @@ import subprocess
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4, UUID
+from dataclasses import FrozenInstanceError
 import pytest
 import pandas as pd
 
@@ -477,7 +478,7 @@ class TestQuoteRepositoryQueries:
             datetime.now(timezone.utc),
             "USD", "SYNTHETIC_GBM", True
         )
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             quote.bid = Decimal("99.8")
 
 
@@ -593,27 +594,6 @@ class TestIngestFrameEdgeCases:
         
         # Verify rollback was called on error
         assert conn.rolled_back
-
-
-# ============================================================================
-# SERVICE_RUNNER TESTS - Lines 2-46 (100% untested module)
-# ============================================================================
-
-class TestServiceRunner:
-    """Test service_runner process management."""
-    
-    def test_main_returns_zero_on_normal_flow(self, monkeypatch):
-        """Test main() entry point basic functionality."""
-        # Note: Full integration testing of subprocess handling requires
-        # complex mocking of subprocess and signal handling
-        # This is a placeholder for the structure
-        pass
-    
-    def test_main_registers_signal_handlers(self, monkeypatch):
-        """Test main() registers SIGTERM and SIGINT handlers."""
-        # Verifying signal handler registration requires inspecting signal module state
-        # This would need integration testing
-        pass
 
 
 if __name__ == "__main__":
