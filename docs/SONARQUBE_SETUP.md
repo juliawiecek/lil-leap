@@ -9,7 +9,7 @@ Jenkins is **http://10.14.137.118:8080/**.
 ## Confirm the project key
 
 `sonar-project.properties`, beside `Jenkinsfile`, currently retains the existing
-`lil-leap` project key. **Confirm the assigned key with the instructor before
+`LilLeap-Project` project key. **Confirm the assigned key with the instructor before
 running analysis.** If the classroom uses `team1-app`, `team2-app`, `team3-app`, or
 `team4-app`, replace `sonar.projectKey` with the assigned value. Do not submit to
 `hello-world-app`; that is only the classroom example. The project-analysis token
@@ -72,16 +72,20 @@ machine's reachable address instead. The webhook sends the completed analysis
 status **from SonarQube to Jenkins**. A global webhook under **Administration >
 Configuration > Webhooks** is also possible when managed by the instructor.
 
-The instructor must associate this project with the expected Java, Python, and
-JavaScript/TypeScript Quality Profiles and the Classroom Quality Gate. One token
+The instructor must associate this project with the eight exported Quality
+Profiles listed in [`sonarqube-config/README.md`](../sonarqube-config/README.md)
+and the Classroom Quality Gate. One token
 authenticates analysis for all languages; it does not select profiles or gates.
 Do not replace classroom policies with guessed thresholds.
 
-For a local server, obtain the actual `sonarqube-config` materials from **Extras
-in the Dailies**, import the provided language profiles through **Quality
-Profiles > Restore**, and use the supplied setup process to reproduce the gate.
-Those profile XML files and `configure-sonarqube.sh` are not present in this
-repository. A local scan can override the server with
+For a local server, start with the [`sonarqube-config` directory](../sonarqube-config/README.md).
+It contains Docker Compose configuration and eight profile XML exports. Import
+them through **Quality Profiles > Restore**, assign them to `LilLeap-Project`,
+and use the supplied classroom setup process to reproduce the gate.
+`configure-sonarqube.sh` and gate definitions are not included in this repository.
+Run `python scripts/validate_sonar_config.py --check-server` from a machine that
+can reach the server to compare assigned profiles with the exports.
+A local scan can override the server with
 `-Dsonar.host.url=http://localhost:9000`; use a token for that local project via
 `SONAR_TOKEN`. Do not commit it.
 
@@ -89,7 +93,9 @@ repository. A local scan can override the server with
 
 Jenkins checks out the repository, validates Compose, builds/tests the Java
 services, runs PostgreSQL integration tests, runs Node and Python tests, and
-archives coverage. It then submits SonarQube analysis, waits up to **five minutes**
+archives coverage. It validates scan paths, profile languages, compiled classes,
+and coverage reports using `scripts/validate_sonar_config.py --require-reports`.
+It then submits SonarQube analysis, waits up to **five minutes**
 for the Quality Gate with `abortPipeline: true`, and builds the Compose images
 only after the gate passes. A failed gate or timeout prevents the image-build
 stage from running.

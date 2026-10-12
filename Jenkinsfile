@@ -227,7 +227,8 @@ pipeline {
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
             --cov-report=xml:coverage.xml
-            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py'
+            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py
+            /tmp/python-venv/bin/python ../scripts/validate_sonar_config.py --require-reports'
             '''
           }
         }
@@ -273,8 +274,9 @@ pipeline {
                   echo "ERROR: SONAR_AUTH_TOKEN is empty. Check SonarQube server credentials in Jenkins."
                   exit 1
                 fi
+                export SONAR_TOKEN="$SONAR_AUTH_TOKEN"
                 "$SCANNER_HOME/bin/sonar-scanner" \
-                  -Dsonar.token="$SONAR_AUTH_TOKEN" \
+                  -Dsonar.host.url="$SONAR_HOST_URL" \
                   -Dsonar.projectVersion="$BUILD_NUMBER"
               '''
             }
