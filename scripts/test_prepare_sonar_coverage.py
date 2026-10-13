@@ -2,10 +2,20 @@
 from pathlib import Path
 import tempfile
 import unittest
-from prepare_sonar_coverage import normalize_lcov
+import xml.etree.ElementTree as ET
+from prepare_sonar_coverage import normalize_lcov, normalize_jacoco
 
 
 class CoveragePathsTests(unittest.TestCase):
+    def test_java_package_paths_are_unique_without_changing_coverage(self):
+        original = ET.fromstring('<report name="service"><package name="com/example"><sourcefile name="SecurityConfig.java"><line nr="10" mi="0" ci="3" mb="1" cb="2" /></sourcefile></package></report>')
+        for service in ('nextTrade-orders', 'nextTrade-holdings', 'insights'):
+            qualified = normalize_jacoco(original, service)
+            self.assertEqual(qualified.find('package').get('name'), service + '/src/main/java/com/example')
+            self.assertEqual(qualified.find('.//line').attrib, original.find('.//line').attrib)
+            self.assertEqual(ET.tostring(normalize_jacoco(qualified, service)), ET.tostring(qualified))
+        self.assertEqual(original.find('package').get('name'), 'com/example')
+
     def test_service_and_shared_windows_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -3,6 +3,70 @@ import { test } from 'node:test';
 import { AuthClient } from '../src/auth-api.ts';
 import { SessionKeeper } from '../src/session-keeper.ts';
 
+test('registration sends profile data without opening a session', async () => {
+  let sent;
+  const client = new AuthClient(async (url, init) => {
+    sent = { url, body: JSON.parse(init.body) };
+    return new Response(null, { status: 204 });
+  });
+  await client.register({ email: 'a@example.test', password: 'test-password' });
+  assert.equal(sent.url, '/auth/register');
+  assert.equal(sent.body.email, 'a@example.test');
+  assert.equal(client.accessToken, null);
+});
+
+test('a signed-in client needs no restoration exchange and refresh requires a session', async () => {
+  const f = fixture();
+  await assert.rejects(f.client.refresh(), /session has ended/);
+  await f.client.login('a', 'b');
+  assert.equal(await f.client.restoreSession(), true);
+  assert.equal(f.calls.length, 1);
+});
+
+test('a blocked browser storage getter still permits memory-only login', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    get() {
+      throw new Error('Storage blocked');
+    },
+  });
+  try {
+    const f = fixture();
+    const client = new AuthClient(f.fetch);
+    await client.login('a', 'b');
+    assert.ok(client.accessToken);
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(globalThis, 'sessionStorage', descriptor);
+    } else {
+      delete globalThis.sessionStorage;
+    }
+  }
+});
+
+test('restoration completing after the idle deadline cannot reopen the session', async () => {
+  const f = fixture();
+  await f.client.login('a', 'b');
+  let resolve;
+  const client = new AuthClient(
+    (url) =>
+      url.endsWith('/refresh')
+        ? new Promise((done) => {
+            resolve = done;
+          })
+        : Promise.resolve(new Response(null, { status: 204 })),
+    '/auth',
+    f.settings,
+  );
+  const pending = client.restoreSession();
+  f.setNow(1600000);
+  resolve(Response.json({ accessToken: token('TRADER'), refreshToken: 'rotated' }));
+  assert.equal(await pending, false);
+  assert.equal(client.accessToken, null);
+  assert.equal(f.values.size, 0);
+});
+
 const token = (role) =>
   'test.' +
   Buffer.from(

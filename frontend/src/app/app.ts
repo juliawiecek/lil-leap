@@ -18,7 +18,6 @@ import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
-import { SESSION_INACTIVITY_MINUTES } from './session-keeper';
 import type { Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup';
@@ -293,11 +292,6 @@ export class App implements AfterViewInit, OnDestroy {
   @HostListener('document:touchstart')
   onUserActivity(): void {
     this.session.recordActivity();
-  }
-
-  private onSessionExpired(): void {
-    this.signOut();
-    this.formStatus.set(`You were signed out after ${SESSION_INACTIVITY_MINUTES} minutes of inactivity.`);
   }
 
   private messageFor(error: unknown): string {

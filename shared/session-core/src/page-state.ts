@@ -78,16 +78,13 @@ export class PageState {
       Object.fromEntries(
         fields.map((field, i) => {
           const value = field.value();
-          return [
-            field.key,
-            value === defaults[i] || value === ''
-              ? null
-              : typeof value === 'boolean'
-                ? value
-                  ? '1'
-                  : '0'
-                : value,
-          ];
+          if (value === defaults[i] || value === '') {
+            return [field.key, null];
+          }
+          if (typeof value === 'boolean') {
+            return [field.key, value ? '1' : '0'];
+          }
+          return [field.key, value];
         }),
       );
     const subscription = router.events.subscribe((event) => {
