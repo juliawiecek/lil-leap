@@ -18,6 +18,11 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Creates the security configuration; Spring instantiates it. */
+    public SecurityConfig() {
+        // No state to initialize.
+    }
+
     /**
      * Restricts access to the service's explicit routes.
      * @param http Spring Security builder
@@ -27,8 +32,7 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
-        return http.csrf(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
+        return http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny())

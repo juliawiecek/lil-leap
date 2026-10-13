@@ -93,48 +93,57 @@ class ReportingControllerTest {
     void instrumentReportReturnsCsvDownload() throws Exception {
         when(reportingService.generateInstrumentReport()).thenReturn(csvResponse(
                 "instrument-report.csv",
-                "instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price\n"
-                        + "AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56\n"));
+                """
+                instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price
+                AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56
+                """));
 
         mvc.perform(asAnalyst(get("/reports/generate/instrument-report")))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("instrument-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
-                .andExpect(content().string(
-                        "instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price\n"
-                                + "AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56\n"));
+                .andExpect(content().string("""
+                        instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price
+                        AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56
+                        """));
     }
 
     @Test
     void clientSegmentReportReturnsCsvDownload() throws Exception {
         when(reportingService.generateClientSegmentReport()).thenReturn(csvResponse(
                 "client-segment-report.csv",
-                "client_segment,trade_count,unique_clients,total_quantity,total_notional\n"
-                        + "NOVICE,6,2,150560,270770.00\n"));
+                """
+                client_segment,trade_count,unique_clients,total_quantity,total_notional
+                NOVICE,6,2,150560,270770.00
+                """));
 
         mvc.perform(asAnalyst(get("/reports/generate/client-segment-report")))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("client-segment-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
-                .andExpect(content().string(
-                        "client_segment,trade_count,unique_clients,total_quantity,total_notional\n"
-                                + "NOVICE,6,2,150560,270770.00\n"));
+                .andExpect(content().string("""
+                        client_segment,trade_count,unique_clients,total_quantity,total_notional
+                        NOVICE,6,2,150560,270770.00
+                        """));
     }
 
     @Test
     void tradingActivityReportReturnsCsvDownload() throws Exception {
         when(reportingService.generateTradingActivityReport()).thenReturn(csvResponse(
                 "trading-activity-report.csv",
-                "trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional\n"
-                        + "2026-10-02,09:00,2,2,280,41430.00\n"));
+                """
+                trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional
+                2026-10-02,09:00,2,2,280,41430.00
+                """));
 
         mvc.perform(asAnalyst(get("/reports/generate/trading-activity-report")))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("trading-activity-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
-                .andExpect(content().string(
-                        "trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional\n"
-                                + "2026-10-02,09:00,2,2,280,41430.00\n"));
+                .andExpect(content().string("""
+                        trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional
+                        2026-10-02,09:00,2,2,280,41430.00
+                        """));
     }
 
     private MockHttpServletRequestBuilder asAnalyst(MockHttpServletRequestBuilder request) {

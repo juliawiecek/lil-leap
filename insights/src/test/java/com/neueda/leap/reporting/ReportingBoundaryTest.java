@@ -7,9 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.test.web.servlet.MockMvc;
 import java.util.Map;
 import java.util.UUID;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -39,5 +44,47 @@ class ReportingBoundaryTest {
             mvc.perform(post(route).header("Authorization", token("ANALYST"))).andExpect(status().isForbidden());
         }
         mvc.perform(post("/reports/summary").header("Authorization", token("ANALYST"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reportReadsDoNotRequireCsrfOrCreateSession() throws Exception {
+        when(reports.summary()).thenReturn(Map.of("fills", 2));
+        var result = mvc.perform(get("/reports/summary").header("Authorization", token("ANALYST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fills").value(2))
+                .andReturn();
+        assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    void unsafeRequestsWithoutCsrfAreRejectedBeforeJwtAuthentication() throws Exception {
+        for (HttpMethod method : new HttpMethod[]{HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE}) {
+            // An invalid bearer would return 401 if the CSRF filter were disabled or bypassed.
+            mvc.perform(request(method, "/reports/summary").header("Authorization", "Bearer invalid-token"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
+        }
+        verifyNoInteractions(reports);
+    }
+
+    @Test
+    void validCsrfDoesNotBypassAuthenticationOrReadOnlyAuthorization() throws Exception {
+        var request = mvc.perform(get("/reports/summary"))
+                .andExpect(status().isUnauthorized()).andReturn().getRequest();
+        var csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+        String csrfValue = csrf.getToken();
+        var session = (MockHttpSession) request.getSession(false);
+
+        mvc.perform(post("/reports/summary").session(session)
+                        .param(csrf.getParameterName(), csrfValue)
+                        .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+        mvc.perform(post("/reports/summary").session(session)
+                        .param(csrf.getParameterName(), csrfValue)
+                        .header("Authorization", token("ANALYST")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
+        verifyNoInteractions(reports);
     }
 }

@@ -11,8 +11,10 @@ import java.time.Duration;
 @Configuration
 public class ExecutionQuoteConfiguration {
 
-    /** Creates the Spring configuration for this component. */
-    public ExecutionQuoteConfiguration() {}
+    /** Creates the execution quote configuration; Spring instantiates it. */
+    public ExecutionQuoteConfiguration() {
+        // No state to initialize.
+    }
 
     @Bean
     Clock executionClock() {

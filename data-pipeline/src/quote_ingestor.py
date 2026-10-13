@@ -69,7 +69,7 @@ def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> N
             with connect() as conn: inserted, skipped=ingest_frame(frame, conn)
             print(f"quote batch inserted={inserted} skipped={skipped} symbols={len(frame)}")
             attempt=0; batch += 1
-        except DatabaseUnavailableError as exc:
+        except DatabaseUnavailableError:
             attempt += 1
             if attempt > 5: raise
             delay=min(2 ** (attempt - 1), 16)

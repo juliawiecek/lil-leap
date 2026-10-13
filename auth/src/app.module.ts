@@ -28,7 +28,7 @@ import { tlsKeystorePath } from './security/tls';
       port: Number(process.env.DB_PORT ?? 5432),
       database: process.env.DB_NAME ?? 'nexttrade',
       username: process.env.DB_APP_USERNAME ?? 'app_user',
-      password: process.env.DB_APP_PASSWORD ?? 'my_app_password',
+      password: requiredEnv('DB_APP_PASSWORD'),
       entities: [User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile],
       synchronize: false, // schema is owned by the admin/migration role, not this service
       poolSize: 10,
@@ -54,4 +54,12 @@ export class AppModule implements NestModule {
       consumer.apply(SecureTransportMiddleware).forRoutes('*');
     }
   }
+}
+
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before starting the service.`);
+  }
+  return value;
 }

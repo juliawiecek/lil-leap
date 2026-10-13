@@ -24,11 +24,10 @@ export class JwtService {
 
   constructor() {
     const secret = process.env.APP_JWT_SECRET;
-    if (!secret && process.env.NODE_ENV === 'production') {
-      throw new Error('APP_JWT_SECRET must be set in production; refusing to sign tokens with the dev fallback secret.');
+    if (!secret) {
+      throw new Error('APP_JWT_SECRET must be set before signing or verifying tokens.');
     }
-    this.secret = secret ?? 'nexttrade-shared-dev-secret-32bytes-min';
-    this.expirationMinutes = Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? 15);
+    this.secret = secret;
     // Never outlive the inactivity window: downstream services verify access tokens
     // statelessly, so an idle user's token must expire no later than their session.
     const inactivityMinutes = sessionInactivityMinutes();
