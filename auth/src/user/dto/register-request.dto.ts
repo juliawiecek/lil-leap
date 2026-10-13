@@ -6,15 +6,14 @@ import {
   IsEmail,
   IsEnum,
   IsOptional,
-  IsString,
   Matches,
   MaxLength,
-  MinLength,
   Validate,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { IsAccountPassword, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './password-rules';
 import { AccountType } from '../../onboarding/enums/account-type.enum';
 import { CitizenshipStatus } from '../../onboarding/enums/citizenship-status.enum';
 import { EmploymentStatus } from '../../onboarding/enums/employment-status.enum';
@@ -154,11 +153,9 @@ export class RegisterRequestDto {
   @MaxLength(320)
   email: string;
 
-  @ApiProperty({ name: 'password', minLength: 8, maxLength: 128, format: 'password' })
+  @ApiProperty({ name: 'password', minLength: PASSWORD_MIN_LENGTH, maxLength: PASSWORD_MAX_LENGTH, format: 'password' })
   @Expose({ name: 'password' })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
+  @IsAccountPassword()
   password: string;
 
   // ---- TRADER-only fields below; required only when userRole == TRADER ----

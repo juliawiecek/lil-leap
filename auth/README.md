@@ -50,6 +50,8 @@ After changing an endpoint or DTO, run `npm run docs:openapi` to regenerate
 | POST | `/auth/login` | `email`, `password` | `200` tokens + user | `400`, `401` |
 | POST | `/auth/refresh` | `refreshToken` | `200` new tokens | `400`, `401` |
 | POST | `/auth/logout` | `refreshToken` | `204` | `400` missing token |
+| POST | `/auth/forgot-password` | `email` | `202` always | `400` missing or malformed email |
+| POST | `/auth/reset-password` | `token`, `newPassword` | `204` | `400` `INVALID_RESET_TOKEN`, `400` password breaks the 8-128 rule |
 | GET | `/rules/tier-eligibility` | — (Bearer token) | `200` tier, balance, gap to next tier | `401`, `404` no account |
 | GET | `/health` | — | `200` | — |
 
@@ -62,8 +64,18 @@ stay signed in. It returns `204` even for an unknown or already-revoked token,
 so it can't be used to test whether a token is valid. The access token keeps
 working until it expires (at most 10 minutes), so clients should discard it on logout.
 
+**Password reset (TS-15.9):** `forgot-password` answers `202` whether or not the
+email is registered. For a registered email it stores the SHA-256 hash of a random
+32-byte token (one per user, so a new request cancels the old link), valid for 20
+minutes, and hands the link to a `PasswordResetDelivery`. The VM has no network, so
+the default `FileOutboxDelivery` writes one `.eml` file per reset to
+`PASSWORD_RESET_OUTBOX_DIR`; in Compose that is the `password_reset_outbox` volume:
+`docker compose exec auth sh -c 'cat /app/outbox/*.eml'`. `reset-password` sets the
+new password (same rule as registration), deletes the token and revokes every refresh
+token the user holds, in one transaction. Raw tokens are never logged.
+
 Errors are JSON with a fixed code (`INVALID_CREDENTIALS`, `USER_ALREADY_EXISTS`,
-`INVALID_REFRESH_TOKEN`, `INVALID_ACCESS_TOKEN`, `INSUFFICIENT_INVESTABLE_ASSETS`,
+`INVALID_REFRESH_TOKEN`, `INVALID_RESET_TOKEN`, `INVALID_ACCESS_TOKEN`, `INSUFFICIENT_INVESTABLE_ASSETS`,
 `ACCOUNT_NOT_FOUND`, `INVALID_REQUEST`, `INTERNAL_ERROR`); raw messages are
 never returned, since requests can carry passwords and SSNs.
 
@@ -75,6 +87,7 @@ never returned, since requests can carry passwords and SSNs.
 | `src/user/` | `auth.controller.ts` (the endpoints), `user.service.ts` (login), DTOs, exceptions |
 | `src/onboarding/` | `registration.service.ts`: one transaction writing `users` plus the role's profile tables; `tier-rules.ts`: tier assignment |
 | `src/rules/` | `GET /rules/tier-eligibility` |
+| `src/password-reset/` | Forgot/reset password endpoints, token handling, and the `.eml` outbox delivery |
 | `src/docs/` | OpenAPI document and Swagger UI setup |
 | `src/security/` | JWT signing, refresh tokens/sessions, bcrypt, SSN encryption (pgcrypto), optional TLS |
 | `src/common/filters/` | Turns every error into a JSON response with a fixed code |
@@ -95,6 +108,8 @@ See the root [env.example](../env.example) for Compose settings. For a native pr
 | `APP_JWT_EXPIRATION_MINUTES` | Access token lifetime; can only be shorter than the inactivity window |
 | `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Identity SSN encryption key; Compose maps `SSN_ENCRYPTION_KEY` to this setting |
 | `TLS_KEYSTORE`, `TLS_KEYSTORE_PASSWORD` | Optional: serve HTTPS directly (unset behind nginx) |
+| `PASSWORD_RESET_OUTBOX_DIR` | Folder for password reset `.eml` files (default `./outbox`) |
+| `PASSWORD_RESET_URL` | Reset page the emailed link opens (default `http://localhost:4200/reset-password`) |
 | `PORT` | Default 8081 (internal in Compose) |
 
 ## Running it
