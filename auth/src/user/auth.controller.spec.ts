@@ -33,7 +33,13 @@ describe('AuthController', () => {
         { provide: RegistrationService, useValue: { register: jest.fn() } },
         { provide: JwtService, useValue: { issueToken: jest.fn() } },
         { provide: RefreshTokenService, useValue: { issue: jest.fn(), rotate: jest.fn(), revoke: jest.fn() } },
-        { provide: TierService, useValue: { findTraderLevel: jest.fn().mockResolvedValue('ADVANCED') } },
+        {
+          provide: TierService,
+          useValue: {
+            findTraderLevel: jest.fn().mockResolvedValue('ADVANCED'),
+            findRiskProfile: jest.fn().mockResolvedValue('MODERATE'),
+          },
+        },
       ],
     }).compile();
 
@@ -78,16 +84,18 @@ describe('AuthController', () => {
     await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
 
     expect(tierService.findTraderLevel).toHaveBeenCalledWith(user.userId);
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER);
+    expect(tierService.findRiskProfile).toHaveBeenCalledWith(user.userId);
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER, 'MODERATE');
   });
 
   it('login issues a token without a tier for a user with no account', async () => {
     userService.login.mockResolvedValue({ ...user, userRole: 'ANALYST' } as any);
     tierService.findTraderLevel.mockResolvedValue(null);
+    tierService.findRiskProfile.mockResolvedValue(null);
 
     await controller.login({ email: 'trader@example.com', password: 'hunter2' } as any);
 
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, null, UserRole.ANALYST);
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, null, UserRole.ANALYST, null);
   });
 
   it('login propagates InvalidCredentialsException for bad credentials', async () => {
@@ -107,7 +115,7 @@ describe('AuthController', () => {
     expect(refreshTokenService.rotate).toHaveBeenCalledWith('old-raw-token');
     expect(result.accessToken).toBe('new.access.token');
     expect(result.refreshToken).toBe('new-raw-token');
-    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER);
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'ADVANCED', UserRole.TRADER, 'MODERATE');
   });
 
   it('logout revokes the given refresh token', async () => {

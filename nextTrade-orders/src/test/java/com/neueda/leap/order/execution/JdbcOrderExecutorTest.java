@@ -85,7 +85,7 @@ class JdbcOrderExecutorTest {
     }
 
     private void rejected(String reason) {
-        assertThat(executor.execute(orderId)).isEqualTo(REJECTED);
+        assertThat(executor.execute(orderId).outcome()).isEqualTo(REJECTED);
         assertThat(write("UPDATE orders").subList(1, 3)).containsExactly(reason, orderId);
         assertThat(write("INSERT INTO order_status_history").subList(1, 4)).containsExactly(orderId, "REJECTED", reason);
         assertThat(write("ORDER_REJECTED")).contains(orderId);
@@ -137,7 +137,7 @@ class JdbcOrderExecutorTest {
     void quoteRequeueDoesNotCreateTradeEffects() {
         when(quotes.selectForExecution(orderId)).thenReturn(new ExecutionQuoteDecision(
                 ExecutionQuoteDecision.Action.REQUEUE, ExecutionQuoteDecision.Reason.QUOTE_UNAVAILABLE, null, null));
-        assertThat(executor.execute(orderId)).isEqualTo(PENDING);
+        assertThat(executor.execute(orderId).outcome()).isEqualTo(PENDING);
         assertThat(writes).isEmpty();
     }
 
@@ -154,7 +154,7 @@ class JdbcOrderExecutorTest {
         side = direction;
         buffer = BigDecimal.ZERO;
         quote("99", "101");
-        assertThat(executor.execute(orderId)).isEqualTo(PENDING);
+        assertThat(executor.execute(orderId).outcome()).isEqualTo(PENDING);
         assertThat(writes).hasSize(1);
         assertThat(write("PRICE_DECISION")).contains(orderId);
         attempts = 3;
@@ -189,7 +189,7 @@ class JdbcOrderExecutorTest {
         side = direction;
         missingPosition = direction.equals("BUY");
         quote("99", "101"); // Exactly at the account's 1% tolerance boundary.
-        assertThat(executor.execute(orderId)).isEqualTo(FILLED);
+        assertThat(executor.execute(orderId).outcome()).isEqualTo(FILLED);
         BigDecimal price = new BigDecimal(direction.equals("BUY") ? "101" : "99");
         BigDecimal delta = new BigDecimal(direction.equals("BUY") ? "-202.00" : "198.00");
         Object fillId = write("INSERT INTO fills").get(1);
