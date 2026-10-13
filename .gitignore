@@ -101,3 +101,5 @@ insights/src/main/java/com/neueda/leap/marketdata/dto/package-info.java
 # Shared session package reports and Python caches
 shared/session-core/coverage/
 __pycache__/
+# Password reset emails written locally by the auth service (contain live reset links)
+auth/outbox/
