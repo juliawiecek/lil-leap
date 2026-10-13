@@ -1,0 +1,44 @@
+{
+  "name": "@lilleap/session-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
+    "./angular": {
+      "types": "./dist/angular.d.ts",
+      "default": "./dist/angular.js"
+    }
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.json",
+    "test": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=json-summary node --enable-source-maps --test --test-concurrency=2 tests/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/router": "^22.1.0",
+    "rxjs": "^7.8.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/common": "22.1.5",
+    "@angular/core": "22.1.5",
+    "@angular/router": "22.1.5",
+    "@angular/compiler": "22.1.5",
+    "@angular/compiler-cli": "22.1.5",
+    "typescript": "~6.0.2",
+    "c8": "^12.0.0",
+    "happy-dom": "^20.14.5",
+    "prettier": "^3.8.1"
+  }
+}

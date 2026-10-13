@@ -51,6 +51,11 @@ with 200. Execution accepts in a separate committed transaction, then claims and
 fills/rejects with database locks. Failed attempts roll back settlement and remain
 retryable. Quote and price-tolerance limits default to ten attempts.
 
+The trader-tier minimum balance is an account-opening requirement; registration
+funding and its opening-minimum check are tracked in NEXT-214. An active,
+trading-enabled account below that minimum can buy with sufficient cash or sell
+with sufficient holdings; both resources are rechecked during settlement.
+
 Requeue and rejection reasons are kept distinct. A transient failure keeps the order PENDING and
 records `RETRY_` plus its cause (`RETRY_QUOTE_UNAVAILABLE`, `RETRY_STALE_QUOTE`,
 `RETRY_INVALID_QUOTE_TIMESTAMP`, `RETRY_PRICE_OUT_OF_TOLERANCE`, `RETRY_EXECUTION_FAILED`) on the

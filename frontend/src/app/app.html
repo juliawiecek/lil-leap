@@ -1,4 +1,4 @@
-<div [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
+<div>
 <div class="market-grid" aria-hidden="true"></div>
   <div class="ambient-light" aria-hidden="true"></div>
   <div class="market-tape" aria-hidden="true">
@@ -168,6 +168,3 @@
 }
 
 </div>
-@if (dashboardOpen()) {
-  <app-stock-dashboard [name]="applicantName()" [level]="traderLevel()" [newAccount]="newAccount()" (signOut)="signOut()" />
-}

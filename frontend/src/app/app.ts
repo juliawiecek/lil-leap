@@ -1,3 +1,6 @@
+import { Router, ActivatedRoute } from '@angular/router';
+import { AppSessionService } from './app-session.service';
+import { safeReturnUrl } from './page-state';
 ﻿import {
   AfterViewInit,
   Component,
@@ -16,25 +19,12 @@ import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
-import { SESSION_INACTIVITY_MINUTES, SessionKeeper } from './session-keeper';
-import { StockDashboard, Experience } from './stock-dashboard';
+import type { Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
 
-const RESET_PATH = '/reset-password';
-
-/**
- * The token from an emailed reset link (/reset-password?token=...), or null. The token is then removed
- * from the address bar so it doesn't linger in browser history; a reload just shows sign-in.
- */
-function takeResetToken(): string | null {
-  const url = new URL(window.location.href);
-  const token = url.pathname === RESET_PATH ? url.searchParams.get('token') : null;
-  if (token) {
-    window.history.replaceState(null, '', RESET_PATH);
-  }
-  return token;
-}
+/** The emailed reset link opens this route (app.routes.ts) with ?token=... */
+const RESET_ROUTE = 'reset-password';
 
 const TITLES: Record<AuthMode, string> = {
   signin: 'Welcome back',
@@ -64,8 +54,8 @@ interface VolumeBar {
 }
 
 @Component({
-  selector: 'app-root',
-  imports: [InvestorProfile, StockDashboard],
+  selector: 'app-login',
+  imports: [InvestorProfile],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   encapsulation: ViewEncapsulation.None,
@@ -80,14 +70,16 @@ export class App implements AfterViewInit, OnDestroy {
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
-  private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
+  private readonly session = inject(AppSessionService);
+  private readonly router = inject(Router, { optional: true });
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly candleStep = 30;
   private readonly riseColor = '#78a85f';
   private readonly neutralColor = '#eeeeee';
 
   /** Set when the app was opened from an emailed reset link; cleared once the password is changed. */
-  private resetToken = takeResetToken();
+  private resetToken = this.resetTokenFromRoute();
 
   readonly authMode = signal<AuthMode>(this.resetToken ? 'reset' : 'signin');
   readonly authTitle = computed(() => TITLES[this.authMode()]);
@@ -107,6 +99,10 @@ export class App implements AfterViewInit, OnDestroy {
   readonly registrationError = signal('');
 
   openDashboard(level: Experience, fresh = true): void {
+    if (this.auth.userRole && this.auth.userRole !== 'TRADER') {
+      void this.auth.logout();
+      throw new AuthApiError('Please use a trader account to sign in to NextTrade.');
+    }
     this.traderLevel.set(level);
     this.newAccount.set(fresh);
     this.profileOpen.set(false);
@@ -118,6 +114,10 @@ export class App implements AfterViewInit, OnDestroy {
     const confirmation = document.getElementById('verify-password') as HTMLInputElement | null;
     if (confirmation) {
       confirmation.value = '';
+    }
+    if (this.router) {
+      const target = safeReturnUrl(this.route?.snapshot.queryParamMap.get('returnUrl') ?? '') ?? '/dashboard';
+      void this.router.navigateByUrl(target);
     }
   }
 
@@ -171,6 +171,12 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
+    if (this.route?.snapshot.queryParamMap.has('returnUrl')) { this.showAuthPage(); }
+    if (this.resetToken) {
+      this.showAuthPage();
+      // Drop the token from the address bar (and history); the same route keeps this component.
+      void this.router?.navigate(['/', RESET_ROUTE], { replaceUrl: true });
+    }
     this.context = this.marketChart.nativeElement.getContext('2d');
     if (!this.context) {
       return;
@@ -206,7 +212,7 @@ export class App implements AfterViewInit, OnDestroy {
   @HostListener('window:pageshow', ['$event'])
   onPageShow(event: PageTransitionEvent): void {
     if (event.persisted) {
-      window.location.reload();
+      void this.session.keeper.check();
     }
   }
 
@@ -245,9 +251,18 @@ export class App implements AfterViewInit, OnDestroy {
 
   /** From the reset screens back to sign-in; a stale reset link is dropped. */
   backToSignIn(): void {
+    const onResetRoute = this.route?.snapshot.routeConfig?.path === RESET_ROUTE;
     this.resetToken = null;
-    window.history.replaceState(null, '', '/');
     this.setAuthMode('signin');
+    if (onResetRoute) {
+      void this.router?.navigateByUrl('/login', { replaceUrl: true });
+    }
+  }
+
+  /** The token from an emailed reset link, read from the reset-password route only. */
+  private resetTokenFromRoute(): string | null {
+    const snapshot = this.route?.snapshot;
+    return snapshot?.routeConfig?.path === RESET_ROUTE ? snapshot.queryParamMap.get('token') : null;
   }
 
   onSubmit(event: Event, form: HTMLFormElement): void {
@@ -330,7 +345,9 @@ export class App implements AfterViewInit, OnDestroy {
     this.formStatus.set('');
     try {
       await this.auth.resetPassword(this.resetToken ?? '', this.password.nativeElement.value);
-      this.backToSignIn();
+      // Stay on this screen as sign-in so the confirmation stays visible; signing in moves on.
+      this.resetToken = null;
+      this.setAuthMode('signin');
       this.clearPasswordFields();
       this.formStatus.set('Your password has been changed. Sign in with your new password.');
     } catch (error) {
@@ -406,11 +423,6 @@ export class App implements AfterViewInit, OnDestroy {
   @HostListener('document:touchstart')
   onUserActivity(): void {
     this.session.recordActivity();
-  }
-
-  private onSessionExpired(): void {
-    this.signOut();
-    this.formStatus.set(`You were signed out after ${SESSION_INACTIVITY_MINUTES} minutes of inactivity.`);
   }
 
   private messageFor(error: unknown): string {

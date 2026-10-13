@@ -194,9 +194,6 @@ public class JdbcOrderExecutor implements OrderExecutor {
     private Result validateSettlementPreconditions(UUID orderId, Account account, Position position,
                                                     boolean buy, BigDecimal cash, BigDecimal amount,
                                                     long quantity) {
-        if (cash.compareTo(account.minimum()) < 0) {
-            return reject(orderId, "ACCOUNT_NOT_SUITABLE");
-        }
         if (buy && cash.compareTo(amount) < 0) {
             return reject(orderId, "INSUFFICIENT_CASH");
         }
