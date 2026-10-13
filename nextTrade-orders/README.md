@@ -19,10 +19,9 @@ ownership, gateway routing, database setup, known gaps and verification.
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
 
-Quote preview takes `side`, `quantity` and exactly one of `symbol` or `instrumentId`.
-Buys are estimated at the ask and sells at the bid from the latest stored quote; the
-response is marked `indicative` and flags `stale` when the quote is older than execution
-accepts. Unknown instruments and missing quotes return 404 with a specific error code.
+Only clients whose profile country is the United States may trade, and only instruments on
+US markets (NASDAQ, NYSE, NYSE American, NYSE Arca, Cboe, IEX). Anything else, including a
+missing country, is rejected with 422 `LOCATION_RESTRICTED`.
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
