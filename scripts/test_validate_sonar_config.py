@@ -85,8 +85,8 @@ class ValidationTests(unittest.TestCase):
         props = {'sonar.host.url': 'http://sonar.invalid', 'sonar.projectKey': 'example'}
         profiles = {'py': ET.fromstring(PROFILE)}
         ready = json.dumps({'status': 'UP', 'version': 'test'}).encode()
-        wrong = json.dumps({'profiles': [{'language': 'py', 'name': 'Sonar way'}]}).encode()
-        assigned = json.dumps({'profiles': [{'language': 'py', 'name': 'python-profile'}]}).encode()
+        wrong = json.dumps({'profiles': []}).encode()
+        assigned = json.dumps({'profiles': [{'language': 'py', 'name': 'texoma-python-profille'}]}).encode()
         with contextlib.redirect_stdout(io.StringIO()):
             with patch.object(validator, 'urlopen', side_effect=[io.BytesIO(ready), io.BytesIO(wrong)]):
                 with self.assertRaisesRegex(ValueError, 'expected'):

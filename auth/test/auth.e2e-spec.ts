@@ -7,6 +7,8 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { tlsKeystorePath } from '../src/security/tls';
+import { PASSWORD_RESET_DELIVERY, PasswordResetDelivery } from '../src/password-reset/password-reset-delivery';
+import { hashResetToken } from '../src/password-reset/password-reset.service';
 
 /**
  * Full register -> login -> refresh -> logout flow against a real Postgres with
@@ -21,6 +23,14 @@ describe('auth (e2e)', () => {
   const traderEmail = `e2e-trader-${runId}@example.com`;
   const analystEmail = `e2e-analyst-${runId}@example.com`;
   const password = 'correct-horse-battery';
+
+  /** Captures reset links instead of writing .eml files. */
+  const resetLinks: string[] = [];
+  const outbox: PasswordResetDelivery = {
+    send: async (_email, resetLink) => {
+      resetLinks.push(resetLink);
+    },
+  };
 
   const post = (path: string, body?: object) =>
     request(app.getHttpServer()).post(path).disableTLSCerts().send(body);
@@ -37,7 +47,10 @@ describe('auth (e2e)', () => {
       throw new Error('TLS_KEYSTORE must point to a PKCS12 keystore for the e2e run.');
     }
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PASSWORD_RESET_DELIVERY)
+      .useValue(outbox)
+      .compile();
     app = moduleRef.createNestApplication({
       httpsOptions: { pfx: fs.readFileSync(keystore), passphrase: process.env.TLS_KEYSTORE_PASSWORD ?? '' },
     });
@@ -49,7 +62,7 @@ describe('auth (e2e)', () => {
   afterAll(async () => {
     if (dataSource) {
       const users = `(SELECT user_id FROM users WHERE email IN ($1, $2))`;
-      for (const table of ['sessions', 'accounts', 'financial_profiles', 'customer_profiles', 'analyst_profiles']) {
+      for (const table of ['sessions', 'password_reset_tokens', 'accounts', 'financial_profiles', 'customer_profiles', 'analyst_profiles']) {
         await dataSource.query(`DELETE FROM ${table} WHERE user_id IN ${users}`, [traderEmail, analystEmail]);
       }
       await dataSource.query('DELETE FROM users WHERE email IN ($1, $2)', [traderEmail, analystEmail]);
@@ -315,6 +328,74 @@ describe('auth (e2e)', () => {
     it('rejects a request without a refresh token', async () => {
       const res = await post('/auth/logout', {}).expect(400);
       expect(res.body.error).toBe('INVALID_REQUEST');
+    });
+  });
+
+  // Runs last: it changes the trader's password, which the blocks above sign in with.
+  describe('password reset', () => {
+    const newPassword = 'new-correct-horse-battery';
+    const tokenFromLastLink = () => new URL(resetLinks.at(-1) ?? '').searchParams.get('token') ?? '';
+    const requestLink = async () => {
+      await post('/auth/forgot-password', { email: traderEmail }).expect(202);
+      return tokenFromLastLink();
+    };
+
+    it('answers 202 for an unknown email without sending anything', async () => {
+      const sentBefore = resetLinks.length;
+
+      await post('/auth/forgot-password', { email: `nobody-${runId}@example.com` }).expect(202);
+
+      expect(resetLinks).toHaveLength(sentBefore);
+    });
+
+    it('stores only the SHA-256 hash of the emailed token, expiring in 20 minutes', async () => {
+      const token = await requestLink();
+
+      const rows = await dataSource.query(
+        `SELECT t.token_hash, EXTRACT(EPOCH FROM (t.expires_at - t.created_at)) AS ttl_seconds
+           FROM password_reset_tokens t JOIN users u USING (user_id) WHERE u.email = $1`,
+        [traderEmail],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].token_hash).toBe(hashResetToken(token));
+      expect(Number(rows[0].ttl_seconds)).toBe(20 * 60);
+    });
+
+    it('rejects a new password that breaks the registration rule', async () => {
+      const token = await requestLink();
+
+      const res = await post('/auth/reset-password', { token, newPassword: 'short' }).expect(400);
+      expect(res.body.error).toBe('INVALID_REQUEST');
+    });
+
+    it('rejects an expired token', async () => {
+      const token = await requestLink();
+      await dataSource.query(
+        `UPDATE password_reset_tokens SET created_at = now() - interval '30 minutes', expires_at = now() - interval '10 minutes'
+          WHERE token_hash = $1`,
+        [hashResetToken(token)],
+      );
+
+      const res = await post('/auth/reset-password', { token, newPassword }).expect(400);
+      expect(res.body.error).toBe('INVALID_RESET_TOKEN');
+    });
+
+    it('rejects an unknown token', async () => {
+      const res = await post('/auth/reset-password', { token: 'never-issued', newPassword }).expect(400);
+      expect(res.body.error).toBe('INVALID_RESET_TOKEN');
+    });
+
+    it('resets the password once, revokes existing sessions, and refuses the token a second time', async () => {
+      const { refreshToken } = await login();
+      const token = await requestLink();
+
+      await post('/auth/reset-password', { token, newPassword }).expect(204);
+
+      await post('/auth/refresh', { refreshToken }).expect(401);
+      await post('/auth/login', { email: traderEmail, password }).expect(401);
+      await post('/auth/login', { email: traderEmail, password: newPassword }).expect(200);
+      const reused = await post('/auth/reset-password', { token, newPassword: 'third-correct-horse' }).expect(400);
+      expect(reused.body.error).toBe('INVALID_RESET_TOKEN');
     });
   });
 });

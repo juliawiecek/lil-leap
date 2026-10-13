@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SessionKeeper } from '../src/app/session-keeper.ts';
+import { SessionKeeper } from '../src/session-keeper.ts';
 
 const MIN = 60 * 1000;
 
@@ -12,13 +12,19 @@ function setup() {
     refreshes: 0,
     logouts: 0,
     failRefresh: false,
-    get accessTokenExpiresAt() { return this.expiresAt; },
+    get accessTokenExpiresAt() {
+      return this.expiresAt;
+    },
     async refresh() {
-      if (this.failRefresh) throw new Error('INVALID_REFRESH_TOKEN');
+      if (this.failRefresh) {
+        throw new Error('INVALID_REFRESH_TOKEN');
+      }
       this.refreshes++;
       this.expiresAt = clock.now + 10 * MIN;
     },
-    async logout() { this.logouts++; },
+    async logout() {
+      this.logouts++;
+    },
   };
   let expired = 0;
   const keeper = new SessionKeeper(client, () => expired++, {
@@ -30,7 +36,9 @@ function setup() {
   const advanceTo = async (minutes, { activeEvery } = {}) => {
     while (clock.now < minutes * MIN) {
       clock.now += 15 * 1000;
-      if (activeEvery && clock.now % (activeEvery * MIN) === 0) keeper.recordActivity();
+      if (activeEvery && clock.now % (activeEvery * MIN) === 0) {
+        keeper.recordActivity();
+      }
       await keeper.check();
     }
   };

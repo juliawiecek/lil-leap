@@ -21,9 +21,13 @@ services:
     depends_on: [frontend, insights-frontend, auth, holdings, orders, quote-service, insights]
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
   insights-frontend:
-    build: ./insights-frontend
+    build:
+      context: .
+      dockerfile: insights-frontend/Dockerfile
 
   auth:
     build: ./auth
@@ -33,6 +37,12 @@ services:
       SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
       SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
+      # No network on the VM: reset emails are .eml files here. Read them with
+      # docker-compose exec auth sh -c 'cat /app/outbox/*.eml'
+      PASSWORD_RESET_OUTBOX_DIR: /app/outbox
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:4200/reset-password}
+    volumes:
+      - password_reset_outbox:/app/outbox
     depends_on:
       db: {condition: service_healthy}
 
@@ -99,3 +109,4 @@ services:
 
 volumes:
   db_data:
+  password_reset_outbox:
