@@ -23,6 +23,13 @@ public interface OrderSubmissionRepository {
      */
     Optional<AccountTradingProfile> findAccountTradingProfile(UUID accountId);
     /**
+     * Reads the declared country from the profile of the user who owns the account.
+     *
+     * @param accountId persistent account identifier
+     * @return the country as entered, or empty when there is no profile or no country
+     */
+    Optional<String> findClientCountry(UUID accountId);
+    /**
      * Looks up an earlier submission using the account-scoped idempotency key.
      *
      * @param accountId persistent account identifier

@@ -19,10 +19,9 @@ ownership, gateway routing, database setup, known gaps and verification.
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
 
-Quote preview takes `side`, `quantity` and exactly one of `symbol` or `instrumentId`.
-Buys are estimated at the ask and sells at the bid from the latest stored quote; the
-response is marked `indicative` and flags `stale` when the quote is older than execution
-accepts. Unknown instruments and missing quotes return 404 with a specific error code.
+Only clients whose profile country is the United States may trade, and only instruments on
+US markets (NASDAQ, NYSE, NYSE American, NYSE Arca, Cboe, IEX). Anything else, including a
+missing country, is rejected with 422 `LOCATION_RESTRICTED`.
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
@@ -51,6 +50,15 @@ The trader-tier minimum balance is an account-opening requirement; registration
 funding and its opening-minimum check are tracked in NEXT-214. An active,
 trading-enabled account below that minimum can buy with sufficient cash or sell
 with sufficient holdings; both resources are rechecked during settlement.
+
+Requeue and rejection reasons are kept distinct. A transient failure keeps the order PENDING and
+records `RETRY_` plus its cause (`RETRY_QUOTE_UNAVAILABLE`, `RETRY_STALE_QUOTE`,
+`RETRY_INVALID_QUOTE_TIMESTAMP`, `RETRY_PRICE_OUT_OF_TOLERANCE`, `RETRY_EXECUTION_FAILED`) on the
+ORDER_REQUEUED event and in `last_execution_error`. A rejection records the bare cause. Every cause
+is bounded: quotes by `orders.execution.max-quote-attempts`, price tolerance by
+`orders.execution.max-price-attempts`, and unexpected failures by
+`orders.execution.max-failure-attempts` (all default 10, retried every `orders.execution.retry-seconds`).
+Requeue is internal to the worker; there is no external requeue route.
 
 Set `TEST_POSTGRES_URL`, `TEST_POSTGRES_USER`, and `TEST_POSTGRES_PASSWORD` for a
 disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submission
