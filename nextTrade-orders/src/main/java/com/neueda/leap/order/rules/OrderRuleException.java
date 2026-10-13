@@ -15,7 +15,9 @@ public class OrderRuleException extends RuntimeException {
         /** The requested instrument is disabled. */
         INSTRUMENT_DISABLED("The requested instrument is disabled."),
         /** The requested instrument is halted or restricted. */
-        INSTRUMENT_NOT_TRADABLE("The requested instrument is halted or restricted.");
+        INSTRUMENT_NOT_TRADABLE("The requested instrument is halted or restricted."),
+        /** The client's location is not permitted to trade the requested instrument. */
+        LOCATION_RESTRICTED("Trading this instrument is not permitted from the client's location.");
         private final String message;
 
         Reason(String message) {
