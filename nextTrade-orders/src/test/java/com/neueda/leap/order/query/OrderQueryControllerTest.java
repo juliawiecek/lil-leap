@@ -87,7 +87,7 @@ class OrderQueryControllerTest {
 
     @Test
     void nonUuidPathsAndQueryStringsStayDenied() throws Exception {
-        mvc.perform(get("/orders/quote-preview").param("symbol", "AAPL").header("Authorization", trader()))
+        mvc.perform(get("/orders/history").param("symbol", "AAPL").header("Authorization", trader()))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/orders/not-a-uuid").header("Authorization", trader()))
                 .andExpect(status().isForbidden());
