@@ -56,11 +56,15 @@ class OrderSubmissionControllerTest {
     }
 
     @Test
-    void missingCsrfCannotSubmit() throws Exception {
+    void bearerSubmissionWithoutCsrfTokenReachesService() throws Exception {
+        // The browser client sends only the bearer token; a CSRF requirement would 403 every order.
+        var request = request();
+        when(service.submit(user, request)).thenThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.values()[0]));
+
         mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
-                        .contentType("application/json").content(json.writeValueAsBytes(request())))
-                .andExpect(status().isForbidden());
-        verifyNoInteractions(service);
+                        .contentType("application/json").content(json.writeValueAsBytes(request)))
+                .andExpect(status().isUnprocessableEntity());
+        verify(service).submit(user, request);
     }
 
     @Test
