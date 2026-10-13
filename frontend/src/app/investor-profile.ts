@@ -510,7 +510,9 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     let caret = international ? 1 : 0;
     let seen = 0;
     while (caret < formatted.length && seen < digitPosition) {
-      if (/\d/.test(formatted[caret])) seen++;
+      if (/\d/.test(formatted[caret])) {
+        seen++;
+      }
       caret++;
     }
     input.setSelectionRange(caret, caret);
@@ -544,7 +546,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     if (id === 'ssn') {
       return { groups: [3, 2, 4], maxDigits: 9, prefix: '' };
     }
-    if ((international && digits.startsWith('1')) || (!international && digits.startsWith('1') && digits.length > 10)) {
+    if (digits.startsWith('1') && (international || digits.length > 10)) {
       return { groups: [1, 3, 3, 4], maxDigits: 11, prefix: international ? '+' : '' };
     }
     if (international) {
@@ -570,7 +572,9 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const fields = this.sections[this.step()].fields;
     fields.forEach((field) => this.applyRequiredValidation(field, form));
     fields.forEach((field) => this.applyBusinessValidation(field, form));
-    if (!form.reportValidity()) return;
+    if (!form.reportValidity()) {
+      return;
+    }
     this.goTo(this.step() + 1);
   }
 
@@ -647,8 +651,12 @@ export class InvestorProfile implements OnInit, AfterViewInit {
 
   display(field: ProfileField): string {
     const value = this.values()[field.id]?.trim();
-    if (!value) return 'Not provided';
-    if (field.id === 'ssn') return '••••••••';
+    if (!value) {
+      return 'Not provided';
+    }
+    if (field.id === 'ssn') {
+      return '••••••••';
+    }
     return field.options?.find(option => option.value === value)?.label ?? value;
   }
 
@@ -656,7 +664,9 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const values = this.values();
     const answers: Record<string, string> = {};
     for (const field of this.sections.flatMap(section => section.fields)) {
-      if (this.visible(field)) answers[field.id] = values[field.id] ?? '';
+      if (this.visible(field)) {
+        answers[field.id] = values[field.id] ?? '';
+      }
     }
     this.completed.emit(answers);
   }

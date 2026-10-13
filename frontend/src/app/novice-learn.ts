@@ -158,7 +158,9 @@ export class NoviceLearn {
     }
   }
   finish(): void {
-    if (this.answer() !== this.current().correct) return;
+    if (this.answer() !== this.current().correct) {
+      return;
+    }
     this.completed.update((list) =>
       list.includes(this.active()) ? list : [...list, this.active()],
     );
