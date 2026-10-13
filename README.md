@@ -41,12 +41,12 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 ```text
 lil-leap/
-|- auth/                 # NestJS Identity Service: register, login, refresh/logout,
+|- auth/                 # NestJS Identity Service: register, login, refresh/logout, password reset,
 |                        #   server-assigned trader tier, OpenAPI spec (openapi.json)
 |- nextTrade-orders/     # Spring Boot: order submission, execution, settlement, history, cash
 |- nextTrade-holdings/   # Spring Boot: holdings service
 |- insights/             # Spring Boot: portfolio, order submission, instruments,
-|                        #   market data, password reset
+|                        #   market data
 |- frontend/             # Angular: NextTrade trading app (nginx, :4200)
 |- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
 |- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
@@ -80,7 +80,6 @@ flowchart LR
     end
 
     db[("PostgreSQL 16<br/>nexttrade · :5432")]
-    mail["mailpit<br/>SMTP :1025 · inbox :8025"]
 
     browser --> fe & ife
     fe -- "/auth/*, /rules/*" --> auth
@@ -89,7 +88,6 @@ flowchart LR
     ife -- "/auth/*" --> auth
     ife -- "/api/*" --> insights
     auth & orders & holdings & insights & quotes --> db
-    insights -. "password-reset email" .-> mail
 ```
 
 Browsers only talk to the two nginx frontends; each proxies API paths to the
@@ -99,14 +97,13 @@ restricted `app_user` role; the schema is owned by the admin role.
 
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
-| `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
+| `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; password reset (reset emails are written as `.eml` files to the `password_reset_outbox` volume, because the VM has no network); assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
 | `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances. |
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
-| `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data, password reset (email via mailpit). |
+| `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
 | `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the `orders-events`, `holdings-events` and `insights-events` topics are created on startup. See [kafka/README.md](kafka/README.md). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
-| `mailpit` | mailpit | 1025, 8025 | Captures outgoing email in development. |
 
 ### Authentication Flow
 
@@ -146,8 +143,8 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 
 | Service | Endpoints (as the browser reaches them) |
 |---|---|
-| `auth` | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`; `GET /rules/tier-eligibility`; `GET /health`. Full spec: [auth/openapi.json](auth/openapi.json). |
-| `insights` | Client financials/portfolio, order submission, instrument lookup, password reset under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
+| `auth` | `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`; `GET /rules/tier-eligibility`; `GET /health`. Full spec: [auth/openapi.json](auth/openapi.json). |
+| `insights` | Client financials/portfolio, order submission, instrument lookup under `/api/*` (Insights app). See [insights/README.md](insights/README.md). |
 | `orders` | `POST /orders` (order submission), `GET /clients/{id}/orders` (history, filterable by `from`/`to`/`status`), `GET /clients/{id}/cash` and `GET /cash/balance/{clientId}` (cash balance); also runs the order execution engine on a schedule. |
 | `holdings` | No business endpoints yet. |
 
@@ -229,7 +226,6 @@ DML permissions. These are development-only credentials — see
 | `frontend`           | `./frontend`       | `4200` -> `80`                | nginx: serves the NextTrade app, proxies to `auth`, `orders`, `holdings` |
 | `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | nginx: serves the Insights app, proxies to `auth`, `insights` |
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
-| `mailpit`            | `axllent/mailpit`  | `1025` (SMTP), `8025` (web UI)| Captures password-reset emails in dev    |
 | `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
 | `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
 | `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the topics once `kafka` is healthy |

@@ -33,10 +33,12 @@ describe('OpenAPI docs (NEXT-152)', () => {
 
   it('covers every endpoint at the path it is actually served on', () => {
     expect(Object.keys(spec.paths).sort()).toEqual([
+      '/auth/forgot-password',
       '/auth/login',
       '/auth/logout',
       '/auth/refresh',
       '/auth/register',
+      '/auth/reset-password',
       '/health',
       '/rules/tier-eligibility',
     ]);
