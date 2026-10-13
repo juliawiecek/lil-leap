@@ -3,6 +3,78 @@ import { test } from 'node:test';
 import { AuthClient } from '../src/auth-api.ts';
 import { SessionKeeper } from '../src/session-keeper.ts';
 
+test('invalidation listeners unsubscribe and signed-out input cannot persist activity', async () => {
+  const f = fixture();
+  let notifications = 0;
+  assert.equal(await f.client.restoreSession(), false);
+  const unsubscribe = f.client.onInvalidated(() => {
+    notifications++;
+  });
+  await f.client.login('a', 'b');
+  await f.client.logout();
+  assert.equal(notifications, 1);
+  f.client.recordActivity();
+  assert.equal(f.values.size, 0);
+  unsubscribe();
+  await f.client.logout();
+  assert.equal(notifications, 1);
+});
+
+for (const exchange of ['login', 'refresh']) {
+  test('a late ' + exchange + ' stays signed out even when revoking its token fails', async () => {
+    const f = fixture();
+    await f.client.login('a', 'b');
+    let resolve;
+    const client = new AuthClient(
+      (url) =>
+        url.endsWith('/' + exchange)
+          ? new Promise((done) => {
+              resolve = done;
+            })
+          : Promise.reject(new Error('Offline')),
+      '/auth',
+      f.settings,
+    );
+    const pending = exchange === 'login' ? client.login('a', 'b') : client.restoreSession();
+    await client.logout();
+    resolve(
+      Response.json({
+        accessToken: token('TRADER'),
+        refreshToken: 'late',
+        user: { userRole: 'TRADER' },
+      }),
+    );
+    if (exchange === 'login') {
+      await assert.rejects(pending, /session has ended/);
+    } else {
+      assert.equal(await pending, false);
+    }
+    await new Promise((done) => setImmediate(done));
+    assert.equal(client.accessToken, null);
+    assert.equal(f.values.size, 0);
+  });
+}
+
+test('unreadable token claims and malformed error codes never expose server details', async () => {
+  const client = new AuthClient(
+    async () =>
+      Response.json({ accessToken: 'test.broken.test', refreshToken: 'test-refresh', user: {} }),
+    '/auth',
+    { storage: null },
+  );
+  await client.login('a', 'b');
+  assert.equal(client.accessTokenExpiresAt, null);
+  assert.equal(client.userRole, null);
+  assert.equal(client.email, null);
+  const rejected = new AuthClient(async () =>
+    Response.json({ error: 123, message: 'private server details' }, { status: 400 }),
+  );
+  await assert.rejects(
+    rejected.login('a', 'b'),
+    (error) => error.message === 'Something went wrong. Please try again.',
+  );
+});
+
 test('registration sends profile data without opening a session', async () => {
   let sent;
   const client = new AuthClient(async (url, init) => {
