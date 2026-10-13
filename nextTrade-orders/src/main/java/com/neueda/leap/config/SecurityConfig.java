@@ -32,7 +32,10 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
-        return http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
+        // Stateless bearer-token API with no cookies or session, so CSRF does not apply; the
+        // browser client sends no CSRF token and enabling it rejects every POST /orders.
+        return http.csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny())
@@ -47,6 +50,7 @@ public class SecurityConfig {
                                 (authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                                     context.getRequest().getQueryString() == null
                                         && context.getRequest().getParameterMap().isEmpty())))
+                        .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {

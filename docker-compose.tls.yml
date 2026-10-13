@@ -1,9 +1,0 @@
-# docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
-# Provide a certificate covering the hostname used for both clients.
-services:
-  gateway:
-    volumes:
-      - ./gateway/tls-trading.conf:/etc/nginx/listeners/trading.conf:ro
-      - ./gateway/tls-reporting.conf:/etc/nginx/listeners/reporting.conf:ro
-      - ${TLS_CERTIFICATE_PATH:?Set TLS_CERTIFICATE_PATH}:/etc/nginx/tls/fullchain.pem:ro
-      - ${TLS_PRIVATE_KEY_PATH:?Set TLS_PRIVATE_KEY_PATH}:/etc/nginx/tls/privkey.pem:ro

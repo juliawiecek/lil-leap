@@ -1,7 +1,7 @@
 ﻿<a class="skip-link" href="#workspace">Skip to content</a>
 <div class="shell" [class.compact]="compact()">
   <aside class="sidebar" [class.open]="mobileNav()">
-    <a class="brand" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+    <a class="brand" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
         <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" /></svg
@@ -44,7 +44,7 @@
       >
         <app-dashboard-icon name="orders" />
       </button>
-      <form class="global-search" (submit)="$event.preventDefault(); search()">
+      <form class="global-search" method="post" (submit)="$event.preventDefault(); search()">
         <app-dashboard-icon name="search" /><input
           aria-label="Search clients or trades"
           placeholder="Search clients, instruments, or order IDs…"
@@ -266,6 +266,7 @@
             </div>
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">Most active instruments</caption>
                 <thead>
                   <tr>
                     <th>Instrument</th>
@@ -416,6 +417,7 @@
           </div>
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">Portfolio segment breakdown</caption>
               <thead>
                 <tr>
                   <th>Segment</th>
@@ -489,6 +491,7 @@
               </div>
               <div class="table-wrap">
                 <table>
+                  <caption class="sr-only">{{ detailTab() === 'Overview' ? 'Recent trading activity' : 'Client orders' }}</caption>
                   <thead>
                     <tr>
                       <th>Submitted (UTC)</th>
@@ -545,6 +548,7 @@
             </div>
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">Client directory</caption>
                 <thead>
                   <tr>
                     <th>Client</th>
@@ -683,6 +687,7 @@
           </div>
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">Recent exports</caption>
               <thead>
                 <tr>
                   <th>Report</th>
@@ -748,6 +753,7 @@
               </div>
               <div class="table-wrap results">
                 <table>
+                  <caption class="sr-only">Investigation results</caption>
                   <thead>
                     <tr>
                       <th>Order / client</th>

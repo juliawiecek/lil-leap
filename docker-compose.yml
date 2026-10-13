@@ -73,23 +73,15 @@ services:
     environment:
       <<: *jwt
       PORT: 8084
-      REPORTING_DB_HOST: reporting-db
-      REPORTING_DB_USERNAME: reporting_user
-      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
-    depends_on:
-      reporting-db: {condition: service_healthy}
 
   db:
     image: postgres:16-alpine
-    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10", "-c", "max_slot_wal_keep_size=1GB"]
     environment:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-main_password}
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
-      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
-      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -100,28 +92,6 @@ services:
       - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
-      - ./db/init-reporting.sh:/docker-entrypoint-initdb.d/04-reporting.sh:ro
-
-  reporting-db:
-    image: postgres:16-alpine
-    entrypoint: ["bash", "/usr/local/bin/start-reporting-replica.sh"]
-    environment:
-      PGDATA: /var/lib/postgresql/data
-      PRIMARY_DB_HOST: db
-      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
-      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
-    depends_on:
-      db: {condition: service_healthy}
-    healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=\"$$REPORTING_DB_PASSWORD\" psql -h 127.0.0.1 -U reporting_user -d nexttrade -tAc 'SELECT pg_is_in_recovery()' | grep -qx t"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    volumes:
-      - reporting_data:/var/lib/postgresql/data
-      - ./db/start-reporting-replica.sh:/usr/local/bin/start-reporting-replica.sh:ro
 
 volumes:
   db_data:
-  reporting_data:
