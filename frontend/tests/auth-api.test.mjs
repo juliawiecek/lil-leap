@@ -161,3 +161,26 @@ test('toTraderRegistration converts yes/no answers to booleans and drops blank f
     broker_firm_name: 'true',
   });
 });
+
+test('password reset calls post the email, then the token and new password, and accept empty 202/204 replies', async () => {
+  const { calls, fetchImpl } = fakeFetch({ status: 202 }, { status: 204 });
+  const client = new AuthClient(fetchImpl);
+
+  await client.requestPasswordReset('a@example.com');
+  await client.resetPassword('link-value', 'NewPassword1!');
+
+  assert.deepEqual(calls, [
+    { url: '/auth/forgot-password', method: 'POST', body: { email: 'a@example.com' } },
+    { url: '/auth/reset-password', method: 'POST', body: { token: 'link-value', newPassword: 'NewPassword1!' } },
+  ]);
+});
+
+test('an invalid, expired or used reset link gets a plain message asking for a new one', async () => {
+  const { fetchImpl } = fakeFetch({ status: 400, body: { error: 'INVALID_RESET_TOKEN', message: 'server text' } });
+
+  await assert.rejects(new AuthClient(fetchImpl).resetPassword('stale', 'NewPassword1!'), (error) => {
+    assert.ok(error instanceof AuthApiError);
+    assert.match(error.userMessage, /invalid, expired or already used/);
+    return true;
+  });
+});
