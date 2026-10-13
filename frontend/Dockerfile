@@ -8,6 +8,7 @@ COPY . .
 RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
+LABEL maintainer="Lil Leap"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/nexttrade-angular/browser/ /usr/share/nginx/html/
 RUN sed -i 's|pid        /var/run/nginx.pid;|pid        /tmp/nginx.pid;|' /etc/nginx/nginx.conf \

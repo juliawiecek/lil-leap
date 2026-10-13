@@ -21,6 +21,7 @@ RUN mvn -B clean package -DskipTests
 # and build cache from Stage 1 are NOT copied here â€” they never exist in the
 # final image. That's why the multi-stage image is significantly smaller.
 FROM eclipse-temurin:21-jre-alpine
+LABEL maintainer="Lil Leap"
 
 WORKDIR /app
 
