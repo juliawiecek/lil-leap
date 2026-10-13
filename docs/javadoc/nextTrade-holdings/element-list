@@ -12,4 +12,5 @@ com.neueda.leap.portfolio.controller
 com.neueda.leap.portfolio.dto
 com.neueda.leap.portfolio.repository
 com.neueda.leap.portfolio.service
+com.neueda.leap.portfolio.settlement
 com.neueda.leap.security

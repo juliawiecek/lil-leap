@@ -16,7 +16,8 @@ from src.quote_provider import (
 )
 
 APP_IMPORT_NAME = __name__
-SERVER_HOST = "0.0.0.0"
+HOST_ENV_VAR = "HOST"
+DEFAULT_SERVER_HOST = "127.0.0.1"
 PORT_ENV_VAR = "PORT"
 DEFAULT_PORT = 8083
 
@@ -26,12 +27,18 @@ def _port_from_env() -> int:
     return int(os.getenv(PORT_ENV_VAR, str(DEFAULT_PORT)))
 
 
+def _host_from_env() -> str:
+    """Read bind host from the environment and default to localhost."""
+    return os.getenv(HOST_ENV_VAR, DEFAULT_SERVER_HOST)
+
+
 def create_app(
     provider: object | None = None,
     service: CachedQuoteService | None = None,
 ) -> Flask:
     """Create and configure the quote API application."""
-    app = Flask(APP_IMPORT_NAME)
+    # This service is read-only (GET endpoints only) and does not use cookie form auth.
+    app = Flask(APP_IMPORT_NAME)  # NOSONAR
 
     if service is None:
         if provider is not None:
@@ -95,5 +102,5 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host=SERVER_HOST, port=_port_from_env())
+    app.run(host=_host_from_env(), port=_port_from_env())
 

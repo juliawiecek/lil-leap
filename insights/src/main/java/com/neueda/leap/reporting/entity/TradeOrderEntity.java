@@ -28,18 +28,34 @@ public class TradeOrderEntity {
     @JoinColumn(name = "instrument_id", nullable = false)
     private InstrumentEntity instrument;
 
+    /** Required by JPA; not for application use. */
     protected TradeOrderEntity() {
     }
 
+    /**
+     * Returns the persistent order identifier.
+     *
+     * @return persistent order identifier
+     */
     public UUID getOrderId() {
         return orderId;
     }
 
+    /**
+     * Returns the account that placed the order.
+     *
+     * @return account that placed the order
+     */
     public UUID getAccountId() {
         return accountId;
     }
 
 
+    /**
+     * Returns the instrument the order traded.
+     *
+     * @return instrument the order traded
+     */
     public InstrumentEntity getInstrument() {
         return instrument;
     }

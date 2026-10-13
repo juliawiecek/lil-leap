@@ -10,7 +10,17 @@ import java.util.UUID;
  *
  * @param userId the authenticated user's unique identifier, from the token's subject claim
  * @param email the authenticated user's email address, as embedded in the token
+ * @param role the authenticated user's role, as embedded in the token's {@code user_role} claim
  */
-<span class="fc" id="L14">public record JwtPrincipal(UUID userId, String email) {</span>
+<span class="fc" id="L15">public record JwtPrincipal(UUID userId, String email, String role) {</span>
+
+    /**
+     * Creates an identity with the default trader role.
+     * @param userId authenticated user identifier
+     * @param email authenticated user's email address
+     */
+	public JwtPrincipal(UUID userId, String email) {
+<span class="nc" id="L23">		this(userId, email, &quot;TRADER&quot;);</span>
+<span class="nc" id="L24">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
