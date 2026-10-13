@@ -47,6 +47,11 @@ with 200. Execution accepts in a separate committed transaction, then claims and
 fills/rejects with database locks. Failed attempts roll back settlement and remain
 retryable. Quote and price-tolerance limits default to ten attempts.
 
+The trader-tier minimum balance is an account-opening requirement; registration
+funding and its opening-minimum check are tracked in NEXT-214. An active,
+trading-enabled account below that minimum can buy with sufficient cash or sell
+with sufficient holdings; both resources are rechecked during settlement.
+
 Set `TEST_POSTGRES_URL`, `TEST_POSTGRES_USER`, and `TEST_POSTGRES_PASSWORD` for a
 disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submission
 contracts. Run Maven from this directory so the production schema can be loaded.

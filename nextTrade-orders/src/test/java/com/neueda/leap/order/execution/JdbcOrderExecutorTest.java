@@ -6,6 +6,7 @@ import com.neueda.leap.order.execution.quote.ExecutionQuoteService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -161,11 +162,28 @@ class JdbcOrderExecutorTest {
         rejected("PRICE_OUT_OF_TOLERANCE");
     }
 
-    @Test
-    void rejectsAccountBelowMinimum() {
+    @ParameterizedTest
+    @CsvSource({"BUY,5000,1000", "SELL,5000,1000", "SELL,5000,0", "BUY,100000,1000", "SELL,100000,0"})
+    void settlesBelowOpeningMinimumWhenResourcesAreSufficient(String direction, String openingMinimum, String balance) {
+        side = direction;
+        minimum = new BigDecimal(openingMinimum);
+        cash = new BigDecimal(balance);
         quote("99", "101");
-        minimum = new BigDecimal("1001");
-        rejected("ACCOUNT_NOT_SUITABLE");
+        executor.execute(orderId);
+        BigDecimal delta = new BigDecimal(direction.equals("BUY") ? "-202.00" : "198.00");
+        assertThat(write("INSERT INTO cash_transactions").get(4)).isEqualTo(delta);
+        assertThat(write("INSERT INTO order_status_history")).contains("FILLED", "EXECUTION_SUCCESS");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"BUY,INSUFFICIENT_CASH", "SELL,INSUFFICIENT_HOLDINGS"})
+    void belowOpeningMinimumStillRejectsInsufficientResources(String direction, String reason) {
+        side = direction;
+        minimum = new BigDecimal("5000");
+        cash = new BigDecimal("201");
+        held = 1;
+        quote("99", "101");
+        rejected(reason);
     }
 
     @Test

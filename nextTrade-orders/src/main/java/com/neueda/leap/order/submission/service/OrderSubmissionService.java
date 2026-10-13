@@ -117,8 +117,5 @@ public class OrderSubmissionService {
     private static void validateAccount(AccountTradingProfile account) {
         if (!"ACTIVE".equals(account.accountStatus())) throw new OrderRuleException(ACCOUNT_NOT_ACTIVE);
         if (!account.tradingEnabled()) throw new OrderRuleException(TRADING_NOT_ENABLED);
-        if (account.currentBalance().compareTo(account.minimumBalanceRequirement()) < 0) {
-            throw new OrderRuleException(ACCOUNT_NOT_SUITABLE);
-        }
     }
 }
