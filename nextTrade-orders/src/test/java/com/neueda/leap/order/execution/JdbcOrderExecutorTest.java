@@ -1,5 +1,6 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.cash.JdbcCashMovementAdapter;
 import com.neueda.leap.marketdata.MarketQuote;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteDecision;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteService;
@@ -53,6 +54,7 @@ class JdbcOrderExecutorTest {
                 when(rs.getBigDecimal(6)).thenReturn(buffer);
             } else if (sql.contains("FROM accounts")) {
                 if (missingAccount) return null;
+                when(rs.getObject(1)).thenReturn(accountId);
                 when(rs.getString(1)).thenReturn(status);
                 when(rs.getBoolean(2)).thenReturn(enabled);
                 when(rs.getBigDecimal(3)).thenReturn(new BigDecimal("1"));
@@ -70,7 +72,7 @@ class JdbcOrderExecutorTest {
         }
         return RETURNS_DEFAULTS.answer(invocation);
     });
-    private final JdbcOrderExecutor executor = new JdbcOrderExecutor(jdbc, quotes, 3);
+    private final JdbcOrderExecutor executor = new JdbcOrderExecutor(jdbc, quotes, new JdbcCashMovementAdapter(jdbc), 3);
 
     private void quote(String bid, String ask) {
         var value = new MarketQuote(UUID.randomUUID(), instrumentId, "AAPL", "NASDAQ",
@@ -95,7 +97,7 @@ class JdbcOrderExecutorTest {
     @ParameterizedTest
     @ValueSource(longs = {0, -1})
     void rejectsInvalidAttemptLimit(long limit) {
-        assertThatThrownBy(() -> new JdbcOrderExecutor(jdbc, quotes, limit)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new JdbcOrderExecutor(jdbc, quotes, new JdbcCashMovementAdapter(jdbc), limit)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -197,7 +199,7 @@ class JdbcOrderExecutorTest {
         assertThat(write("INSERT INTO holding_movements").subList(1, 7))
                 .containsExactly(accountId, instrumentId, fillId, direction.equals("BUY") ? 2L : -2L, price, direction);
         assertThat(write("INSERT INTO cash_transactions").subList(1, 5)).containsExactly(accountId, fillId, direction, delta);
-        assertThat(write("INSERT INTO cash_balances").get(2)).isEqualTo(cash.add(delta));
+        assertThat(write("UPDATE cash_balances").get(1)).isEqualTo(cash.add(delta));
         assertThat(write("INSERT INTO order_status_history")).contains("FILLED", "EXECUTION_SUCCESS");
         assertThat(write("SETTLEMENT_COMPLETED")).contains(fillId, delta);
     }
