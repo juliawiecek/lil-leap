@@ -68,21 +68,23 @@ test('screeners separate gainers and decliners and restore all quotes', t => {
   desk.filter.set('Gainers');
   assert.ok(desk.screened().length > 0);
   assert.ok(desk.screened().every(q => q.change > 0));
+  // Every seeded quote starts as a gainer, so make one fall to exercise the Decliners screen.
+  desk.quote('NVDA').change = -2.36;
   desk.filter.set('Decliners');
-  assert.deepEqual(desk.screened().map(q => q.symbol), ['TSLA', 'META']);
+  assert.deepEqual(desk.screened().map(q => q.symbol), ['NVDA']);
   desk.filter.set('All stocks');
   assert.equal(desk.screened().length, desk.quotes.length);
 });
 
 test('choosing a symbol updates ticket prices and clears stale search and errors', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }]);
-  desk.query.set('tsla'); desk.message.set('old error'); desk.page.set('Watchlist');
-  desk.choose(desk.quote('TSLA'));
-  assert.equal(desk.selected().symbol, 'TSLA');
-  assert.equal(desk.limitPrice(), '142.20');
-  assert.equal(desk.profitPrice(), '149.31');
-  assert.equal(desk.stopPrice(), '135.09');
-  assert.equal(desk.alertPrice(), '145.04');
+  desk.query.set('nvda'); desk.message.set('old error'); desk.page.set('Watchlist');
+  desk.choose(desk.quote('NVDA'));
+  assert.equal(desk.selected().symbol, 'NVDA');
+  assert.equal(desk.limitPrice(), '893.12');
+  assert.equal(desk.profitPrice(), '937.78');
+  assert.equal(desk.stopPrice(), '848.46');
+  assert.equal(desk.alertPrice(), '910.98');
   assert.equal(desk.query(), ''); assert.equal(desk.message(), '');
   assert.equal(desk.page(), 'Overview');
 });
@@ -229,16 +231,16 @@ test('a listed stock with no backend instrument is not submitted', async t => {
   const desk = tradingDesk(t);
   const client = new MockOrderSubmissionClient();
   const all = await client.getInstruments();
-  client.getInstruments = async () => all.filter(i => i.symbol !== 'TSLA');
+  client.getInstruments = async () => all.filter(i => i.symbol !== 'NVDA');
   let submitted = 0;
   client.submit = async () => { submitted++; throw new Error('should not submit'); };
   desk.orderSubmissionClient = client;
   desk.orderHistoryClient = new ScriptedOrderHistory([]);
   await desk.loadTradingData();
-  desk.choose(desk.quote('TSLA')); desk.orderType.set('Market'); desk.quantity.set('1');
+  desk.choose(desk.quote('NVDA')); desk.orderType.set('Market'); desk.quantity.set('1');
   await desk.confirmOrder();
   assert.equal(submitted, 0);
-  assert.match(desk.message(), /TSLA is not available to trade yet/);
+  assert.match(desk.message(), /NVDA is not available to trade yet/);
 });
 
 test('price alerts reject invalid prices and retain the selected symbol', t => {
@@ -248,8 +250,8 @@ test('price alerts reject invalid prices and retain the selected symbol', t => {
     assert.match(desk.message(), /positive alert price/);
     assert.deepEqual(desk.alerts(), []);
   }
-  desk.choose(desk.quote('TSLA')); desk.alertPrice.set('150'); desk.createAlert();
-  assert.deepEqual(desk.alerts(), [{ symbol: 'TSLA', price: 150 }]);
+  desk.choose(desk.quote('NVDA')); desk.alertPrice.set('150'); desk.createAlert();
+  assert.deepEqual(desk.alerts(), [{ symbol: 'NVDA', price: 150 }]);
 });
 
 test('portfolio and order load failures retain values and show safe fallback messages', async t => {

@@ -28,7 +28,7 @@ class QuoteRepository:
             for row in rows:
                 cur.execute("""
                     INSERT INTO quotes(instrument_id, bid, ask, quoted_at, source, is_synthetic)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, LEAST(%s::timestamptz, CURRENT_TIMESTAMP), %s, %s)
                     ON CONFLICT (instrument_id, quoted_at, source) DO NOTHING
                     RETURNING quote_id
                 """, row)

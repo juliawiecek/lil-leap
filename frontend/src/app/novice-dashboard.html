@@ -112,7 +112,7 @@
                     {{ showBalance() ? (portfolioValue() | currency) : '••••••••' }}
                   </div>
                   <div class="portfolio-gain">
-                    <strong>{{ showBalance() ? '+$482.17 (+1.99%)' : '••••••' }}</strong
+                    <strong>{{ showBalance() ? ((todayReturn() >= 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••' }}</strong
                     ><span>Today</span>
                   </div>
                 </div>
@@ -188,14 +188,14 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong class="positive">{{
-                    showBalance() ? '+$482.17 (+1.99%)' : '••••••'
+                  ><strong [class.positive]="todayReturn() >= 0" [class.negative]="todayReturn() < 0">{{
+                    showBalance() ? ((todayReturn() >= 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••'
                   }}</strong>
                 </div>
                 <div>
                   <span>Total return</span
-                  ><strong class="positive">{{
-                    showBalance() ? '+$2,341.56 (+10.47%)' : '••••••'
+                  ><strong [class.positive]="totalReturn() >= 0" [class.negative]="totalReturn() < 0">{{
+                    showBalance() ? ((totalReturn() >= 0 ? '+' : '') + (totalReturn() | currency) + ' (' + (totalReturnPercent() | number: '1.2-2') + '%)') : '••••••'
                   }}</strong>
                 </div>
               </div>
@@ -301,12 +301,12 @@
               } @else {
                 <div class="asset-class-list">
                   <div>
-                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>72%</strong
-                    ><span>$17,770.15</span>
+                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong
+                    ><span>{{ assetAllocation().stocksValue | currency }}</span>
                   </div>
                   <div>
-                    <span><i class="asset-dot cash"></i>Cash</span><strong>28%</strong
-                    ><span>$6,910.27</span>
+                    <span><i class="asset-dot cash"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong
+                    ><span>{{ assetAllocation().cashValue | currency }}</span>
                   </div>
                 </div>
               }
@@ -405,19 +405,19 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <svg class="allocation-donut" aria-label="Asset allocation: Stocks 72 percent, Cash 28 percent">
+                <svg class="allocation-donut" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
                   <foreignObject width="100%" height="100%">
-                    <div xmlns="http://www.w3.org/1999/xhtml"><strong>$24,680</strong><span>Total</span></div>
+                    <div xmlns="http://www.w3.org/1999/xhtml"><strong>{{ assetAllocation().total | currency }}</strong><span>Total</span></div>
                   </foreignObject>
                 </svg>
                 <div class="allocation-legend">
                   <div>
-                    <i class="asset-dot stocks"></i><span>Stocks<small>$17,770.15</small></span
-                    ><b>72%</b>
+                    <i class="asset-dot stocks"></i><span>Stocks<small>{{ assetAllocation().stocksValue | currency }}</small></span
+                    ><b>{{ assetAllocation().stocksPercent }}%</b>
                   </div>
                   <div>
-                    <i class="asset-dot cash"></i><span>Cash<small>$6,910.27</small></span
-                    ><b>28%</b>
+                    <i class="asset-dot cash"></i><span>Cash<small>{{ assetAllocation().cashValue | currency }}</small></span
+                    ><b>{{ assetAllocation().cashPercent }}%</b>
                   </div>
                 </div>
               </div>
@@ -567,6 +567,7 @@
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
       <p>Buying power: {{ buyingPower() | currency }}</p>
+      <p>Execution threshold: order is rejected if execution price moves more than ${{ executionThresholdDollars() }} from the indicative price.</p>
       @if (reviewing()) {
         <p class="review-confirmation">
           {{ side() }} {{ quantity() }} shares of {{ tradeQuote().symbol }} at
@@ -580,8 +581,8 @@
     </form>
   } @else if (modal() === 'allocation') {
     <div class="asset-class-list">
-      <div><span>Stocks</span><strong>72%</strong><span>$17,770.15</span></div>
-      <div><span>Cash</span><strong>28%</strong><span>$6,910.27</span></div>
+      <div><span>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ assetAllocation().stocksValue | currency }}</span></div>
+      <div><span>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ assetAllocation().cashValue | currency }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

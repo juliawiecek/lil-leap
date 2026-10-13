@@ -6,6 +6,7 @@
 
 /** Tier the server assigned from the user's declared finances (JWT `trader_level` claim). */
 export type TraderLevel = 'NOVICE' | 'ADVANCED';
+export type RiskProfile = 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
 
 export interface AuthUser {
   id: string;
@@ -45,6 +46,7 @@ export class AuthClient {
   #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;
   #traderLevel: TraderLevel | null = null;
+  #riskProfile: RiskProfile | null = null;
 
   constructor(fetchImpl: typeof fetch = (input, init) => fetch(input, init), baseUrl = '/auth') {
     this.#fetch = fetchImpl;
@@ -64,6 +66,11 @@ export class AuthClient {
   /** The signed-in user's tier from the access token; null when signed out or for a user without an account. */
   get traderLevel(): TraderLevel | null {
     return this.#traderLevel;
+  }
+
+  /** The signed-in user's declared risk profile from the access token; null when unavailable. */
+  get riskProfile(): RiskProfile | null {
+    return this.#riskProfile;
   }
 
   /** Creates the account. Issues no tokens -- call login afterwards. */
@@ -124,21 +131,26 @@ export class AuthClient {
     this.#refreshToken = refreshToken;
     this.#accessTokenExpiresAt = null;
     this.#traderLevel = null;
+    this.#riskProfile = null;
     const payload = accessToken?.split('.')[1];
     if (!payload) {
       return;
     }
     try {
-      const { exp, iat, trader_level } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
+      const { exp, iat, trader_level, risk_profile } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         exp?: unknown;
         iat?: unknown;
         trader_level?: unknown;
+        risk_profile?: unknown;
       };
       if (typeof exp === 'number' && typeof iat === 'number') {
         this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
       }
       if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') {
         this.#traderLevel = trader_level;
+      }
+      if (risk_profile === 'CONSERVATIVE' || risk_profile === 'MODERATE' || risk_profile === 'AGGRESSIVE') {
+        this.#riskProfile = risk_profile;
       }
     } catch {
       // Unreadable token: leave expiry unknown, which makes the session keeper refresh on next activity.

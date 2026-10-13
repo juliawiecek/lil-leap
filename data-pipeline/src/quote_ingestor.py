@@ -1,7 +1,7 @@
 """Generate and atomically persist synthetic US-equity quotes."""
 from __future__ import annotations
 import argparse, os, signal, time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import pandas as pd
 from src.database import connect, DatabaseUnavailableError
@@ -44,7 +44,9 @@ def ingest_frame(frame: pd.DataFrame, connection) -> tuple[int,int]:
         raise
 
 def generate_current(periods: int, seed: int) -> pd.DataFrame:
-    start=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    # Keep the most recent generated quote at "now" so execution freshness checks pass.
+    latest = datetime.now(timezone.utc).replace(microsecond=0)
+    start = (latest - timedelta(minutes=max(periods - 1, 0))).isoformat()
     return generate_quotes(periods=periods, seed=seed, start_timestamp=start)
 
 def run_once(periods: int, seed: int) -> tuple[int,int,int]:
@@ -65,7 +67,11 @@ def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> N
     while not should_stop():
         started=time.monotonic()
         try:
-            frame=generate_current(1, seed + batch)
+            # Generate 3 prices per interval to get GBM variation (periods must be > 1 for price movement)
+            # We take the last price to show market movement over time
+            frame=generate_current(3, seed + batch)
+            # Keep only the most recent price for this interval
+            frame = frame.groupby('symbol', as_index=False).tail(1)
             with connect() as conn: inserted, skipped=ingest_frame(frame, conn)
             print(f"quote batch inserted={inserted} skipped={skipped} symbols={len(frame)}")
             attempt=0; batch += 1
