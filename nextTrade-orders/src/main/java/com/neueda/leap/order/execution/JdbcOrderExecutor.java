@@ -1,5 +1,6 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.cash.CashMovementAdapter;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteDecision;
 import com.neueda.leap.order.execution.quote.ExecutionQuoteService;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,19 +19,22 @@ public class JdbcOrderExecutor implements OrderExecutor {
     private static final String PRICE_OUT_OF_TOLERANCE = "PRICE_OUT_OF_TOLERANCE";
     private final JdbcTemplate jdbc;
     private final ExecutionQuoteService quotes;
+    private final CashMovementAdapter cashMovements;
     private final long maxAttempts;
 
     /**
      * Creates the execution handler.
      * @param jdbc transactional database access
      * @param quotes latest quote and freshness contract
+     * @param cashMovements settlement-only cash movements, joined to this transaction
      * @param maxAttempts maximum attempts for out-of-tolerance prices
      */
-    public JdbcOrderExecutor(JdbcTemplate jdbc, ExecutionQuoteService quotes,
+    public JdbcOrderExecutor(JdbcTemplate jdbc, ExecutionQuoteService quotes, CashMovementAdapter cashMovements,
             @Value("${orders.execution.max-price-attempts:10}") long maxAttempts) {
         if (maxAttempts < 1) throw new IllegalArgumentException("Attempt limit must be positive");
         this.jdbc = jdbc;
         this.quotes = quotes;
+        this.cashMovements = cashMovements;
         this.maxAttempts = maxAttempts;
     }
 
@@ -70,8 +74,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
         }
         boolean buy = Boolean.TRUE.equals(quoteContext.buy());
 
-        BigDecimal cash = jdbc.query("SELECT balance FROM cash_balances WHERE account_id = ? FOR UPDATE",
-                (rs, n) -> rs.getBigDecimal(1), order.account()).stream().findFirst().orElse(BigDecimal.ZERO);
+        BigDecimal cash = cashMovements.lockBalance(order.account());
         var position = jdbc.query("""
                 SELECT quantity, avg_cost FROM holdings WHERE account_id = ? AND instrument_id = ? FOR UPDATE
                 """, (rs, n) -> new Position(rs.getLong(1), rs.getBigDecimal(2)), order.account(), order.instrument())
@@ -82,7 +85,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
             return fundsRejection;
         }
 
-        SettlementResult settlement = persistSettlement(orderId, order, buy, quoteContext.price(), quoteContext.quote().quotedAt(), amount, cash);
+        SettlementResult settlement = persistSettlement(orderId, order, buy, quoteContext.price(), quoteContext.quote().quotedAt(), amount);
         BigDecimal cashChange = settlement.cashChange();
         history(orderId, "FILLED", "EXECUTION_SUCCESS");
         jdbc.update("""
@@ -201,7 +204,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
     }
 
     private SettlementResult persistSettlement(UUID orderId, Trade order, boolean buy, BigDecimal price,
-                                               java.time.OffsetDateTime quotedAt, BigDecimal amount, BigDecimal cash) {
+                                               java.time.OffsetDateTime quotedAt, BigDecimal amount) {
         UUID fill = UUID.randomUUID();
         jdbc.update("""
                 INSERT INTO fills(fill_id, order_id, filled_quantity, execution_price, quote_timestamp)
@@ -212,17 +215,13 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """, order.account(), order.instrument(), fill, change, price, order.side());
-        BigDecimal cashChange = buy ? amount.negate() : amount;
-        jdbc.update("""
-                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
-                VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
-                """, order.account(), fill, order.side(), cashChange);
-
         // holding_movements invokes the transactional holdings projection trigger.
-        jdbc.update("""
-                INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)
-                ON CONFLICT (account_id) DO UPDATE SET balance = EXCLUDED.balance, updated_at = CURRENT_TIMESTAMP
-                """, order.account(), cash.add(cashChange));
+        BigDecimal cashChange = buy ? amount.negate() : amount;
+        if (buy) {
+            cashMovements.buy(order.account(), fill, amount);
+        } else {
+            cashMovements.sell(order.account(), fill, amount);
+        }
         return new SettlementResult(fill, cashChange);
     }
 
