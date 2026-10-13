@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
@@ -80,6 +81,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');
+  private routing?: PageBinding;
+  private destroyed = false;
+  readonly symbol = signal('AAPL');
   readonly submitting = signal(false);
   readonly submittedOrderId = signal<string | null>(null);
   readonly clientReference = signal<string>('');
@@ -94,6 +98,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     { name: 'Watchlist', icon: 'star' },
     { name: 'Portfolio', icon: 'chart' },
     { name: 'Orders', icon: 'orders' },
+    { name: 'History', icon: 'orders' },
     { name: 'Markets', icon: 'chart' },
     { name: 'Screeners', icon: 'search' },
     { name: 'Settings', icon: 'settings' },
@@ -256,17 +261,23 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }
   choose(quote: Quote): void {
+    this.symbol.set(quote.symbol);
+    this.setTicketQuote(quote);
+    this.query.set('');
+    this.message.set('');
+    this.page.set('Overview');
+    this.routing?.go('Overview');
+  }
+  private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
     this.limitPrice.set(quote.price.toFixed(2));
     this.profitPrice.set((quote.price * 1.05).toFixed(2));
     this.stopPrice.set((quote.price * 0.95).toFixed(2));
     this.alertPrice.set((quote.price * 1.02).toFixed(2));
-    this.query.set('');
-    this.message.set('');
-    this.page.set('Overview');
   }
   navigate(page: string): void {
     this.page.set(page);
+    this.routing?.go(page);
     if (page === 'Portfolio') {
       this.bottomTab.set('Positions');
     }
@@ -421,7 +432,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
   async refreshPortfolio(): Promise<void> {
     try {
-      this.applyPortfolio(await this.portfolioClient.load());
+      const portfolio = await this.portfolioClient.load();
+      if (this.destroyed) return;
+      this.applyPortfolio(portfolio);
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
       return;
@@ -451,6 +464,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
   #schedulePrices(): void {
+    if (this.destroyed) return;
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) {
       return;
@@ -501,6 +515,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.message.set('Order is still processing. Status updates continue in Orders.');
       return;
     }
+    if (this.destroyed) return;
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
 
@@ -525,6 +540,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.message.set('Price alert added.');
   }
   constructor(private readonly auth: AuthService) {
+    this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
+      { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
+      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'orderStatus', value: this.orderStatus, allowed: ['All','Submitted','Accepted','Pending','Delayed','Filled','Rejected'] }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers','52W High/Low'] }
+    ], () => {
+      const quote = this.quote(this.symbol());
+      if (this.selected() !== quote) this.setTicketQuote(quote);
+      if (quote.symbol !== this.symbol()) this.message.set('That symbol is unavailable.');
+    });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
@@ -532,6 +555,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.#destroyed = true;
+    this.destroyed = true;
+    this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
     clearTimeout(this.#ordersPollTimer);

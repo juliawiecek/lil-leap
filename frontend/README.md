@@ -45,10 +45,24 @@ through `proxy.conf.json`. In Docker, the shared gateway routes `/auth/` to Iden
 requests same-origin, so no CORS setup is needed. Never call the auth
 service by absolute URL.
 
-Tokens are held in memory only (`src/app/auth-api.ts`), so reloading the page
-signs you out. While you're active the app refreshes them in the background;
-after 10 minutes without input it signs you out (`src/app/session-keeper.ts`,
-BR-03 — keep `SESSION_INACTIVITY_MINUTES` there in step with the auth service).
+Access tokens stay in memory. The rotated refresh token and last user-input time
+are stored in `sessionStorage` for this tab. Startup exchanges that token before
+opening protected pages; a failed or idle-expired session opens login. Closing
+the tab removes its recoverable session. Reloading never resets the ten-minute
+inactivity deadline (BR-03; keep `SESSION_INACTIVITY_MINUTES` in step with Identity).
+
+Pages use Angular routes: `/dashboard`, `/orders`, `/history`, `/settings`,
+`/watchlist`, `/portfolio`, and the tier-specific `/learn`, `/markets`, `/screeners`.
+Search, chart/panel choices and history filters are URL parameters, so reload and
+Back/Forward restore them. API data reloads from the server; order drafts do not.
+Both nginx clients already fall back to `index.html` for deep links.
+
+Browser regression checks run with `npm run test:e2e` after building both apps.
+The default test server serves the production builds on ports 18080/18081 with
+SPA fallback. Identity and trading responses are mocked with rotating tokens;
+these checks do not claim to exercise a live Identity database. To use separately
+served builds, set `NEXT220_TRADING_URL` and `NEXT220_INSIGHTS_URL`. Windows uses
+installed Edge; other systems need Playwright Chromium (`npx playwright install chromium`).
 
 ### Common problems
 
@@ -86,7 +100,7 @@ See the [route table](../docs/architecture/service-boundaries.md#gateway-routes)
 - `src/app/app.scss`: visual design and animations
 - `src/app/app.ts`: Angular state, interactions, and chart rendering
 
-Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load real order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order tickets and other trading views still use local sample data and simulated interactions; live submission, quote and portfolio integration remains separate work.
+Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order submission, portfolio reads and quote polling use the existing trading APIs. Some overview and market views still contain illustrative data.
 
 ## Error logging
 

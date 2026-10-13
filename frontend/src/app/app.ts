@@ -1,3 +1,6 @@
+import { Router, ActivatedRoute } from '@angular/router';
+import { AppSessionService } from './app-session.service';
+import { safeReturnUrl } from './page-state';
 ﻿import {
   AfterViewInit,
   Component,
@@ -15,8 +18,8 @@ import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
-import { SESSION_INACTIVITY_MINUTES, SessionKeeper } from './session-keeper';
-import { StockDashboard, Experience } from './stock-dashboard';
+import { SESSION_INACTIVITY_MINUTES } from './session-keeper';
+import type { Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -35,8 +38,8 @@ interface VolumeBar {
 }
 
 @Component({
-  selector: 'app-root',
-  imports: [InvestorProfile, StockDashboard],
+  selector: 'app-login',
+  imports: [InvestorProfile],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   encapsulation: ViewEncapsulation.None,
@@ -51,7 +54,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
-  private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
+  private readonly session = inject(AppSessionService);
+  private readonly router = inject(Router, { optional: true });
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly candleStep = 30;
   private readonly riseColor = '#78a85f';
@@ -68,6 +73,10 @@ export class App implements AfterViewInit, OnDestroy {
   readonly registrationError = signal('');
 
   openDashboard(level: Experience, fresh = true): void {
+    if (this.auth.userRole && this.auth.userRole !== 'TRADER') {
+      void this.auth.logout();
+      throw new AuthApiError('Please use a trader account to sign in to NextTrade.');
+    }
     this.traderLevel.set(level);
     this.newAccount.set(fresh);
     this.profileOpen.set(false);
@@ -79,6 +88,10 @@ export class App implements AfterViewInit, OnDestroy {
     const confirmation = document.getElementById('verify-password') as HTMLInputElement | null;
     if (confirmation) {
       confirmation.value = '';
+    }
+    if (this.router) {
+      const target = safeReturnUrl(this.route?.snapshot.queryParamMap.get('returnUrl') ?? '') ?? '/dashboard';
+      void this.router.navigateByUrl(target);
     }
   }
 
@@ -132,6 +145,7 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
+    if (this.route?.snapshot.queryParamMap.has('returnUrl')) this.showAuthPage();
     this.context = this.marketChart.nativeElement.getContext('2d');
     if (!this.context) {
       return;
@@ -167,7 +181,7 @@ export class App implements AfterViewInit, OnDestroy {
   @HostListener('window:pageshow', ['$event'])
   onPageShow(event: PageTransitionEvent): void {
     if (event.persisted) {
-      window.location.reload();
+      void this.session.keeper.check();
     }
   }
 

@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
@@ -36,12 +37,20 @@ export class OrderHistory implements OnInit, OnDestroy {
   readonly to = signal('');
   readonly status = signal('');
 
+  private routing?: PageBinding;
+  constructor() {
+    this.routing = inject(PageState, { optional: true })?.connect(signal('History'), PAGE_PATHS, [
+      { key: 'from', value: this.from, date: true }, { key: 'to', value: this.to, date: true },
+      { key: 'status', value: this.status, allowed: this.statusOptions.map(option => option.value) },
+    ], () => { if (this.routing) void this.load(); });
+  }
   ngOnInit(): void {
     void this.load();
     this.#scheduleRefresh();
   }
 
   ngOnDestroy(): void {
+    ++this.#request; this.routing?.destroy();
     this.#destroyed = true;
     clearTimeout(this.#refreshTimer);
   }

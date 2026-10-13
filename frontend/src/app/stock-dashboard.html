@@ -1,12 +1,5 @@
-﻿<app-novice-dashboard
-  [hidden]="mode() !== 'NOVICE'"
-  [name]="name()"
-  [mode]="mode()"
-  (signOut)="signOut.emit()"
-/>
-<app-advanced-dashboard
-  [hidden]="mode() !== 'ADVANCED'"
-  [name]="name()"
-  [mode]="mode()"
-  (signOut)="signOut.emit()"
-/>
+@if (mode() === 'NOVICE') {
+  <app-novice-dashboard [name]="name()" [mode]="mode()" (signOut)="signOut.emit()" />
+} @else {
+  <app-advanced-dashboard [name]="name()" [mode]="mode()" (signOut)="signOut.emit()" />
+}

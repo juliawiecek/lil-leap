@@ -26,13 +26,18 @@ Open http://localhost:4301. Start `docker compose up --build -d gateway` from th
 
 ## Boundaries
 
-This is a design preview with product-facing UI copy, not an authenticated internal production app. The persona switch only previews UI; it must be replaced by server-enforced roles before use with real records. No real client data or credentials are requested.
+Sign-in uses the existing Identity service and requires an ANALYST account.
+Access tokens stay in memory; the rotated refresh token and last activity time
+use a separate `sessionStorage` key for this app. Reload restores the session
+before rendering a protected page, without extending its ten-minute idle deadline.
+The Analyst/Operations selector previews sample-data views; it does not change
+the authenticated role or grant backend permissions.
 
 Fixtures in `src/app/insights-data.ts` contain August/September 2026 sample orders and a September 22 snapshot. Reports and volume charts derive from those orders. Client balance snapshots are separate illustrative values, not reconstructed from that limited order sample. Volume is filled notional in USD. Activity definitions and USD segment thresholds are provisional; the current definitions are displayed in the UI.
 
-Backend integration is still needed for reporting snapshots/freshness, identity and permissions, authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
+Backend integration is still needed for reporting snapshots/freshness, record-level permissions, authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
 
-The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Unused router dependency, icon paths and font weights/families have been removed; RxJS remains an Angular peer dependency. Local browser previews and npm caches are excluded from both Git and Docker builds.
+The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Angular Router provides guarded navigation; RxJS remains an Angular peer dependency. Local browser previews and npm caches are excluded from both Git and Docker builds.
 
 ## Visual consistency
 
@@ -47,3 +52,16 @@ Historical UI-preview verification (before NEXT-193): production build passed; a
 ## Local development files
 
 Generated JavaScript belongs in `out-tsc/`, not `src/`. For a check without emitting files, run `npx ngc -p tsconfig.app.json --noEmit`. Dependencies in `node_modules/` are retained for local development; build output and caches can be regenerated.
+
+## Session and URL restoration (NEXT-220)
+
+Protected routes are `/dashboard`, `/history` (Trading Activity), `/orders`
+(Trade Investigation), `/client-activity`, `/clients`, `/reports`, `/compliance`,
+and `/settings`. Existing client/trade details use `/clients/:id` and `/orders/:id`.
+Dates, search, filters, grouping, tabs, preview workspace and compact display are
+URL parameters. Missing record IDs show an unavailable-record notice rather than
+opening another record. Report export history still resets on reload.
+
+Both apps' browser checks live in `../frontend/e2e`; build both apps and run
+`npm run test:e2e` from `frontend`. Unit tests include the same auth/session
+contract scenarios in both independently buildable apps.

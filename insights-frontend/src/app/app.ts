@@ -1,4 +1,7 @@
-﻿import { Component, computed, signal } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { AuthService } from './auth.service';
+import { AppSessionService } from './app-session.service';
+﻿import { Component, OnDestroy, computed, signal, inject } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardIcon } from './dashboard-icon';
@@ -16,7 +19,7 @@ import {
   type Trade,
 } from './insights-data';
 @Component({
-  selector: 'app-root',
+  selector: 'app-insights-workspace',
   imports: [
     CurrencyPipe,
     DatePipe,
@@ -29,7 +32,10 @@ import {
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnDestroy {
+  readonly auth = inject(AuthService, { optional: true });
+  readonly session = inject(AppSessionService, { optional: true });
+  private routing?: PageBinding;
   readonly nav = [
     { label: 'Overview', icon: 'home' },
     { label: 'Trading Activity', icon: 'chart' },
@@ -176,6 +182,28 @@ export class App {
         Settings: 'Make this workspace work for you.',
       })[this.page()],
   );
+  constructor() {
+    this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
+      { key: 'q', value: this.query }, { key: 'start', value: this.start, date: true },
+      { key: 'end', value: this.end, date: true }, { key: 'asset', value: this.asset, allowed: ['All', ...this.classes] },
+      { key: 'market', value: this.market, allowed: ['All','US','Global'] },
+      { key: 'segment', value: this.segment, allowed: ['All', ...this.segments] },
+      { key: 'status', value: this.status, allowed: ['All','Submitted','Accepted','Filled','Rejected'] },
+      { key: 'cadence', value: this.cadence, allowed: ['Daily','Weekly','Monthly','Yearly'] },
+      { key: 'detailTab', value: this.detailTab, allowed: ['Overview','Orders','Documents','Lifecycle','Audit Trail'] },
+      { key: 'reportType', value: this.reportType, allowed: this.reportTypes },
+      { key: 'reportTab', value: this.reportTab, allowed: ['Standard Reports','Custom Reports','Scheduled Reports'] },
+      { key: 'view', value: this.role, allowed: ['Analyst','Operations'] },
+      { key: 'definitions', value: this.definitions }, { key: 'compact', value: this.compact },
+    ], parts => {
+      const tabs = parts[0] === 'clients' ? ['Overview','Orders','Documents'] : parts[0] === 'orders' ? ['Overview','Lifecycle','Audit Trail'] : ['Overview'];
+      if (!tabs.includes(this.detailTab())) this.detailTab.set('Overview');
+      this.selectedClient.set(parts[0] === 'clients' && parts[1] ? clients.find(c => c.id === parts[1]) ?? null : null);
+      this.selectedTrade.set(parts[0] === 'orders' && parts[1] ? trades.find(t => t.id === parts[1]) ?? null : null);
+      if (parts[1] && !this.selectedClient() && !this.selectedTrade()) this.notice.set('That record is unavailable.');
+    });
+  }
+  ngOnDestroy(): void { this.routing?.destroy(); }
   navigate(page: string) {
     this.page.set(page);
     this.mobileNav.set(false);
@@ -184,6 +212,7 @@ export class App {
     this.selectedTrade.set(null);
     this.detailTab.set('Overview');
     this.notice.set('');
+    this.routing?.go(page);
   }
   reset() {
     this.start.set('2026-09-01');
@@ -194,6 +223,7 @@ export class App {
     this.status.set('All');
     this.query.set('');
     this.selectedTrade.set(null);
+    this.routing?.go(this.page());
   }
   clientName(id: string) {
     return clients.find((c) => c.id === id)?.name || id;
@@ -205,16 +235,19 @@ export class App {
     this.page.set('Clients');
     this.selectedClient.set(c);
     this.detailTab.set('Overview');
+    this.routing?.go('Clients', c.id);
   }
   openTrade(t: Trade) {
     this.page.set('Trade Investigation');
     this.selectedTrade.set(t);
     this.detailTab.set('Overview');
+    this.routing?.go('Trade Investigation', t.id);
   }
   search() {
     this.page.set(this.role() === 'Operations' ? 'Trade Investigation' : 'Clients');
     this.selectedClient.set(null);
     this.selectedTrade.set(null);
+    this.routing?.go(this.page());
   }
   useRole(role: string) {
     this.role.set(role);

@@ -1,3 +1,4 @@
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
@@ -59,6 +60,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #bids = new Map<string, number>();
   private readonly quoteService = inject(QuoteService);
   private readonly destroy$ = new Subject<void>();
+  private routing?: PageBinding;
+  private destroyed = false;
+  readonly symbol = signal('AAPL');
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
@@ -69,6 +73,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { label: 'Watchlist', icon: 'star' },
     { label: 'Portfolio', icon: 'chart' },
     { label: 'Orders', icon: 'orders' },
+    { label: 'History', icon: 'orders' },
     { label: 'Learn', icon: 'learn' },
     { label: 'Settings', icon: 'settings' },
   ];
@@ -176,6 +181,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   navigate(tab: string): void {
     this.activeTab.set(tab);
+    this.routing?.go(tab);
     this.notifications.set(false);
   }
   openModal(kind: string): void {
@@ -202,6 +208,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   openTrade(side = 'Buy', symbol?: string): void {
     const start = this.resolveTradeStartSymbol(side, symbol);
     this.tradeQuote.set(this.quotes().find((q) => q.symbol === start) || this.quotes()[0]);
+    this.symbol.set(this.tradeQuote().symbol);
     this.side.set(side);
     this.quantity.set('');
     this.reviewing.set(false);
@@ -343,14 +350,25 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (row?.status === 'ACCEPTED') {
       this.tradeMessage.set('Order accepted. Waiting for it to fill…');
     }
+    if (this.destroyed) return;
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   constructor(private readonly auth: AuthService) {
+    this.routing = inject(PageState, { optional: true })?.connect(this.activeTab, PAGE_PATHS, [
+      { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
+      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.investmentTab, allowed: ['Holdings','Asset classes'] }
+    ], () => {
+      const quote = this.quotes().find(q => q.symbol === this.symbol());
+      if (quote) this.tradeQuote.set(quote);
+      else this.tradeMessage.set('That symbol is unavailable.');
+    });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
   }
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
     this.destroy$.next();
@@ -362,7 +380,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   async refreshPortfolio(): Promise<void> {
     try {
-      this.applyPortfolio(await this.portfolioClient.load());
+      const portfolio = await this.portfolioClient.load();
+      if (this.destroyed) return;
+      this.applyPortfolio(portfolio);
     } catch {
       // The trade dialog already reports order problems; balances refresh again after the next fill.
       return;
@@ -392,6 +412,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
   }
   #schedulePrices(): void {
+    if (this.destroyed) return;
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) {
       return;

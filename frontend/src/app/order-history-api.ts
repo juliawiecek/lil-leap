@@ -32,6 +32,7 @@ export interface OrderHistoryFilters {
 /** Anything that can supply the current access token, such as AuthService. */
 export interface AccessTokenSource {
   readonly accessToken: string | null;
+  unauthorized?(token: string | null): void;
 }
 
 export class OrderHistoryClient {
@@ -73,6 +74,7 @@ export class OrderHistoryClient {
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
+    if (response.status === 401) this.#tokens.unauthorized?.(token);
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
       const message = typeof body?.message === 'string' ? body.message : null;

@@ -5,12 +5,13 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 4300",
-    "test": "node --test tests/*.test.mjs",
-    "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=html --reports-dir=coverage node --enable-source-maps --test tests/*.test.mjs",
+    "test": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=html --reports-dir=coverage node --enable-source-maps --test --test-concurrency=2 tests/*.test.mjs",
     "pretest:ci": "node -e \"require('node:fs').mkdirSync('test-results', { recursive: true })\"",
-    "test:ci": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
+    "test:ci": "node --test --test-concurrency=2 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "test:e2e": "playwright test --config=playwright.config.mjs"
   },
   "private": true,
   "packageManager": "npm@11.9.0",
@@ -19,12 +20,14 @@
     "@angular/compiler": "^22.1.0",
     "@angular/core": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
+    "@angular/router": "^22.1.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
+    "@playwright/test": "^1.64.0",
     "c8": "^12.0.0",
     "happy-dom": "^20.14.5",
     "prettier": "^3.8.1",
