@@ -6,6 +6,7 @@ import { OrderHistoryClient } from './order-history-api';
 @Injectable({ providedIn: 'root' })
 export class OrderHistoryService extends OrderHistoryClient {
   constructor() {
-    super(inject(AuthService));
+    const auth = inject(AuthService);
+    super(auth, auth.transport);
   }
 }

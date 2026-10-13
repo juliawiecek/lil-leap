@@ -1,0 +1,15 @@
+# Repository-root build context for the Angular apps and shared auth source.
+.git
+**/node_modules
+**/.angular
+**/dist
+**/target
+**/coverage
+**/*.log
+**/.pytest_cache
+**/__pycache__
+e2e/artifacts
+docs/javadoc
+.idea
+.env
+.env.*.local

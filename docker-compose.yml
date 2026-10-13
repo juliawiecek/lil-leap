@@ -21,9 +21,13 @@ services:
     depends_on: [frontend, insights-frontend, auth, holdings, orders, quote-service, insights]
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
   insights-frontend:
-    build: ./insights-frontend
+    build:
+      context: .
+      dockerfile: insights-frontend/Dockerfile
 
   auth:
     build: ./auth

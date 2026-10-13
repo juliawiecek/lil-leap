@@ -1,0 +1,186 @@
+# NEXT-164: isolated real services; no published ports or development volumes.
+services:
+  gateway:
+    image: nginx:1.27-alpine
+    volumes:
+    - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    - ./gateway/proxy-headers.conf:/etc/nginx/routes/proxy-headers.conf:ro
+    - ./gateway/http-trading.conf:/etc/nginx/listeners/trading.conf:ro
+    - ./gateway/http-reporting.conf:/etc/nginx/listeners/reporting.conf:ro
+    depends_on:
+    - frontend
+    - insights-frontend
+    - auth
+    - holdings
+    - orders
+    - quote-service
+    - insights
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+  insights-frontend:
+    build:
+      context: .
+      dockerfile: insights-frontend/Dockerfile
+  auth:
+    build: ./auth
+    environment:
+      APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: e2e-app-password
+      PORT: 8081
+      SSN_ENCRYPTION_KEY: e2e-ssn-key
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: e2e-ssn-key
+      SESSION_INACTIVITY_MINUTES: ${E2E_SESSION_MINUTES:-1}
+      APP_JWT_EXPIRATION_MINUTES: ${E2E_SESSION_MINUTES:-1}
+    depends_on:
+      db:
+        condition: service_healthy
+  holdings:
+    build: ./nextTrade-holdings
+    environment:
+      APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: e2e-app-password
+      PORT: 8080
+    depends_on:
+      db:
+        condition: service_healthy
+  orders:
+    build: ./nextTrade-orders
+    environment:
+      APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: e2e-app-password
+      PORT: 8082
+    depends_on:
+      db:
+        condition: service_healthy
+  quote-service:
+    build: ./data-pipeline
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: e2e-app-password
+      PORT: 8083
+      QUOTE_PROVIDER: postgres
+      QUOTE_INTERVAL_SECONDS: '2'
+      QUOTE_PERIODS: '10'
+      QUOTE_SEED: '42'
+      QUOTE_RETENTION_DAYS: '0'
+      QUOTE_INGEST_CONTINUOUS: 'true'
+    command:
+    - python
+    - -m
+    - src.service_runner
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  insights:
+    build: ./insights
+    environment:
+      APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
+      PORT: 8084
+      REPORTING_DB_HOST: reporting-db
+      REPORTING_DB_USERNAME: reporting_user
+      REPORTING_DB_PASSWORD: e2e-reporting-password
+    depends_on:
+      reporting-db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    command:
+    - postgres
+    - -c
+    - wal_level=replica
+    - -c
+    - max_wal_senders=10
+    - -c
+    - max_replication_slots=10
+    - -c
+    - max_slot_wal_keep_size=1GB
+    environment:
+      POSTGRES_DB: nexttrade
+      POSTGRES_USER: main
+      POSTGRES_PASSWORD: e2e-owner-password
+      DB_APP_USERNAME: app_user
+      DB_APP_PASSWORD: e2e-app-password
+      REPORTING_DB_PASSWORD: e2e-reporting-password
+      REPLICATION_PASSWORD: e2e-replication-password
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+    - db_data:/var/lib/postgresql/data
+    - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
+    - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
+    - ./db/init-reporting.sh:/docker-entrypoint-initdb.d/04-reporting.sh:ro
+  reporting-db:
+    image: postgres:16-alpine
+    entrypoint:
+    - bash
+    - /usr/local/bin/start-reporting-replica.sh
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      PRIMARY_DB_HOST: db
+      REPLICATION_PASSWORD: e2e-replication-password
+      REPORTING_DB_PASSWORD: e2e-reporting-password
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - PGPASSWORD="$$REPORTING_DB_PASSWORD" psql -h 127.0.0.1 -U reporting_user -d
+        nexttrade -tAc 'SELECT pg_is_in_recovery()' | grep -qx t
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+    - reporting_data:/var/lib/postgresql/data
+    - ./db/start-reporting-replica.sh:/usr/local/bin/start-reporting-replica.sh:ro
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    init: true
+    ipc: host
+    environment:
+      TRADING_URL: http://gateway:4200
+      INSIGHTS_URL: http://gateway:4201
+      PGHOST: db
+      PGUSER: main
+      PGDATABASE: nexttrade
+      PGPASSWORD: e2e-owner-password
+      HOME: /tmp/pw-home
+      npm_config_cache: /tmp/npm-cache
+    volumes:
+    - ./e2e:/source:ro
+    - ./e2e/artifacts:/artifacts
+    entrypoint:
+    - sh
+    - -ec
+    command:
+    - mkdir -p /tmp/e2e; cp /source/package*.json /source/playwright.config.ts /source/global-setup.ts
+      /tmp/e2e/; cp -R /source/tests /tmp/e2e/; cd /tmp/e2e; npm ci --no-audit --no-fund;
+      npx playwright test
+volumes:
+  db_data: null
+  reporting_data: null

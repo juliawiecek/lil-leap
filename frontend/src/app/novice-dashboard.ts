@@ -253,6 +253,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
+    if (this.destroyed) return;
     clearTimeout(this.#trackTimer);
     let row;
     try {
@@ -276,14 +277,17 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return;
     }
     if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
-    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+    if (!this.destroyed) this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   constructor(private readonly auth: AuthService) {
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, this.auth?.transport);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, this.auth?.transport);
+    this.portfolioClient = new PortfolioClient(this.auth, this.auth?.transport);
   }
+  private destroyed = false;
+
   ngOnDestroy(): void {
+    this.destroyed = true;
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
   }
@@ -321,7 +325,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #schedulePrices(): void {
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) return;
-    this.#priceTimer = setTimeout(async () => {
+    if (!this.destroyed) this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
     }, QUOTE_REFRESH_MS);

@@ -1,4 +1,5 @@
-﻿import { Component, computed, signal } from '@angular/core';
+import { LIVE_REPORTS, type ReportSummary } from './live-reports';
+﻿import { Component, computed, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DashboardIcon } from './dashboard-icon';
@@ -29,7 +30,30 @@ import {
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnInit, OnDestroy {
+  readonly liveReports = inject(LIVE_REPORTS, { optional: true });
+  readonly summary = signal<ReportSummary | null>(null);
+  readonly summaryError = signal('');
+  private destroyed = false;
+  private summaryPending = false;
+
+  ngOnInit(): void { if (this.liveReports) void this.refreshSummary(); }
+  ngOnDestroy(): void { this.destroyed = true; }
+
+  async refreshSummary(): Promise<void> {
+    if (!this.liveReports || this.summaryPending || this.destroyed) return;
+    this.summaryPending = true;
+    this.summaryError.set('');
+    try {
+      const summary = await this.liveReports.load();
+      if (!this.destroyed) this.summary.set(summary);
+    } catch {
+      if (!this.destroyed) this.summaryError.set('Could not load reporting summary. Please try again.');
+    } finally { this.summaryPending = false; }
+  }
+
+  signOut(): void { void this.liveReports?.logout(); }
+
   readonly nav = [
     { label: 'Overview', icon: 'home' },
     { label: 'Trading Activity', icon: 'chart' },

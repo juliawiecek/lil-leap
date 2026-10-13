@@ -1,15 +1,16 @@
-FROM node:22-alpine AS build
-WORKDIR /app
+FROM node:24-alpine AS build
+WORKDIR /workspace/insights-frontend
 
-COPY package.json package-lock.json ./
+COPY insights-frontend/package.json insights-frontend/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY insights-frontend/ ./
+COPY frontend-shared/ /workspace/frontend-shared/
 RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist/insights-frontend/browser/ /usr/share/nginx/html/
+COPY insights-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /workspace/insights-frontend/dist/insights-frontend/browser/ /usr/share/nginx/html/
 RUN sed -i 's|pid        /var/run/nginx.pid;|pid        /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 

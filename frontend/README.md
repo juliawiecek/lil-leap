@@ -45,9 +45,9 @@ through `proxy.conf.json`. In Docker, the shared gateway routes `/auth/` to Iden
 requests same-origin, so no CORS setup is needed. Never call the auth
 service by absolute URL.
 
-Tokens are held in memory only (`src/app/auth-api.ts`), so reloading the page
+Tokens are held in memory only (`../frontend-shared/auth-api.ts`), so reloading the page
 signs you out. While you're active the app refreshes them in the background;
-after 10 minutes without input it signs you out (`src/app/session-keeper.ts`,
+after 10 minutes without input it signs you out (`../frontend-shared/session-keeper.ts`,
 BR-03 — keep `SESSION_INACTIVITY_MINUTES` there in step with the auth service).
 
 ### Common problems
@@ -64,7 +64,9 @@ For backend startup, follow the [setup guide](../docs/GETTING_STARTED.md).
 npm run build
 ```
 
-The compiled site is written to `dist/nexttrade-angular/browser`.
+The compiled site is written to `dist/nexttrade-angular/browser`. Docker builds use the repository root: `docker build -f frontend/Dockerfile .`.
+
+Run the isolated real-stack Playwright suite with `npm --prefix e2e run test:stack` from the repository root; see the [main README](../README.md#real-stack-browser-tests-next-164--next-163).
 
 ## Run with Docker
 
@@ -74,7 +76,7 @@ The shared gateway publishes the trading client at `http://localhost:4200`:
 docker compose up --build -d gateway
 ```
 
-The frontend container serves static files on internal port 80. The gateway routes
+The frontend container serves static files on internal port 8080. The gateway routes
 authentication to Identity, portfolio and instrument reads to Holdings, order
 submission to Orders, and quote requests to Quotes. `GET /api/v1/orders` belongs
 to Holdings; `POST /api/v1/orders` belongs to Orders. Paths are preserved.
@@ -86,7 +88,7 @@ See the [route table](../docs/architecture/service-boundaries.md#gateway-routes)
 - `src/app/app.scss`: visual design and animations
 - `src/app/app.ts`: Angular state, interactions, and chart rendering
 
-Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load real order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order tickets and other trading views still use local sample data and simulated interactions; live submission, quote and portfolio integration remains separate work.
+Registration, login, token refresh and logout use the real Identity service. The novice and advanced dashboards load real order history from `GET /api/v1/clients/{id}/orders` through the gateway to Holdings, with date and status filters and the current bearer token. Order tickets submit real orders and the dashboards load real cash and holdings. Both fetch-based service clients and quote requests use the shared Angular transport and JWT interceptor. `/dashboard` is guarded; rejected sessions return to `/login`.
 
 ## Error logging
 

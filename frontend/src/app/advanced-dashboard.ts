@@ -400,7 +400,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #schedulePrices(): void {
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) return;
-    this.#priceTimer = setTimeout(async () => {
+    if (!this.destroyed) this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
     }, QUOTE_REFRESH_MS);
@@ -429,6 +429,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    * so its status moves from Submitted to Accepted to Filled without a page refresh.
    */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
+    if (this.destroyed) return;
     clearTimeout(this.#trackTimer);
     if (!(await this.refreshOrders())) return;
     const order = this.orders().find((o) => o.id === orderId);
@@ -439,7 +440,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
-    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+    if (!this.destroyed) this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   createAlert(): void {
     const price = Number(this.alertPrice());
@@ -451,12 +452,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.message.set('Price alert added.');
   }
   constructor(private readonly auth: AuthService) {
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, this.auth?.transport);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, this.auth?.transport);
+    this.portfolioClient = new PortfolioClient(this.auth, this.auth?.transport);
   }
 
+  private destroyed = false;
+
   ngOnDestroy(): void {
+    this.destroyed = true;
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
   }

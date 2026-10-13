@@ -119,9 +119,7 @@ export class OrderSubmissionClient {
     if (!token) throw new OrderSubmissionError('You must be signed in to submit orders.');
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/accounts`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await this.#fetch(`${this.#baseUrl}/accounts`);
       if (!response.ok) throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
       return response.json();
     } catch (error) {
@@ -139,9 +137,7 @@ export class OrderSubmissionClient {
     if (!token) throw new OrderSubmissionError('You must be signed in to fetch instruments.');
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/instruments`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await this.#fetch(`${this.#baseUrl}/instruments`);
       if (!response.ok) throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
       return response.json();
     } catch (error) {
@@ -169,7 +165,7 @@ export class OrderSubmissionClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+
         },
         body: JSON.stringify(payload),
       });

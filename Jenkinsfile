@@ -170,8 +170,8 @@ pipeline {
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE/frontend:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/frontend" \
             node:24-alpine \
             sh -ec 'npm ci --no-audit --no-fund
             npm run test:coverage
@@ -186,8 +186,8 @@ pipeline {
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE/insights-frontend:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/insights-frontend" \
             node:24-alpine \
             sh -ec 'npm ci --no-audit --no-fund
             npm run test:coverage
@@ -313,6 +313,20 @@ pipeline {
         echo "Waiting for SonarQube quality gate on main branch"
         timeout(time: 5, unit: 'MINUTES') {
           waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Playwright - Real Client Journey') {
+      options { timeout(time: 30, unit: 'MINUTES') }
+      steps {
+        // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
+        sh 'bash scripts/run_e2e_ci.sh'
+      }
+      post {
+        always {
+          junit testResults: 'e2e/artifacts/**/junit.xml', allowEmptyResults: true
+          archiveArtifacts artifacts: 'e2e/artifacts/**', allowEmptyArchive: true
         }
       }
     }

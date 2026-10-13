@@ -63,9 +63,7 @@ export class OrderHistoryClient {
     const query = params.size ? `?${params}` : '';
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      response = await this.#fetch(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`);
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }

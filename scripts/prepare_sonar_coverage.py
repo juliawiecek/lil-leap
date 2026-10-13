@@ -10,12 +10,15 @@ def normalize_lcov(text: str, service: str, root: Path) -> str:
             source = line[3:].replace("\\", "/")
             if source.startswith("/app/"):
                 source = source[len("/app/"):]
-            if not source.startswith(f"{service}/"):
+            if not Path(source).is_absolute() and not source.startswith((f"{service}/", "frontend-shared/")):
                 source = f"{service}/{source.removeprefix('./')}"
             path = (root / source).resolve()
-            if not path.is_relative_to((root / service / "src").resolve()) or not path.is_file():
+            allowed = [(root / service / "src").resolve()]
+            if service in ("frontend", "insights-frontend"):
+                allowed.append((root / "frontend-shared").resolve())
+            if not any(path.is_relative_to(directory) for directory in allowed) or not path.is_file():
                 raise ValueError(f"Unresolvable LCOV source in {service}: {line[3:]}")
-            line = f"SF:{source}"
+            line = f"SF:{path.relative_to(root.resolve()).as_posix()}"
         lines.append(line)
     return "\n".join(lines) + "\n"
 

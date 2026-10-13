@@ -387,6 +387,56 @@ scripts/auth-integration-test.sh --down      # also stop the stack afterwards
 
 Needs bash, curl and Docker (run it on Linux, macOS or WSL).
 
+### Real-stack browser tests (NEXT-164 / NEXT-163)
+
+Both apps now use JWT interception and guarded `/dashboard` routes. NextTrade
+starts at `/login` (registration at `/register`); Insights requires an analyst
+account at `/login`. Tokens remain in memory, so refreshing a page requires a
+new login. Insights includes a live backend reporting summary; its other
+reporting views still use the existing sample datasets.
+
+Run the full Playwright suite from the repository root with **Node 24 and a
+running Docker engine with Compose v2**:
+
+```powershell
+npm --prefix e2e ci
+npm --prefix e2e run test:stack
+```
+
+The runner builds the real services, starts a uniquely named isolated Compose
+project without host ports, waits for services and fresh quotes, and runs
+Chromium in the pinned Playwright image. It always collects container logs and
+removes only its own containers and database volumes. A second invocation uses
+fresh databases and users, providing a repeatability check. No API responses,
+Identity tokens, orders, fills, or holdings are mocked.
+
+| Acceptance criterion | Browser coverage |
+|---|---|
+| AC1 | Browser registration, explicit login, one AAPL buy, real `FILLED` order, matching portfolio holdings and cash |
+| AC2 | One-minute test-only real server inactivity expiry; access and refresh both rejected; idle user returned to login |
+| AC3 | Real server-expired JWT triggers `401` and login redirect in both apps; unauthenticated route guards |
+| AC4 | Real NestJS Identity, Spring services, PostgreSQL, quote pipeline, gateway, and reporting replica |
+
+Registration creates a pending, unfunded account. The golden-path fixture
+activates and funds only its generated trader with a settled $25,000 deposit
+in the ledger and cash cache; account approval/funding is outside this browser
+journey. Orders and holdings are produced entirely by the real application.
+The short server-expiry phase uses one-minute tokens and sessions. A second
+phase restores ten-minute Identity settings and advances the browser clock to
+check the default client inactivity boundary separately from server expiry.
+Production timeout settings are unchanged.
+
+Jenkins requires the suite to pass and publishes JUnit results plus failure
+screenshots, traces, HTML reports, and container logs under `e2e/artifacts/`.
+`npm --prefix e2e exec -- playwright test --list` lists cases without starting
+the stack; use the stack runner for execution. The standalone test Compose model
+reuses production Dockerfiles, gateway routing, schema, and initialization scripts;
+keep its service wiring aligned when production Compose changes.
+
+Both Angular Docker builds now need the repository root as their build context:
+`docker build -f frontend/Dockerfile .` or
+`docker build -f insights-frontend/Dockerfile .`.
+
 ### Frontend build validation
 
 ```bat

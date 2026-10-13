@@ -25,7 +25,7 @@ test('an empty portfolio is worth its cash with no gain', () => {
 test('load sums cash, keeps instrument ids and drops empty positions', async () => {
   const requests = [];
   const fetchImpl = async (url, init) => {
-    requests.push([url, init.headers.Authorization]);
+    requests.push([url, init?.headers?.Authorization]);
     const body = url.endsWith('/cash')
       ? [{ balance: '100.10' }, { balance: 5 }]
       : [{ instrumentId: 'i1', symbol: 'AAPL', instrumentName: 'Apple', quantity: '3', averageCost: '150.5' },
@@ -34,7 +34,7 @@ test('load sums cash, keeps instrument ids and drops empty positions', async () 
   };
   const portfolio = await new PortfolioClient({ accessToken: 'tok' }, fetchImpl).load();
   assert.deepEqual(portfolio, { cash: 105.1, holdings: [{ instrumentId: 'i1', symbol: 'AAPL', instrumentName: 'Apple', quantity: 3, averageCost: 150.5 }] });
-  assert.deepEqual(requests.map(([url, auth]) => [url, auth]).sort(), [['/api/v1/cash', 'Bearer tok'], ['/api/v1/holdings', 'Bearer tok']]);
+  assert.deepEqual(requests.map(([url, auth]) => [url, auth]).sort(), [['/api/v1/cash', undefined], ['/api/v1/holdings', undefined]]);
 });
 
 test('latestBids reads each quote and leaves out the ones that fail', async () => {

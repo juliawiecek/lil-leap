@@ -11,6 +11,8 @@
   signal,
 } from '@angular/core';
 
+import { NavigationEnd, Router, RouterOutlet, ROUTES } from '@angular/router';
+import type { Subscription } from 'rxjs';
 import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
@@ -36,7 +38,7 @@ interface VolumeBar {
 
 @Component({
   selector: 'app-root',
-  imports: [InvestorProfile, StockDashboard],
+  imports: [InvestorProfile, StockDashboard, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   encapsulation: ViewEncapsulation.None,
@@ -51,7 +53,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
-  private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
+  private readonly router = inject(ROUTES, { optional: true })?.length ? inject(Router) : null;
+  private routeSubscription?: Subscription;
+  private readonly session = this.auth.session ?? new SessionKeeper(this.auth, () => this.onSessionExpired());
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly candleStep = 30;
   private readonly riseColor = '#78a85f';
@@ -71,7 +75,8 @@ export class App implements AfterViewInit, OnDestroy {
     this.traderLevel.set(level);
     this.newAccount.set(fresh);
     this.profileOpen.set(false);
-    this.dashboardOpen.set(true);
+    this.dashboardOpen.set(!this.router);
+    if (this.router) void this.router.navigate(['/dashboard']);
     this.password.nativeElement.value = '';
     this.passwordDraft.set('');
     this.confirmationDraft.set('');
@@ -87,6 +92,7 @@ export class App implements AfterViewInit, OnDestroy {
     this.applicantName.set('');
     this.applicantEmail.set('');
     this.setAuthMode('signin');
+    void this.router?.navigate(['/login'], { replaceUrl: true });
   }
   readonly applicantName = signal('');
   readonly applicantEmail = signal('');
@@ -129,6 +135,23 @@ export class App implements AfterViewInit, OnDestroy {
   private focusTimer?: ReturnType<typeof setTimeout>;
   private animationFrameId = 0;
 
+  constructor() {
+    this.routeSubscription = this.router?.events.subscribe(event => {
+      if (!(event instanceof NavigationEnd)) return;
+      if (event.urlAfterRedirects.startsWith('/dashboard') && this.auth.sessionValid) {
+        this.traderLevel.set(this.auth.traderLevel ?? 'NOVICE');
+        this.dashboardOpen.set(true);
+        this.profileOpen.set(false);
+      } else {
+        this.dashboardOpen.set(false);
+        this.profileOpen.set(false);
+        this.session.stop();
+        this.setAuthMode(event.urlAfterRedirects.startsWith('/register') ? 'signup' : 'signin');
+        if (event.urlAfterRedirects.includes('expired=1')) this.formStatus.set('Your session has ended. Please sign in again.');
+      }
+    });
+  }
+
   ngAfterViewInit(): void {
     this.context = this.marketChart.nativeElement.getContext('2d');
     if (!this.context) return;
@@ -139,6 +162,8 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+    this.session.stop();
     cancelAnimationFrame(this.animationFrameId);
     if (this.brandTimer) clearTimeout(this.brandTimer);
     if (this.focusTimer) clearTimeout(this.focusTimer);
@@ -164,6 +189,8 @@ export class App implements AfterViewInit, OnDestroy {
     this.confirmationDraft.set('');
     this.passwordStarted.set(!!this.password.nativeElement.value);
     this.authMode.set(mode);
+    const path = mode === 'signup' ? '/register' : '/login';
+    if (this.router && !this.router.url.startsWith(path)) void this.router.navigate([path]);
     this.formStatus.set('');
 
     if (this.focusTimer) clearTimeout(this.focusTimer);

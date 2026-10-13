@@ -26,19 +26,21 @@ Open http://localhost:4301. Start `docker compose up --build -d gateway` from th
 
 ## Boundaries
 
-This is a design preview with product-facing UI copy, not an authenticated internal production app. The persona switch only previews UI; it must be replaced by server-enforced roles before use with real records. No real client data or credentials are requested.
+The app now requires a real NestJS analyst login at `/login`, guards `/dashboard`, attaches the in-memory JWT to API requests, and returns to login on a protected `401`. The live summary displays backend account, order, fill and gross execution metrics. Other reporting views and the persona switch remain previews backed by sample data; the persona switch does not change the authenticated role.
 
 Fixtures in `src/app/insights-data.ts` contain August/September 2026 sample orders and a September 22 snapshot. Reports and volume charts derive from those orders. Client balance snapshots are separate illustrative values, not reconstructed from that limited order sample. Volume is filled notional in USD. Activity definitions and USD segment thresholds are provisional; the current definitions are displayed in the UI.
 
-Backend integration is still needed for reporting snapshots/freshness, identity and permissions, authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
+Backend integration is still needed for the remaining reporting snapshots/freshness and authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
 
-The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Unused router dependency, icon paths and font weights/families have been removed; RxJS remains an Angular peer dependency. Local browser previews and npm caches are excluded from both Git and Docker builds.
+The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Angular Router now provides protected navigation, and RxJS supports the shared HTTP transport. Local browser previews and npm caches are excluded from both Git and Docker builds.
 
 ## Visual consistency
 
-Core palette and panel tokens are in `src/styles.scss`, matched to `frontend/src/app/novice-dashboard.scss`. The NT symbol reuses the main app's brand SVG. When changing the main brand, keep these values aligned; the apps remain independently buildable without importing source outside their build contexts. The internal app uses a wider sidebar to accommodate operations navigation and blue-gray metadata as its secondary accent.
+Core palette and panel tokens are in `src/styles.scss`, matched to `frontend/src/app/novice-dashboard.scss`. The NT symbol reuses the main app's brand SVG. When changing the main brand, keep these values aligned; both apps import the shared auth core from `../frontend-shared` and use the repository root as their Docker build context. The internal app uses a wider sidebar to accommodate operations navigation and blue-gray metadata as its secondary accent.
 
 ## Validation
+
+Run `npm test` and `npm run build`. The real-stack Playwright suite runs from the repository root with `npm --prefix e2e run test:stack`; see the [main README](../README.md#real-stack-browser-tests-next-164--next-163). Build the container from that root with `docker build -f insights-frontend/Dockerfile .`.
 
 The data tests check aggregate reconciliation across chart groupings and asset classes, intersecting/inclusive filters, empty results, fixture chronology and CSV escaping/formula protection. A production build checks Angular template and type integration. Daily refresh and report-generation service performance require later integration tests.
 

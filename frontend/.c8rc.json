@@ -1,15 +1,31 @@
 {
   "all": true,
-  "src": ["src"],
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.d.ts"],
-  "extension": [".ts"],
-  "reporter": ["text", "html", "lcovonly", "json-summary"],
+  "src": [
+    "src",
+    "../frontend-shared"
+  ],
+  "include": [
+    "**/frontend/src/**/*.ts",
+    "**/frontend-shared/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.d.ts"
+  ],
+  "extension": [
+    ".ts"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "lcovonly",
+    "json-summary"
+  ],
   "reports-dir": "coverage",
   "check-coverage": true,
   "per-file": true,
   "lines": 1,
   "statements": 1,
   "functions": 1,
-  "branches": 1
+  "branches": 1,
+  "allowExternal": true
 }

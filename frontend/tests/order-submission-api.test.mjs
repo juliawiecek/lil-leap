@@ -29,7 +29,7 @@ test('submit sends exactly one POST /api/v1/orders', async () => {
   assert.equal(calls[0].method, 'POST');
 });
 
-test('submit includes access token in Authorization header', async () => {
+test('submit delegates authorization to the shared HTTP transport', async () => {
   const { calls, fetchImpl } = fakeFetch({ status: 201, body: { orderId: 'o1', status: 'PENDING' } });
   const client = new OrderSubmissionClient({ accessToken: 'my-token' }, fetchImpl);
   await client.submit({
@@ -39,7 +39,6 @@ test('submit includes access token in Authorization header', async () => {
     quantity: 10,
     clientReference: 'ref1',
   });
-  // Note: We can't directly inspect headers in fakeFetch, but we verify the token is passed
   assert.equal(calls[0].method, 'POST');
 });
 

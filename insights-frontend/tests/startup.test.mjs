@@ -5,7 +5,7 @@ import { APP_BOOTSTRAP_LISTENER, destroyPlatform } from '@angular/core';
 const { appConfig } = await import('../src/app/app.config.ts');
 await import('../src/app/app.ts');
 
-test('real insights entry point starts the dashboard with configured providers', { timeout: 15000 }, async t => {
+test('real insights entry point starts the protected routing shell with configured providers', { timeout: 15000 }, async t => {
   await resolveTemplates();
   document.body.innerHTML = '<app-root></app-root>';
   let bootstrapped;
@@ -15,9 +15,10 @@ test('real insights entry point starts the dashboard with configured providers',
   t.after(() => { appConfig.providers.splice(appConfig.providers.indexOf(observer), 1); destroyPlatform(); });
   await import('../src/main.ts');
   const ref = await ready;
-  assert.equal(ref.instance.page(), 'Overview');
-  assert.match(document.querySelector('app-root').textContent, /Trading/);
-  assert.ok(document.querySelector('app-insights-chart svg'));
+  assert.equal(typeof ref.instance.recordActivity, 'function');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(document.querySelector('app-root').textContent, /Sign in to your analyst workspace/);
+  assert.equal(document.querySelector('app-insights-chart'), null);
 });
 
 test('entry point catches and reports bootstrap failure when the root host is missing', async t => {

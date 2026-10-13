@@ -8,7 +8,7 @@ import { of, throwError, firstValueFrom } from 'rxjs';
 // can be imported and provides the expected interface.
 const { QuoteService } = await import('../src/app/quote.service.ts');
 
-test('quote requests use the gateway paths and current in-memory token', async () => {
+test('quote requests use gateway paths and delegate authorization to the interceptor', async () => {
   const calls = [];
   const http = { get: (url, options) => { calls.push({url, options}); return of({}); } };
   const auth = { accessToken: 'first-token' };
@@ -19,10 +19,10 @@ test('quote requests use the gateway paths and current in-memory token', async (
   auth.accessToken = null;
   await firstValueFrom(service.getHistory('instrument', 5));
   assert.equal(calls[0].url, '/api/v1/quotes/latest/by-instrument/instrument');
-  assert.equal(calls[0].options.headers.Authorization, 'Bearer first-token');
-  assert.equal(calls[1].options.headers.Authorization, 'Bearer rotated-token');
+  assert.equal(calls[0].options?.headers, undefined);
+  assert.equal(calls[1].options?.headers, undefined);
   assert.equal(calls[2].url, '/api/v1/quotes/history/instrument');
-  assert.equal(calls[2].options.headers.Authorization, undefined);
+  assert.equal(calls[2].options?.headers, undefined);
   assert.equal(calls[2].options.params.limit, '5');
 });
 

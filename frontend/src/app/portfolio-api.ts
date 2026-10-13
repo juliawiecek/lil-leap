@@ -124,7 +124,7 @@ export class PortfolioClient {
     if (!token) throw new Error('Sign in to see your balances.');
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+      response = await this.#fetch(`${this.#baseUrl}${path}`);
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
