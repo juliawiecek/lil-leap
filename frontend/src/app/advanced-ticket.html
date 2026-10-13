@@ -12,7 +12,7 @@
   </div>
   <div class="ticket-body">
     @if (desk().ticketTab() === 'Trade') {
-      <form (submit)="$event.preventDefault(); desk().reviewOrder()">
+      <form method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
         <div class="side-switch">
           @for (action of ['Buy', 'Sell']; track action) {
             <button

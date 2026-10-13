@@ -95,7 +95,9 @@ export class AuthClient {
    */
   async refresh(): Promise<void> {
     const refreshToken = this.#refreshToken;
-    if (!refreshToken) throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    if (!refreshToken) {
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
     try {
       const body = (await this.#post('/refresh', { refreshToken })) as { accessToken: string; refreshToken: string };
       this.#setTokens(body.accessToken, body.refreshToken);
@@ -109,7 +111,9 @@ export class AuthClient {
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
     this.#setTokens(null, null);
-    if (!refreshToken) return;
+    if (!refreshToken) {
+      return;
+    }
     try {
       await this.#post('/logout', { refreshToken });
     } catch {
@@ -129,7 +133,9 @@ export class AuthClient {
     this.#traderLevel = null;
     this.#riskProfile = null;
     const payload = accessToken?.split('.')[1];
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     try {
       const { exp, iat, trader_level, risk_profile } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         exp?: unknown;
@@ -137,8 +143,12 @@ export class AuthClient {
         trader_level?: unknown;
         risk_profile?: unknown;
       };
-      if (typeof exp === 'number' && typeof iat === 'number') this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
-      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') this.#traderLevel = trader_level;
+      if (typeof exp === 'number' && typeof iat === 'number') {
+        this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+      }
+      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') {
+        this.#traderLevel = trader_level;
+      }
       if (risk_profile === 'CONSERVATIVE' || risk_profile === 'MODERATE' || risk_profile === 'AGGRESSIVE') {
         this.#riskProfile = risk_profile;
       }

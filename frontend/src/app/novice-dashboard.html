@@ -1,6 +1,6 @@
 <div class="novice-shell">
   <aside class="novice-sidebar">
-    <a class="wordmark" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+    <a class="wordmark" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
     <nav aria-label="Main navigation">
@@ -224,6 +224,7 @@
               @if (investmentTab() === 'Holdings') {
                 <div class="table-scroll">
                   <table class="holdings-table">
+                    <caption class="sr-only">Holdings</caption>
                     <thead>
                       <tr>
                         <th>Symbol</th>
@@ -449,6 +450,7 @@
                 </button>
               </div>
               <table class="watch-table">
+                <caption class="sr-only">Watchlist</caption>
                 <thead>
                   <tr>
                     <th>Symbol</th>
@@ -528,7 +530,7 @@
         {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
       </button>
     </div>
-    <form (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+    <form method="post" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
       <label for="novice-stock">Stock</label
       ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
         @for (q of tradableQuotes(); track q.symbol) {

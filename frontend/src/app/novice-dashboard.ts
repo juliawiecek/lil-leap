@@ -168,7 +168,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         Math.sin(i * 1.83 + seed) * 0.014 +
         Math.cos(i * 0.67 + seed * 2) * 0.023 +
         Math.sin(i * 0.2 + seed) * 0.022;
-      if (down) y = 1 - y;
+      if (down) {
+        y = 1 - y;
+      }
       return `${i ? 'L' : 'M'}${(t * width).toFixed(1)},${(y * height + 5).toFixed(1)}`;
     }).join(' ');
   }
@@ -184,7 +186,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.dialog()?.nativeElement.close();
   }
   onDialogClick(event: MouseEvent): void {
-    if (event.target === this.dialog()?.nativeElement) this.closeModal();
+    if (event.target === this.dialog()?.nativeElement) {
+      this.closeModal();
+    }
   }
   /** Stocks the trade dialog offers: those the backend can trade, or every quote until instruments load. */
   readonly tradableQuotes = computed(() => {
@@ -218,7 +222,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Switches the open trade to another stock and drops any review of the previous one. */
   chooseTradeSymbol(symbol: string): void {
     const quote = this.quotes().find((q) => q.symbol === symbol);
-    if (!quote) return;
+    if (!quote) {
+      return;
+    }
     this.tradeQuote.set(quote);
     this.reviewing.set(false);
     this.tradeMessage.set('');
@@ -229,22 +235,29 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       list.includes(symbol) ? list.filter((s) => s !== symbol) : [...list, symbol],
     );
   }
-  reviewTrade(): void {
+  private tradeError(): string {
     const count = Number(this.quantity());
     const held = this.holdings().find((h) => h.symbol === this.tradeQuote().symbol)?.shares || 0;
-    let error = '';
     if (!Number.isSafeInteger(count) || count < 1) {
-      error = 'Enter a whole number of shares greater than zero.';
-    } else if (this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()) {
-      error = 'This order exceeds your buying power.';
-    } else if (this.side() === 'Sell' && count > held) {
-      error = 'You can only sell shares you hold.';
+      return 'Enter a whole number of shares greater than zero.';
     }
+    if (this.side() === 'Buy' && this.tradeTotal() > this.buyingPower()) {
+      return 'This order exceeds your buying power.';
+    }
+    if (this.side() === 'Sell' && count > held) {
+      return 'You can only sell shares you hold.';
+    }
+    return '';
+  }
+  reviewTrade(): void {
+    const error = this.tradeError();
     const startingReview = !this.reviewing();
 
     this.tradeMessage.set(error);
     this.reviewing.set(!error);
-    if (!error && startingReview) this.clientReference.set(OrderSubmissionClient.generateClientReference());
+    if (!error && startingReview) {
+      this.clientReference.set(OrderSubmissionClient.generateClientReference());
+    }
   }
   /**
    * Sends the reviewed order to the backend. Holdings and buying power are not changed
@@ -252,7 +265,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   async confirmTrade(): Promise<void> {
     this.reviewTrade();
-    if (!this.reviewing() || this.submitting()) return;
+    if (!this.reviewing() || this.submitting()) {
+      return;
+    }
     const quote = this.tradeQuote();
     const account = this.selectedAccount();
     const instrument = this.instruments().find((i) => i.symbol === quote.symbol);
@@ -310,7 +325,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return;
     }
     if (row && FINAL_ORDER_STATUSES.has(row.status)) {
-      if (row.status === 'FILLED') await this.refreshPortfolio();
+      if (row.status === 'FILLED') {
+        await this.refreshPortfolio();
+      }
       const action = row.side === 'SELL' ? 'Sold' : 'Bought';
       this.tradeMessage.set(
         row.status === 'FILLED'
@@ -323,7 +340,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.tradeMessage.set('Your order is still being processed. Check Orders for its status.');
       return;
     }
-    if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
+    if (row?.status === 'ACCEPTED') {
+      this.tradeMessage.set('Order accepted. Waiting for it to fill…');
+    }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   constructor(private readonly auth: AuthService) {
@@ -359,10 +378,14 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Re-values holdings at their latest bids; a failed quote keeps the last price. */
   async refreshPrices(): Promise<void> {
     const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
-    if (!ids.length) return;
+    if (!ids.length) {
+      return;
+    }
     try {
       const bids = await this.portfolioClient.latestBids(ids);
-      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      for (const [id, bid] of bids) {
+        this.#bids.set(id, bid);
+      }
       this.#render();
     } catch {
       // Keep showing the last known values; the next tick retries.
@@ -370,7 +393,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   #schedulePrices(): void {
     clearTimeout(this.#priceTimer);
-    if (!this.#portfolio.holdings.length) return;
+    if (!this.#portfolio.holdings.length) {
+      return;
+    }
     this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();

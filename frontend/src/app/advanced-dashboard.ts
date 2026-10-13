@@ -139,8 +139,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly screened = computed(() =>
     this.quotes.filter((q) => {
       const filter = this.filter();
-      if (filter === 'Gainers') return q.change > 0;
-      if (filter === 'Decliners') return q.change < 0;
+      if (filter === 'Gainers') {
+        return q.change > 0;
+      }
+      if (filter === 'Decliners') {
+        return q.change < 0;
+      }
       return true;
     }),
   );
@@ -177,7 +181,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
   readonly filteredOrders = computed(() => {
     const status = this.orderStatus();
-    if (status === 'All') return this.orders();
+    if (status === 'All') {
+      return this.orders();
+    }
     return this.orders().filter((order) => order.status === status);
   });
   readonly orderType = signal('Limit');
@@ -260,7 +266,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   navigate(page: string): void {
     this.page.set(page);
-    if (page === 'Portfolio') this.bottomTab.set('Positions');
+    if (page === 'Portfolio') {
+      this.bottomTab.set('Positions');
+    }
   }
   openModal(kind: string): void {
     this.modal.set(kind);
@@ -275,7 +283,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.dialog()?.nativeElement.close();
   }
   backdrop(event: MouseEvent): void {
-    if (event.target === this.dialog()?.nativeElement) this.closeModal();
+    if (event.target === this.dialog()?.nativeElement) {
+      this.closeModal();
+    }
   }
   spark(seed: number, down = false): string {
     return Array.from(
@@ -287,34 +297,42 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   validate(): string {
     const count = Number(this.quantity()),
       price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price;
-    if (!Number.isSafeInteger(count) || count <= 0)
+    if (!Number.isSafeInteger(count) || count <= 0) {
       return 'Enter a whole number of shares greater than zero.';
-    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total()))
+    }
+    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
       return 'Enter a valid order price.';
-    if (this.side() === 'Buy' && this.total() > this.buyingPower())
+    }
+    if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
+    }
     if (
       this.side() === 'Sell' &&
       count > (this.positions().find((p) => p.symbol === this.selected().symbol)?.quantity || 0)
-    )
+    ) {
       return 'You can only sell shares you hold.';
+    }
     if (
       this.takeProfit() &&
       (!Number.isFinite(Number(this.profitPrice())) || Number(this.profitPrice()) <= price)
-    )
+    ) {
       return 'Take profit must be above the order price.';
+    }
     if (
       this.stopLoss() &&
       (!Number.isFinite(Number(this.stopPrice())) ||
         Number(this.stopPrice()) <= 0 ||
         Number(this.stopPrice()) >= price)
-    )
+    ) {
       return 'Stop loss must be positive and below the order price.';
+    }
     return '';
   }
   reviewOrder(): void {
     this.message.set(this.validate());
-    if (!this.message()) this.openModal('review');
+    if (!this.message()) {
+      this.openModal('review');
+    }
   }
   async confirmOrder(): Promise<void> {
     const error = this.validate();
@@ -335,7 +353,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return;
     }
     // Prevent double-click while submission is in flight
-    if (this.submitting()) return;
+    if (this.submitting()) {
+      return;
+    }
     this.submitting.set(true);
     try {
       const count = Number(this.quantity());
@@ -416,10 +436,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
   async refreshPrices(): Promise<void> {
     const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
-    if (!ids.length) return;
+    if (!ids.length) {
+      return;
+    }
     try {
       const bids = await this.portfolioClient.latestBids(ids);
-      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      for (const [id, bid] of bids) {
+        this.#bids.set(id, bid);
+      }
       this.#render();
     } catch {
       // Keep showing the last known values; the next tick retries.
@@ -427,7 +451,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   #schedulePrices(): void {
     clearTimeout(this.#priceTimer);
-    if (!this.#portfolio.holdings.length) return;
+    if (!this.#portfolio.holdings.length) {
+      return;
+    }
     this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
@@ -458,11 +484,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
     clearTimeout(this.#trackTimer);
-    if (!(await this.refreshOrders())) return;
+    if (!(await this.refreshOrders())) {
+      return;
+    }
     const order = this.orders().find((o) => o.id === orderId);
     if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
       // Reload balances first so a load error never replaces the fill message.
-      if (order.status === 'Filled') await this.refreshPortfolio();
+      if (order.status === 'Filled') {
+        await this.refreshPortfolio();
+      }
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }

@@ -105,9 +105,9 @@ pipeline {
             test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
             export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
             export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
-            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest test
+            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest,OrderIdempotencyPostgresTest test
             mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
-              -Dtest=HoldingsSettlementPostgresTest \
+              -Dtest=HoldingsSettlementPostgresTest,InstrumentSearchRepositoryTest \
               -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
               -Dtest.holdings.postgres.user=orders_test \
               -Dtest.holdings.postgres.password=ci-test-only test
@@ -121,6 +121,21 @@ pipeline {
         dir('insights') {
           sh 'mvn -B -ntp clean verify'
         }
+      }
+    }
+
+    stage('Prepare Java Analysis Dependencies') {
+      steps {
+        sh '''
+          set -eu
+          for service in nextTrade-orders nextTrade-holdings insights; do
+            (
+              cd "$service"
+              mvn -B -ntp org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies \
+                -DincludeScope=test -DoutputDirectory=target/sonar-libraries
+            )
+          done
+        '''
       }
     }
 
@@ -227,7 +242,8 @@ pipeline {
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
             --cov-report=xml:coverage.xml
-            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py'
+            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py
+            /tmp/python-venv/bin/python ../scripts/validate_sonar_config.py --require-reports'
             '''
           }
         }
@@ -273,8 +289,9 @@ pipeline {
                   echo "ERROR: SONAR_AUTH_TOKEN is empty. Check SonarQube server credentials in Jenkins."
                   exit 1
                 fi
+                export SONAR_TOKEN="$SONAR_AUTH_TOKEN"
                 "$SCANNER_HOME/bin/sonar-scanner" \
-                  -Dsonar.token="$SONAR_AUTH_TOKEN" \
+                  -Dsonar.host.url="$SONAR_HOST_URL" \
                   -Dsonar.projectVersion="$BUILD_NUMBER"
               '''
             }

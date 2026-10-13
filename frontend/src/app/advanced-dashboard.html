@@ -1,6 +1,6 @@
 <div class="pro-shell" [class.collapsed]="collapsed()">
   <aside class="pro-sidebar">
-    <a class="pro-logo" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+    <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
     <nav aria-label="Advanced navigation">
@@ -167,6 +167,7 @@
             <div class="table-scroll">
               @if (bottomTab() === 'Positions') {
                 <table class="positions-table">
+                  <caption class="sr-only">Positions</caption>
                   <thead>
                     <tr>
                       <th>Symbol</th>
@@ -225,6 +226,7 @@
                 </table>
               } @else if (bottomTab() === 'Orders' || bottomTab() === 'Executions') {
                 <table>
+                  <caption class="sr-only">{{ bottomTab() }}</caption>
                   <thead>
                     <tr>
                       <th>Time</th>
@@ -316,6 +318,7 @@
             }
             <div class="table-scroll">
               <table class="watch-table">
+                <caption class="sr-only">{{ page() === 'Screeners' ? 'Stock screener' : 'Watchlist' }}</caption>
                 <thead>
                   <tr>
                     <th>Symbol</th>
@@ -425,6 +428,7 @@
               </div>
               <div class="table-scroll">
                 <table>
+                  <caption class="sr-only">Recent executions</caption>
                   <thead>
                     <tr>
                       <th>Time</th>
