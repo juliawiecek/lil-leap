@@ -2,6 +2,7 @@ package com.neueda.leap.common.exception;
 
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.order.rules.OrderRuleException;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -59,6 +60,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
         return ResponseEntity.unprocessableEntity().body(Map.of(
                 ERROR_KEY, exception.reason().name(), MESSAGE_KEY, exception.getMessage()));
+    }
+
+    /**
+     * Rejects a retry whose client reference already created a different order.
+     * @param exception idempotency conflict
+     * @return HTTP 409 with a fixed IDEMPOTENCY_CONFLICT response
+     */
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<Map<String, String>> handleIdempotencyConflict(IdempotencyConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "IDEMPOTENCY_CONFLICT", "message", IdempotencyConflictException.MESSAGE));
     }
 
     /**

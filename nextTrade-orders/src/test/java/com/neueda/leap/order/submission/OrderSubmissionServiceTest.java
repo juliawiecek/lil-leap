@@ -4,6 +4,7 @@ import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.AccountTradingProfile;
 import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.instrument.dto.InstrumentResponse;
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -92,10 +94,66 @@ class OrderSubmissionServiceTest {
     }
 
     @Test
+    void identicalRetryByInstrumentIdReturnsExistingOrder() {
+        var request = new SubmitOrderRequest(accountId, null, clientReference, "buy", 10, null, null, instrumentId);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(response("AAPL")));
+
+        assertFalse(service.submit(userId, request).created());
+    }
+
+    @Test
+    void retryThatChangesTheOrderIsAConflict() {
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(response("AAPL")));
+
+        var changedRetries = List.of(request("AAPL", "SELL", 10), request("AAPL", "BUY", 11), request("MSFT", "BUY", 10),
+                new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", BigDecimal.ONE));
+        for (var changed : changedRetries) {
+            assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, changed));
+        }
+        verifyNoInteractions(sufficiency);
+    }
+
+    @Test
+    void retryBufferIsComparedByValue() {
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.of(new OrderSubmissionResponse(UUID.randomUUID(), accountId, instrumentId, "AAPL",
+                        clientReference, "BUY", 10, "MARKET", "SUBMITTED", Instant.now(), new BigDecimal("5.00"))));
+
+        var replayed = service.submit(userId,
+                new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", new BigDecimal("5")));
+        assertFalse(replayed.created());
+        var differentBuffer = new SubmitOrderRequest(accountId, "AAPL", clientReference, "BUY", 10, "MARKET", new BigDecimal("6"));
+        var noBuffer = request("AAPL", "BUY", 10);
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, differentBuffer));
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, noBuffer));
+    }
+
+    @Test
+    void concurrentInsertWithAChangedOrderIsAConflict() {
+        var request = request("AAPL", "SELL", 10);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
+        when(repository.findByAccountAndClientReference(accountId, clientReference))
+                .thenReturn(Optional.empty(), Optional.of(response("AAPL")));
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
+        when(repository.insert(request, instrumentId, "AAPL"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request));
+    }
+
+    @Test
     void anotherUsersAccountIsHiddenAsNotFound() {
         when(repository.accountBelongsToUser(accountId, userId)).thenReturn(false);
+        var request = request("AAPL", "BUY", 10);
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
-                () -> service.submit(userId, request("AAPL", "BUY", 10)));
+                () -> service.submit(userId, request));
         assertEquals(404, error.getStatusCode().value());
         verifyNoInteractions(sufficiency);
     }
@@ -107,8 +165,8 @@ class OrderSubmissionServiceTest {
                 new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
         when(instruments.findInstrumentBySymbol("NOPE")).thenReturn(Optional.empty());
-        assertThrows(OrderRuleException.class,
-                () -> service.submit(userId, request("NOPE", "BUY", 10)));
+        var request = request("NOPE", "BUY", 10);
+        assertThrows(OrderRuleException.class, () -> service.submit(userId, request));
         verifyNoInteractions(sufficiency);
     }
 
