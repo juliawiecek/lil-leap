@@ -20,7 +20,7 @@ export interface OrderHistoryRow {
 export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED']);
 /** How often, and for how long, a dashboard re-reads a just-submitted order while it executes. */
 export const ORDER_TRACK_INTERVAL_MS = 2000;
-export const ORDER_TRACK_LIMIT_MS = 30000;
+export const ORDER_TRACK_LIMIT_MS = 300000;
 
 /** Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status. */
 export interface OrderHistoryFilters {
@@ -53,12 +53,16 @@ export class OrderHistoryClient {
   async list(filters: OrderHistoryFilters = {}): Promise<OrderHistoryRow[]> {
     const token = this.#tokens.accessToken;
     const userId = token ? subjectOf(token) : null;
-    if (!token || !userId) throw new Error('Sign in to see your orders.');
+    if (!token || !userId) {
+      throw new Error('Sign in to see your orders.');
+    }
 
     const params = new URLSearchParams();
     for (const key of ['from', 'to', 'status'] as const) {
       const value = filters[key]?.trim();
-      if (value) params.set(key, value);
+      if (value) {
+        params.set(key, value);
+      }
     }
     const query = params.size ? `?${params}` : '';
     let response: Response;
@@ -87,7 +91,9 @@ export class OrderHistoryClient {
 /** Reads the JWT subject (the user id) without verifying it; the server verifies every request. */
 function subjectOf(token: string): string | null {
   const payload = token.split('.')[1];
-  if (!payload) return null;
+  if (!payload) {
+    return null;
+  }
   try {
     const { sub } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as { sub?: unknown };
     return typeof sub === 'string' && sub ? sub : null;

@@ -16,12 +16,17 @@ ownership, gateway routing, database setup, known gaps and verification.
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
 | GET | `/api/v1/orders/{id}` | One caller-owned order, with its fill once executed (TRADER only) |
 | GET | `/api/v1/orders/{id}/status` | Current status and the latest status-history reason code (TRADER only) |
+| GET | `/api/v1/orders/quote-preview` | Indicative price and total before submitting (TRADER only) |
 
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
 
 The two GET routes return 404 `ORDER_NOT_FOUND` for another client's order, exactly as for
 an unknown id.
+
+Only clients whose profile country is the United States may trade, and only instruments on
+US markets (NASDAQ, NYSE, NYSE American, NYSE Arca, Cboe, IEX). Anything else, including a
+missing country, is rejected with 422 `LOCATION_RESTRICTED`.
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
@@ -45,6 +50,15 @@ Submission returns 201/SUBMITTED; an idempotent retry returns the existing order
 with 200. Execution accepts in a separate committed transaction, then claims and
 fills/rejects with database locks. Failed attempts roll back settlement and remain
 retryable. Quote and price-tolerance limits default to ten attempts.
+
+Requeue and rejection reasons are kept distinct. A transient failure keeps the order PENDING and
+records `RETRY_` plus its cause (`RETRY_QUOTE_UNAVAILABLE`, `RETRY_STALE_QUOTE`,
+`RETRY_INVALID_QUOTE_TIMESTAMP`, `RETRY_PRICE_OUT_OF_TOLERANCE`, `RETRY_EXECUTION_FAILED`) on the
+ORDER_REQUEUED event and in `last_execution_error`. A rejection records the bare cause. Every cause
+is bounded: quotes by `orders.execution.max-quote-attempts`, price tolerance by
+`orders.execution.max-price-attempts`, and unexpected failures by
+`orders.execution.max-failure-attempts` (all default 10, retried every `orders.execution.retry-seconds`).
+Requeue is internal to the worker; there is no external requeue route.
 
 Set `TEST_POSTGRES_URL`, `TEST_POSTGRES_USER`, and `TEST_POSTGRES_PASSWORD` for a
 disposable database to include `OrderLifecyclePostgresTest` and PostgreSQL submission

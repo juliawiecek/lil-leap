@@ -1,0 +1,16 @@
+app:
+  jwt:
+    secret: nexttrade-shared-dev-secret-32bytes-min
+nexttrade:
+  security:
+    ssn-encryption-key: my-ssn-encryption-key-dev-only
+server:
+  port: 8084
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN
+    org.hibernate: INFO
+

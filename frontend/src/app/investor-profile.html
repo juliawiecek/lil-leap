@@ -21,7 +21,7 @@
       <p class="subtitle">{{ step() < 3 ? sections[step()].description : 'Check your information before the verification stage.' }}</p>
       <div class="account-summary"><strong>{{ values()['first_name'] }} {{ values()['last_name'] }}</strong><span>{{ email() }}</span></div>
 
-      <form #profileForm novalidate [hidden]="step() === 3" (submit)="advance($event, profileForm)">
+      <form #profileForm method="post" novalidate [hidden]="step() === 3" (submit)="advance($event, profileForm)">
         @for (section of sections; track section.title; let i = $index) {
           <fieldset [hidden]="step() !== i" [disabled]="step() !== i">
             <legend class="sr-only">{{ section.title }}</legend>

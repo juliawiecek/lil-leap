@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
@@ -13,10 +13,12 @@ import { OrderHistoryService } from './order-history.service';
   templateUrl: './order-history.html',
   styleUrl: './order-history.scss',
 })
-export class OrderHistory implements OnInit {
+export class OrderHistory implements OnInit, OnDestroy {
   readonly #orders = inject(OrderHistoryService);
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
+  #refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  #destroyed = false;
 
   readonly statusOptions = [
     { value: '', label: 'All' },
@@ -36,6 +38,12 @@ export class OrderHistory implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    this.#scheduleRefresh();
+  }
+
+  ngOnDestroy(): void {
+    this.#destroyed = true;
+    clearTimeout(this.#refreshTimer);
   }
 
   setFrom(value: string): void {
@@ -81,14 +89,30 @@ export class OrderHistory implements OnInit {
     this.error.set('');
     try {
       const rows = await this.#orders.list({ from: this.from(), to: this.to(), status: this.status() });
-      if (request === this.#request) this.rows.set(rows);
+      if (request === this.#request) {
+        this.rows.set(rows);
+      }
     } catch (e) {
       if (request === this.#request) {
         this.rows.set([]);
         this.error.set(e instanceof Error ? e.message : 'Could not load your orders. Please try again.');
       }
     } finally {
-      if (request === this.#request) this.loading.set(false);
+      if (request === this.#request) {
+        this.loading.set(false);
+      }
     }
+  }
+
+  #scheduleRefresh(): void {
+    clearTimeout(this.#refreshTimer);
+    // A load still in flight at destroy time must not re-arm the timer.
+    if (this.#destroyed) {
+      return;
+    }
+    this.#refreshTimer = setTimeout(async () => {
+      await this.load();
+      this.#scheduleRefresh();
+    }, 5000);
   }
 }

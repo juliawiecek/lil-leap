@@ -45,6 +45,11 @@ registerHooks({
 
 export function component(t, Type, providers = []) {
   const injector = createEnvironmentInjector(providers, Injector.NULL);
-  t.after(() => injector.destroy());
-  return runInInjectionContext(injector, () => new Type());
+  const instance = runInInjectionContext(injector, () => new Type());
+  // Mirror Angular teardown so polling timers started in ngOnInit can't keep the test process alive.
+  t.after(() => {
+    instance.ngOnDestroy?.();
+    injector.destroy();
+  });
+  return instance;
 }

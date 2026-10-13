@@ -15,6 +15,7 @@ import java.util.UUID;
 /** Fills or rejects a locked order; settlement participates in the worker transaction. */
 @Service
 public class JdbcOrderExecutor implements OrderExecutor {
+    private static final String PRICE_OUT_OF_TOLERANCE = "PRICE_OUT_OF_TOLERANCE";
     private final JdbcTemplate jdbc;
     private final ExecutionQuoteService quotes;
     private final long maxAttempts;
@@ -49,7 +50,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public Outcome execute(UUID orderId) {
+    public Result execute(UUID orderId) {
         var order = jdbc.queryForObject("""
                 SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent
                 FROM orders WHERE order_id = ?
@@ -57,12 +58,15 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6)), orderId);
         if (order == null) throw new IllegalArgumentException("Order not found");
 
-        Account account = requireExecutableAccount(orderId, order);
-        if (account == null) return Outcome.REJECTED;
+        Account account = lockAccount(order.account());
+        Result notExecutable = rejectIfNotExecutable(orderId, order, account);
+        if (notExecutable != null) {
+            return notExecutable;
+        }
 
         QuoteContext quoteContext = selectExecutableQuote(orderId, order, account);
-        if (quoteContext.outcome() != null) {
-            return quoteContext.outcome();
+        if (quoteContext.result() != null) {
+            return quoteContext.result();
         }
         boolean buy = Boolean.TRUE.equals(quoteContext.buy());
 
@@ -73,9 +77,9 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 """, (rs, n) -> new Position(rs.getLong(1), rs.getBigDecimal(2)), order.account(), order.instrument())
                 .stream().findFirst().orElse(new Position(0, BigDecimal.ZERO));
         BigDecimal amount = quoteContext.price().multiply(BigDecimal.valueOf(order.quantity())).setScale(2, RoundingMode.HALF_UP);
-        Outcome fundsOutcome = validateSettlementPreconditions(orderId, account, position, buy, cash, amount, order.quantity());
-        if (fundsOutcome != null) {
-            return fundsOutcome;
+        Result fundsRejection = validateSettlementPreconditions(orderId, account, position, buy, cash, amount, order.quantity());
+        if (fundsRejection != null) {
+            return fundsRejection;
         }
 
         SettlementResult settlement = persistSettlement(orderId, order, buy, quoteContext.price(), quoteContext.quote().quotedAt(), amount, cash);
@@ -88,34 +92,33 @@ public class JdbcOrderExecutor implements OrderExecutor {
                                           'executionPrice', CAST(? AS numeric), 'cashDelta', CAST(? AS numeric))
                 FROM (VALUES ('ORDER_FILLED'), ('SETTLEMENT_COMPLETED')) events(event_type)
                 """, order.account(), orderId, settlement.fillId(), order.quantity(), quoteContext.price(), cashChange);
-        return Outcome.FILLED;
+        return Result.filled();
     }
 
-    private Account requireExecutableAccount(UUID orderId, Trade order) {
-        Account account = lockActiveAccountOrReject(orderId, order);
-        if (account == null) {
-            return null;
+    private Result rejectIfNotExecutable(UUID orderId, Trade order, Account account) {
+        if (account == null || !"ACTIVE".equals(account.status()) || !account.enabled()) {
+            return reject(orderId, "ACCOUNT_NOT_ACTIVE");
         }
         if (!isInstrumentTradable(order.instrument())) {
-            reject(orderId, "INSTRUMENT_NOT_TRADABLE");
-            return null;
+            return reject(orderId, "INSTRUMENT_NOT_TRADABLE");
         }
-        return account;
+        return null;
     }
 
     private QuoteContext selectExecutableQuote(UUID orderId, Trade order, Account account) {
         var decision = quotes.selectForExecution(orderId);
-        Outcome quoteOutcome = handleQuoteDecision(orderId, decision);
-        if (quoteOutcome != null) {
-            return new QuoteContext(null, null, null, quoteOutcome);
+        Result quoteResult = handleQuoteDecision(orderId, decision);
+        if (quoteResult != null) {
+            return new QuoteContext(null, null, null, quoteResult);
         }
         var quote = decision.quote();
         auditQuoteDecision(orderId, quote);
         boolean buy = "BUY".equals(order.side());
         BigDecimal price = buy ? quote.ask() : quote.bid();
         if (!isWithinTolerance(order, account, quote, buy, price)) {
-            Outcome outcome = order.attempts() >= maxAttempts ? reject(orderId, "PRICE_OUT_OF_TOLERANCE") : Outcome.PENDING;
-            return new QuoteContext(quote, buy, price, outcome);
+            Result result = order.attempts() >= maxAttempts
+                    ? reject(orderId, PRICE_OUT_OF_TOLERANCE) : Result.requeue(PRICE_OUT_OF_TOLERANCE);
+            return new QuoteContext(quote, buy, price, result);
         }
         return new QuoteContext(quote, buy, price, null);
     }
@@ -130,7 +133,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
                 """, quote.quoteId(), quote.quotedAt(), quote.bid(), quote.ask(), orderId);
     }
 
-    private Outcome reject(UUID orderId, String reason) {
+    private Result reject(UUID orderId, String reason) {
         jdbc.update("UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
                 reason, orderId);
         history(orderId, "REJECTED", reason);
@@ -140,24 +143,19 @@ public class JdbcOrderExecutor implements OrderExecutor {
                        jsonb_build_object('reasonCode', last_execution_error, 'attemptNumber', execution_attempts)
                 FROM orders WHERE order_id = ?
                 """, orderId);
-        return Outcome.REJECTED;
+        return Result.rejected(reason);
     }
 
     private void history(UUID orderId, String status, String reason) {
         jdbc.update("INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, ?, ?)", orderId, status, reason);
     }
 
-    private Account lockActiveAccountOrReject(UUID orderId, Trade order) {
+    private Account lockAccount(UUID accountId) {
         // Serialize all settlements for an account, including initially absent balance rows.
-        var account = jdbc.queryForObject("""
+        return jdbc.queryForObject("""
                 SELECT account_status, trading_enabled, execution_buffer_percent, min_balance_requirement
                 FROM accounts WHERE account_id = ? FOR UPDATE
-                """, (rs, n) -> new Account(rs.getString(1), rs.getBoolean(2), rs.getBigDecimal(3), rs.getBigDecimal(4)), order.account());
-        if (account == null || !"ACTIVE".equals(account.status()) || !account.enabled()) {
-            reject(orderId, "ACCOUNT_NOT_ACTIVE");
-            return null;
-        }
-        return account;
+                """, (rs, n) -> new Account(rs.getString(1), rs.getBoolean(2), rs.getBigDecimal(3), rs.getBigDecimal(4)), accountId);
     }
 
     private boolean isInstrumentTradable(UUID instrumentId) {
@@ -168,9 +166,9 @@ public class JdbcOrderExecutor implements OrderExecutor {
         return Boolean.TRUE.equals(tradable);
     }
 
-    private Outcome handleQuoteDecision(UUID orderId, ExecutionQuoteDecision decision) {
+    private Result handleQuoteDecision(UUID orderId, ExecutionQuoteDecision decision) {
         if (decision.action() == ExecutionQuoteDecision.Action.REQUEUE) {
-            return Outcome.PENDING;
+            return Result.requeue(decision.reason().name());
         }
         if (decision.action() == ExecutionQuoteDecision.Action.REJECT) {
             return reject(orderId, decision.reason().name());
@@ -190,7 +188,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
         return order.buffer() == null ? account.buffer() : order.buffer();
     }
 
-    private Outcome validateSettlementPreconditions(UUID orderId, Account account, Position position,
+    private Result validateSettlementPreconditions(UUID orderId, Account account, Position position,
                                                     boolean buy, BigDecimal cash, BigDecimal amount,
                                                     long quantity) {
         if (cash.compareTo(account.minimum()) < 0) {
@@ -235,5 +233,5 @@ public class JdbcOrderExecutor implements OrderExecutor {
     private record Account(String status, boolean enabled, BigDecimal buffer, BigDecimal minimum) {}
     private record Position(long quantity, BigDecimal cost) {}
     private record SettlementResult(UUID fillId, BigDecimal cashChange) {}
-    private record QuoteContext(com.neueda.leap.marketdata.MarketQuote quote, Boolean buy, BigDecimal price, Outcome outcome) {}
+    private record QuoteContext(com.neueda.leap.marketdata.MarketQuote quote, Boolean buy, BigDecimal price, Result result) {}
 }

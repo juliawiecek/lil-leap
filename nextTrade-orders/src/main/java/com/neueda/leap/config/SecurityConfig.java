@@ -42,7 +42,10 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
-        return http.formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
+        // Stateless bearer-token API with no cookies or session, so CSRF does not apply; the
+        // browser client sends no CSRF token and enabling it rejects every POST /orders.
+        return http.csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny())
@@ -51,9 +54,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/orders").access(traderWithoutParameters())
-                        // UUID ids only, so sibling routes such as /orders/quote-preview stay denied.
+                        // UUID ids only, so sibling routes such as /orders/quote-preview are matched separately.
                         .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, ORDER_READ_PATH))
                             .access(traderWithoutParameters())
+                        .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {
