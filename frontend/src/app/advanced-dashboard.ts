@@ -73,6 +73,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
   #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
+  #destroyed = false;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
   readonly name = input('');
@@ -506,6 +507,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   private async pollOrdersUntilDestroyed(): Promise<void> {
     clearTimeout(this.#ordersPollTimer);
     await this.refreshOrders();
+    // A refresh still in flight at destroy time must not re-arm the timer.
+    if (this.#destroyed) {
+      return;
+    }
     this.#ordersPollTimer = setTimeout(() => {
       void this.pollOrdersUntilDestroyed();
     }, 5000);
@@ -526,6 +531,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.#destroyed = true;
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
     clearTimeout(this.#ordersPollTimer);

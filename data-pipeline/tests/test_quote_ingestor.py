@@ -83,7 +83,8 @@ def test_continuous_retries_then_advances_seed_and_respects_interval(monkeypatch
     sleeps = []
     ingestor.run_continuous(5, 42, stop=lambda: len(sleeps) == 3, sleep=sleeps.append)
     assert sleeps == [1, 3, 0]
-    assert [c.args for c in generate.call_args_list] == [(1, 42), (1, 42), (1, 43)]
+    # Each tick generates a 3-step price path (so prices move) and keeps the latest step.
+    assert [c.args for c in generate.call_args_list] == [(3, 42), (3, 42), (3, 43)]
 
 
 def test_continuous_stops_after_bounded_database_retries(monkeypatch):

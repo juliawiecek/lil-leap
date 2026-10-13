@@ -18,6 +18,7 @@ export class OrderHistory implements OnInit, OnDestroy {
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
   #refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  #destroyed = false;
 
   readonly statusOptions = [
     { value: '', label: 'All' },
@@ -41,6 +42,7 @@ export class OrderHistory implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.#destroyed = true;
     clearTimeout(this.#refreshTimer);
   }
 
@@ -104,6 +106,10 @@ export class OrderHistory implements OnInit, OnDestroy {
 
   #scheduleRefresh(): void {
     clearTimeout(this.#refreshTimer);
+    // A load still in flight at destroy time must not re-arm the timer.
+    if (this.#destroyed) {
+      return;
+    }
     this.#refreshTimer = setTimeout(async () => {
       await this.load();
       this.#scheduleRefresh();

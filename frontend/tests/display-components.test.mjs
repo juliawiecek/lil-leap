@@ -39,10 +39,10 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   const desk = component(t, AdvancedDashboard);
   desk.applyPortfolio({ cash: 48230.12, holdings: [] });
   const fixture = await render(t, AdvancedTicket, { desk });
-  input(fixture, '#pro-symbol', 'TSLA', 'change');
+  input(fixture, '#pro-symbol', 'NVDA', 'change');
   input(fixture, '#pro-type', 'Market', 'change');
   input(fixture, '#pro-quantity', '2');
-  assert.equal(desk.selected().symbol, 'TSLA');
+  assert.equal(desk.selected().symbol, 'NVDA');
   assert.equal(desk.orderType(), 'Market'); assert.equal(desk.quantity(), '2');
   assert.equal(fixture.nativeElement.querySelector('#pro-limit'), null);
   const review = t.mock.method(desk, 'openModal', () => {});
@@ -64,7 +64,9 @@ test('chart period buttons update accessible labels and plotted candles', async 
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
   assert.equal(desk.period(), '1W'); assert.notDeepEqual(desk.candles(), before);
   assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1W candlestick chart"]'));
-  desk.choose(desk.quote('TSLA')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.textContent, /Tesla/);
+  // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
+  desk.quote('NVDA').change = -2.36;
+  desk.choose(desk.quote('NVDA')); fixture.detectChanges();
+  assert.match(fixture.nativeElement.textContent, /NVIDIA/);
   assert.ok(fixture.nativeElement.querySelector('.loss'));
 });
