@@ -28,6 +28,33 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 - Insights (reporting): http://localhost:4201
 - API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
+### Test Logins (Development Only)
+
+A fresh database comes with three ready accounts, so there is no need to register by hand.
+The password for all of them is `Password123!`.
+
+| Email | Role | What you get |
+| --- | --- | --- |
+| `novice@nexttrade.local` | Trader, Novice | Novice dashboard, $10,000 cash, AAPL and MSFT holdings, 3 filled orders and 1 rejected |
+| `advanced@nexttrade.local` | Trader, Advanced | Advanced dashboard, $150,000 cash, 5 holdings, 6 filled orders and 1 rejected |
+| `analyst@nexttrade.local` | Analyst | Insights (reporting) app |
+
+They come from [`db/seeds/002_test_users.sql`](db/seeds/002_test_users.sql), which uses fixed ids so
+tests and docs can refer to the same accounts. It loads automatically:
+
+- **Docker:** on an empty `db_data` volume, as `05-test-users.sql`.
+- **No Docker:** every time you run `db/setup-local.sql` (see [QUICKSTART.md](QUICKSTART.md)).
+
+To add them to an existing Docker database without wiping it, run:
+
+```bash
+docker compose exec db psql -U main -d nexttrade -f /docker-entrypoint-initdb.d/05-test-users.sql
+```
+
+The script is safe to re-run and never changes rows that already exist. If you registered one of
+these emails yourself, it stops with a message instead; delete that user or start from an empty volume.
+These accounts are for development and demos only and must never be loaded into production.
+
 ## 📊 Code Coverage Status
 
 | Service | Coverage | Tests | Goal |
@@ -197,6 +224,7 @@ on a remote server: **[docs/api/README.md](docs/api/README.md)**.
 - Schema: `db/finalized-schema.sql`
 - Role/bootstrap script: `db/init-app-role.sh`
 - Seed data: `db/seeds/001_us_equity_instruments.sql`
+- Test logins (dev only): `db/seeds/002_test_users.sql`, see [Test Logins](#test-logins-development-only)
 - ER diagram: [`db/ER_Diagram.pdf`](db/ER_Diagram.pdf) / [`db/er_diagram.png`](db/er_diagram.png)
 
 ### Credential and Role Model (Current Dev Setup)
