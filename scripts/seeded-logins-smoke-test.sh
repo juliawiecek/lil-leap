@@ -2,14 +2,14 @@
 # TS-DB-04: the seeded test logins work on a fresh stack.
 #
 # Starts db, auth, holdings and quote-service on an empty volume, then checks that:
-#   - novice@, advanced@ and analyst@nexttrade.local log in with Password123! (200 + token)
+#   - novice@, advanced@ and analyst@nexttrade.local log in with the shared test password (200 + token)
 #   - each token carries the expected role and trader tier
 #   - the novice and advanced portfolios return 200 with $10,000 and $150,000 cash
 #   - a wrong password is still rejected (401)
 #
-# Usage (from the repo root):
-#   scripts/seeded-logins-smoke-test.sh          build, start, check, tear down
-#   KEEP=1 scripts/seeded-logins-smoke-test.sh   leave the smoke stack running afterwards
+# Usage (from the repo root; the password is in the team's secure chat, never in the repo):
+#   SEED_TEST_PASSWORD=... scripts/seeded-logins-smoke-test.sh          build, start, check, tear down
+#   KEEP=1 SEED_TEST_PASSWORD=... scripts/seeded-logins-smoke-test.sh   leave the smoke stack running
 #
 # Uses its own compose project (SMOKE_PROJECT, default nexttrade-smoke), so it never touches
 # your own stack or its database. No host ports are published: requests come from a curl
@@ -21,10 +21,15 @@ COMPOSE="${COMPOSE_CMD:-docker compose}"
 PROJECT="${SMOKE_PROJECT:-nexttrade-smoke}"
 WAIT_SECONDS="${WAIT_SECONDS:-240}"
 CURL_IMAGE="curlimages/curl:8.10.1"
-PASSWORD='Password123!'
+PASSWORD="${SEED_TEST_PASSWORD:-}"
 NOVICE_ID="a0000000-0000-4000-8000-000000000001"
 ADVANCED_ID="a0000000-0000-4000-8000-000000000002"
 SERVICES=(db auth holdings quote-service)
+
+if [[ -z "$PASSWORD" ]]; then
+  echo "Set SEED_TEST_PASSWORD to the shared test-login password (Jenkins: credential seed-test-password)" >&2
+  exit 2
+fi
 
 cd "$(dirname "$0")/.."
 # shellcheck disable=SC2206

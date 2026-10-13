@@ -326,8 +326,11 @@ pipeline {
     stage('Smoke Test - Seeded Logins') {
       // TS-DB-04: on a fresh volume the dev test users log in and see their portfolios.
       // Runs in its own compose project with no published ports, and removes it afterwards.
+      // The shared test password lives only in the Jenkins credential "seed-test-password".
       steps {
-        sh "COMPOSE_CMD='${COMPOSE_CMD}' SMOKE_PROJECT=nexttrade-smoke-${BUILD_NUMBER} bash scripts/seeded-logins-smoke-test.sh"
+        withCredentials([string(credentialsId: 'seed-test-password', variable: 'SEED_TEST_PASSWORD')]) {
+          sh 'SMOKE_PROJECT="nexttrade-smoke-$BUILD_NUMBER" bash scripts/seeded-logins-smoke-test.sh'
+        }
       }
     }
   }

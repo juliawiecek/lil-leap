@@ -134,7 +134,7 @@ npm start
 
 ### Test Logins
 
-Password for all: `Password123!` (development only)
+All three share one password, posted in the team's secure chat (development only).
 
 | Email | Opens |
 |-------|-------|

@@ -3,7 +3,7 @@
 --
 -- Never mount this file in a production compose file.
 --
--- Accounts (password for all: Password123!)
+-- Accounts (one shared password, shared with the team privately; never commit it)
 --   novice@nexttrade.local    TRADER, NOVICE    $10,000 cash, AAPL + MSFT, 3 fills, 1 rejected order
 --   advanced@nexttrade.local  TRADER, ADVANCED  $150,000 cash, 5 holdings, 6 fills, 1 rejected order
 --   analyst@nexttrade.local   ANALYST           insights (reporting) app
@@ -50,15 +50,16 @@ BEGIN
 END $$;
 
 -- ----------------------------------------------------------
--- Users (auth: '{bcrypt}' prefix + bcrypt cost 10)
+-- Users. Only bcrypt hashes are stored (auth's format: '{bcrypt}' prefix, cost 10),
+-- so the password itself is not in the repository.
 -- ----------------------------------------------------------
 INSERT INTO users (user_id, email, password_hash, user_role) VALUES
     ('a0000000-0000-4000-8000-000000000001', 'novice@nexttrade.local',
-     '{bcrypt}' || crypt('Password123!', gen_salt('bf', 10)), 'TRADER'),
+     '{bcrypt}$2a$10$r61.WVDqMOCcMYtjIyQ84.cd4C/1nL2dBPU37BDiDcxMvt8PZkVBC', 'TRADER'),
     ('a0000000-0000-4000-8000-000000000002', 'advanced@nexttrade.local',
-     '{bcrypt}' || crypt('Password123!', gen_salt('bf', 10)), 'TRADER'),
+     '{bcrypt}$2a$10$YqpOCB4wU1lVu/6q5L2Wv.zTIOogHu2MfLdS4sKZHoehrduJUpRb6', 'TRADER'),
     ('a0000000-0000-4000-8000-000000000003', 'analyst@nexttrade.local',
-     '{bcrypt}' || crypt('Password123!', gen_salt('bf', 10)), 'ANALYST')
+     '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'ANALYST')
 ON CONFLICT DO NOTHING;
 
 -- ----------------------------------------------------------

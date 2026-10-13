@@ -31,7 +31,8 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 ### Test Logins (Development Only)
 
 A fresh database comes with three ready accounts, so there is no need to register by hand.
-The password for all of them is `Password123!`.
+They share one password, which is posted in the team's secure chat rather than in this repository
+(the seed stores only its bcrypt hash).
 
 | Email | Role | What you get |
 | --- | --- | --- |
