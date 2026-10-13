@@ -6,7 +6,9 @@
 /** Generate a random UUID for client reference */
 function generateUUID(): string {
   const randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto);
-  if (randomUUID) return randomUUID();
+  if (randomUUID) {
+    return randomUUID();
+  }
   const getRandomValues = globalThis.crypto?.getRandomValues;
   if (!getRandomValues) {
     throw new Error('Secure random generator is unavailable for UUID creation.');
@@ -116,14 +118,20 @@ export class OrderSubmissionClient {
    */
   async getAccounts(): Promise<Account[]> {
     const token = this.#tokens.accessToken;
-    if (!token) throw new OrderSubmissionError('You must be signed in to submit orders.');
+    if (!token) {
+      throw new OrderSubmissionError('You must be signed in to submit orders.');
+    }
 
     try {
       const response = await this.#fetch(`${this.#baseUrl}/accounts`);
-      if (!response.ok) throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
+      if (!response.ok) {
+        throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
+      }
       return response.json();
     } catch (error) {
-      if (error instanceof OrderSubmissionError) throw error;
+      if (error instanceof OrderSubmissionError) {
+        throw error;
+      }
       throw new OrderSubmissionError('Connection error. Check your network and try again.');
     }
   }
@@ -134,14 +142,20 @@ export class OrderSubmissionClient {
    */
   async getInstruments(): Promise<Instrument[]> {
     const token = this.#tokens.accessToken;
-    if (!token) throw new OrderSubmissionError('You must be signed in to fetch instruments.');
+    if (!token) {
+      throw new OrderSubmissionError('You must be signed in to fetch instruments.');
+    }
 
     try {
       const response = await this.#fetch(`${this.#baseUrl}/instruments`);
-      if (!response.ok) throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
+      if (!response.ok) {
+        throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
+      }
       return response.json();
     } catch (error) {
-      if (error instanceof OrderSubmissionError) throw error;
+      if (error instanceof OrderSubmissionError) {
+        throw error;
+      }
       throw new OrderSubmissionError('Connection error. Check your network and try again.');
     }
   }
@@ -156,7 +170,9 @@ export class OrderSubmissionClient {
    */
   async submit(request: SubmitOrderRequest): Promise<OrderSubmissionResponse> {
     const token = this.#tokens.accessToken;
-    if (!token) throw new OrderSubmissionError('You must be signed in to submit orders.');
+    if (!token) {
+      throw new OrderSubmissionError('You must be signed in to submit orders.');
+    }
     this.#assertValidSubmitRequest(request);
     const payload = this.#buildSubmitPayload(request);
 
@@ -178,7 +194,9 @@ export class OrderSubmissionClient {
 
       return body as OrderSubmissionResponse;
     } catch (error) {
-      if (error instanceof OrderSubmissionError) throw error;
+      if (error instanceof OrderSubmissionError) {
+        throw error;
+      }
       throw new OrderSubmissionError('Connection error. Check your network and try again.');
     }
   }
@@ -192,15 +210,21 @@ export class OrderSubmissionClient {
   }
 
   #assertValidSubmitRequest(request: SubmitOrderRequest): void {
-    if (!request.accountId) throw new OrderSubmissionError('Account is required.');
-    if (!request.instrumentId) throw new OrderSubmissionError('Instrument is required.');
+    if (!request.accountId) {
+      throw new OrderSubmissionError('Account is required.');
+    }
+    if (!request.instrumentId) {
+      throw new OrderSubmissionError('Instrument is required.');
+    }
     if (!request.side || !['BUY', 'SELL'].includes(request.side)) {
       throw new OrderSubmissionError('Side must be BUY or SELL.');
     }
     if (!Number.isSafeInteger(request.quantity) || request.quantity <= 0) {
       throw new OrderSubmissionError('Quantity must be a positive whole number.');
     }
-    if (!request.clientReference) throw new OrderSubmissionError('Internal error: clientReference is required.');
+    if (!request.clientReference) {
+      throw new OrderSubmissionError('Internal error: clientReference is required.');
+    }
   }
 
   #buildSubmitPayload(request: SubmitOrderRequest): SubmitOrderRequest {

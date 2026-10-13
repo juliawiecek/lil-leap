@@ -82,7 +82,9 @@ export class App implements AfterViewInit, OnDestroy {
     this.confirmationDraft.set('');
     this.passwordStarted.set(false);
     const confirmation = document.getElementById('verify-password') as HTMLInputElement | null;
-    if (confirmation) confirmation.value = '';
+    if (confirmation) {
+      confirmation.value = '';
+    }
   }
 
   signOut(): void {
@@ -154,7 +156,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.context = this.marketChart.nativeElement.getContext('2d');
-    if (!this.context) return;
+    if (!this.context) {
+      return;
+    }
 
     this.buildVolumeField();
     this.resizeChart();
@@ -165,15 +169,21 @@ export class App implements AfterViewInit, OnDestroy {
     this.routeSubscription?.unsubscribe();
     this.session.stop();
     cancelAnimationFrame(this.animationFrameId);
-    if (this.brandTimer) clearTimeout(this.brandTimer);
-    if (this.focusTimer) clearTimeout(this.focusTimer);
+    if (this.brandTimer) {
+      clearTimeout(this.brandTimer);
+    }
+    if (this.focusTimer) {
+      clearTimeout(this.focusTimer);
+    }
     this.renderer.removeClass(document.body, 'brand-phase');
     this.renderer.removeClass(document.body, 'auth-phase');
   }
 
   @HostListener('window:resize')
   onResize(): void {
-    if (!this.context) return;
+    if (!this.context) {
+      return;
+    }
     this.buildVolumeField();
     this.resizeChart();
     this.drawChart();
@@ -181,7 +191,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   @HostListener('window:pageshow', ['$event'])
   onPageShow(event: PageTransitionEvent): void {
-    if (event.persisted) window.location.reload();
+    if (event.persisted) {
+      window.location.reload();
+    }
   }
 
   setAuthMode(mode: AuthMode): void {
@@ -193,7 +205,9 @@ export class App implements AfterViewInit, OnDestroy {
     if (this.router && !this.router.url.startsWith(path)) void this.router.navigate([path]);
     this.formStatus.set('');
 
-    if (this.focusTimer) clearTimeout(this.focusTimer);
+    if (this.focusTimer) {
+      clearTimeout(this.focusTimer);
+    }
     this.focusTimer = setTimeout(() => {
       const target = mode === 'signup' ? this.fullName : this.email;
       target?.nativeElement.focus({ preventScroll: true });
@@ -247,7 +261,9 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private async signIn(): Promise<void> {
-    if (this.signingIn()) return;
+    if (this.signingIn()) {
+      return;
+    }
     this.signingIn.set(true);
     this.formStatus.set('');
     try {
@@ -263,7 +279,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   /** Registration issues no tokens, so a successful sign-up signs in with the same credentials. */
   async completeRegistration(answers: Record<string, string>): Promise<void> {
-    if (this.registering()) return;
+    if (this.registering()) {
+      return;
+    }
     this.registering.set(true);
     this.registrationError.set('');
     const email = this.applicantEmail();
@@ -317,14 +335,18 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private showAuthPage(): void {
-    if (this.pageReady()) return;
+    if (this.pageReady()) {
+      return;
+    }
     this.pageReady.set(true);
     this.renderer.addClass(document.body, 'brand-phase');
     this.renderer.addClass(document.body, 'auth-phase');
   }
 
   private beginBrandTransition(): void {
-    if (this.brandStarted) return;
+    if (this.brandStarted) {
+      return;
+    }
     this.brandStarted = true;
     this.renderer.addClass(document.body, 'brand-phase');
     this.brandTimer = setTimeout(
@@ -415,7 +437,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private drawCandle(candle: Candle, x: number, progress = 1, opacity = 1): void {
     const context = this.context;
-    if (!context) return;
+    if (!context) {
+      return;
+    }
 
     const animatedClose = candle.open + (candle.close - candle.open) * progress;
     const animatedHigh =
@@ -447,7 +471,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private drawChart(): void {
     const context = this.context;
-    if (!context) return;
+    if (!context) {
+      return;
+    }
 
     context.clearRect(0, 0, this.width, this.height);
     context.shadowColor = 'transparent';

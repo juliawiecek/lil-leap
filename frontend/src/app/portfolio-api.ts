@@ -114,21 +114,27 @@ export class PortfolioClient {
     const bids = new Map<string, number>();
     results.forEach((result, i) => {
       const bid = result.status === 'fulfilled' ? Number(result.value.bid) : Number.NaN;
-      if (Number.isFinite(bid) && bid > 0) bids.set(instrumentIds[i], bid);
+      if (Number.isFinite(bid) && bid > 0) {
+        bids.set(instrumentIds[i], bid);
+      }
     });
     return bids;
   }
 
   async #get<T>(path: string): Promise<T> {
     const token = this.#tokens.accessToken;
-    if (!token) throw new Error('Sign in to see your balances.');
+    if (!token) {
+      throw new Error('Sign in to see your balances.');
+    }
     let response: Response;
     try {
       response = await this.#fetch(`${this.#baseUrl}${path}`);
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
-    if (!response.ok) throw new Error('Could not load your balances. Please try again.');
+    if (!response.ok) {
+      throw new Error('Could not load your balances. Please try again.');
+    }
     return (await response.json()) as T;
   }
 }

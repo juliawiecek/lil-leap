@@ -101,7 +101,9 @@ export class AuthClient {
    */
   async refresh(): Promise<void> {
     const refreshToken = this.#refreshToken;
-    if (!refreshToken) throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    if (!refreshToken) {
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
     try {
       const body = (await this.#post('/refresh', { refreshToken })) as { accessToken: string; refreshToken: string };
       this.#setTokens(body.accessToken, body.refreshToken);
@@ -115,7 +117,9 @@ export class AuthClient {
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
     this.#setTokens(null, null);
-    if (!refreshToken) return;
+    if (!refreshToken) {
+      return;
+    }
     try {
       await this.#post('/logout', { refreshToken });
     } catch {
@@ -135,7 +139,9 @@ export class AuthClient {
     this.#traderLevel = null;
     this.#userRole = null;
     const payload = accessToken?.split('.')[1];
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     try {
       const { exp, iat, trader_level, user_role, sub } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         sub?: unknown;
@@ -144,9 +150,13 @@ export class AuthClient {
         iat?: unknown;
         trader_level?: unknown;
       };
-      if (typeof exp === 'number' && typeof iat === 'number' && exp > iat) this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+      if (typeof exp === 'number' && typeof iat === 'number' && exp > iat) {
+        this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+      }
       if (typeof sub === 'string' && (user_role === 'TRADER' || user_role === 'ANALYST')) this.#userRole = user_role;
-      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') this.#traderLevel = trader_level;
+      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') {
+        this.#traderLevel = trader_level;
+      }
     } catch {
       // Unreadable token: leave expiry unknown, which makes the session keeper refresh on next activity.
     }
