@@ -31,7 +31,7 @@ export class Login {
   readonly pending = signal(false);
   readonly message = signal('');
   async signIn(email: string, password: string): Promise<void> {
-    if (this.pending()) return;
+    if (this.pending()) { return; }
     this.pending.set(true); this.message.set('');
     try {
       await this.auth.login(email, password);

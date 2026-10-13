@@ -145,7 +145,7 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
-    if (this.route?.snapshot.queryParamMap.has('returnUrl')) this.showAuthPage();
+    if (this.route?.snapshot.queryParamMap.has('returnUrl')) { this.showAuthPage(); }
     this.context = this.marketChart.nativeElement.getContext('2d');
     if (!this.context) {
       return;

@@ -132,7 +132,7 @@ export class PortfolioClient {
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
-    if (response.status === 401) this.#tokens.unauthorized?.(token);
+    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
       throw new Error('Could not load your balances. Please try again.');
     }

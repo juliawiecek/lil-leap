@@ -22,7 +22,7 @@ def normalize_lcov(text: str, service: str, root: Path) -> str:
 
 def main() -> None:
     root = Path(__file__).resolve().parent.parent
-    for service in ("auth", "frontend", "insights-frontend"):
+    for service in ("auth", "frontend", "insights-frontend", "shared/session-core"):
         report = root / service / "coverage" / "lcov.info"
         normalized = normalize_lcov(report.read_text(encoding="utf-8"), service, root)
         report.write_text(normalized, encoding="utf-8")

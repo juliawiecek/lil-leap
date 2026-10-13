@@ -116,3 +116,14 @@ cookies, Authorization headers, and request/response bodies.
 
 Future API integration must not log credentials or store tokens in URLs.
 Backend logging setup is in [the orders backend README](../nextTrade-orders/README.md).
+
+## Shared session package
+
+Before installing either app, run `npm ci --prefix shared/session-core` and
+`npm run build --prefix shared/session-core` from the repository root. Then run
+`npm ci` in each app. Rebuild the shared package and reinstall the consumers
+after changing shared sources. Local file dependencies are installed as copies
+so the apps use their own Angular runtime. The shared package owns auth/session
+behavior and contract tests; each app provides its role, storage key and routes.
+
+Docker builds use the repository root as their context: `docker build -f frontend/Dockerfile .`. Compose and Jenkins prepare the shared package automatically.

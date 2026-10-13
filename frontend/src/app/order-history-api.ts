@@ -74,7 +74,7 @@ export class OrderHistoryClient {
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
-    if (response.status === 401) this.#tokens.unauthorized?.(token);
+    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
       const message = typeof body?.message === 'string' ? body.message : null;

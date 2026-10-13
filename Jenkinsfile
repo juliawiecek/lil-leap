@@ -164,14 +164,27 @@ pipeline {
       }
     }
 
+    stage('Build and Test Shared Session Package') {
+      steps {
+        sh '''
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
+            -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE/shared/session-core" \
+            node:24-alpine sh -ec 'npm ci --no-audit --no-fund
+            npm run build
+            npm run test:coverage'
+        '''
+      }
+    }
+
     stage('Unit Tests - frontend (Angular)') {
       steps {
         sh '''
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE/frontend:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/frontend" \
             node:24-alpine \
             sh -ec 'npm ci --no-audit --no-fund
             npm run test:coverage
@@ -186,8 +199,8 @@ pipeline {
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE/insights-frontend:/app" \
-            -w /app \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE/insights-frontend" \
             node:24-alpine \
             sh -ec 'npm ci --no-audit --no-fund
             npm run test:coverage
@@ -260,7 +273,7 @@ pipeline {
     stage('Archive Node Coverage') {
       steps {
         archiveArtifacts(
-          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**',
+          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**,shared/session-core/coverage/**',
           fingerprint: true,
           allowEmptyArchive: true
         )

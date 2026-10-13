@@ -127,7 +127,7 @@ export class OrderSubmissionClient {
       const response = await this.#fetch(`${this.#baseUrl}/accounts`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (response.status === 401) this.#tokens.unauthorized?.(token);
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
         throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
       }
@@ -154,7 +154,7 @@ export class OrderSubmissionClient {
       const response = await this.#fetch(`${this.#baseUrl}/instruments`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (response.status === 401) this.#tokens.unauthorized?.(token);
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
         throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
       }
@@ -195,7 +195,7 @@ export class OrderSubmissionClient {
 
       const body = (await response.json()) as { message?: string; [key: string]: any };
 
-      if (response.status === 401) this.#tokens.unauthorized?.(token);
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
         throw this.#toSubmitError(response.status, body.message);
       }

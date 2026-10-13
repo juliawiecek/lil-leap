@@ -197,10 +197,10 @@ export class App implements OnDestroy {
       { key: 'definitions', value: this.definitions }, { key: 'compact', value: this.compact },
     ], parts => {
       const tabs = parts[0] === 'clients' ? ['Overview','Orders','Documents'] : parts[0] === 'orders' ? ['Overview','Lifecycle','Audit Trail'] : ['Overview'];
-      if (!tabs.includes(this.detailTab())) this.detailTab.set('Overview');
+      if (!tabs.includes(this.detailTab())) { this.detailTab.set('Overview'); }
       this.selectedClient.set(parts[0] === 'clients' && parts[1] ? clients.find(c => c.id === parts[1]) ?? null : null);
       this.selectedTrade.set(parts[0] === 'orders' && parts[1] ? trades.find(t => t.id === parts[1]) ?? null : null);
-      if (parts[1] && !this.selectedClient() && !this.selectedTrade()) this.notice.set('That record is unavailable.');
+      if (parts[1] && !this.selectedClient() && !this.selectedTrade()) { this.notice.set('That record is unavailable.'); }
     });
   }
   ngOnDestroy(): void { this.routing?.destroy(); }

@@ -311,14 +311,14 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
 
   private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) return 0;
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
     const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
     return Math.round(percent * 100) / 100;
   }
 
   private defaultThresholdDollars(): number {
     const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) return byRisk;
+    if (byRisk) { return byRisk; }
     return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
   }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
@@ -350,7 +350,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (row?.status === 'ACCEPTED') {
       this.tradeMessage.set('Order accepted. Waiting for it to fill…');
     }
-    if (this.destroyed) return;
+    if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   constructor(private readonly auth: AuthService) {
@@ -359,8 +359,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.investmentTab, allowed: ['Holdings','Asset classes'] }
     ], () => {
       const quote = this.quotes().find(q => q.symbol === this.symbol());
-      if (quote) this.tradeQuote.set(quote);
-      else this.tradeMessage.set('That symbol is unavailable.');
+      if (quote) { this.tradeQuote.set(quote); }
+      else { this.tradeMessage.set('That symbol is unavailable.'); }
     });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
@@ -381,7 +381,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   async refreshPortfolio(): Promise<void> {
     try {
       const portfolio = await this.portfolioClient.load();
-      if (this.destroyed) return;
+      if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch {
       // The trade dialog already reports order problems; balances refresh again after the next fill.
@@ -412,7 +412,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
   }
   #schedulePrices(): void {
-    if (this.destroyed) return;
+    if (this.destroyed) { return; }
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) {
       return;
@@ -484,7 +484,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.quotes.set(next);
     const selected = this.tradeQuote();
     const refreshed = next.find((q) => q.symbol === selected.symbol);
-    if (refreshed) this.tradeQuote.set(refreshed);
+    if (refreshed) { this.tradeQuote.set(refreshed); }
   }
 
   private async loadTradingData(): Promise<void> {

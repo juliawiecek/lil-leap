@@ -1,4 +1,4 @@
-﻿# NextTrade Internal Insights
+ï»¿# NextTrade Internal Insights
 
 Internal reporting and operations UI for Priya and David. Reporting layouts follow the supplied renderings. Branding matches the main dashboard: the NextTrade wordmark with green Trade and the NT symbol, Inter headings and UI text, charcoal backgrounds, 8px panels, neutral borders and the same green primary buttons. A small Insights / Internal label and reporting-specific layout distinguish the internal workspace. IBM Plex Mono is reserved for identifiers and compact metadata.
 
@@ -65,3 +65,14 @@ opening another record. Report export history still resets on reload.
 Both apps' browser checks live in `../frontend/e2e`; build both apps and run
 `npm run test:e2e` from `frontend`. Unit tests include the same auth/session
 contract scenarios in both independently buildable apps.
+
+## Shared session package
+
+Before installing either app, run `npm ci --prefix shared/session-core` and
+`npm run build --prefix shared/session-core` from the repository root. Then run
+`npm ci` in each app. Rebuild the shared package and reinstall the consumers
+after changing shared sources. Local file dependencies are installed as copies
+so the apps use their own Angular runtime. The shared package owns auth/session
+behavior and contract tests; each app provides its role, storage key and routes.
+
+Docker builds use the repository root as their context: `docker build -f insights-frontend/Dockerfile .`. Compose and Jenkins prepare the shared package automatically.

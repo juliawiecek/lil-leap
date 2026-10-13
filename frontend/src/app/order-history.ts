@@ -42,7 +42,7 @@ export class OrderHistory implements OnInit, OnDestroy {
     this.routing = inject(PageState, { optional: true })?.connect(signal('History'), PAGE_PATHS, [
       { key: 'from', value: this.from, date: true }, { key: 'to', value: this.to, date: true },
       { key: 'status', value: this.status, allowed: this.statusOptions.map(option => option.value) },
-    ], () => { if (this.routing) void this.load(); });
+    ], () => { if (this.routing) { void this.load(); } });
   }
   ngOnInit(): void {
     void this.load();

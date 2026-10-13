@@ -408,14 +408,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) return 0;
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
     const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
     return Math.round(percent * 100) / 100;
   }
 
   private defaultThresholdDollars(): number {
     const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) return byRisk;
+    if (byRisk) { return byRisk; }
     return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
   }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
@@ -433,7 +433,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   async refreshPortfolio(): Promise<void> {
     try {
       const portfolio = await this.portfolioClient.load();
-      if (this.destroyed) return;
+      if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
@@ -464,7 +464,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
   #schedulePrices(): void {
-    if (this.destroyed) return;
+    if (this.destroyed) { return; }
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) {
       return;
@@ -515,7 +515,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.message.set('Order is still processing. Status updates continue in Orders.');
       return;
     }
-    if (this.destroyed) return;
+    if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
 
@@ -545,8 +545,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'orderStatus', value: this.orderStatus, allowed: ['All','Submitted','Accepted','Pending','Delayed','Filled','Rejected'] }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers','52W High/Low'] }
     ], () => {
       const quote = this.quote(this.symbol());
-      if (this.selected() !== quote) this.setTicketQuote(quote);
-      if (quote.symbol !== this.symbol()) this.message.set('That symbol is unavailable.');
+      if (this.selected() !== quote) { this.setTicketQuote(quote); }
+      if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
@@ -560,7 +560,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
     clearTimeout(this.#ordersPollTimer);
-    if (this.#clockTimer) clearInterval(this.#clockTimer);
+    if (this.#clockTimer) { clearInterval(this.#clockTimer); }
   }
 
   ngOnInit(): void {

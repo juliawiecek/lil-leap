@@ -97,3 +97,7 @@ insights/src/main/java/com/neueda/leap/marketdata/dto/package-info.java
 
 # Angular build cache (including root-level CLI invocations)
 .angular/
+
+# Shared session package reports and Python caches
+shared/session-core/coverage/
+__pycache__/
