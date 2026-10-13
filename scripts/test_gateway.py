@@ -28,7 +28,7 @@ def main():
                             (ROOT / 'gateway/proxy-headers.conf').read_text())
     upstreams = {'holdings:8080': 18080, 'auth:8081': 18081, 'orders:8082': 18082,
                  'quote-service:8083': 18083, 'insights:8084': 18084,
-                 'frontend:80': 18085, 'insights-frontend:80': 18086}
+                 'frontend:8080': 18085, 'insights-frontend:8080': 18086}
     for name, port in sorted(upstreams.items(), key=lambda entry: -len(entry[0])):
         config = config.replace(name, f'127.0.0.1:{port}')
 
@@ -74,8 +74,8 @@ def main():
             (18420, 'GET', '/api/v1/cash/balance/test', 'holdings:8080'),
             (18420, 'POST', '/auth/login', 'auth:8081'),
             (18420, 'GET', '/rules/tier-eligibility', 'auth:8081'),
-            (18420, 'GET', '/', 'frontend:80'),
-            (18421, 'GET', '/', 'insights-frontend:80'),
+            (18420, 'GET', '/', 'frontend:8080'),
+            (18421, 'GET', '/', 'insights-frontend:8080'),
             (18421, 'GET', '/api/v1/reports/summary', 'insights:8084'),
             (18421, 'POST', '/auth/login', 'auth:8081'),
             (18421, 'POST', '/api/v1/orders', None),

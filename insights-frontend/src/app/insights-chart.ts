@@ -125,7 +125,9 @@ export class InsightsChart {
     );
   });
   shortLabel(label: string) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(label)) return label;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(label)) {
+      return label;
+    }
     return new Date(label + 'T00:00:00Z').toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -137,11 +139,15 @@ export class InsightsChart {
   readonly prefix = input('$');
   readonly max = computed(() => Math.max(1, ...this.points().map((p) => p.value)) * 1.15);
   readonly divisor = computed(() => {
-    if (this.max() >= 1000000) return 1000000;
+    if (this.max() >= 1000000) {
+      return 1000000;
+    }
     return this.max() >= 1000 ? 1000 : 1;
   });
   readonly suffix = computed(() => {
-    if (this.divisor() === 1000000) return 'M';
+    if (this.divisor() === 1000000) {
+      return 'M';
+    }
     return this.divisor() === 1000 ? 'K' : '';
   });
   x(i: number) {

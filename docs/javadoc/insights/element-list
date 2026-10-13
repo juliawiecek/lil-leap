@@ -2,4 +2,11 @@ com.neueda.leap
 com.neueda.leap.common.exception
 com.neueda.leap.config
 com.neueda.leap.reporting
+com.neueda.leap.reporting.controller
+com.neueda.leap.reporting.dto
+com.neueda.leap.reporting.entity
+com.neueda.leap.reporting.enums
+com.neueda.leap.reporting.model
+com.neueda.leap.reporting.repository
+com.neueda.leap.reporting.service
 com.neueda.leap.security

@@ -125,14 +125,9 @@ loadScripts(document, 'script');</script>
 <div class="block">Looks up an earlier submission using the account-scoped idempotency key.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#insert(java.util.UUID,java.util.UUID,java.lang.String,java.util.UUID,java.lang.String,long,java.lang.String,java.math.BigDecimal)" class="member-name-link">insert</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)" class="member-name-link">insert</a><wbr>(<a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientReference,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side,
- long&nbsp;quantity,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent)</code></div>
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.</div>
 </div>
@@ -194,27 +189,17 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="insert(java.util.UUID,java.util.UUID,java.lang.String,java.util.UUID,java.lang.String,long,java.lang.String,java.math.BigDecimal)">
+<section class="detail" id="insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)">
 <h3>insert</h3>
-<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</span>&nbsp;<span class="element-name">insert</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</span>&nbsp;<span class="element-name">insert</span><wbr><span class="parameters">(<a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientReference,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side,
- long&nbsp;quantity,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent)</span></div>
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</span></div>
 <div class="block">Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
-<dd><code>accountId</code> - persistent account identifier</dd>
-<dd><code>instrumentId</code> - persistent instrument identifier</dd>
-<dd><code>symbol</code> - instrument trading symbol</dd>
-<dd><code>clientReference</code> - caller-supplied idempotency key, scoped to the account</dd>
-<dd><code>side</code> - order side, BUY or SELL</dd>
-<dd><code>quantity</code> - number of units in the order</dd>
-<dd><code>orderType</code> - order type, such as MARKET</dd>
-<dd><code>bufferPercent</code> - order-specific execution tolerance percentage, or null to use the account default</dd>
+<dd><code>request</code> - validated order submission, normalized before persistence</dd>
+<dd><code>instrumentId</code> - resolved persistent instrument identifier</dd>
+<dd><code>symbol</code> - resolved instrument trading symbol</dd>
 <dt>Returns:</dt>
 <dd>inserted order, or empty when the idempotency key conflicts</dd>
 </dl>

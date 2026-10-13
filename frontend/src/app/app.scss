@@ -527,8 +527,8 @@
     }
 
     .auth-tab.active {
-      background: rgba(255, 255, 255, 0.075);
-      color: #f2f2ee;
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
       box-shadow: 0 5px 18px rgba(0, 0, 0, 0.2);
     }
 
@@ -554,10 +554,15 @@
       font-weight: 500;
     }
 
-    .field-row a {
+    .field-row .text-link {
+      padding: 0;
+      border: 0;
+      background: none;
       color: #90aa81;
+      font: inherit;
       font-size: 12px;
       text-decoration: none;
+      cursor: pointer;
     }
 
     .input-wrap {
@@ -656,17 +661,6 @@
     .auth-footer nav {
       display: flex;
       gap: 22px;
-    }
-
-    .auth-footer a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .auth-footer a:hover,
-    .auth-footer a:focus-visible {
-      color: rgba(238, 238, 238, 0.72);
-      outline: none;
     }
 
     body.brand-phase .chart-stage {
@@ -896,7 +890,7 @@
 .auth-fields .field-group input { height: 44px; }
 .auth-fields .field-row { min-height: 20px; }
 .auth-shell:not(.signup-layout) .auth-fields .field-group { grid-column: 1 / -1; }
-.signup-layout .auth-fields .field-row a { display: none; }
+.signup-layout .auth-fields .field-row .text-link { display: none; }
 .signup-layout .auth-panel { padding-block: 18px; }
 .signup-layout .auth-subtitle, .signup-layout .auth-tabs { margin-bottom: 12px; }
 .signup-layout .form-status:empty { margin: 0; min-height: 0; }

@@ -60,9 +60,9 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  orderSubmissionClient: OrderSubmissionClient;
-  orderHistoryClient: OrderHistoryClient;
-  portfolioClient: PortfolioClient;
+  readonly orderSubmissionClient: OrderSubmissionClient;
+  readonly orderHistoryClient: OrderHistoryClient;
+  readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -120,8 +120,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   );
   readonly screened = computed(() =>
     this.quotes.filter((q) => {
-      if (this.filter() === 'Gainers') return q.change > 0;
-      return this.filter() !== 'Decliners' || q.change < 0;
+      const filter = this.filter();
+      if (filter === 'Gainers') {
+        return q.change > 0;
+      }
+      if (filter === 'Decliners') {
+        return q.change < 0;
+      }
+      return true;
     }),
   );
   /** Positions, cash and total value, loaded from the backend and reloaded after each fill. */
@@ -161,7 +167,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
   readonly filteredOrders = computed(() => {
     const status = this.orderStatus();
-    if (status === 'All') return this.orders();
+    if (status === 'All') {
+      return this.orders();
+    }
     return this.orders().filter((order) => order.status === status);
   });
   readonly orderType = signal('Limit');
@@ -217,13 +225,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() => {
-    if (this.period() === '1D')
+  readonly chartTimes = computed(() => this.chartLabelsFor(this.period()));
+
+  private chartLabelsFor(period: string): string[] {
+    if (period === '1D') {
       return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-    return this.period() === '1W'
-      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  });
+    }
+    if (period === '1W') {
+      return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    }
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+  }
   quote(symbol: string): Quote {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }
@@ -239,7 +251,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   navigate(page: string): void {
     this.page.set(page);
-    if (page === 'Portfolio') this.bottomTab.set('Positions');
+    if (page === 'Portfolio') {
+      this.bottomTab.set('Positions');
+    }
   }
   openModal(kind: string): void {
     this.modal.set(kind);
@@ -254,7 +268,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.dialog()?.nativeElement.close();
   }
   backdrop(event: MouseEvent): void {
-    if (event.target === this.dialog()?.nativeElement) this.closeModal();
+    if (event.target === this.dialog()?.nativeElement) {
+      this.closeModal();
+    }
   }
   spark(seed: number, down = false): string {
     return Array.from(
@@ -266,34 +282,42 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   validate(): string {
     const count = Number(this.quantity()),
       price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price;
-    if (!Number.isSafeInteger(count) || count <= 0)
+    if (!Number.isSafeInteger(count) || count <= 0) {
       return 'Enter a whole number of shares greater than zero.';
-    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total()))
+    }
+    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
       return 'Enter a valid order price.';
-    if (this.side() === 'Buy' && this.total() > this.buyingPower())
+    }
+    if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
+    }
     if (
       this.side() === 'Sell' &&
       count > (this.positions().find((p) => p.symbol === this.selected().symbol)?.quantity || 0)
-    )
+    ) {
       return 'You can only sell shares you hold.';
+    }
     if (
       this.takeProfit() &&
       (!Number.isFinite(Number(this.profitPrice())) || Number(this.profitPrice()) <= price)
-    )
+    ) {
       return 'Take profit must be above the order price.';
+    }
     if (
       this.stopLoss() &&
       (!Number.isFinite(Number(this.stopPrice())) ||
         Number(this.stopPrice()) <= 0 ||
         Number(this.stopPrice()) >= price)
-    )
+    ) {
       return 'Stop loss must be positive and below the order price.';
+    }
     return '';
   }
   reviewOrder(): void {
     this.message.set(this.validate());
-    if (!this.message()) this.openModal('review');
+    if (!this.message()) {
+      this.openModal('review');
+    }
   }
   async confirmOrder(): Promise<void> {
     const error = this.validate();
@@ -314,7 +338,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return;
     }
     // Prevent double-click while submission is in flight
-    if (this.submitting()) return;
+    if (this.submitting()) {
+      return;
+    }
     this.submitting.set(true);
     try {
       const count = Number(this.quantity());
@@ -382,10 +408,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
   async refreshPrices(): Promise<void> {
     const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
-    if (!ids.length) return;
+    if (!ids.length) {
+      return;
+    }
     try {
       const bids = await this.portfolioClient.latestBids(ids);
-      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      for (const [id, bid] of bids) {
+        this.#bids.set(id, bid);
+      }
       this.#render();
     } catch {
       // Keep showing the last known values; the next tick retries.
@@ -393,7 +423,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   #schedulePrices(): void {
     clearTimeout(this.#priceTimer);
-    if (!this.#portfolio.holdings.length) return;
+    if (!this.#portfolio.holdings.length) {
+      return;
+    }
     this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
@@ -424,15 +456,21 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
     clearTimeout(this.#trackTimer);
-    if (!(await this.refreshOrders())) return;
+    if (!(await this.refreshOrders())) {
+      return;
+    }
     const order = this.orders().find((o) => o.id === orderId);
     if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
       // Reload balances first so a load error never replaces the fill message.
-      if (order.status === 'Filled') await this.refreshPortfolio();
+      if (order.status === 'Filled') {
+        await this.refreshPortfolio();
+      }
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }
-    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
+      return;
+    }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   createAlert(): void {

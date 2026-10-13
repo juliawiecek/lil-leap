@@ -12,7 +12,7 @@ spring:
     log-request-details: false
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:nexttrade-shared-dev-secret-32bytes-min}
+    secret: ${APP_JWT_SECRET}
 server:
   port: ${PORT:8080}
   servlet:

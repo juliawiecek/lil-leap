@@ -38,12 +38,13 @@ export function investableCapacity(netWorthBracket: NetWorthBracket, annualIncom
 export function assignTier(netWorthBracket: NetWorthBracket, annualIncome?: string | null): TierAssignment {
   const capacity = investableCapacity(netWorthBracket, annualIncome);
 
-  if (!(capacity >= TIER_MIN_BALANCE[TraderLevel.NOVICE])) {
+  if (capacity < TIER_MIN_BALANCE[TraderLevel.NOVICE]) {
     throw new InsufficientInvestableAssetsException();
   }
-  const traderLevel = capacity >= TIER_MIN_BALANCE[TraderLevel.ADVANCED]
-    ? TraderLevel.ADVANCED
-    : TraderLevel.NOVICE;
+  let traderLevel = TraderLevel.NOVICE;
+  if (capacity >= TIER_MIN_BALANCE[TraderLevel.ADVANCED]) {
+    traderLevel = TraderLevel.ADVANCED;
+  }
 
   return { traderLevel, minBalanceRequirement: TIER_MIN_BALANCE[traderLevel].toFixed(2) };
 }

@@ -14,6 +14,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
+| GET | `/api/v1/orders/quote-preview` | Indicative price and total before submitting (TRADER only) |
 
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.

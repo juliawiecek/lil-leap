@@ -1,6 +1,5 @@
 package com.neueda.leap.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -26,6 +25,24 @@ class SensitiveLogConverterTest {
     void keepsUsefulNonSensitiveEvents() {
         assertThat(converter.transform(null, "Login failed status=401 requestId=123"))
                 .isEqualTo("Login failed status=401 requestId=123");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\"", "'"})
+    void masksLongEscapedValuesWithoutLosingFollowingFields(String quote) {
+        String secret = ("value\\" + quote).repeat(20_000);
+        String input = "password=" + quote + secret + quote + ",status=ok";
+        assertThat(converter.transform(null, input)).isEqualTo("password=[REDACTED],status=ok");
+    }
+
+    @Test
+    void masksMultipleFieldsAndKeepsDelimitedDiagnostics() {
+        assertThat(converter.transform(null, "password=first,token='second',status=ok"))
+                .isEqualTo("password=[REDACTED],token=[REDACTED],status=ok");
+        assertThat(converter.transform(null, "access_token=first&action=read"))
+                .isEqualTo("access_token=[REDACTED]&action=read");
+        assertThat(converter.transform(null, "password=\"" + "x".repeat(100_000)))
+                .isEqualTo("password=[REDACTED]");
     }
 
 }
