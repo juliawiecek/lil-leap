@@ -6,6 +6,7 @@ COPY . .
 RUN npm run build
 
 FROM node:20-alpine
+LABEL maintainer="Lil Leap"
 WORKDIR /app
 ENV NODE_ENV=production
 

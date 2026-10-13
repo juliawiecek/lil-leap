@@ -90,7 +90,7 @@
           <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
         </div>
 
-        <form #authForm novalidate (submit)="onSubmit($event, authForm)">
+        <form #authForm method="post" novalidate (submit)="onSubmit($event, authForm)">
 
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
@@ -106,7 +106,7 @@
           <div class="field-group">
             <div class="field-row">
               <label for="password">Password</label>
-              <a href="#" [style.visibility]="authMode() === 'signup' ? 'hidden' : 'visible'" (click)="showPasswordRecovery($event)">Forgot password?</a>
+              <button type="button" class="text-link" [style.visibility]="authMode() === 'signup' ? 'hidden' : 'visible'" (click)="showPasswordRecovery($event)">Forgot password?</button>
             </div>
             <div class="input-wrap">
               <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="authMode() === 'signup' ? 'new-password' : 'current-password'" [attr.minlength]="authMode() === 'signup' ? 12 : null" [attr.aria-describedby]="authMode() === 'signup' && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" required (input)="updatePassword($any($event.target).value)" />
@@ -144,9 +144,9 @@
     <footer class="auth-footer">
       <span>© 2026 NextTrade. All rights reserved.</span>
       <nav aria-label="Legal">
-        <a href="#">Privacy</a>
-        <a href="#">Security</a>
-        <a href="#">Support</a>
+        <span>Privacy</span>
+        <span>Security</span>
+        <span>Support</span>
       </nav>
     </footer>
   </section>
