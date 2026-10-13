@@ -70,7 +70,7 @@ email is registered. For a registered email it stores the SHA-256 hash of a rand
 minutes, and hands the link to a `PasswordResetDelivery`. The VM has no network, so
 the default `FileOutboxDelivery` writes one `.eml` file per reset to
 `PASSWORD_RESET_OUTBOX_DIR`; in Compose that is the `password_reset_outbox` volume:
-`docker compose exec auth sh -c 'cat /app/outbox/*.eml'`. `reset-password` sets the
+`docker-compose exec auth sh -c 'cat /app/outbox/*.eml'`. `reset-password` sets the
 new password (same rule as registration), deletes the token and revokes every refresh
 token the user holds, in one transaction. Raw tokens are never logged.
 
