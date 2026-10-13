@@ -143,7 +143,11 @@ export function buckets(rows: Trade[], cadence: string) {
     .map(([label, value]) => ({ label, value }));
 }
 export function csvCell(value: unknown) {
-  let text = String(value ?? '');
+  let text = value == null
+    ? ''
+    : typeof value === 'object'
+      ? JSON.stringify(value)
+      : String(value);
   if (/^[=+@\-\t\r]/.test(text)) text = "'" + text;
   return '"' + text.replaceAll('"', '""') + '"';
 }

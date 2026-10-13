@@ -34,7 +34,7 @@ class CountingProvider:
         return self.provider.get_quote(symbol)
 
 
-@pytest.fixture()
+@pytest.fixture
 def quote_file(tmp_path: Path) -> Path:
     path = tmp_path / "quotes.csv"
     quotes = generate_quotes(periods=10, seed=42)

@@ -42,9 +42,9 @@ interface Quote {
   styleUrl: './novice-dashboard.scss',
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
-  orderSubmissionClient: OrderSubmissionClient;
-  orderHistoryClient: OrderHistoryClient;
-  portfolioClient: PortfolioClient;
+  readonly orderSubmissionClient: OrderSubmissionClient;
+  readonly orderHistoryClient: OrderHistoryClient;
+  readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -161,7 +161,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    * and a buy on the first tradable stock; the dialog's picker can change it.
    */
   openTrade(side = 'Buy', symbol?: string): void {
-    const start = symbol ?? (side === 'Sell' ? this.holdings()[0]?.symbol : undefined) ?? this.tradableQuotes()[0]?.symbol;
+    const start = this.resolveTradeStartSymbol(side, symbol);
     this.tradeQuote.set(this.quotes.find((q) => q.symbol === start) || this.quotes[0]);
     this.side.set(side);
     this.quantity.set('');
@@ -169,6 +169,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.tradeMessage.set('');
     this.query.set('');
     this.openModal('trade');
+  }
+
+  private resolveTradeStartSymbol(side: string, symbol?: string): string | undefined {
+    if (symbol) {
+      return symbol;
+    }
+    if (side === 'Sell') {
+      return this.holdings()[0]?.symbol;
+    }
+    return this.tradableQuotes()[0]?.symbol;
   }
   /** Switches the open trade to another stock and drops any review of the previous one. */
   chooseTradeSymbol(symbol: string): void {
@@ -268,7 +278,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (row?.status === 'ACCEPTED') this.tradeMessage.set('Order accepted. Waiting for it to fill…');
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
-  constructor(private auth: AuthService) {
+  constructor(private readonly auth: AuthService) {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);

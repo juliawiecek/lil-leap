@@ -101,29 +101,36 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Lists cash balances for the given client via the <code>/clients/{id}/cash</code> shape.</div>
 </div>
-<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color"><span class="type-name-label">OrderHistoryController.</span><code><a href="../../portfolio/controller/OrderHistoryController.html#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id,
+<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientPortfolioController.</span><code><a href="../../portfolio/controller/ClientPortfolioController.html#getHolding(java.util.UUID,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getHolding</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">TS-11.1c AC1: Returns detail for one holding by account and instrument.</div>
+</div>
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderHistoryController.</span><code><a href="../../portfolio/controller/OrderHistoryController.html#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;from,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;to,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;status,
  <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last odd-row-color">
+<div class="col-last even-row-color">
 <div class="block">Returns the caller's own orders, newest first.</div>
 </div>
-<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../portfolio/dto/PortfolioSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">PortfolioSummaryResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#getPortfolioSummary(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getPortfolioSummary</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientId,
+<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../portfolio/dto/PortfolioSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">PortfolioSummaryResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#getPortfolioSummary(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getPortfolioSummary</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientId,
  <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last even-row-color">
+<div class="col-last odd-row-color">
 <div class="block">TS-11.3 AC1: Returns combined portfolio summary for a client.</div>
 </div>
-<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-last even-row-color">
 <div class="block">Lists holdings owned by the authenticated caller.</div>
 </div>
-<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/OrderSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderSummaryResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#orders(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">orders</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../portfolio/dto/OrderSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderSummaryResponse</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../portfolio/controller/ClientFinancialController.html#orders(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">orders</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-last odd-row-color">
 <div class="block">Lists order history owned by the authenticated caller.</div>
 </div>
 </div>

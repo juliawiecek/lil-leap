@@ -83,7 +83,8 @@
         <button
           type="button"
           class="avatar"
-          aria-label="Account settings"
+          [attr.aria-label]="(name() || 'A').slice(0, 1).toUpperCase() + ' account settings'"
+          title="Account settings"
           (click)="navigate('Settings')"
         >
           {{ (name() || 'A').slice(0, 1).toUpperCase() }}
@@ -493,7 +494,7 @@
                     </div>
                   }
                 </div>
-                <svg class="exposure-ring" role="img" aria-label="Equities 82.4%, Options 5.6%, Cash 12%, Other 0%">
+                <svg class="exposure-ring" aria-label="Equities 82.4%, Options 5.6%, Cash 12%, Other 0%">
                   <foreignObject width="100%" height="100%">
                     <div xmlns="http://www.w3.org/1999/xhtml"><b>$284.7K</b><small>Total</small></div>
                   </foreignObject>

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
-const { OrderSubmissionClient } = await import('../src/app/order-submission-api.ts');
+const { OrderSubmissionClient, OrderSubmissionError } = await import('../src/app/order-submission-api.ts');
 
 // Mock AuthService that provides an accessToken
 class MockAuthService {
@@ -250,4 +250,137 @@ test('price alerts reject invalid prices and retain the selected symbol', t => {
   }
   desk.choose(desk.quote('TSLA')); desk.alertPrice.set('150'); desk.createAlert();
   assert.deepEqual(desk.alerts(), [{ symbol: 'TSLA', price: 150 }]);
+});
+
+test('portfolio and order load failures retain values and show safe fallback messages', async t => {
+  const desk = tradingDesk(t);
+  const positions = desk.positions();
+  desk.portfolioClient = { load: async () => { throw 'unavailable'; } };
+  await desk.refreshPortfolio();
+  assert.equal(desk.message(), 'Could not load your balances.');
+  assert.deepEqual(desk.positions(), positions);
+  desk.portfolioClient.load = async () => { throw new Error('Balances unavailable'); };
+  await desk.refreshPortfolio();
+  assert.equal(desk.message(), 'Balances unavailable');
+  desk.orderHistoryClient = { list: async () => { throw null; } };
+  assert.equal(await desk.refreshOrders(), false);
+  assert.equal(desk.message(), 'Could not load your orders.');
+});
+
+test('destroying dashboard cancels order and price polling', async t => {
+  const desk = tradingDesk(t);
+  let orders = 0, quotes = 0;
+  desk.orderHistoryClient = { list: async () => { orders++; return []; } };
+  desk.portfolioClient.latestBids = async () => { quotes++; return new Map(); };
+  await desk.refreshPortfolio();
+  await desk.trackOrder('pending');
+  desk.ngOnDestroy();
+  t.mock.timers.tick(10000);
+  await flush();
+  assert.equal(orders, 1);
+  assert.equal(quotes, 1);
+});
+
+test('zero-value positions have zero portfolio weights', t => {
+  const desk = tradingDesk(t);
+  desk.applyPortfolio({ cash: 0, holdings: [{ symbol: 'AAPL', quantity: 0, averageCost: 0 }] });
+  assert.equal(desk.portfolio(), 0);
+  assert.equal(desk.positions()[0].weight, 0);
+});
+
+test('submission guards loading and duplicate requests and reports backend errors', async t => {
+  const desk = tradingDesk(t);
+  desk.loadingAccounts.set(true);
+  await desk.confirmOrder();
+  assert.match(desk.message(), /Loading accounts/);
+  await desk.loadTradingData();
+  let calls = 0;
+  desk.orderSubmissionClient.submit = async () => { calls++; throw new Error('internal details'); };
+  desk.submitting.set(true);
+  await desk.confirmOrder();
+  assert.equal(calls, 0);
+  desk.submitting.set(false);
+  await desk.confirmOrder();
+  assert.equal(desk.message(), 'Submission failed. Please try again.');
+  assert.equal(desk.submitting(), false);
+  desk.orderSubmissionClient.submit = async () => { throw new OrderSubmissionError('Trading unavailable', 503); };
+  await desk.confirmOrder();
+  assert.equal(desk.message(), 'Trading unavailable');
+});
+
+test('sell submission uses backend instrument and stops tracking rejected orders', async t => {
+  const desk = tradingDesk(t);
+  await desk.loadTradingData();
+  desk.side.set('Sell'); desk.quantity.set('2');
+  let request;
+  desk.orderSubmissionClient.submit = async value => {
+    request = value; return { orderId: 'o1', status: 'SUBMITTED' };
+  };
+  desk.orderHistoryClient = new ScriptedOrderHistory([historyRow('REJECTED')]);
+  await desk.confirmOrder(); await flush();
+  assert.equal(request.side, 'SELL');
+  assert.equal(request.instrumentId, 'aapl-uuid');
+  assert.equal(desk.message(), 'Order o1 rejected.');
+});
+
+test('tracking stops when its deadline has elapsed', async t => {
+  const desk = tradingDesk(t);
+  const history = new ScriptedOrderHistory([]);
+  desk.orderHistoryClient = history;
+  await desk.trackOrder('o1', 0);
+  t.mock.timers.tick(10000); await flush();
+  assert.equal(history.calls, 1);
+});
+
+test('search, order filters and chart periods update the displayed data', t => {
+  const desk = tradingDesk(t);
+  desk.query.set('  apple  ');
+  assert.deepEqual(desk.results().map(q => q.symbol), ['AAPL']);
+  desk.orders.set([{ id: 'one', status: 'Filled' }, { id: 'two', status: 'Rejected' }]);
+  desk.orderStatus.set('All');
+  assert.equal(desk.filteredOrders().length, 2);
+  desk.orderStatus.set('Rejected');
+  assert.deepEqual(desk.filteredOrders().map(o => o.id), ['two']);
+  desk.period.set('1M');
+  assert.deepEqual(desk.chartTimes(), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']);
+  assert.equal(desk.quote('unknown'), desk.quotes[0]);
+  desk.navigate('Portfolio');
+  assert.equal(desk.bottomTab(), 'Positions');
+});
+
+test('review creates a fresh order reference and backdrop closes only the dialog', t => {
+  const desk = tradingDesk(t);
+  let opened = 0, closed = 0;
+  const dialog = { showModal: () => opened++, close: () => closed++ };
+  t.mock.method(desk, 'dialog', () => ({ nativeElement: dialog }));
+  desk.submittedOrderId.set('old-order');
+  const reference = desk.clientReference();
+  desk.reviewOrder();
+  assert.equal(opened, 1);
+  assert.notEqual(desk.clientReference(), reference);
+  assert.equal(desk.submittedOrderId(), null);
+  desk.backdrop({ target: {} });
+  assert.equal(closed, 0);
+  desk.backdrop({ target: dialog });
+  assert.equal(closed, 1);
+  const reviewedReference = desk.clientReference();
+  desk.openModal('alert');
+  assert.equal(desk.clientReference(), reviewedReference);
+});
+
+test('missing active account or stale instrument mapping prevents submission', async t => {
+  const desk = tradingDesk(t);
+  desk.orderSubmissionClient.getAccounts = async () => [{ account_id: 'a1', account_status: 'CLOSED', trading_enabled: false }];
+  await desk.loadTradingData();
+  let calls = 0;
+  desk.orderSubmissionClient.submit = async () => { calls++; };
+  await desk.confirmOrder();
+  assert.equal(desk.message(), 'No active account selected.');
+  assert.equal(desk.submitting(), false);
+  desk.selectedAccount.set({ account_id: 'a1' });
+  desk.selected.set({ ...desk.selected(), instrumentId: 'stale-id' });
+  await desk.confirmOrder();
+  assert.match(desk.message(), /not available to trade/);
+  assert.equal(desk.submitting(), false);
+  assert.equal(calls, 0);
 });
