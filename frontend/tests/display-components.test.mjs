@@ -22,11 +22,11 @@ test('icons render requested paths and fall back for unknown names', async t => 
 test('server tier selects the visible dashboard and child sign-out reaches the parent', async t => {
   const fixture = await render(t, StockDashboard, { name: 'Ada', level: 'NOVICE' });
   const root = fixture.nativeElement;
-  assert.equal(root.querySelector('app-novice-dashboard').hidden, false);
-  assert.equal(root.querySelector('app-advanced-dashboard').hidden, true);
+  assert.ok(root.querySelector('app-novice-dashboard'));
+  assert.equal(root.querySelector('app-advanced-dashboard'), null);
   fixture.componentRef.setInput('level', 'ADVANCED'); fixture.detectChanges();
-  assert.equal(root.querySelector('app-novice-dashboard').hidden, true);
-  assert.equal(root.querySelector('app-advanced-dashboard').hidden, false);
+  assert.equal(root.querySelector('app-novice-dashboard'), null);
+  assert.ok(root.querySelector('app-advanced-dashboard'));
   let emitted = 0; fixture.componentInstance.signOut.subscribe(() => emitted++);
   const settings = [...root.querySelectorAll('app-advanced-dashboard button')].find(b => b.textContent.trim() === 'Settings');
   assert.ok(settings); settings.click(); fixture.detectChanges();

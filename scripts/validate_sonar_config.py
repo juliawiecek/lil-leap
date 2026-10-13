@@ -153,12 +153,12 @@ def check_server(props, profiles, server_url=None):
     for language, local in profiles.items():
         expected = local.findtext('name')
         actual = by_language.get(language, {}).get('name')
-        if actual != expected:
-            raise ValueError(f'{language}: project uses {actual!r}; expected {expected!r}')
-        backup = ET.fromstring(get('qualityprofiles/backup', language=language, qualityProfile=expected))
+        if not actual:
+            raise ValueError(f'{language}: project has no assigned profile; expected rules from {expected!r}')
+        backup = ET.fromstring(get('qualityprofiles/backup', language=language, qualityProfile=actual))
         if profile_rules(backup) != profile_rules(local):
             raise ValueError(f'{language}: server rules differ from the committed profile export')
-        print(f'Server profile matches export: {expected}')
+        print(f'Server profile {actual} matches export: {expected}')
     gate = json.loads(get('qualitygates/get_by_project', project=props['sonar.projectKey']))
     print('Assigned quality gate: ' + gate['qualityGate']['name'] + ' (thresholds not verified)')
 

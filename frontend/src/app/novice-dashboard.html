@@ -363,7 +363,7 @@
               }
             </section>
           }
-          @if (activeTab() === 'Orders') {
+          @if (activeTab() === 'Orders' || activeTab() === 'History') {
             <section class="panel expanded-list">
               <div class="panel-heading"><h2>Order history</h2></div>
               <app-order-history />
