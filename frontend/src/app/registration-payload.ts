@@ -20,7 +20,9 @@ export function toTraderRegistration(
   const request: Record<string, string | boolean> = { user_role: 'TRADER', email: email.trim(), password };
   for (const [key, raw] of Object.entries(fields)) {
     const value = raw.trim();
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
     request[key] = BOOLEAN_FIELDS.has(key) ? value === 'true' : value;
   }
   return request;

@@ -62,17 +62,23 @@ export class SessionKeeper {
 
   /** Call on user input (clicks, keys, scrolling). Cheap enough for every event. */
   recordActivity(): void {
-    if (this.running) this.#lastActivity = this.#now();
+    if (this.running) {
+      this.#lastActivity = this.#now();
+    }
   }
 
   stop(): void {
-    if (this.#timer !== null) this.#clearInterval(this.#timer);
+    if (this.#timer !== null) {
+      this.#clearInterval(this.#timer);
+    }
     this.#timer = null;
   }
 
   /** Runs on the interval; exposed for tests. */
   async check(): Promise<void> {
-    if (!this.running || this.#refreshing) return;
+    if (!this.running || this.#refreshing) {
+      return;
+    }
     const now = this.#now();
 
     if (now - this.#lastActivity >= this.#inactivityMs) {
@@ -82,8 +88,12 @@ export class SessionKeeper {
 
     const expiresAt = this.#client.accessTokenExpiresAt;
     const activeSinceRefresh = this.#lastActivity > this.#lastRefresh;
-    if (expiresAt !== null && expiresAt - now > this.#refreshAheadMs) return;
-    if (expiresAt !== null && !activeSinceRefresh && expiresAt > now) return;
+    if (expiresAt !== null && expiresAt - now > this.#refreshAheadMs) {
+      return;
+    }
+    if (expiresAt !== null && !activeSinceRefresh && expiresAt > now) {
+      return;
+    }
 
     // Due for a refresh and the user has been active (or the token is gone/expired): renew or end.
     if (!activeSinceRefresh) {
@@ -102,7 +112,9 @@ export class SessionKeeper {
   }
 
   #expire(): void {
-    if (!this.running) return;
+    if (!this.running) {
+      return;
+    }
     this.stop();
     void this.#client.logout();
     this.#onExpired();

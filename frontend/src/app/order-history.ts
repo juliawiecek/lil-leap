@@ -81,14 +81,18 @@ export class OrderHistory implements OnInit {
     this.error.set('');
     try {
       const rows = await this.#orders.list({ from: this.from(), to: this.to(), status: this.status() });
-      if (request === this.#request) this.rows.set(rows);
+      if (request === this.#request) {
+        this.rows.set(rows);
+      }
     } catch (e) {
       if (request === this.#request) {
         this.rows.set([]);
         this.error.set(e instanceof Error ? e.message : 'Could not load your orders. Please try again.');
       }
     } finally {
-      if (request === this.#request) this.loading.set(false);
+      if (request === this.#request) {
+        this.loading.set(false);
+      }
     }
   }
 }
