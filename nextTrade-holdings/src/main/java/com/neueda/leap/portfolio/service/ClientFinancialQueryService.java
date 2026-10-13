@@ -6,8 +6,10 @@ import com.neueda.leap.portfolio.dto.HoldingResponse;
 import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
 import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -25,6 +27,21 @@ import java.time.Instant;
 @Service
 @Transactional(readOnly = true)
 public class ClientFinancialQueryService {
+
+    private static final String ACCOUNT_NOT_FOUND = "Account not found";
+    private static final String COL_ACCOUNT_ID = "account_id";
+    private static final String COL_INSTRUMENT_ID = "instrument_id";
+    private static final String COL_SYMBOL = "symbol";
+    private static final String COL_INSTRUMENT_NAME = "instrument_name";
+    private static final String COL_CURRENCY = "currency";
+    private static final String COL_SETTLED_BALANCE = "settled_balance";
+    private static final String COL_PENDING_BALANCE = "pending_balance";
+    private static final String COL_AVAILABLE_BALANCE = "available_balance";
+    private static final String COL_TOTAL_BALANCE = "total_balance";
+    private static final String COL_AVG_COST = "avg_cost";
+    private static final String COL_MIDPOINT = "midpoint";
+    private static final String COL_QUANTITY = "quantity";
+    private static final String COL_UPDATED_AT = "updated_at";
 
     private static final String HOLDINGS_SQL = """
             SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
@@ -87,13 +104,13 @@ public class ClientFinancialQueryService {
     public List<HoldingResponse> getHoldings(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(HOLDINGS_SQL, (rs, rowNum) -> new HoldingResponse(
-                rs.getObject("account_id", UUID.class),
-                rs.getObject("instrument_id", UUID.class),
-                rs.getString("symbol"),
-                rs.getString("instrument_name"),
-                rs.getLong("quantity"),
-                rs.getBigDecimal("avg_cost"),
-                rs.getTimestamp("updated_at").toInstant()
+                rs.getObject(COL_ACCOUNT_ID, UUID.class),
+                rs.getObject(COL_INSTRUMENT_ID, UUID.class),
+                rs.getString(COL_SYMBOL),
+                rs.getString(COL_INSTRUMENT_NAME),
+                rs.getLong(COL_QUANTITY),
+                rs.getBigDecimal(COL_AVG_COST),
+                rs.getTimestamp(COL_UPDATED_AT).toInstant()
         ), authenticatedUserId);
     }
 
@@ -106,10 +123,10 @@ public class ClientFinancialQueryService {
     public List<CashBalanceResponse> getCashBalances(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(CASH_SQL, (rs, rowNum) -> new CashBalanceResponse(
-                rs.getObject("account_id", UUID.class),
-                rs.getString("currency"),
+                rs.getObject(COL_ACCOUNT_ID, UUID.class),
+                rs.getString(COL_CURRENCY),
                 rs.getBigDecimal("balance"),
-                rs.getTimestamp("updated_at").toInstant()
+                rs.getTimestamp(COL_UPDATED_AT).toInstant()
         ), authenticatedUserId);
     }
 
@@ -123,13 +140,13 @@ public class ClientFinancialQueryService {
     public List<CashBalanceDetailResponse> getCashBalancesDetailed(UUID authenticatedUserId) {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(CASH_DETAIL_SQL, (rs, rowNum) -> new CashBalanceDetailResponse(
-                rs.getObject("account_id", UUID.class),
-                rs.getString("currency"),
-                rs.getBigDecimal("settled_balance"),
-                rs.getBigDecimal("pending_balance"),
-                rs.getBigDecimal("available_balance"),
-                rs.getBigDecimal("total_balance"),
-                rs.getTimestamp("updated_at").toInstant()
+                rs.getObject(COL_ACCOUNT_ID, UUID.class),
+                rs.getString(COL_CURRENCY),
+                rs.getBigDecimal(COL_SETTLED_BALANCE),
+                rs.getBigDecimal(COL_PENDING_BALANCE),
+                rs.getBigDecimal(COL_AVAILABLE_BALANCE),
+                rs.getBigDecimal(COL_TOTAL_BALANCE),
+                rs.getTimestamp(COL_UPDATED_AT).toInstant()
         ), authenticatedUserId);
     }
 
@@ -143,8 +160,7 @@ public class ClientFinancialQueryService {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query("SELECT account_id FROM accounts WHERE user_id = ? ORDER BY account_id LIMIT 1",
                 (rs, row) -> rs.getObject(1, UUID.class), authenticatedUserId).stream().findFirst()
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Account not found"));
+                .orElseThrow(this::accountNotFound);
     }
 
     /**
@@ -175,19 +191,18 @@ public class ClientFinancialQueryService {
 
         List<HoldingResponse> holdings = jdbcTemplate.query(holdingsSql, (rs, rowNum) ->
             new HoldingResponse(
-                rs.getObject("account_id", UUID.class),
-                rs.getObject("instrument_id", UUID.class),
-                rs.getString("symbol"),
-                rs.getString("instrument_name"),
-                rs.getLong("quantity"),
-                rs.getBigDecimal("avg_cost"),
-                rs.getTimestamp("updated_at").toInstant()
+                rs.getObject(COL_ACCOUNT_ID, UUID.class),
+                rs.getObject(COL_INSTRUMENT_ID, UUID.class),
+                rs.getString(COL_SYMBOL),
+                rs.getString(COL_INSTRUMENT_NAME),
+                rs.getLong(COL_QUANTITY),
+                rs.getBigDecimal(COL_AVG_COST),
+                rs.getTimestamp(COL_UPDATED_AT).toInstant()
             ), authenticatedUserId, accountId);
 
         CashBalanceDetailResponse cash = getCashBalancesDetailed(authenticatedUserId).stream()
                 .filter(balance -> balance.accountId().equals(accountId)).findFirst()
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Account not found"));
+                .orElseThrow(this::accountNotFound);
 
         // Get latest quotes for valuation
         String quotesSql = """
@@ -204,7 +219,7 @@ public class ClientFinancialQueryService {
 
         java.util.Map<UUID, BigDecimal> priceMap = new java.util.HashMap<>();
         jdbcTemplate.query(quotesSql, (rs, rowNum) -> {
-            priceMap.put(rs.getObject("instrument_id", UUID.class), rs.getBigDecimal("midpoint"));
+            priceMap.put(rs.getObject(COL_INSTRUMENT_ID, UUID.class), rs.getBigDecimal(COL_MIDPOINT));
             return null;
         });
 
@@ -240,23 +255,27 @@ public class ClientFinancialQueryService {
         requireAuthenticatedUser(authenticatedUserId);
         return jdbcTemplate.query(ORDERS_SQL, (rs, rowNum) -> new OrderSummaryResponse(
                 rs.getObject("order_id", UUID.class),
-                rs.getObject("account_id", UUID.class),
-                rs.getObject("instrument_id", UUID.class),
-                rs.getString("symbol"),
+                rs.getObject(COL_ACCOUNT_ID, UUID.class),
+                rs.getObject(COL_INSTRUMENT_ID, UUID.class),
+                rs.getString(COL_SYMBOL),
                 rs.getObject("client_reference", UUID.class),
                 rs.getString("side"),
-                rs.getLong("quantity"),
+                rs.getLong(COL_QUANTITY),
                 rs.getString("order_type"),
                 rs.getString("status"),
                 rs.getTimestamp("submitted_at").toInstant(),
                 nullableInstant(rs.getTimestamp("accepted_at")),
-                rs.getTimestamp("updated_at").toInstant(),
+                rs.getTimestamp(COL_UPDATED_AT).toInstant(),
                 rs.getBigDecimal("buffer_percent")
         ), authenticatedUserId);
     }
 
     private static Instant nullableInstant(Timestamp value) {
         return value == null ? null : value.toInstant();
+    }
+
+    private ResponseStatusException accountNotFound() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND);
     }
 
     private static void requireAuthenticatedUser(UUID userId) {

@@ -219,7 +219,9 @@ export class App {
   useRole(role: string) {
     this.role.set(role);
     this.selectedTrade.set(null);
-    if (role === 'Analyst' && this.page() === 'Trade Investigation') this.navigate('Overview');
+    if (role === 'Analyst' && this.page() === 'Trade Investigation') {
+      this.navigate('Overview');
+    }
   }
   percent(value: number, total: number) {
     return total ? (value / total) * 100 : 0;
@@ -238,7 +240,7 @@ export class App {
       return;
     }
     let data: unknown[][];
-    if (name === 'Client Activity Summary')
+    if (name === 'Client Activity Summary') {
       data = [
         ['Client ID', 'Client', 'Portfolio segment', 'Activity', 'Joined'],
         ...this.clientRows().map((c) => [
@@ -249,7 +251,7 @@ export class App {
           c.joined,
         ]),
       ];
-    else if (name === 'Monthly Executive Report')
+    } else if (name === 'Monthly Executive Report') {
       data = [
         ['Metric', 'Value'],
         ['Filled notional USD', this.totals().volume],
@@ -258,7 +260,7 @@ export class App {
         ['Active trading clients', this.totals().active],
         ['New clients', this.newClients()],
       ];
-    else
+    } else {
       data = [
         [
           'Order ID',
@@ -283,6 +285,7 @@ export class App {
           t.submitted,
         ]),
       ];
+    }
     const csv = [
       ['Report', name],
       ['Period', this.start(), this.end()],

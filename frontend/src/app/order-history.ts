@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
@@ -13,7 +13,7 @@ import { OrderHistoryService } from './order-history.service';
   templateUrl: './order-history.html',
   styleUrl: './order-history.scss',
 })
-export class OrderHistory {
+export class OrderHistory implements OnInit {
   readonly #orders = inject(OrderHistoryService);
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
@@ -34,7 +34,7 @@ export class OrderHistory {
   readonly to = signal('');
   readonly status = signal('');
 
-  constructor() {
+  ngOnInit(): void {
     void this.load();
   }
 
@@ -81,14 +81,18 @@ export class OrderHistory {
     this.error.set('');
     try {
       const rows = await this.#orders.list({ from: this.from(), to: this.to(), status: this.status() });
-      if (request === this.#request) this.rows.set(rows);
+      if (request === this.#request) {
+        this.rows.set(rows);
+      }
     } catch (e) {
       if (request === this.#request) {
         this.rows.set([]);
         this.error.set(e instanceof Error ? e.message : 'Could not load your orders. Please try again.');
       }
     } finally {
-      if (request === this.#request) this.loading.set(false);
+      if (request === this.#request) {
+        this.loading.set(false);
+      }
     }
   }
 }

@@ -262,13 +262,6 @@ test('successful submission does not mark order FILLED', async () => {
   assert.equal(response.status, 'PENDING');
 });
 
-test('existing quote and order-history tests remain green', async () => {
-  // This test passes if the quote service and order history service continue to work
-  // independently. No changes to those services, so they should remain unaffected.
-  // Placeholder: integration test to verify no breaking changes.
-  assert.ok(true);
-});
-
 test('submit throws if no access token', async () => {
   const client = new OrderSubmissionClient({ accessToken: null });
   try {
@@ -306,5 +299,20 @@ test('submit throws if invalid quantity', async () => {
 test('generateClientReference returns a valid UUID', async () => {
   const ref = OrderSubmissionClient.generateClientReference();
   // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  assert.match(ref, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  assert.match(ref, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test('UUID fallback preserves every random byte and sets version and variant', t => {
+  t.mock.getter(globalThis, 'crypto', () => ({
+    getRandomValues(bytes) {
+      bytes.set(Array.from({ length: 16 }, (_, i) => 255 - i * 17));
+      return bytes;
+    },
+  }));
+  assert.equal(OrderSubmissionClient.generateClientReference(), 'ffeeddcc-bbaa-4988-b766-554433221100');
+});
+
+test('UUID generation fails when secure randomness is unavailable', t => {
+  t.mock.getter(globalThis, 'crypto', () => undefined);
+  assert.throws(() => OrderSubmissionClient.generateClientReference(), /Secure random generator is unavailable/);
 });

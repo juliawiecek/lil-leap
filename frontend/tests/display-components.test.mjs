@@ -37,6 +37,7 @@ test('server tier selects the visible dashboard and child sign-out reaches the p
 
 test('trade ticket binds order inputs and submits a review with validation', async t => {
   const desk = component(t, AdvancedDashboard);
+  desk.applyPortfolio({ cash: 48230.12, holdings: [] });
   const fixture = await render(t, AdvancedTicket, { desk });
   input(fixture, '#pro-symbol', 'TSLA', 'change');
   input(fixture, '#pro-type', 'Market', 'change');

@@ -24,9 +24,19 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** Creates the application-wide REST exception handler. */
+    /** Creates the exception handler; Spring registers it as controller advice. */
     public GlobalExceptionHandler() {
+        // No state to initialize.
     }
+
+    private static final String ERROR_KEY = "error";
+    private static final String MESSAGE_KEY = "message";
+    private static final String REQUEST_FAILED = "REQUEST_FAILED";
+    private static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    private static final String INVALID_REQUEST = "INVALID_REQUEST";
+    private static final String REQUEST_FAILED_MESSAGE = "The request could not be completed.";
+    private static final String INVALID_FIELDS_MESSAGE = "The request contains invalid or missing fields.";
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
@@ -37,7 +47,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OrderRuleException.class)
     public ResponseEntity<Map<String, String>> handleOrderRule(OrderRuleException exception) {
         return ResponseEntity.unprocessableEntity().body(Map.of(
-                "error", exception.reason().name(), "message", exception.reason().message()));
+                ERROR_KEY, exception.reason().name(), MESSAGE_KEY, exception.reason().message()));
     }
 
     /**
@@ -48,7 +58,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OrderSufficiencyException.class)
     public ResponseEntity<Map<String, String>> handleOrderSufficiency(OrderSufficiencyException exception) {
         return ResponseEntity.unprocessableEntity().body(Map.of(
-                "error", exception.reason().name(), "message", exception.getMessage()));
+                ERROR_KEY, exception.reason().name(), MESSAGE_KEY, exception.getMessage()));
     }
 
     /**
@@ -59,7 +69,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handleStatusException(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
-                "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -74,12 +84,12 @@ public class GlobalExceptionHandler {
         // Preserve framework statuses such as 404/405/415 without their request-derived messages.
         if (exception instanceof ErrorResponse error) {
             return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(
-                    "error", "REQUEST_FAILED", "message", "The request could not be completed."));
+                    ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
         }
         // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
         log.error("Request failed exceptionType={}", exception.getClass().getSimpleName());
         return ResponseEntity.internalServerError().body(Map.of(
-                "error", "INTERNAL_ERROR", "message", "The request could not be completed."));
+                ERROR_KEY, INTERNAL_ERROR, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
     }
 
     /**
@@ -90,7 +100,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, String>> handleInvalidRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of(
-                "error", "INVALID_REQUEST", "message", "The request contains invalid or missing fields."));
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_FIELDS_MESSAGE));
     }
 
 }

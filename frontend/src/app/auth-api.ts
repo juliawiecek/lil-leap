@@ -39,8 +39,8 @@ const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
 
 export class AuthClient {
-  #fetch: typeof fetch;
-  #baseUrl: string;
+  readonly #fetch: typeof fetch;
+  readonly #baseUrl: string;
   #accessToken: string | null = null;
   #accessTokenExpiresAt: number | null = null;
   #refreshToken: string | null = null;
@@ -88,7 +88,9 @@ export class AuthClient {
    */
   async refresh(): Promise<void> {
     const refreshToken = this.#refreshToken;
-    if (!refreshToken) throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    if (!refreshToken) {
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
     try {
       const body = (await this.#post('/refresh', { refreshToken })) as { accessToken: string; refreshToken: string };
       this.#setTokens(body.accessToken, body.refreshToken);
@@ -102,7 +104,9 @@ export class AuthClient {
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
     this.#setTokens(null, null);
-    if (!refreshToken) return;
+    if (!refreshToken) {
+      return;
+    }
     try {
       await this.#post('/logout', { refreshToken });
     } catch {
@@ -121,15 +125,21 @@ export class AuthClient {
     this.#accessTokenExpiresAt = null;
     this.#traderLevel = null;
     const payload = accessToken?.split('.')[1];
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
     try {
-      const { exp, iat, trader_level } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      const { exp, iat, trader_level } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
         exp?: unknown;
         iat?: unknown;
         trader_level?: unknown;
       };
-      if (typeof exp === 'number' && typeof iat === 'number') this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
-      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') this.#traderLevel = trader_level;
+      if (typeof exp === 'number' && typeof iat === 'number') {
+        this.#accessTokenExpiresAt = Date.now() + (exp - iat) * 1000;
+      }
+      if (trader_level === 'NOVICE' || trader_level === 'ADVANCED') {
+        this.#traderLevel = trader_level;
+      }
     } catch {
       // Unreadable token: leave expiry unknown, which makes the session keeper refresh on next activity.
     }

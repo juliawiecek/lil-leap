@@ -17,8 +17,11 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-    /** Creates the service security configuration. */
-    public SecurityConfig() {}
+
+    /** Creates the security configuration; Spring instantiates it. */
+    public SecurityConfig() {
+        // No state to initialize.
+    }
 
     /**
      * Restricts access to the service's explicit routes.
@@ -29,6 +32,8 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
+        // Stateless bearer-token API with no cookies or session, so CSRF does not apply; the
+        // browser client sends no CSRF token and enabling it rejects every POST /orders.
         return http.csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)

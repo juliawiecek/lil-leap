@@ -19,11 +19,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /** Creates the OpenAPI configuration; Spring instantiates it. */
+    public OpenApiConfig() {
+        // No state to initialize.
+    }
+
     private static final String BEARER_SCHEME = "bearerAuth";
 
-    /** Creates the OpenAPI metadata configuration. */
-    public OpenApiConfig() {
-    }
 
     /**
      * Builds the OpenAPI document's info block and bearer-auth security scheme.
