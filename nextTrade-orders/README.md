@@ -14,9 +14,15 @@ ownership, gateway routing, database setup, known gaps and verification.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
+| GET | `/api/v1/orders/quote-preview` | Indicative price and total before submitting (TRADER only) |
 
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
+
+Quote preview takes `side`, `quantity` and exactly one of `symbol` or `instrumentId`.
+Buys are estimated at the ask and sells at the bid from the latest stored quote; the
+response is marked `indicative` and flags `stale` when the quote is older than execution
+accepts. Unknown instruments and missing quotes return 404 with a specific error code.
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.
