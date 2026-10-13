@@ -1,7 +1,6 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { interval, Subject, takeUntil, switchMap, startWith, tap, catchError, Observable } from 'rxjs';
-import { of } from 'rxjs';
+import { interval, Subject, takeUntil, switchMap, startWith, tap, catchError, Observable, of } from 'rxjs';
 import { QuoteService, Quote } from './quote.service';
 import { FormatAgePipe } from './format-age.pipe';
 

@@ -59,4 +59,15 @@ class JwtServiceTest {
 
         assertTrue(jwtService.validate("not-a-real-token").isEmpty());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "   ", "ADMIN"})
+    void issuedRoleIsPreservedOrDefaultsToTrader(String role) {
+        var service = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
+        UUID id = UUID.randomUUID();
+        var token = service.issueToken(id, "trader@example.com", role);
+        var principal = service.validate(token).orElseThrow();
+        assertEquals(id, principal.userId());
+        assertEquals(role == null || role.isBlank() ? "TRADER" : role, principal.role());
+    }
 }

@@ -71,7 +71,7 @@ class HttpSecurityTest {
         String token = tokens.issueToken(id, "client@example.com");
         HttpClient client = HttpClient.newHttpClient();
 
-        HttpResponse<String> holdings = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/holdings"))
+        HttpResponse<String> holdings = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/holdings"))
                 .header("Authorization", "Bearer " + token).build(), HttpResponse.BodyHandlers.ofString());
 
         assertThat(holdings.statusCode()).isEqualTo(200);

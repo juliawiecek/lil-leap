@@ -110,7 +110,7 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E()" class="member-name-link">GlobalExceptionHandler</a>()</code></div>
 <div class="col-last even-row-color">
-<div class="block">Creates the application-wide REST exception handler.</div>
+<div class="block">Creates the exception handler; Spring registers it as controller advice.</div>
 </div>
 </div>
 </section>
@@ -127,18 +127,35 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidRequest(java.lang.Exception)" class="member-name-link">handleInvalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleAccessDenied(org.springframework.security.access.AccessDeniedException)" class="member-name-link">handleAccessDenied</a><wbr>(org.springframework.security.access.AccessDeniedException&nbsp;exception)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Rejects invalid payloads without rendering or logging rejected values.</div>
+<div class="block">Returns 403 when method security (for example <code>@PreAuthorize</code>) denies
+ an authenticated caller.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleStatusException(org.springframework.web.server.ResponseStatusException)" class="member-name-link">handleStatusException</a><wbr>(org.springframework.web.server.ResponseStatusException&nbsp;exception)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidDateRange(com.neueda.leap.reporting.model.InvalidReportDateRangeException)" class="member-name-link">handleInvalidDateRange</a><wbr>(<a href="../../reporting/model/InvalidReportDateRangeException.html" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a>&nbsp;exception)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Preserves an explicit HTTP failure status while hiding exception details.</div>
+<div class="block">Rejects a report request whose date range is inverted or too long.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleUnexpectedException(java.lang.Exception)" class="member-name-link">handleUnexpectedException</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidParameter(java.lang.Exception)" class="member-name-link">handleInvalidParameter</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Rejects missing, malformed, or out-of-bounds query parameters without
+ echoing the rejected values.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidRequest(java.lang.Exception)" class="member-name-link">handleInvalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Rejects invalid payloads without rendering or logging rejected values.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleStatusException(org.springframework.web.server.ResponseStatusException)" class="member-name-link">handleStatusException</a><wbr>(org.springframework.web.server.ResponseStatusException&nbsp;exception)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Preserves an explicit HTTP failure status while hiding exception details.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleUnexpectedException(java.lang.Exception)" class="member-name-link">handleUnexpectedException</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Converts unhandled failures into safe responses without exposing exception messages.</div>
 </div>
 </div>
@@ -162,7 +179,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="&lt;init&gt;()">
 <h3>GlobalExceptionHandler</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">GlobalExceptionHandler</span>()</div>
-<div class="block">Creates the application-wide REST exception handler.</div>
+<div class="block">Creates the exception handler; Spring registers it as controller advice.</div>
 </section>
 </li>
 </ul>
@@ -214,6 +231,51 @@ loadScripts(document, 'script');</script>
 <dd><code>exception</code> - validation or parsing failure that may contain credentials</dd>
 <dt>Returns:</dt>
 <dd>HTTP 400 with a fixed INVALID_REQUEST response</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="handleAccessDenied(org.springframework.security.access.AccessDeniedException)">
+<h3>handleAccessDenied</h3>
+<div class="member-signature"><span class="annotations">@ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleAccessDenied</span><wbr><span class="parameters">(org.springframework.security.access.AccessDeniedException&nbsp;exception)</span></div>
+<div class="block">Returns 403 when method security (for example <code>@PreAuthorize</code>) denies
+ an authenticated caller. Without this, the catch-all handler above would
+ intercept the denial before Spring Security and turn it into a 500.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>exception</code> - authorization failure raised by method security</dd>
+<dt>Returns:</dt>
+<dd>HTTP 403 with the same body as the security filter chain's access-denied handler</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="handleInvalidParameter(java.lang.Exception)">
+<h3>handleInvalidParameter</h3>
+<div class="member-signature"><span class="annotations">@ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,org.springframework.web.method.annotation.HandlerMethodValidationException.class})
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleInvalidParameter</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</span></div>
+<div class="block">Rejects missing, malformed, or out-of-bounds query parameters without
+ echoing the rejected values.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>exception</code> - parameter binding or method validation failure</dd>
+<dt>Returns:</dt>
+<dd>HTTP 400 with a fixed INVALID_REQUEST response</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="handleInvalidDateRange(com.neueda.leap.reporting.model.InvalidReportDateRangeException)">
+<h3>handleInvalidDateRange</h3>
+<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../reporting/model/InvalidReportDateRangeException.html" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException.class</a>)
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleInvalidDateRange</span><wbr><span class="parameters">(<a href="../../reporting/model/InvalidReportDateRangeException.html" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a>&nbsp;exception)</span></div>
+<div class="block">Rejects a report request whose date range is inverted or too long.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>exception</code> - date range rule violation with a fixed, caller-safe message</dd>
+<dt>Returns:</dt>
+<dd>HTTP 400 with INVALID_DATE_RANGE and the rule that was violated</dd>
 </dl>
 </section>
 </li>

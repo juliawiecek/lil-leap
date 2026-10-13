@@ -89,7 +89,7 @@ function subjectOf(token: string): string | null {
   const payload = token.split('.')[1];
   if (!payload) return null;
   try {
-    const { sub } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { sub?: unknown };
+    const { sub } = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as { sub?: unknown };
     return typeof sub === 'string' && sub ? sub : null;
   } catch {
     return null;

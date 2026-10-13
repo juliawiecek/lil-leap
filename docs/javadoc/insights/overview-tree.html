@@ -56,6 +56,13 @@ loadScripts(document, 'script');</script>
 <li><a href="com/neueda/leap/common/exception/package-tree.html">com.neueda.leap.common.exception</a>, </li>
 <li><a href="com/neueda/leap/config/package-tree.html">com.neueda.leap.config</a>, </li>
 <li><a href="com/neueda/leap/reporting/package-tree.html">com.neueda.leap.reporting</a>, </li>
+<li><a href="com/neueda/leap/reporting/controller/package-tree.html">com.neueda.leap.reporting.controller</a>, </li>
+<li><a href="com/neueda/leap/reporting/dto/package-tree.html">com.neueda.leap.reporting.dto</a>, </li>
+<li><a href="com/neueda/leap/reporting/entity/package-tree.html">com.neueda.leap.reporting.entity</a>, </li>
+<li><a href="com/neueda/leap/reporting/enums/package-tree.html">com.neueda.leap.reporting.enums</a>, </li>
+<li><a href="com/neueda/leap/reporting/model/package-tree.html">com.neueda.leap.reporting.model</a>, </li>
+<li><a href="com/neueda/leap/reporting/repository/package-tree.html">com.neueda.leap.reporting.repository</a>, </li>
+<li><a href="com/neueda/leap/reporting/service/package-tree.html">com.neueda.leap.reporting.service</a>, </li>
 <li><a href="com/neueda/leap/security/package-tree.html">com.neueda.leap.security</a></li>
 </ul>
 <section class="hierarchy">
@@ -90,12 +97,31 @@ loadScripts(document, 'script');</script>
 </ul>
 </li>
 <li class="circle">com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" class="type-name-link" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></li>
+<li class="circle">com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/InstrumentEntity.html" class="type-name-link" title="class in com.neueda.leap.reporting.entity">InstrumentEntity</a></li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtServiceImpl.html" class="type-name-link" title="class in com.neueda.leap.security">JwtServiceImpl</a> (implements com.neueda.leap.security.<a href="com/neueda/leap/security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>)</li>
 <li class="circle">com.neueda.leap.<a href="com/neueda/leap/Main.html" class="type-name-link" title="class in com.neueda.leap">Main</a></li>
+<li class="circle">com.neueda.leap.config.<a href="com/neueda/leap/config/ReportingConfiguration.html" class="type-name-link" title="class in com.neueda.leap.config">ReportingConfiguration</a></li>
+<li class="circle">com.neueda.leap.reporting.controller.<a href="com/neueda/leap/reporting/controller/ReportingController.html" class="type-name-link" title="class in com.neueda.leap.reporting.controller">ReportingController</a></li>
 <li class="circle">com.neueda.leap.reporting.<a href="com/neueda/leap/reporting/ReportingController.html" class="type-name-link" title="class in com.neueda.leap.reporting">ReportingController</a></li>
 <li class="circle">com.neueda.leap.reporting.<a href="com/neueda/leap/reporting/ReportingQueryService.html" class="type-name-link" title="class in com.neueda.leap.reporting">ReportingQueryService</a></li>
+<li class="circle">com.neueda.leap.reporting.service.<a href="com/neueda/leap/reporting/service/ReportingServiceImpl.html" class="type-name-link" title="class in com.neueda.leap.reporting.service">ReportingServiceImpl</a> (implements com.neueda.leap.reporting.service.<a href="com/neueda/leap/reporting/service/ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a>)</li>
 <li class="circle">com.neueda.leap.config.<a href="com/neueda/leap/config/SecurityConfig.html" class="type-name-link" title="class in com.neueda.leap.config">SecurityConfig</a></li>
 <li class="circle">com.neueda.leap.config.<a href="com/neueda/leap/config/SpringDocConfig.html" class="type-name-link" title="class in com.neueda.leap.config">SpringDocConfig</a></li>
+<li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" class="type-name-link external-link" title="class or interface in java.lang">Throwable</a> (implements java.io.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Serializable.html" title="class or interface in java.io" class="external-link">Serializable</a>)
+<ul>
+<li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" class="type-name-link external-link" title="class or interface in java.lang">Exception</a>
+<ul>
+<li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/RuntimeException.html" class="type-name-link external-link" title="class or interface in java.lang">RuntimeException</a>
+<ul>
+<li class="circle">com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/InvalidReportDateRangeException.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="circle">com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/TradeFillEntity.html" class="type-name-link" title="class in com.neueda.leap.reporting.entity">TradeFillEntity</a></li>
+<li class="circle">com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/TradeOrderEntity.html" class="type-name-link" title="class in com.neueda.leap.reporting.entity">TradeOrderEntity</a></li>
 </ul>
 </li>
 </ul>
@@ -104,6 +130,62 @@ loadScripts(document, 'script');</script>
 <h2 title="Interface Hierarchy">Interface Hierarchy</h2>
 <ul>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtService.html" class="type-name-link" title="interface in com.neueda.leap.security">JwtService</a></li>
+<li class="circle">org.springframework.data.repository.query.QueryByExampleExecutor&lt;T&gt;
+<ul>
+<li class="circle">org.springframework.data.jpa.repository.JpaRepository&lt;T,<wbr>ID&gt; (also extends org.springframework.data.repository.ListCrudRepository&lt;T,<wbr>ID&gt;, org.springframework.data.repository.ListPagingAndSortingRepository&lt;T,<wbr>ID&gt;)
+<ul>
+<li class="circle">com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" class="type-name-link" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="circle">com.neueda.leap.reporting.service.<a href="com/neueda/leap/reporting/service/ReportingService.html" class="type-name-link" title="interface in com.neueda.leap.reporting.service">ReportingService</a></li>
+<li class="circle">org.springframework.data.repository.Repository&lt;T,<wbr>ID&gt;
+<ul>
+<li class="circle">org.springframework.data.repository.CrudRepository&lt;T,<wbr>ID&gt;
+<ul>
+<li class="circle">org.springframework.data.repository.ListCrudRepository&lt;T,<wbr>ID&gt;
+<ul>
+<li class="circle">org.springframework.data.jpa.repository.JpaRepository&lt;T,<wbr>ID&gt; (also extends org.springframework.data.repository.ListPagingAndSortingRepository&lt;T,<wbr>ID&gt;, org.springframework.data.repository.query.QueryByExampleExecutor&lt;T&gt;)
+<ul>
+<li class="circle">com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" class="type-name-link" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="circle">org.springframework.data.repository.PagingAndSortingRepository&lt;T,<wbr>ID&gt;
+<ul>
+<li class="circle">org.springframework.data.repository.ListPagingAndSortingRepository&lt;T,<wbr>ID&gt;
+<ul>
+<li class="circle">org.springframework.data.jpa.repository.JpaRepository&lt;T,<wbr>ID&gt; (also extends org.springframework.data.repository.ListCrudRepository&lt;T,<wbr>ID&gt;, org.springframework.data.repository.query.QueryByExampleExecutor&lt;T&gt;)
+<ul>
+<li class="circle">com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" class="type-name-link" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="circle">com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.OverviewProjection.html" class="type-name-link" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.OverviewProjection</a></li>
+<li class="circle">com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.TopInstrumentProjection.html" class="type-name-link" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.TopInstrumentProjection</a></li>
+</ul>
+</section>
+<section class="hierarchy">
+<h2 title="Enum Class Hierarchy">Enum Class Hierarchy</h2>
+<ul>
+<li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" class="type-name-link external-link" title="class or interface in java.lang">Object</a>
+<ul>
+<li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Enum.html" class="type-name-link external-link" title="class or interface in java.lang">Enum</a>&lt;E&gt; (implements java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Comparable.html" title="class or interface in java.lang" class="external-link">Comparable</a>&lt;T&gt;, java.lang.constant.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/constant/Constable.html" title="class or interface in java.lang.constant" class="external-link">Constable</a>, java.io.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Serializable.html" title="class or interface in java.io" class="external-link">Serializable</a>)
+<ul>
+<li class="circle">com.neueda.leap.reporting.enums.<a href="com/neueda/leap/reporting/enums/ClientSegment.html" class="type-name-link" title="enum class in com.neueda.leap.reporting.enums">ClientSegment</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </section>
 <section class="hierarchy">
@@ -113,7 +195,17 @@ loadScripts(document, 'script');</script>
 <ul>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Record.html" class="type-name-link external-link" title="class or interface in java.lang">Record</a>
 <ul>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ClientActivityTrendDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ClientSegmentActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ClientSegmentActivityResponse</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/DailyTradeActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">DailyTradeActivityResponse</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">InsightsOverviewResponse</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/InstrumentActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">InstrumentActivityResponse</a></li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" class="type-name-link" title="class in com.neueda.leap.security">JwtPrincipal</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/OverviewDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></li>
+<li class="circle">com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/ReportDateRange.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">ReportDateRange</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ReportGenerationResponseDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ReportGenerationResponseDto</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/TopInstrumentDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a></li>
+<li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/TopInstrumentResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">TopInstrumentResponse</a></li>
 </ul>
 </li>
 </ul>
