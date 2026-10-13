@@ -26,6 +26,8 @@ Install **Node.js 24.15.0 or a later 24.x release** (includes npm), then clone
 this repository. From the project folder (`lil-leap`):
 
 ```powershell
+npm ci --prefix shared/session-core
+npm run build --prefix shared/session-core
 cd frontend
 npm ci
 npm start

@@ -7,6 +7,8 @@ Internal reporting and operations UI for Priya and David. Reporting layouts foll
 Use Node 24.15+:
 
 ```powershell
+npm ci --prefix ../shared/session-core
+npm run build --prefix ../shared/session-core
 npm ci
 npm start
 ```
@@ -63,8 +65,8 @@ URL parameters. Missing record IDs show an unavailable-record notice rather than
 opening another record. Report export history still resets on reload.
 
 Both apps' browser checks live in `../frontend/e2e`; build both apps and run
-`npm run test:e2e` from `frontend`. Unit tests include the same auth/session
-contract scenarios in both independently buildable apps.
+`npm run test:e2e` from `frontend`. Shared-package tests own the auth/session
+contracts; each app tests its adapters and routes.
 
 ## Shared session package
 
