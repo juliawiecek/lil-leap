@@ -10,6 +10,11 @@
 # Usage (from the repo root; the password is in the team's secure chat, never in the repo):
 #   SEED_TEST_PASSWORD=... scripts/seeded-logins-smoke-test.sh          build, start, check, tear down
 #   KEEP=1 SEED_TEST_PASSWORD=... scripts/seeded-logins-smoke-test.sh   leave the smoke stack running
+#   scripts/seeded-logins-smoke-test.sh                                 CI: no shared password needed
+#
+# Without SEED_TEST_PASSWORD the script generates a random password and re-hashes the three
+# seeded users with it inside the throwaway smoke database, so CI needs no stored secret.
+# Every other check is the same; only the committed hashes themselves go unchecked.
 #
 # Uses its own compose project (SMOKE_PROJECT, default nexttrade-smoke), so it never touches
 # your own stack or its database. No host ports are published: requests come from a curl
@@ -25,10 +30,12 @@ PASSWORD="${SEED_TEST_PASSWORD:-}"
 NOVICE_ID="a0000000-0000-4000-8000-000000000001"
 ADVANCED_ID="a0000000-0000-4000-8000-000000000002"
 SERVICES=(db auth holdings quote-service)
+RESET_PASSWORDS=0
 
 if [[ -z "$PASSWORD" ]]; then
-  echo "Set SEED_TEST_PASSWORD to the shared test-login password (Jenkins: credential seed-test-password)" >&2
-  exit 2
+  PASSWORD="smoke-$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  RESET_PASSWORDS=1
+  echo "SEED_TEST_PASSWORD not set: using a random password for this smoke stack only"
 fi
 
 cd "$(dirname "$0")/.."
@@ -95,6 +102,17 @@ echo "Starting ${SERVICES[*]} on an empty volume (project $PROJECT)"
 NETWORK="$(docker inspect -f '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}' \
   "$("${DC[@]}" ps -q auth)")"
 docker pull -q "$CURL_IMAGE" >/dev/null
+
+if (( RESET_PASSWORDS )); then
+  # Same '{bcrypt}' format and cost as auth. up -d returns once db is healthy, i.e. after the seeds ran.
+  "${DC[@]}" exec -T db psql -q -U main -d nexttrade -v ON_ERROR_STOP=1 -v pw="$PASSWORD" <<'SQL' \
+    || { echo "could not set the smoke password on the seeded users" >&2; exit 1; }
+UPDATE users SET password_hash = '{bcrypt}' || crypt(:'pw', gen_salt('bf', 10))
+WHERE user_id IN ('a0000000-0000-4000-8000-000000000001',
+                  'a0000000-0000-4000-8000-000000000002',
+                  'a0000000-0000-4000-8000-000000000003');
+SQL
+fi
 
 novice_login_ok() { [[ "$(login novice@nexttrade.local)" == 200 ]]; }
 wait_until "auth" novice_login_ok || exit 1
