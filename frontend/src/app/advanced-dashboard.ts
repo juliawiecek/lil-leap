@@ -24,6 +24,7 @@ import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
 import { ToastService, Toasts } from './toasts';
+import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
   CONSERVATIVE: 7,
@@ -40,6 +41,9 @@ interface Quote {
   sector: string;
   quotedAt: string;
 }
+/** Size of the price chart's drawing area, in SVG units. */
+const CHART_WIDTH = 824;
+const CHART_HEIGHT = 160;
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -286,17 +290,37 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() => this.chartLabelsFor(this.period()));
+  /** Order history rows, kept for the chart's trade markers (PS-13). */
+  readonly historyRows = signal<OrderHistoryRow[]>([]);
+  /** The client's fills of the charted stock, oldest first. */
+  readonly tradeMarks = computed(() => tradeMarks(this.historyRows(), this.selected().symbol));
+  /** Average cost of the charted stock while it is held; null otherwise. */
+  readonly averageCost = computed(() => {
+    const held = this.positions().find((p) => p.symbol === this.selected().symbol && p.quantity > 0);
+    return held ? held.cost : null;
+  });
+  readonly chartWindow = computed(() => periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks()));
+  /** Price range covering the live price, every fill and the average cost. */
+  readonly chartRange = computed(() =>
+    priceRange([this.selected().price, ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0]),
+  );
+  readonly plottedTrades = computed(() => {
+    const range = this.chartRange();
+    return range ? plotMarks(this.tradeMarks(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : [];
+  });
+  /** Fills earlier than the chosen period, which are not drawn. */
+  readonly tradesOutsidePeriod = computed(() => this.tradeMarks().length - this.plottedTrades().length);
+  readonly averageCostY = computed(() => {
+    const range = this.chartRange();
+    const cost = this.averageCost();
+    return range && cost ? priceY(cost, range, CHART_HEIGHT) : null;
+  });
+  readonly priceAxis = computed(() => {
+    const range = this.chartRange();
+    return range ? priceLabels(range) : [];
+  });
+  readonly chartTimes = computed(() => timeLabels(this.period(), this.chartWindow()));
 
-  private chartLabelsFor(period: string): string[] {
-    if (period === '1D') {
-      return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-    }
-    if (period === '1W') {
-      return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    }
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  }
   quote(symbol: string): Quote {
     return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
   }
@@ -500,6 +524,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     try {
       const rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
       this.orders.set(rows.map(toOrder));
+      this.historyRows.set(rows);
       return true;
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
