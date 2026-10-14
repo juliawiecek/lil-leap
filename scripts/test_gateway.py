@@ -60,6 +60,7 @@ def main():
         cases = [
             (18420, 'GET', '/api/v1/orders?limit=5', 'holdings:8080'),
             (18420, 'POST', '/api/v1/orders', 'orders:8082'),
+            (18420, 'GET', '/api/v1/market/status', 'orders:8082'),
             (18420, 'GET', '/api/v1/holdings', 'holdings:8080'),
             (18420, 'GET', '/api/v1/accounts', 'holdings:8080'),
             (18420, 'GET', '/api/v1/instruments/test', 'holdings:8080'),
