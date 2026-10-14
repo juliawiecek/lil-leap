@@ -42,7 +42,8 @@ cd "$(dirname "$0")/.."
 # shellcheck disable=SC2206
 DC=($COMPOSE -p "$PROJECT" -f docker-compose.yml)
 FAILURES=0
-BODY=""
+# Response bodies go to a file: request runs inside $(...), so a variable set there would be lost.
+BODY_FILE="$(mktemp)"
 
 pass() { printf '  \033[32mPASS\033[0m %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
@@ -51,6 +52,7 @@ check() { # check <description> <actual> <expected>
 }
 
 cleanup() {
+  rm -f "$BODY_FILE"
   if [[ "${KEEP:-0}" == "1" ]]; then
     echo "Smoke stack left running: ${DC[*]} down -v"
   else
@@ -59,11 +61,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# HTTP status of a request made from inside the stack's network; the body goes to $BODY.
+# HTTP status of a request made from inside the stack's network; the body goes to $BODY_FILE.
 request() {
   local out
   out="$(docker run --rm --network "$NETWORK" "$CURL_IMAGE" -s --max-time 20 -w '\n%{http_code}' "$@")"
-  BODY="${out%$'\n'*}"
+  printf '%s' "${out%$'\n'*}" > "$BODY_FILE"
   printf '%s' "${out##*$'\n'}"
 }
 
@@ -72,8 +74,8 @@ login() { # login <email> [password]
     -d "{\"email\":\"$1\",\"password\":\"${2:-$PASSWORD}\"}"
 }
 
-json_field() { # json_field <name>: first string or number value of that key in $BODY
-  printf '%s' "$BODY" | grep -o "\"$1\":\"\?[^\",}]*" | head -1 | sed -E "s/^\"$1\":\"?//"
+json_field() { # json_field <name>: first string or number value of that key in the last response
+  grep -o "\"$1\":\"\?[^\",}]*" "$BODY_FILE" | head -1 | sed -E "s/^\"$1\":\"?//"
 }
 
 jwt_claim() { # jwt_claim <token> <claim>
@@ -137,11 +139,11 @@ wait_until "novice portfolio" novice_portfolio_ok || fail "novice portfolio retu
 
 check "novice portfolio returns 200" "$(portfolio "$NOVICE_ID" "$TOKEN_novice")" 200
 check "novice has \$10,000 available" "$(json_field availableBalance | sed -E 's/\.0+$//')" 10000
-check "novice has 2 holdings" "$(printf '%s' "$BODY" | grep -o '"symbol"' | wc -l | tr -d ' ')" 2
+check "novice has 2 holdings" "$(grep -o '"symbol"' "$BODY_FILE" | wc -l | tr -d ' ')" 2
 
 check "advanced portfolio returns 200" "$(portfolio "$ADVANCED_ID" "$TOKEN_advanced")" 200
 check "advanced has \$150,000 available" "$(json_field availableBalance | sed -E 's/\.0+$//')" 150000
-check "advanced has 5 holdings" "$(printf '%s' "$BODY" | grep -o '"symbol"' | wc -l | tr -d ' ')" 5
+check "advanced has 5 holdings" "$(grep -o '"symbol"' "$BODY_FILE" | wc -l | tr -d ' ')" 5
 
 if (( FAILURES > 0 )); then
   echo "$FAILURES check(s) failed"
