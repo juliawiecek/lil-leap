@@ -93,7 +93,7 @@
     </header>
     <main class="pro-content">
       <div class="session-line">
-        <span><i></i>Markets Open</span><span>09:42:17 ET</span><span>Wed, Apr 23, 2025</span>
+        <span><i></i>Markets Open</span><span>{{ formattedTime().time }} ET</span><span>{{ formattedTime().date }}</span>
       </div>
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel">
@@ -111,15 +111,15 @@
           <div class="summary-metrics">
             <div class="main-value">
               <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-              ><span class="gain">▲ +$12,842.31 (+4.73%) <small>Today</small></span>
+              ><span [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0">{{ totalReturn() >= 0 ? '▲ ' : '▼ ' }}{{ totalReturn() | currency }} ({{ totalReturnPercent() | number: '1.2-2' }}%) <small>Today</small></span>
             </div>
             <div>
               <span>Buying Power</span
               ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
             </div>
             <div>
-              <span>Day P&amp;L</span><strong class="gain">+$12,842.31</strong
-              ><b class="gain">+4.73%</b>
+              <span>Day P&amp;L</span><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0">{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+              ><b [class.gain]="totalReturnPercent() >= 0" [class.loss]="totalReturnPercent() < 0">{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b>
             </div>
             <div>
               <span>Total Return</span
@@ -291,7 +291,7 @@
             </div>
           </section>
         }
-        @if (page() === 'Orders') {
+        @if (page() === 'Orders' || page() === 'History') {
           <section class="panel orders-history-panel">
             <div class="panel-heading"><h2>Order History</h2></div>
             <app-order-history />

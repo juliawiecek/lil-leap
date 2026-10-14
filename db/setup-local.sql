@@ -24,6 +24,9 @@ SELECT to_regclass('public.users') IS NULL AS needs_schema \gset
     \echo 'Existing schema retained. Apply any outstanding migrations separately.'
 \endif
 
+-- Dev test logins (TS-DB-04). Idempotent, so it also runs on an existing database.
+\ir seeds/002_test_users.sql
+
 -- Same application permissions as init-app-role.sh in the Docker setup.
 GRANT CONNECT ON DATABASE nexttrade TO app_user;
 GRANT USAGE ON SCHEMA public TO app_user;

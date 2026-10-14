@@ -5,18 +5,28 @@ import com.neueda.leap.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 /** Verifies Identity-issued JWTs and exposes only this service's API. */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    /** {@code /orders/{uuid}} and {@code /orders/{uuid}/status}, with no query string. */
+    private static final String ORDER_READ_PATH =
+            "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(/status)?$";
 
     /** Creates the security configuration; Spring instantiates it. */
     public SecurityConfig() {
@@ -43,12 +53,14 @@ public class SecurityConfig {
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/orders").access(
-                            org.springframework.security.authorization.AuthorizationManagers.allOf(
-                                org.springframework.security.authorization.AuthorityAuthorizationManager.hasRole("TRADER"),
-                                (authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
-                                    context.getRequest().getQueryString() == null
-                                        && context.getRequest().getParameterMap().isEmpty())))
+                        .requestMatchers(HttpMethod.POST, "/settlements/recover", "/settlements/rollback").hasRole("OPERATIONS")
+                        .requestMatchers(HttpMethod.POST, "/orders").access(traderWithoutParameters())
+                        // UUID ids only, so sibling routes such as /orders/quote-preview are matched separately.
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, ORDER_READ_PATH))
+                            .access(traderWithoutParameters())
+                        .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
+                        // Market open/closed is not account data: any signed-in user may read it.
+                        .requestMatchers(HttpMethod.GET, "/market/status").authenticated()
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {
@@ -63,5 +75,14 @@ public class SecurityConfig {
                         }))
                 .addFilterBefore(new JwtAuthenticationFilter(tokens), UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    /** Traders only, and no query or form parameters that could look like a scope override. */
+    private static AuthorizationManager<RequestAuthorizationContext> traderWithoutParameters() {
+        return AuthorizationManagers.allOf(
+                AuthorityAuthorizationManager.hasRole("TRADER"),
+                (authentication, context) -> new AuthorizationDecision(
+                        context.getRequest().getQueryString() == null
+                                && context.getRequest().getParameterMap().isEmpty()));
     }
 }

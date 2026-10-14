@@ -19,6 +19,10 @@ import { PasswordEncoderService } from './security/password-encoder.service';
 import { SecureTransportMiddleware } from './security/secure-transport.middleware';
 import { AccessTokenGuard } from './security/access-token.guard';
 import { tlsKeystorePath } from './security/tls';
+import { PasswordResetToken } from './password-reset/entities/password-reset-token.entity';
+import { PasswordResetController } from './password-reset/password-reset.controller';
+import { PasswordResetService } from './password-reset/password-reset.service';
+import { mailDeliveryProvider } from './mail/mail-delivery.provider';
 
 @Module({
   imports: [
@@ -29,13 +33,13 @@ import { tlsKeystorePath } from './security/tls';
       database: process.env.DB_NAME ?? 'nexttrade',
       username: process.env.DB_APP_USERNAME ?? 'app_user',
       password: requiredEnv('DB_APP_PASSWORD'),
-      entities: [User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile],
+      entities: [User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile, PasswordResetToken],
       synchronize: false, // schema is owned by the admin/migration role, not this service
       poolSize: 10,
     }),
-    TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile]),
+    TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile, PasswordResetToken]),
   ],
-  controllers: [AuthController, RulesController, HealthController],
+  controllers: [AuthController, PasswordResetController, RulesController, HealthController],
   providers: [
     UserService,
     RegistrationService,
@@ -45,6 +49,9 @@ import { tlsKeystorePath } from './security/tls';
     SsnEncryptionService,
     PasswordEncoderService,
     AccessTokenGuard,
+    PasswordResetService,
+    // MAIL_DELIVERY=outbox (default, the VM) writes .eml files; smtp sends to Mailpit on dev laptops.
+    mailDeliveryProvider,
   ],
 })
 export class AppModule implements NestModule {

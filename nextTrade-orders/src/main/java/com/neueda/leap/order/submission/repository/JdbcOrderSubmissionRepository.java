@@ -45,6 +45,15 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
     }
 
     @Override
+    public Optional<String> findClientCountry(UUID accountId) {
+        return jdbcTemplate.query("""
+                SELECT cp.country FROM accounts a
+                JOIN customer_profiles cp ON cp.user_id = a.user_id
+                WHERE a.account_id = ? AND cp.country IS NOT NULL
+                """, (rs, row) -> rs.getString("country"), accountId).stream().findFirst();
+    }
+
+    @Override
     public Optional<OrderSubmissionResponse> findByAccountAndClientReference(UUID accountId, UUID clientReference) {
         return jdbcTemplate.query("""
                 SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,

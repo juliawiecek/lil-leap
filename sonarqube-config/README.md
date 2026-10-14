@@ -106,9 +106,10 @@ whose source paths resolve in this checkout. Jenkins runs it after preparing
 coverage and before scanning. Existing reports passing this check do not prove
 they were generated from the current source revision.
 
-The third command checks server readiness, the project's assigned profile names,
-and each profile's exported rules, severities, parameters, and impacts against
-these files. Supply `SONAR_TOKEN` through your environment if authentication is
+The third command checks server readiness and compares the assigned profile for
+each language with the exported rules, severities, parameters, and impacts in
+these files. Assigned names are reported; identical rule configurations may have
+different server names (currently `texoma-*`). Supply `SONAR_TOKEN` through your environment if authentication is
 required; it needs permission to read the project and profile backups. The check
 is read-only. For a local server, append `--server-url http://localhost:9000`.
 It reports the assigned Quality Gate but does not verify its thresholds.

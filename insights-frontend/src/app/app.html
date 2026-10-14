@@ -54,6 +54,7 @@
         /><button type="submit" aria-label="Run search">↵</button>
       </form>
       <div class="top-actions">
+        <button type="button" (click)="session?.logout()">Sign out</button>
         <button
           class="icon-button"
           aria-label="Notifications"
@@ -63,8 +64,8 @@
         </button>
         <div class="avatar">{{ role() === 'Analyst' ? 'PS' : 'DC' }}</div>
         <label class="identity"
-          ><strong>{{ role() === 'Analyst' ? 'Priya Shah' : 'David Chen' }}</strong
-          ><select aria-label="Workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
+          ><strong>{{ auth?.email || 'Insights workspace' }}</strong
+          ><select aria-label="Preview workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
             <option value="Analyst">Analyst</option>
             <option value="Operations">Operations</option>
           </select></label

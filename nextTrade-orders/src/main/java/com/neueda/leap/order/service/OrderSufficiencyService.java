@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
 import java.util.UUID;
 
 import static com.neueda.leap.order.service.OrderSufficiencyException.Reason.*;
@@ -47,8 +48,11 @@ public class OrderSufficiencyService {
         switch (request.normalizedSide()) {
             case "BUY" -> validateBuy(request, instrumentId);
             case "SELL" -> {
-                if (balances.holdingQuantity(request.accountId(), instrumentId) < request.quantity()) {
-                    throw new OrderSufficiencyException(INSUFFICIENT_HOLDINGS);
+                long held = balances.holdingQuantity(request.accountId(), instrumentId);
+                if (held < request.quantity()) {
+                    throw new OrderSufficiencyException(INSUFFICIENT_HOLDINGS, String.format(Locale.US,
+                            "Insufficient holdings: this order sells %,d shares but you hold %,d.",
+                            request.quantity(), held));
                 }
             }
             default -> throw new IllegalArgumentException("Unsupported order side");
@@ -67,8 +71,18 @@ public class OrderSufficiencyService {
         BigDecimal requiredCash = ask.multiply(BigDecimal.valueOf(request.quantity()))
                 .multiply(BigDecimal.ONE.add(buffer.movePointLeft(2)))
                 .setScale(2, RoundingMode.CEILING);
-        if (balances.cashBalance(request.accountId()).compareTo(requiredCash) < 0) {
-            throw new OrderSufficiencyException(INSUFFICIENT_CASH);
+        BigDecimal available = balances.cashBalance(request.accountId());
+        if (available.compareTo(requiredCash) < 0) {
+            throw new OrderSufficiencyException(INSUFFICIENT_CASH, String.format(Locale.US,
+                    "Insufficient cash: this order needs %s (%,d shares at the %s ask plus a %s%% price buffer), "
+                            + "but %s is available.",
+                    usd(requiredCash), request.quantity(), usd(ask),
+                    buffer.stripTrailingZeros().toPlainString(), usd(available)));
         }
+    }
+
+    /** Formats a USD amount for messages, e.g. $1,250.00. */
+    private static String usd(BigDecimal amount) {
+        return String.format(Locale.US, "$%,.2f", amount);
     }
 }

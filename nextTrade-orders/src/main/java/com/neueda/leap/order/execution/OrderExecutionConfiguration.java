@@ -1,5 +1,7 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher;
+import com.neueda.leap.order.market.MarketHours;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +12,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import java.time.Clock;
 
 /**
  * Configures database-backed execution polling when {@code orders.execution.enabled} is true or absent.
@@ -28,9 +32,12 @@ public class OrderExecutionConfiguration {
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             OrderExecutor executor,
-            com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher eventPublisher,
-            @Value("${orders.execution.retry-seconds:30}") int retrySeconds) {
-        return new OrderExecutionWorker(jdbc, manager, executor, eventPublisher, retrySeconds);
+            OrderLifecycleEventPublisher eventPublisher,
+            @Value("${orders.execution.retry-seconds:30}") int retrySeconds,
+            @Value("${orders.execution.max-failure-attempts:10}") long maxAttempts,
+            MarketHours marketHours, Clock clock) {
+        return new OrderExecutionWorker(jdbc, manager, executor, eventPublisher, retrySeconds, maxAttempts,
+                marketHours, clock);
     }
 
     @Bean

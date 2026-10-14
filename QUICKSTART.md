@@ -18,7 +18,7 @@ From the repository root:
 psql -h localhost -p 5432 -U postgres -d postgres -f db\setup-local.sql
 ```
 
-This single script creates the local roles, creates the `nexttrade` database if needed, loads the schema, seeds instrument data, and applies the app permissions.
+This single script creates the local roles, creates the `nexttrade` database if needed, loads the schema, seeds instrument data, adds the [test logins](#test-logins), and applies the app permissions. It is safe to run again; an existing database keeps its data and gets any missing test logins.
 
 ### 3. Create Per-Service Local Config Where Needed
 
@@ -43,6 +43,8 @@ Two files need to be updated (they already exist, just need verification):
   "/rules/**": { "target": "http://localhost:8081", "secure": false },
   "/api/v1/orders": { "target": "http://localhost:8082", "secure": false },
   "/api/v1/accounts": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/cash": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/holdings": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/instruments": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/clients/**": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/quotes/latest/**": { "target": "http://localhost:8080", "secure": false },
@@ -108,21 +110,21 @@ npm run start:dev
 ### Terminal 2: Orders Service
 ```cmd
 cd nextTrade-orders
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8082"
 
 ### Terminal 3: Holdings Service
 ```cmd
 cd nextTrade-holdings
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8080"
 
 ### Terminal 4: Insights Service
 ```cmd
 cd insights
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8084"
 
@@ -152,6 +154,18 @@ npm start
 ```
 **Ready when:** "Angular Live Development Server is listening on localhost:4301"
 
+> **Profiles:** use `-Dspring-boot.run.profiles=local`. `-Dspring.profiles.active=local` sets the
+> property on Maven, not on the app, so the app starts without its local settings and fails on
+> `APP_JWT_SECRET`.
+
+### Optional Terminal 8: Mailpit (password reset emails)
+Download `mailpit-windows-amd64.zip` from https://github.com/axllent/mailpit/releases, unzip it, then:
+```cmd
+mailpit.exe --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
+```
+In `auth/.env` set `MAIL_DELIVERY=smtp` and `PASSWORD_RESET_URL=http://localhost:4300/reset-password`,
+then restart auth. Without Mailpit, leave `MAIL_DELIVERY=outbox` and open the `.eml` files in `auth/outbox/`.
+
 ---
 
 ## Access the Apps
@@ -160,9 +174,22 @@ npm start
 - **Reporting Frontend:** http://localhost:4301
 - **Auth Health:** http://localhost:8081/health
 - **Auth Swagger:** http://localhost:8081/auth/docs
+- **Mailpit inbox (if running):** http://localhost:8025
 - **Orders Swagger:** http://localhost:8082/api/v1/swagger-ui.html
 - **Holdings Swagger:** http://localhost:8080/api/v1/swagger-ui.html
 - **Insights Swagger:** http://localhost:8084/api/v1/swagger-ui.html
+
+### Test Logins
+
+All three share one password, posted in the team's secure chat (development only).
+
+| Email | Opens |
+|-------|-------|
+| `novice@nexttrade.local` | Novice dashboard: $10,000 cash, 2 holdings, order history |
+| `advanced@nexttrade.local` | Advanced dashboard: $150,000 cash, 5 holdings, order history |
+| `analyst@nexttrade.local` | Reporting frontend |
+
+See [Test Logins](README.md#test-logins-development-only) in the root README for details.
 
 ---
 

@@ -205,6 +205,78 @@
         ]
       }
     },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "PasswordResetController_forgotPassword",
+        "summary": "Request a password reset link",
+        "description": "Always 202. A registered email gets a link that expires in 20 minutes and works once.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted; a link is sent if the email is registered."
+          },
+          "400": {
+            "description": "INVALID_REQUEST: email missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "PasswordResetController_resetPassword",
+        "summary": "Set a new password with a reset token",
+        "description": "Burns the token and signs the user out of every session.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed."
+          },
+          "400": {
+            "description": "INVALID_RESET_TOKEN: unknown, expired or already used. INVALID_REQUEST: password too short or too long.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/rules/tier-eligibility": {
       "get": {
         "operationId": "RulesController_tierEligibility",
@@ -443,6 +515,12 @@
             "example": "10,000",
             "description": "Required when user_role is TRADER. Dollars; commas allowed."
           },
+          "initial_deposit": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "10,000",
+            "description": "Required when user_role is TRADER. Dollars; commas allowed. At least the assigned tier minimum ($5,000 Novice, $100,000 Advanced) and no more than liquidity_position."
+          },
           "accredited_investor": {
             "type": "boolean",
             "description": "Required when user_role is TRADER."
@@ -637,6 +715,39 @@
         "required": [
           "accessToken",
           "refreshToken"
+        ]
+      },
+      "ForgotPasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ada@example.com",
+            "maxLength": 320
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token from the reset link.",
+            "maxLength": 128
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "format": "password"
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
         ]
       },
       "TierEligibilityResponseDto": {

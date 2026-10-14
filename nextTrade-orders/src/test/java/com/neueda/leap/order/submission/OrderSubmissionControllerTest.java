@@ -5,8 +5,8 @@ import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.order.submission.controller.OrderSubmissionController;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.service.IdempotencyConflictException;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
-import com.neueda.leap.security.JwtService;
 import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +49,18 @@ class OrderSubmissionControllerTest {
     }
 
     @Test
+    void changedRetryOfAClientReferenceReturnsConflict() throws Exception {
+        var request = request();
+        when(service.submit(user, request)).thenThrow(new IdempotencyConflictException());
+
+        mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
+                        .contentType("application/json").content(json.writeValueAsBytes(request)))
+                .andExpect(status().isConflict())
+                .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
+                        "error", "IDEMPOTENCY_CONFLICT", "message", IdempotencyConflictException.MESSAGE)), true));
+    }
+
+    @Test
     void missingAuthenticationCannotSubmit() throws Exception {
         mvc.perform(post("/orders").with(csrf().asHeader()).contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isUnauthorized());
@@ -85,6 +97,17 @@ class OrderSubmissionControllerTest {
         mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "analyst@example.test", "ANALYST"))
                         .contentType("application/json").content(json.writeValueAsBytes(request())))
                 .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void cashMovementsHaveNoExternalRoute() throws Exception {
+        String bearer = "Bearer " + tokens.issueToken(user, "test@example.test", "TRADER");
+        for (String path : new String[]{"/cash/buy", "/cash/sell"}) {
+            mvc.perform(post(path).header("Authorization", bearer)
+                            .contentType("application/json").content("{\"amount\":100}"))
+                    .andExpect(status().isForbidden());
+        }
         verifyNoInteractions(service);
     }
 

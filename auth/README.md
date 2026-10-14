@@ -50,6 +50,8 @@ After changing an endpoint or DTO, run `npm run docs:openapi` to regenerate
 | POST | `/auth/login` | `email`, `password` | `200` tokens + user | `400`, `401` |
 | POST | `/auth/refresh` | `refreshToken` | `200` new tokens | `400`, `401` |
 | POST | `/auth/logout` | `refreshToken` | `204` | `400` missing token |
+| POST | `/auth/forgot-password` | `email` | `202` always | `400` missing or malformed email |
+| POST | `/auth/reset-password` | `token`, `newPassword` | `204` | `400` `INVALID_RESET_TOKEN`, `400` password breaks the 8-128 rule |
 | GET | `/rules/tier-eligibility` | — (Bearer token) | `200` tier, balance, gap to next tier | `401`, `404` no account |
 | GET | `/health` | — | `200` | — |
 
@@ -62,8 +64,27 @@ stay signed in. It returns `204` even for an unknown or already-revoked token,
 so it can't be used to test whether a token is valid. The access token keeps
 working until it expires (at most 10 minutes), so clients should discard it on logout.
 
+**Password reset (TS-15.9):** `forgot-password` answers `202` whether or not the
+email is registered. For a registered email it stores the SHA-256 hash of a random
+32-byte token (one per user, so a new request cancels the old link), valid for 20
+minutes, and emails the link. `reset-password` sets the new password (same rule as
+registration), deletes the token and revokes every refresh token the user holds, in one
+transaction, then emails a "password changed" notice. Raw tokens are never logged.
+
+**Email (PS-08):** every email goes through one `MailDelivery` interface, chosen by
+`MAIL_DELIVERY`. Emails are sent after the DB commit, and a failed send is logged, not
+returned to the user.
+
+| `MAIL_DELIVERY` | Where | What happens |
+|---|---|---|
+| `outbox` (default) | the VM, which has no network | one `.eml` file per email in `PASSWORD_RESET_OUTBOX_DIR`; in Compose that is the `password_reset_outbox` volume: `docker-compose exec auth sh -c 'cat /app/outbox/*.eml'` |
+| `smtp` | dev laptops | sent to Mailpit (`SMTP_HOST`:`SMTP_PORT`, default `localhost:1025`); inbox at http://localhost:8025. With Docker: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`; without Docker, run the Mailpit binary |
+
+The SMTP sender is a small client on Node's built-in `net` module (plain SMTP, no TLS or
+login, which is all Mailpit needs), so the VM's image build needs no new npm package.
+
 Errors are JSON with a fixed code (`INVALID_CREDENTIALS`, `USER_ALREADY_EXISTS`,
-`INVALID_REFRESH_TOKEN`, `INVALID_ACCESS_TOKEN`, `INSUFFICIENT_INVESTABLE_ASSETS`,
+`INVALID_REFRESH_TOKEN`, `INVALID_RESET_TOKEN`, `INVALID_ACCESS_TOKEN`, `INSUFFICIENT_INVESTABLE_ASSETS`,
 `ACCOUNT_NOT_FOUND`, `INVALID_REQUEST`, `INTERNAL_ERROR`); raw messages are
 never returned, since requests can carry passwords and SSNs.
 
@@ -75,6 +96,8 @@ never returned, since requests can carry passwords and SSNs.
 | `src/user/` | `auth.controller.ts` (the endpoints), `user.service.ts` (login), DTOs, exceptions |
 | `src/onboarding/` | `registration.service.ts`: one transaction writing `users` plus the role's profile tables; `tier-rules.ts`: tier assignment |
 | `src/rules/` | `GET /rules/tier-eligibility` |
+| `src/password-reset/` | Forgot/reset password endpoints, token handling, and the reset/password-changed email texts |
+| `src/mail/` | `MailDelivery`: the `.eml` outbox and the SMTP sender, picked by `MAIL_DELIVERY` |
 | `src/docs/` | OpenAPI document and Swagger UI setup |
 | `src/security/` | JWT signing, refresh tokens/sessions, bcrypt, SSN encryption (pgcrypto), optional TLS |
 | `src/common/filters/` | Turns every error into a JSON response with a fixed code |
@@ -95,6 +118,11 @@ See the root [env.example](../env.example) for Compose settings. For a native pr
 | `APP_JWT_EXPIRATION_MINUTES` | Access token lifetime; can only be shorter than the inactivity window |
 | `NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY` | Identity SSN encryption key; Compose maps `SSN_ENCRYPTION_KEY` to this setting |
 | `TLS_KEYSTORE`, `TLS_KEYSTORE_PASSWORD` | Optional: serve HTTPS directly (unset behind nginx) |
+| `MAIL_DELIVERY` | `outbox` (default) or `smtp`; anything else stops startup |
+| `PASSWORD_RESET_OUTBOX_DIR` | Folder for `.eml` files when `MAIL_DELIVERY=outbox` (default `./outbox`) |
+| `SMTP_HOST`, `SMTP_PORT` | SMTP server when `MAIL_DELIVERY=smtp` (default `localhost:1025`, a local Mailpit) |
+| `MAIL_FROM` | From address (default `NextTrade <no-reply@nexttrade.local>`) |
+| `PASSWORD_RESET_URL` | Reset page the emailed link opens (default `http://localhost:4200/reset-password`) |
 | `PORT` | Default 8081 (internal in Compose) |
 
 ## Running it

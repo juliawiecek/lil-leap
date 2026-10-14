@@ -11,8 +11,23 @@
   <meta name="theme-color" content="#000000">
   <meta name="description" content="NextTrade secure market access experience.">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #000; }
+    .startup-loader { position: fixed; inset: 0; display: grid; place-items: center; }
+    .startup-spinner {
+      width: 32px; height: 32px; border: 3px solid #78a85f33;
+      border-top-color: #78a85f; border-radius: 50%;
+      animation: startup-spin 0.8s linear infinite;
+    }
+    @keyframes startup-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .startup-spinner { animation: none; } }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <div class="startup-loader" role="status" aria-label="Loading session">
+      <span class="startup-spinner" aria-hidden="true"></span>
+    </div>
+  </app-root>
 </body>
 </html>

@@ -1,8 +1,12 @@
 package com.neueda.leap.order.service;
 
-/** A fixed, safe rejection reason for an order that cannot pass sufficiency checks. */
+/**
+ * A stable rejection reason for an order that cannot pass sufficiency checks. The message may
+ * describe the caller's own order and account (amounts needed and available), which only the
+ * account owner can see; it never names other accounts.
+ */
 public class OrderSufficiencyException extends RuntimeException {
-    /** Supported rejections; messages never include account balances or identifiers. */
+    /** Supported rejections. */
     public enum Reason {
         /** The account cannot cover the buffered purchase cost. */
         INSUFFICIENT_CASH,
@@ -25,6 +29,16 @@ public class OrderSufficiencyException extends RuntimeException {
             case INSUFFICIENT_HOLDINGS -> "Insufficient holdings for this order.";
             case QUOTE_UNAVAILABLE -> "A valid quote is required to check buying power.";
         });
+        this.reason = reason;
+    }
+
+    /**
+     * Creates a rule rejection that explains the shortfall to the account owner.
+     * @param reason safe reason code
+     * @param message what the order needs and what the account has
+     */
+    public OrderSufficiencyException(Reason reason, String message) {
+        super(message);
         this.reason = reason;
     }
 

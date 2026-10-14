@@ -30,6 +30,7 @@ const trader = {
   net_worth_bracket: '$25k-100k',
   risk_profile: 'MODERATE',
   liquidity_position: '10000',
+  initial_deposit: '10000',
   accredited_investor: false,
   is_politically_exposed_person: false,
   account_name: 'Main',
@@ -54,6 +55,11 @@ describe('RegisterRequestDto', () => {
   it('requires the financial fields for a TRADER', async () => {
     const [message] = await errorsFor({ ...trader, risk_profile: undefined });
     expect(message).toMatch(/employmentStatus, annualIncome.* are required for TRADER registration/);
+  });
+
+  it('requires the initial deposit for a TRADER', async () => {
+    const [message] = await errorsFor({ ...trader, initial_deposit: ' ' });
+    expect(message).toMatch(/initialDeposit.* are required for TRADER registration/);
   });
 
   it('requires the account fields for a TRADER', async () => {

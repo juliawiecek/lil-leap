@@ -21,9 +21,13 @@ services:
     depends_on: [frontend, insights-frontend, auth, holdings, orders, quote-service, insights]
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
   insights-frontend:
-    build: ./insights-frontend
+    build:
+      context: .
+      dockerfile: insights-frontend/Dockerfile
 
   auth:
     build: ./auth
@@ -33,6 +37,12 @@ services:
       SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
       SESSION_INACTIVITY_MINUTES: ${SESSION_INACTIVITY_MINUTES:-10}
+      # No network on the VM: reset emails are .eml files here. Read them with
+      # docker-compose exec auth sh -c 'cat /app/outbox/*.eml'
+      PASSWORD_RESET_OUTBOX_DIR: /app/outbox
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:4200/reset-password}
+    volumes:
+      - password_reset_outbox:/app/outbox
     depends_on:
       db: {condition: service_healthy}
 
@@ -49,6 +59,8 @@ services:
     environment:
       <<: [*primary-database, *jwt]
       PORT: 8082
+      # Demo switch: false lets orders fill outside NYSE hours (NEXT-212).
+      NEXTTRADE_MARKET_RESPECT_HOURS: ${NEXTTRADE_MARKET_RESPECT_HOURS:-true}
     depends_on:
       db: {condition: service_healthy}
 
@@ -82,6 +94,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-main_password}
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
+      # Same key as auth, so seeded SSNs decrypt like registered ones (05-test-users.sql).
+      SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -92,6 +106,9 @@ services:
       - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
+      # Dev/demo test logins (TS-DB-04). Never mount this in a production compose file.
+      - ./db/seeds/002_test_users.sql:/docker-entrypoint-initdb.d/05-test-users.sql:ro
 
 volumes:
   db_data:
+  password_reset_outbox:

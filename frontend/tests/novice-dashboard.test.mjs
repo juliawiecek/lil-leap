@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { of } from 'rxjs';
 import { component } from './component-helper.mjs';
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
+const { QuoteService } = await import('../src/app/quote.service.ts');
+const { ORDER_TRACK_LIMIT_MS } = await import('../src/app/order-history-api.ts');
+
+// A fixed live quote per stock, so prices are known once the dashboard's first quote refresh runs.
+const PRICES = { AAPL: 176.56, MSFT: 276.57, NVDA: 278.09, AMZN: 180.34, GOOGL: 155.91 };
+const fixedQuotes = [{
+  provide: QuoteService,
+  useValue: { getLatestByMarketSymbol: (_market, symbol) => of({ midpoint: PRICES[symbol] }) },
+}];
 
 const instrument = (symbol) => ({
   instrumentId: `${symbol.toLowerCase()}-id`, symbol, instrumentName: symbol, assetClass: 'COMMON_STOCK',
@@ -20,7 +30,7 @@ const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), 
 // and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
 async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'] } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
-  const desk = component(t, NoviceDashboard);
+  const desk = component(t, NoviceDashboard, fixedQuotes);
   let loads = 0;
   desk.portfolioClient = { load: async () => portfolios[Math.min(loads++, portfolios.length - 1)] };
   const submitted = [];
@@ -32,6 +42,8 @@ async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], 
     submit: async (request) => { submitted.push(request); return { orderId: 'o1', status: 'SUBMITTED' }; },
   };
   desk.orderHistoryClient = { list: async () => history[Math.min(historyCalls++, history.length - 1)] };
+  // ngOnInit reads the signed-in user's tier to pick the default execution threshold.
+  desk.auth = { traderLevel: 'NOVICE', riskProfile: null };
   await desk.ngOnInit(); await flush();
   return { desk, submitted, historyCalls: () => historyCalls };
 }
@@ -61,7 +73,7 @@ test('holdings are re-priced at the latest bid every 5 seconds, so portfolio val
 
 test('the trade dialog offers only tradable stocks and switching stock resets the review', async t => {
   const { desk, submitted } = await tradingDesk(t);
-  assert.deepEqual(desk.tradableQuotes().map(q => q.symbol), ['AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NVDA']);
+  assert.deepEqual(desk.tradableQuotes().map(q => q.symbol), ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL']);
   desk.openTrade('Buy'); desk.quantity.set('1'); desk.reviewTrade();
   assert.equal(desk.reviewing(), true);
   desk.chooseTradeSymbol('GOOGL');
@@ -92,7 +104,7 @@ test('a filled sell reloads balances so cash goes up and the shares go down', as
 });
 
 test('quote search matches symbols and company names regardless of case or surrounding spaces', t => {
-  const desk = component(t, NoviceDashboard);
+  const desk = component(t, NoviceDashboard, fixedQuotes);
   for (const query of [' msft ', 'MICROSOFT']) {
     desk.query.set(query);
     assert.deepEqual(desk.results().map(q => q.symbol), ['MSFT']);
@@ -100,11 +112,11 @@ test('quote search matches symbols and company names regardless of case or surro
   desk.query.set('missing company');
   assert.deepEqual(desk.results(), []);
   desk.query.set('');
-  assert.equal(desk.results().length, desk.quotes.length);
+  assert.equal(desk.results().length, desk.quotes().length);
 });
 
 test('watchlist toggling removes and restores the selected quote without duplicates', t => {
-  const desk = component(t, NoviceDashboard);
+  const desk = component(t, NoviceDashboard, fixedQuotes);
   desk.openTrade('Buy', 'AAPL');
   desk.toggleWatch();
   assert.ok(!desk.watchlist().some(q => q.symbol === 'AAPL'));
@@ -113,7 +125,7 @@ test('watchlist toggling removes and restores the selected quote without duplica
 });
 
 test('opening a different trade clears stale review, quantity, search, and errors', t => {
-  const desk = component(t, NoviceDashboard);
+  const desk = component(t, NoviceDashboard, fixedQuotes);
   desk.quantity.set('2'); desk.reviewing.set(true);
   desk.tradeMessage.set('old error'); desk.query.set('apple');
   desk.openTrade('Sell', 'MSFT');
@@ -143,7 +155,7 @@ test('buying power and owned shares constrain novice orders', async t => {
   desk.openTrade('Buy', 'AAPL'); desk.quantity.set('1000'); desk.reviewTrade();
   assert.match(desk.tradeMessage(), /buying power/);
   assert.equal(desk.reviewing(), false);
-  desk.openTrade('Sell', 'TSLA'); desk.quantity.set('1'); await desk.confirmTrade();
+  desk.openTrade('Sell', 'AMZN'); desk.quantity.set('1'); await desk.confirmTrade();
   assert.match(desk.tradeMessage(), /only sell shares you hold/);
   assert.deepEqual(submitted, []);
 });
@@ -154,7 +166,8 @@ test('confirming a buy sends a market order and leaves balances to the backend',
   desk.openTrade('Buy', 'AAPL'); desk.quantity.set('2'); await desk.confirmTrade();
   assert.equal(submitted.length, 1);
   const { clientReference, ...order } = submitted[0];
-  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET' });
+  // A novice's default $6 execution threshold on a $176.56 quote is a 3.4% price buffer.
+  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET', bufferPercent: 3.4 });
   assert.ok(clientReference);
   assert.deepEqual({ cash: desk.buyingPower(), invested: desk.invested(), holdings: desk.holdings() }, before);
   assert.equal(desk.quantity(), '');
@@ -198,16 +211,16 @@ test('a rejected order is reported in plain words', async t => {
   assert.match(desk.tradeMessage(), /was not filled/);
 });
 
-test('an order still running after 30 seconds points the user to Orders', async t => {
+test('an order still running past the tracking limit points the user to Orders', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('ACCEPTED')]] });
-  await desk.trackOrder('o1', Date.now() - 30000);
+  await desk.trackOrder('o1', Date.now() - ORDER_TRACK_LIMIT_MS);
   assert.match(desk.tradeMessage(), /still being processed/);
 });
 
 test('stocks without a backend instrument and users without an account are not sent', async t => {
-  const noStock = await tradingDesk(t);
-  noStock.desk.openTrade('Buy', 'TSLA'); noStock.desk.quantity.set('1'); await noStock.desk.confirmTrade();
-  assert.match(noStock.desk.tradeMessage(), /TSLA is not available to trade yet/);
+  const noStock = await tradingDesk(t, { symbols: ['AAPL', 'MSFT', 'AMZN', 'GOOGL'] });
+  noStock.desk.openTrade('Buy', 'NVDA'); noStock.desk.quantity.set('1'); await noStock.desk.confirmTrade();
+  assert.match(noStock.desk.tradeMessage(), /NVDA is not available to trade yet/);
   assert.deepEqual(noStock.submitted, []);
   const noAccount = await tradingDesk(t, { account: false });
   noAccount.desk.openTrade('Buy', 'AAPL'); noAccount.desk.quantity.set('1'); await noAccount.desk.confirmTrade();
@@ -231,4 +244,19 @@ test('a failed send shows the reason and a retry reuses the same order reference
   await desk.confirmTrade();
   assert.equal(submitted.length, 2);
   assert.equal(submitted[0].clientReference, submitted[1].clientReference);
+});
+
+test('the header counts down to the market close and keeps the last status if a refresh fails', async t => {
+  const { desk } = await tradingDesk(t);
+  desk.marketStatusClient = { status: async () => ({ open: true, exchangeTimeZone: 'America/New_York',
+    nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' }) };
+  await desk.refreshMarketStatus();
+  desk.marketClock.set(new Date('2026-10-14T17:46:00Z'));
+  assert.equal(desk.marketOpen(), true);
+  assert.equal(desk.marketText(), 'Market closes in 2h 14m');
+
+  desk.marketStatusClient = { status: async () => { throw new Error('down'); } };
+  await desk.refreshMarketStatus();
+  desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
+  assert.equal(desk.marketText(), 'Market closes in 1h 0m');
 });
