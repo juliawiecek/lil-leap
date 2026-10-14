@@ -22,9 +22,18 @@ test('protected content and login stay hidden until restoration resolves', async
   let finish; const delay = new Promise(resolve => { finish = resolve; });
   const { calls } = await identity(page, info, { delay });
   await page.goto('/orders', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('status')).toHaveText('Restoring your session?');
+  const loader = page.getByRole('status', { name: 'Loading session' });
+  const spinner = loader.locator('.startup-spinner');
+  await expect(loader).toBeVisible();
+  await expect(page.getByText('Restoring your session?')).toHaveCount(0);
+  await expect(spinner).toHaveCSS('animation-name', 'startup-spin');
+  await expect(page.locator('html')).toHaveCSS('background-color',
+    info.project.metadata.role === 'TRADER' ? 'rgb(0, 0, 0)' : 'rgb(12, 16, 17)');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(spinner).toHaveCSS('animation-name', 'none');
   await expect(workspace(page)).toHaveCount(0); await expect(page.locator('#email')).toHaveCount(0);
   finish(); await ready(page);
+  await expect(loader).toHaveCount(0);
   expect(calls.filter(path => path === '/auth/refresh')).toHaveLength(1);
 });
 
