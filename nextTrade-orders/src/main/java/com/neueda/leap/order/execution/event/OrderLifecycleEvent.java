@@ -39,4 +39,3 @@ public record OrderLifecycleEvent(
         BigDecimal executionPrice
 ) {
 }
-

@@ -95,4 +95,3 @@ class KafkaOrderEventConsumerServiceTest {
                 new BigDecimal("101.25"));
     }
 }
-

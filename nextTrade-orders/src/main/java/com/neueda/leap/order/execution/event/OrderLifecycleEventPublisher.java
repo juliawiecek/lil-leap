@@ -12,4 +12,3 @@ public interface OrderLifecycleEventPublisher {
      */
     void publishTerminalEvent(UUID orderId);
 }
-
