@@ -59,6 +59,8 @@ services:
     environment:
       <<: [*primary-database, *jwt]
       PORT: 8082
+      # Demo switch: false lets orders fill outside NYSE hours (NEXT-212).
+      NEXTTRADE_MARKET_RESPECT_HOURS: ${NEXTTRADE_MARKET_RESPECT_HOURS:-true}
     depends_on:
       db: {condition: service_healthy}
 

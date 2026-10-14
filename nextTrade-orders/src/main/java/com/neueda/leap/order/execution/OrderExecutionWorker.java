@@ -1,5 +1,10 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.market.MarketHours;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -57,6 +62,23 @@ public class OrderExecutionWorker {
                                       'nextExecutionTime', next_execution_at) FROM deferred
             """;
 
+    /** Holds a claimed order until the market opens; it executes on the first claim after that. */
+    private static final String HOLD_UNTIL_OPEN_SQL = """
+            WITH held AS (
+                UPDATE orders SET next_execution_at = ?, last_execution_error = 'MARKET_CLOSED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                RETURNING order_id, account_id, execution_attempts, next_execution_at
+            ), history AS (
+                INSERT INTO order_status_history(order_id, status, reason_code)
+                SELECT order_id, 'PENDING', 'MARKET_CLOSED' FROM held
+            )
+            INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+            SELECT account_id, order_id, 'SYSTEM', 'ORDER_REQUEUED',
+                   jsonb_build_object('attemptNumber', execution_attempts, 'reasonCode', 'MARKET_CLOSED',
+                                      'nextExecutionTime', next_execution_at) FROM held
+            """;
+
     private static final String LOCK_FOR_EXECUTION_SQL = """
             SELECT order_id FROM orders WHERE order_id = ? AND execution_attempts = ?
                 AND status = 'PENDING' AND accepted_at IS NOT NULL
@@ -86,6 +108,8 @@ public class OrderExecutionWorker {
     private final OrderExecutor executor;
     private final int retrySeconds;
     private final long maxAttempts;
+    private final MarketHours marketHours;
+    private final Clock clock;
 
     /**
      * Creates a {@code OrderExecutionWorker} with the default attempt limit for unexpected failures.
@@ -113,6 +137,24 @@ public class OrderExecutionWorker {
      */
     public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
                                 OrderExecutor executor, int retrySeconds, long maxAttempts) {
+        this(jdbc, manager, executor, retrySeconds, maxAttempts, null, Clock.systemUTC());
+    }
+
+    /**
+     * Creates a {@code OrderExecutionWorker} that only executes during market hours (NEXT-212).
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @param maxAttempts attempts after which an unexpected failure rejects the order instead of requeueing it
+     * @param marketHours session rules; null executes at any time
+     * @param clock source of the current time
+     * @throws IllegalArgumentException if the retry delay or attempt limit is less than one
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, int retrySeconds, long maxAttempts,
+                                MarketHours marketHours, Clock clock) {
         if (retrySeconds < 1) {
             throw new IllegalArgumentException("Retry delay must be positive");
         }
@@ -123,6 +165,8 @@ public class OrderExecutionWorker {
         this.executor = executor;
         this.retrySeconds = retrySeconds;
         this.maxAttempts = maxAttempts;
+        this.marketHours = marketHours;
+        this.clock = clock;
         transaction = new TransactionTemplate(manager);
         transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -155,6 +199,11 @@ public class OrderExecutionWorker {
      * @param claim persisted claim and attempt number
      */
     public void execute(Claim claim) {
+        Instant now = clock.instant();
+        if (marketHours != null && !marketHours.isOpen(now)) {
+            holdUntilOpen(claim, marketHours.nextOpen(now));
+            return;
+        }
         String requeueReason;
         try {
             requeueReason = executeClaimTransaction(claim);
@@ -185,6 +234,12 @@ public class OrderExecutionWorker {
 
     private void defer(Claim claim, String reason) {
         transaction.executeWithoutResult(tx -> jdbc.update(DEFER_SQL, retrySeconds, reason, claim.orderId(), claim.attempt()));
+    }
+
+    /** Keeps the order PENDING until the next session; fenced by attempt like a requeue. */
+    private void holdUntilOpen(Claim claim, Instant open) {
+        transaction.executeWithoutResult(tx -> jdbc.update(HOLD_UNTIL_OPEN_SQL, Timestamp.from(open),
+                claim.orderId(), claim.attempt()));
     }
 
     /** Ends retries for an order that keeps failing unexpectedly; fenced by attempt like a requeue. */
