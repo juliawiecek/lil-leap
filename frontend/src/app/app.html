@@ -84,15 +84,17 @@
       </section>
 
       <section class="auth-panel" aria-labelledby="auth-title">
-        <h2 id="auth-title">{{ authMode() === 'signup' ? 'Create your account' : 'Welcome back' }}</h2>
+        <h2 id="auth-title">{{ authTitle() }}</h2>
         <p class="auth-subtitle" id="auth-subtitle">
-          Your next move starts here.
+          {{ authSubtitle() }}
         </p>
 
-        <div class="auth-tabs" role="tablist" aria-label="Account access">
-          <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
-          <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
-        </div>
+        @if (showTabs()) {
+          <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
+            <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
+          </div>
+        }
 
         <form #authForm method="post" novalidate (submit)="onSubmit($event, authForm)">
 
@@ -102,23 +104,23 @@
             <input #fullName id="full-name" name="name" type="text" autocomplete="name" placeholder="Your full name" [required]="authMode() === 'signup'" />
           </div>
 
-          <div class="field-group">
+          <div class="field-group" [hidden]="authMode() === 'reset'">
             <div class="field-row"><label for="email">Email address</label></div>
-            <input #email id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <input #email id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" [required]="authMode() !== 'reset'" />
           </div>
 
-          <div class="field-group">
+          <div class="field-group" [hidden]="authMode() === 'forgot'">
             <div class="field-row">
-              <label for="password">Password</label>
-              <button type="button" class="text-link" [style.visibility]="authMode() === 'signup' ? 'hidden' : 'visible'" (click)="showPasswordRecovery($event)">Forgot password?</button>
+              <label for="password">{{ authMode() === 'reset' ? 'New password' : 'Password' }}</label>
+              <button type="button" class="text-link" [style.visibility]="authMode() === 'signin' ? 'visible' : 'hidden'" (click)="showPasswordRecovery($event)">Forgot password?</button>
             </div>
             <div class="input-wrap">
-              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="authMode() === 'signup' ? 'new-password' : 'current-password'" [attr.minlength]="authMode() === 'signup' ? 12 : null" [attr.aria-describedby]="authMode() === 'signup' && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" required (input)="updatePassword($any($event.target).value)" />
+              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="choosingPassword() ? 'new-password' : 'current-password'" [attr.minlength]="choosingPassword() ? 12 : null" [attr.aria-describedby]="choosingPassword() && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" [required]="authMode() !== 'forgot'" (input)="updatePassword($any($event.target).value)" />
               <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
             </div>
           </div>
 
-          @if (authMode() === 'signup') {
+          @if (choosingPassword()) {
             <div class="field-group">
               <div class="field-row"><label for="verify-password">Verify password</label></div>
               <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" />
@@ -126,7 +128,7 @@
           }
 
           </div>
-          @if (authMode() === 'signup' && passwordStarted()) {
+          @if (choosingPassword() && passwordStarted()) {
             <div class="password-checklist" id="password-requirements" aria-live="polite" aria-atomic="true">
               <p>Your password needs:</p>
               <ul>
@@ -137,10 +139,13 @@
               </ul>
             </div>
           }
-          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ authMode() === 'signup' ? 'Create account' : signingIn() ? 'Signing in…' : 'Continue securely' }}</button>
+          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ submitLabel() }}</button>
 
 
           <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
+          @if (!showTabs()) {
+            <button type="button" class="text-link" (click)="backToSignIn()">Back to sign in</button>
+          }
         </form>
         <div class="auth-alternative">
           <div class="auth-divider"><span>or</span></div>

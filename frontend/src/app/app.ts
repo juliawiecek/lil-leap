@@ -10,6 +10,7 @@ import { safeReturnUrl } from './page-state';
   Renderer2,
   ViewChild,
   ViewEncapsulation,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -20,7 +21,23 @@ import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
 import type { Experience } from './stock-dashboard';
 
-type AuthMode = 'signin' | 'signup';
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
+
+/** The emailed reset link opens this route (app.routes.ts) with ?token=... */
+const RESET_ROUTE = 'reset-password';
+
+const TITLES: Record<AuthMode, string> = {
+  signin: 'Welcome back',
+  signup: 'Create your account',
+  forgot: 'Reset your password',
+  reset: 'Choose a new password',
+};
+const SUBTITLES: Record<AuthMode, string> = {
+  signin: 'Your next move starts here.',
+  signup: 'Your next move starts here.',
+  forgot: 'Enter your email and we will send you a link to choose a new password.',
+  reset: 'Pick a new password for your account. You will be signed out everywhere else.',
+};
 
 interface Candle {
   open: number;
@@ -60,7 +77,17 @@ export class App implements AfterViewInit, OnDestroy {
   private readonly riseColor = '#87bb66';
   private readonly neutralColor = '#c4cbbf';
 
-  readonly authMode = signal<AuthMode>('signin');
+  /** Set when the app was opened from an emailed reset link; cleared once the password is changed. */
+  private resetToken = this.resetTokenFromRoute();
+
+  readonly authMode = signal<AuthMode>(this.resetToken ? 'reset' : 'signin');
+  readonly authTitle = computed(() => TITLES[this.authMode()]);
+  readonly authSubtitle = computed(() => SUBTITLES[this.authMode()]);
+  /** Sign-in and sign-up share tabs; the reset screens stand alone with a way back. */
+  readonly showTabs = computed(() => this.authMode() === 'signin' || this.authMode() === 'signup');
+  /** Sign-up and reset both choose a password, so both show the rules checklist and a confirmation box. */
+  readonly choosingPassword = computed(() => this.authMode() === 'signup' || this.authMode() === 'reset');
+  readonly submitLabel = computed(() => this.labelFor(this.authMode(), this.signingIn()));
   readonly pageReady = signal(false);
   // Decorative login chart; independent of the opening animation and market data.
   readonly loginCandles = Array.from({ length: 44 }, (_, index) => {
@@ -160,6 +187,11 @@ export class App implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     if (this.route?.snapshot.queryParamMap.has('returnUrl')) { this.showAuthPage(); }
+    if (this.resetToken) {
+      this.showAuthPage();
+      // Drop the token from the address bar (and history); the same route keeps this component.
+      void this.router?.navigate(['/', RESET_ROUTE], { replaceUrl: true });
+    }
     this.context = this.marketChart.nativeElement.getContext('2d');
     if (!this.context) {
       return;
@@ -205,9 +237,15 @@ export class App implements AfterViewInit, OnDestroy {
       clearTimeout(this.focusTimer);
     }
     this.focusTimer = setTimeout(() => {
-      const target = mode === 'signup' ? this.fullName : this.email;
-      target?.nativeElement.focus({ preventScroll: true });
+      this.focusTargetFor(mode)?.nativeElement.focus({ preventScroll: true });
     });
+  }
+
+  private focusTargetFor(mode: AuthMode): ElementRef<HTMLInputElement> | undefined {
+    if (mode === 'signup') {
+      return this.fullName;
+    }
+    return mode === 'reset' ? this.password : this.email;
   }
 
   togglePassword(): void {
@@ -215,9 +253,26 @@ export class App implements AfterViewInit, OnDestroy {
     this.password.nativeElement.focus();
   }
 
+  /** "Forgot password?" swaps the sign-in card for the email-only reset request. */
   showPasswordRecovery(event: Event): void {
     event.preventDefault();
-    this.formStatus.set('Password recovery will continue in the next step.');
+    this.setAuthMode('forgot');
+  }
+
+  /** From the reset screens back to sign-in; a stale reset link is dropped. */
+  backToSignIn(): void {
+    const onResetRoute = this.route?.snapshot.routeConfig?.path === RESET_ROUTE;
+    this.resetToken = null;
+    this.setAuthMode('signin');
+    if (onResetRoute) {
+      void this.router?.navigateByUrl('/login', { replaceUrl: true });
+    }
+  }
+
+  /** The token from an emailed reset link, read from the reset-password route only. */
+  private resetTokenFromRoute(): string | null {
+    const snapshot = this.route?.snapshot;
+    return snapshot?.routeConfig?.path === RESET_ROUTE ? snapshot.queryParamMap.get('token') : null;
   }
 
   onSubmit(event: Event, form: HTMLFormElement): void {
@@ -227,20 +282,20 @@ export class App implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (this.authMode() === 'signup') {
-      this.passwordDraft.set(this.password.nativeElement.value);
-      this.passwordStarted.set(true);
-      if (!this.passwordRules.every(rule => rule.test(this.password.nativeElement.value))) {
-        this.formStatus.set('Please meet all the password requirements below.');
-        this.password.nativeElement.focus();
-        return;
-      }
-      const confirmation = form.elements.namedItem('verifyPassword') as HTMLInputElement;
-      if (confirmation.value !== this.password.nativeElement.value) {
-        this.formStatus.set('Passwords do not match. Please enter the same password in both fields.');
-        confirmation.focus();
-        return;
-      }
+    const mode = this.authMode();
+    if (mode === 'forgot') {
+      void this.requestPasswordReset();
+      return;
+    }
+    if (this.choosingPassword() && !this.newPasswordAccepted(form)) {
+      return;
+    }
+    if (mode === 'reset') {
+      void this.completePasswordReset();
+      return;
+    }
+
+    if (mode === 'signup') {
       if (!this.fullName.nativeElement.value.trim()) {
         this.formStatus.set('Please enter your full name.');
         this.fullName.nativeElement.focus();
@@ -254,6 +309,82 @@ export class App implements AfterViewInit, OnDestroy {
     }
 
     void this.signIn();
+  }
+
+  /** The same rules as sign-up, plus a matching confirmation; shows what's wrong and focuses it. */
+  private newPasswordAccepted(form: HTMLFormElement): boolean {
+    const password = this.password.nativeElement.value;
+    this.passwordDraft.set(password);
+    this.passwordStarted.set(true);
+    if (!this.passwordRules.every(rule => rule.test(password))) {
+      this.formStatus.set('Please meet all the password requirements below.');
+      this.password.nativeElement.focus();
+      return false;
+    }
+    const confirmation = form.elements.namedItem('verifyPassword') as HTMLInputElement;
+    if (confirmation.value !== password) {
+      this.formStatus.set('Passwords do not match. Please enter the same password in both fields.');
+      confirmation.focus();
+      return false;
+    }
+    return true;
+  }
+
+  /** Always shows the same confirmation, so the page doesn't reveal which emails have accounts. */
+  private async requestPasswordReset(): Promise<void> {
+    if (this.signingIn()) {
+      return;
+    }
+    this.signingIn.set(true);
+    this.formStatus.set('');
+    try {
+      await this.auth.requestPasswordReset(this.email.nativeElement.value.trim());
+      this.formStatus.set('If an account exists for that email, we have sent a link to reset your password. It expires in 20 minutes.');
+    } catch (error) {
+      this.formStatus.set(this.messageFor(error));
+    } finally {
+      this.signingIn.set(false);
+    }
+  }
+
+  private async completePasswordReset(): Promise<void> {
+    if (this.signingIn()) {
+      return;
+    }
+    this.signingIn.set(true);
+    this.formStatus.set('');
+    try {
+      await this.auth.resetPassword(this.resetToken ?? '', this.password.nativeElement.value);
+      // Stay on this screen as sign-in so the confirmation stays visible; signing in moves on.
+      this.resetToken = null;
+      this.setAuthMode('signin');
+      this.clearPasswordFields();
+      this.formStatus.set('Your password has been changed. Sign in with your new password.');
+    } catch (error) {
+      this.formStatus.set(this.messageFor(error));
+    } finally {
+      this.signingIn.set(false);
+    }
+  }
+
+  private clearPasswordFields(): void {
+    this.password.nativeElement.value = '';
+    this.passwordDraft.set('');
+    this.confirmationDraft.set('');
+    this.passwordStarted.set(false);
+  }
+
+  private labelFor(mode: AuthMode, busy: boolean): string {
+    if (mode === 'signup') {
+      return 'Create account';
+    }
+    if (mode === 'forgot') {
+      return busy ? 'Sending…' : 'Send reset link';
+    }
+    if (mode === 'reset') {
+      return busy ? 'Saving…' : 'Set new password';
+    }
+    return busy ? 'Signing in…' : 'Continue securely';
   }
 
   private async signIn(): Promise<void> {

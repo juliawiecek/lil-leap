@@ -6,13 +6,16 @@ const { App } = await import('../src/app/app.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { AuthApiError } = await import('../src/app/auth-api.ts');
 
-async function setup(t, overrides = {}) {
+/** `route` opens the page on a route (e.g. reset-password) with query params; router navigations are recorded. */
+async function setup(t, overrides = {}, route = {}) {
   const auth = { login: t.mock.fn(async () => ({})), register: t.mock.fn(async () => {}),
     logout: t.mock.fn(async () => {}), traderLevel: 'ADVANCED', accessTokenExpiresAt: null, ...overrides };
-  const fixture = await render(t, App, {}, [{ provide: AuthService, useValue: auth }, { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } }, { provide: Router, useValue: { url: '/login', navigateByUrl: async () => true, navigate: async () => true } }]);
+  const snapshot = { queryParamMap: convertToParamMap(route.query ?? {}), routeConfig: route.path ? { path: route.path } : undefined };
+  const router = { url: '/login', navigateByUrl: t.mock.fn(async () => true), navigate: t.mock.fn(async () => true) };
+  const fixture = await render(t, App, {}, [{ provide: AuthService, useValue: auth }, { provide: ActivatedRoute, useValue: { snapshot } }, { provide: Router, useValue: router }]);
   const app = fixture.componentInstance;
   t.after(() => app.session.stop());
-  return { fixture, app, auth };
+  return { fixture, app, auth, router };
 }
 function submit(fixture) {
   fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -113,7 +116,7 @@ test('password visibility, recovery, and bfcache return check the idle deadline'
   app.togglePassword(); fixture.detectChanges();
   assert.equal(fixture.nativeElement.querySelector('#password').type, 'password');
   const event = new Event('click', { cancelable: true }); app.showPasswordRecovery(event);
-  assert.equal(event.defaultPrevented, true); assert.match(app.formStatus(), /Password recovery/);
+  assert.equal(event.defaultPrevented, true); assert.equal(app.authMode(), 'forgot');
   const check = t.mock.method(app.session.keeper, 'check', async () => {});
   app.onPageShow({ persisted: false }); assert.equal(check.mock.callCount(), 0);
   app.onPageShow({ persisted: true }); assert.equal(check.mock.callCount(), 1);
@@ -156,4 +159,99 @@ test('opening candles finish morphing before the login form is revealed', async 
   assert.equal(app.chartMorph, 1);
   assert.equal(app.pageReady(), true);
   assert.equal(document.body.classList.contains('brand-phase'), false);
+function shown(fixture, selector) {
+  return !fixture.nativeElement.querySelector(selector).closest('.field-group').hidden;
+}
+
+test('forgot password asks only for the email and always shows the same confirmation', async t => {
+  const requestPasswordReset = t.mock.fn(async () => undefined);
+  const { fixture, app } = await setup(t, { requestPasswordReset });
+  app.showPasswordRecovery(new Event('click', { cancelable: true })); fixture.detectChanges();
+
+  assert.equal(app.authTitle(), 'Reset your password');
+  assert.equal(shown(fixture, '#email'), true);
+  assert.equal(shown(fixture, '#password'), false);
+  assert.equal(fixture.nativeElement.querySelector('.auth-tabs'), null);
+
+  input(fixture, '#email', ' ada@example.com '); submit(fixture); submit(fixture);
+  await settle(fixture);
+  assert.equal(requestPasswordReset.mock.callCount(), 1);
+  assert.deepEqual(requestPasswordReset.mock.calls[0].arguments, ['ada@example.com']);
+  assert.match(app.formStatus(), /If an account exists for that email, we have sent a link/);
+
+  app.backToSignIn(); fixture.detectChanges();
+  assert.equal(app.authMode(), 'signin');
+  assert.ok(fixture.nativeElement.querySelector('.auth-tabs'));
+});
+
+test('a failed reset request shows a safe message', async t => {
+  const requestPasswordReset = t.mock.fn(async () => { throw new AuthApiError('We could not reach NextTrade.'); });
+  const { fixture, app } = await setup(t, { requestPasswordReset });
+  app.setAuthMode('forgot'); fixture.detectChanges();
+
+  input(fixture, '#email', 'ada@example.com'); submit(fixture); await settle(fixture);
+
+  assert.equal(app.formStatus(), 'We could not reach NextTrade.');
+  assert.equal(app.signingIn(), false);
+});
+
+test('an emailed reset link opens the new-password screen and drops the token from the address bar', async t => {
+  const resetPassword = t.mock.fn(async () => undefined);
+  const { fixture, app, router } = await setup(t, { resetPassword }, { path: 'reset-password', query: { token: 'link-value' } });
+
+  assert.equal(app.authMode(), 'reset');
+  assert.equal(app.authTitle(), 'Choose a new password');
+  assert.deepEqual(router.navigate.mock.calls[0].arguments, [['/', 'reset-password'], { replaceUrl: true }]);
+  assert.equal(shown(fixture, '#email'), false);
+  assert.ok(fixture.nativeElement.querySelector('#verify-password'));
+
+  // Long enough for native validation, but missing the other sign-up rules.
+  input(fixture, '#password', 'abcdefghijklmnop'); input(fixture, '#verify-password', 'abcdefghijklmnop'); submit(fixture);
+  assert.match(app.formStatus(), /password requirements/);
+  input(fixture, '#password', 'NewPassword1!'); input(fixture, '#verify-password', 'Different1!'); submit(fixture);
+  assert.match(app.formStatus(), /Passwords do not match/);
+  assert.equal(resetPassword.mock.callCount(), 0);
+
+  input(fixture, '#verify-password', 'NewPassword1!'); submit(fixture); await settle(fixture);
+  assert.deepEqual(resetPassword.mock.calls[0].arguments, ['link-value', 'NewPassword1!']);
+  assert.equal(app.authMode(), 'signin');
+  assert.equal(fixture.nativeElement.querySelector('#password').value, '');
+  assert.match(app.formStatus(), /Your password has been changed/);
+  assert.equal(router.navigateByUrl.mock.callCount(), 0);
+});
+
+test('an expired or used reset link explains how to get a new one', async t => {
+  const resetPassword = t.mock.fn(async () => {
+    throw new AuthApiError('This reset link is invalid, expired or already used. Please request a new one.');
+  });
+  const { fixture, app } = await setup(t, { resetPassword }, { path: 'reset-password', query: { token: 'stale' } });
+
+  input(fixture, '#password', 'NewPassword1!'); input(fixture, '#verify-password', 'NewPassword1!');
+  submit(fixture); await settle(fixture);
+
+  assert.equal(app.authMode(), 'reset');
+  assert.match(app.formStatus(), /request a new one/);
+});
+
+test('back to sign in from a reset link goes to the login page', async t => {
+  const { app, router } = await setup(t, {}, { path: 'reset-password', query: { token: 'link-value' } });
+
+  app.backToSignIn();
+
+  assert.equal(app.authMode(), 'signin');
+  assert.deepEqual(router.navigateByUrl.mock.calls[0].arguments, ['/login', { replaceUrl: true }]);
+});
+
+test('without a token the reset page just shows sign in', async t => {
+  const { app, router } = await setup(t, {}, { path: 'reset-password' });
+
+  assert.equal(app.authMode(), 'signin');
+  assert.equal(app.submitLabel(), 'Continue securely');
+  assert.equal(router.navigate.mock.callCount(), 0);
+});
+
+test('a token on any other route is ignored', async t => {
+  const { app } = await setup(t, {}, { path: 'login', query: { token: 'link-value' } });
+
+  assert.equal(app.authMode(), 'signin');
 });

@@ -25,6 +25,12 @@ export const routes: Routes = [
     loadComponent: () => import('./app').then((module) => module.App),
     canActivate: [guestGuard],
   },
+  // The emailed reset link (PS-08); without its own route the wildcard would redirect it and drop the token.
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./app').then((module) => module.App),
+    canActivate: [guestGuard],
+  },
   ...Object.values(PAGE_PATHS).map((path) => ({
     path: path.slice(1),
     loadComponent: () => import('./trading-workspace').then((module) => module.TradingWorkspace),

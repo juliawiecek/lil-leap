@@ -9,9 +9,10 @@ const { AuthService } = await import('../src/app/auth.service.ts');
 const { AppSessionService } = await import('../src/app/app-session.service.ts');
 
 test('all trading route loaders resolve to their public or protected component', async () => {
+  const publicPaths = ['login', 'reset-password'];
   for (const route of routes.filter((route) => route.loadComponent)) {
     const Type = await route.loadComponent();
-    assert.equal(Type.name, route.path === 'login' ? 'App' : 'TradingWorkspace');
+    assert.equal(Type.name, publicPaths.includes(route.path) ? 'App' : 'TradingWorkspace');
   }
 });
 

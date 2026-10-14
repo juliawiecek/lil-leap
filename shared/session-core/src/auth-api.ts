@@ -37,6 +37,7 @@ const MESSAGES: Record<string, string> = {
   INSUFFICIENT_INVESTABLE_ASSETS:
     'A minimum of $5,000 in investable assets is required to open an account. Please review your net worth and income.',
   INVALID_REQUEST: 'Some details were not accepted. Please review your information and try again.',
+  INVALID_RESET_TOKEN: 'This reset link is invalid, expired or already used. Please request a new one.',
 };
 const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
@@ -292,6 +293,16 @@ export class AuthClient {
     }
   }
 
+  /** Asks for a reset link. The server answers the same whether or not the email is registered. */
+  async requestPasswordReset(email: string): Promise<void> {
+    await this.#post('/forgot-password', { email });
+  }
+
+  /** Sets a new password with the token from the reset link; the server also ends every session. */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await this.#post('/reset-password', { token, newPassword });
+  }
+
   /** Always signs out locally; revoking the session server-side is best effort and never throws. */
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
@@ -382,7 +393,8 @@ export class AuthClient {
     }
 
     if (response.ok) {
-      return response.status === 204 ? undefined : response.json();
+      // 202 Accepted (forgot-password) and 204 No Content carry no body.
+      return response.status === 202 || response.status === 204 ? undefined : response.json();
     }
 
     const code = await response
