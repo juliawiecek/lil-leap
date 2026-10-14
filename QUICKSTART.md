@@ -59,6 +59,37 @@ Two files need to be updated (they already exist, just need verification):
 }
 ```
 
+### 5. Optional: Start Kafka Locally (No Docker)
+
+If you want the Orders service to publish terminal events and Insights to write the CSV/audit outputs without Docker, install Apache Kafka locally and start the broker from the Kafka distribution directory.
+
+**Prerequisites**
+- Java 17+ installed and `JAVA_HOME` set
+- Apache Kafka 3.7.x extracted somewhere on disk, for example `C:\kafka\kafka_3.7.1`
+
+**Terminal A — ZooKeeper**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\zookeeper-server-start.bat config\zookeeper.properties
+```
+
+**Terminal B — Kafka broker**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-server-start.bat config\server.properties
+```
+
+**Terminal C — create the topic**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-topics.bat --create --bootstrap-server localhost:9092 --topic order-events --partitions 1 --replication-factor 1
+bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
+```
+
+The Spring Boot local profiles for `nextTrade-orders` and `insights` now default Kafka bootstrap servers to `localhost:9092`, so they connect to the locally started broker automatically. If you prefer the Docker broker instead, use the optional Compose override in `kafka/README.md`.
+
+When using the native Kafka broker, keep 3 terminals open for ZooKeeper, the Kafka broker, and topic creation before you start the 7 application terminals below.
+
 ---
 
 ## Each Development Session (5 minutes)

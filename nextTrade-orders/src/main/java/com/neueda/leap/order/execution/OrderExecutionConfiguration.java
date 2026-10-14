@@ -28,8 +28,9 @@ public class OrderExecutionConfiguration {
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             OrderExecutor executor,
+            com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher eventPublisher,
             @Value("${orders.execution.retry-seconds:30}") int retrySeconds) {
-        return new OrderExecutionWorker(jdbc, manager, executor, retrySeconds);
+        return new OrderExecutionWorker(jdbc, manager, executor, eventPublisher, retrySeconds);
     }
 
     @Bean

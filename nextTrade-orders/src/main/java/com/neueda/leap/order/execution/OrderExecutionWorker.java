@@ -1,5 +1,6 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -66,6 +67,7 @@ public class OrderExecutionWorker {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final OrderExecutor executor;
+    private final OrderLifecycleEventPublisher eventPublisher;
     private final int retrySeconds;
 
     /**
@@ -74,17 +76,34 @@ public class OrderExecutionWorker {
      * @param jdbc JDBC operations participating in Spring transactions
      * @param manager transaction manager used for independent claim and execution transactions
      * @param executor executor invoked while the order row is locked
+     * @param eventPublisher Kafka publisher invoked after terminal commits
      * @param retrySeconds positive delay in seconds before a claimed order is eligible again
      * @throws IllegalArgumentException if the retry delay is less than one second
      */
     public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
-                                OrderExecutor executor, int retrySeconds) {
+                                OrderExecutor executor,
+                                OrderLifecycleEventPublisher eventPublisher,
+                                int retrySeconds) {
         if (retrySeconds < 1) throw new IllegalArgumentException("Retry delay must be positive");
         this.jdbc = jdbc;
         this.executor = executor;
+        this.eventPublisher = eventPublisher;
         this.retrySeconds = retrySeconds;
         transaction = new TransactionTemplate(manager);
         transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /**
+     * Backwards-compatible constructor used by existing unit tests and older wiring.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, int retrySeconds) {
+        this(jdbc, manager, executor, orderId -> { }, retrySeconds);
     }
 
     /**
@@ -114,48 +133,63 @@ public class OrderExecutionWorker {
      */
     public void execute(Claim claim) {
         try {
-            boolean pending = executeClaimTransaction(claim);
-            if (pending) defer(claim, "EXECUTION_PENDING");
-        } catch (RuntimeException failure) {
+            OrderExecutor.Outcome outcome = executeClaimTransaction(claim);
+            if (outcome == null) {
+                return;
+            }
+            if (outcome == OrderExecutor.Outcome.PENDING) {
+                defer(claim, "EXECUTION_PENDING");
+                return;
+            }
+            publishTerminalEvent(claim.orderId());
+        } catch (RuntimeException ignored) {
             // The committed claim survives even if this diagnostic update also fails.
             defer(claim, "EXECUTION_FAILED");
         }
     }
 
-    private boolean executeClaimTransaction(Claim claim) {
-        return Boolean.TRUE.equals(transaction.execute(tx -> {
+    private OrderExecutor.Outcome executeClaimTransaction(Claim claim) {
+        return transaction.execute(tx -> {
             var locked = jdbc.query(LOCK_FOR_EXECUTION_SQL,
                     (rs, n) -> rs.getObject(1, UUID.class), claim.orderId(), claim.attempt());
             if (locked.isEmpty()) {
-                return false;
+                return null;
             }
             return processOutcome(claim, executor.execute(claim.orderId()), tx);
-        }));
+        });
     }
 
     private void defer(Claim claim, String reason) {
         transaction.executeWithoutResult(tx -> jdbc.update(DEFER_SQL, retrySeconds, reason, claim.orderId(), claim.attempt()));
     }
 
-    private boolean processOutcome(Claim claim, OrderExecutor.Outcome outcome,
-                                   org.springframework.transaction.TransactionStatus tx) {
+    private OrderExecutor.Outcome processOutcome(Claim claim, OrderExecutor.Outcome outcome,
+                                     org.springframework.transaction.TransactionStatus tx) {
         return switch (outcome) {
             case FILLED -> {
                 validateFill(claim.orderId());
                 jdbc.update("UPDATE orders SET status = 'FILLED', updated_at = CURRENT_TIMESTAMP, last_execution_error = NULL WHERE order_id = ?",
                         claim.orderId());
-                yield false;
+                yield OrderExecutor.Outcome.FILLED;
             }
             case REJECTED -> {
                 validateRejection(claim.orderId());
-                yield false;
+                yield OrderExecutor.Outcome.REJECTED;
             }
             case PENDING -> {
                 // Roll back any accidental partial effects from an unavailable executor.
                 tx.setRollbackOnly();
-                yield true;
+                yield OrderExecutor.Outcome.PENDING;
             }
         };
+    }
+
+    private void publishTerminalEvent(UUID orderId) {
+        try {
+            eventPublisher.publishTerminalEvent(orderId);
+        } catch (RuntimeException failure) {
+            // Kafka is best-effort for the demo flow; order completion still stands.
+        }
     }
 
     private void validateFill(UUID orderId) {
