@@ -20,6 +20,7 @@ test('profile prefills name, formats contact and currency inputs, and builds the
   profile.goTo(1); fixture.detectChanges();
   input(fixture, '#profile-annual_income', '123456.789'); assert.equal(profile.values().annual_income, '123,456.78');
   input(fixture, '#profile-liquidity_position', '$10000'); assert.equal(profile.values().liquidity_position, '10,000');
+  input(fixture, '#profile-initial_deposit', '$5000.5'); assert.equal(profile.values().initial_deposit, '5,000.5');
   input(fixture, '#profile-employment_status', 'RETIRED', 'change');
   assert.equal(fixture.nativeElement.querySelector('#profile-employer_name').disabled, true);
 });
