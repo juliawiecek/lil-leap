@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.UUID;
 
 /**
@@ -54,11 +55,14 @@ public class KafkaOrderLifecycleEventPublisher implements OrderLifecycleEventPub
         }
 
         try {
-            kafkaTemplate.send(topic, orderId.toString(), objectMapper.writeValueAsString(event)).join();
+            CompletableFuture<?> send = kafkaTemplate.send(topic, orderId.toString(), objectMapper.writeValueAsString(event));
+            send.whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.warn("Unable to publish terminal order {} to Kafka topic {}", orderId, topic, ex);
+                }
+            });
         } catch (JsonProcessingException ex) {
             log.warn("Unable to serialise terminal order {} for Kafka topic {}", orderId, topic, ex);
-        } catch (RuntimeException ex) {
-            log.warn("Unable to publish terminal order {} to Kafka topic {}", orderId, topic, ex);
         }
     }
 

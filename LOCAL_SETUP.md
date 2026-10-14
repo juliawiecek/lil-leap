@@ -27,6 +27,7 @@ That script creates the `main` and `app_user` roles if they do not already exist
 ## Optional Kafka broker
 
 If you want the Orders service to publish terminal events and Insights to consume them without Docker, install Apache Kafka locally and start it from the Kafka distribution directory.
+Use your downloaded Kafka install directory (for example `C:\kafka\kafka_3.7.1`), not this repository's `kafka/` folder.
 
 ```cmd
 cd C:\kafka\kafka_3.7.1

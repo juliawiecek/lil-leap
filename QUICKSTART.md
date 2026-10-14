@@ -62,6 +62,7 @@ Two files need to be updated (they already exist, just need verification):
 ### 5. Optional: Start Kafka Locally (No Docker)
 
 If you want the Orders service to publish terminal events and Insights to write the CSV/audit outputs without Docker, install Apache Kafka locally and start the broker from the Kafka distribution directory.
+Use your downloaded Kafka install directory (for example `C:\kafka\kafka_3.7.1`), not this repository's `kafka/` folder.
 
 **Prerequisites**
 - Java 17+ installed and `JAVA_HOME` set

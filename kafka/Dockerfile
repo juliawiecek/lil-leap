@@ -1,5 +1,7 @@
 FROM confluentinc/cp-kafka:7.5.0
 
+LABEL maintainer="NextTrade Team"
+
 # The Confluent entrypoint builds configuration from the environment.
 ENV KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
 ENV KAFKA_BROKER_ID=1
@@ -14,4 +16,7 @@ ENV KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
 
 # Kafka entrypoint will start the broker
 EXPOSE 9092 29092
+
+HEALTHCHECK --interval=10s --timeout=10s --retries=20 --start-period=30s \
+  CMD kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1
 
