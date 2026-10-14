@@ -33,13 +33,17 @@ export async function resolveTemplates() {
 }
 
 let initialized = false;
+/** Component tests never draw real charts: happy-dom has no canvas or ResizeObserver. */
+const { CHART_FACTORY } = await import('../src/app/live-chart.ts');
+const noChart = () => ({ render() {}, destroy() {} });
+
 export async function render(t, Type, inputs = {}, providers = []) {
   if (!initialized) {
     TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
     initialized = true;
   }
   await resolveTemplates();
-  TestBed.configureTestingModule({ imports: [Type], providers });
+  TestBed.configureTestingModule({ imports: [Type], providers: [{ provide: CHART_FACTORY, useValue: noChart }, ...providers] });
   const fixture = TestBed.createComponent(Type);
   for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
   t.after(() => { TestBed.resetTestingModule(); frames.clear(); });

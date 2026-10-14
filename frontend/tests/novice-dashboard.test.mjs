@@ -245,3 +245,55 @@ test('a failed send shows the reason and a retry reuses the same order reference
   assert.equal(submitted.length, 2);
   assert.equal(submitted[0].clientReference, submitted[1].clientReference);
 });
+
+// Live portfolio chart: real candles plus the client's fills, rebuilt per period.
+const minute = m => Date.UTC(2026, 9, 14, 14, m) / 1000;
+const bars = (...closes) => closes.map((close, i) => ({ time: minute(i), open: close, high: close, low: close, close }));
+
+function chartDesk(desk, { candles = new Map(), fills = [], failFills = false } = {}) {
+  const requests = [];
+  desk.marketData = { candlesFor: async (ids, timeframe) => { requests.push({ ids, timeframe }); return candles; } };
+  desk.chartHistoryClient = { list: async () => { if (failFills) { throw new Error('down'); } return fills; } };
+  return requests;
+}
+
+test('the portfolio chart values cash plus shares at each bar of the selected period', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [{ ...holding('AAPL', 10, 100), instrumentId: 'aapl-id' }] }] });
+  await desk.refreshPortfolio();
+  const requests = chartDesk(desk, { candles: new Map([['aapl-id', bars(100, 110)]]) });
+  await desk.refreshChart();
+  assert.deepEqual(requests.at(-1), { ids: ['aapl-id'], timeframe: { interval: '1m', limit: 390 } });
+  assert.deepEqual(desk.chartSpec(), { kind: 'area', key: '1D', data: [{ time: minute(0), value: 2000 }, { time: minute(1), value: 2100 }] });
+});
+
+test('a client holding only cash gets a flat line on the first stock\'s time axis', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 5000, holdings: [] }] });
+  await desk.refreshPortfolio();
+  const requests = chartDesk(desk, { candles: new Map([['aapl-id', bars(225, 226)]]) });
+  await desk.refreshChart();
+  assert.deepEqual(requests.at(-1).ids, ['aapl-id']);
+  assert.deepEqual(desk.portfolioSeries().map(p => p.value), [5000, 5000]);
+});
+
+test('switching period reloads with that timeframe, and a slow answer for the old period is dropped', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
+  const requests = chartDesk(desk, { candles: new Map([['aapl-id', bars(1)]]) });
+  desk.selectPeriod('1W');
+  await flush();
+  assert.equal(desk.period(), '1W');
+  assert.deepEqual(requests.at(-1).timeframe, { interval: '15m', limit: 130 });
+
+  desk.portfolioSeries.set([]);
+  desk.marketData = { candlesFor: async () => { desk.period.set('1M'); return new Map([['aapl-id', bars(1)]]); } };
+  await desk.refreshChart();
+  assert.deepEqual(desk.portfolioSeries(), []);
+});
+
+test('a chart load failure keeps the last line and says it will retry', async t => {
+  const { desk } = await tradingDesk(t);
+  chartDesk(desk, { failFills: true });
+  desk.portfolioSeries.set([{ time: 1, value: 2 }]);
+  await desk.refreshChart();
+  assert.deepEqual(desk.portfolioSeries(), [{ time: 1, value: 2 }]);
+  assert.match(desk.chartStatus(), /Could not load the chart/);
+});

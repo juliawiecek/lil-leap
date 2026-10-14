@@ -15,6 +15,10 @@ import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './
 import { AuthService } from './auth.service';
 import { QuoteService } from './quote.service';
 import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
+import { type Point, portfolioHistory, timeframeFor, toFills } from './chart-data';
+import type { ChartSpec } from './lightweight-chart';
+import { LiveChart } from './live-chart';
+import { MarketDataClient } from './market-data-api';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
@@ -46,7 +50,7 @@ interface Quote {
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, LiveChart],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -54,6 +58,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly orderSubmissionClient: OrderSubmissionClient;
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
+  readonly marketData: MarketDataClient;
+  /** Separate from order tracking, so chart refreshes never interleave with a tracked order's reads. */
+  readonly chartHistoryClient: OrderHistoryClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -146,19 +153,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       cashPercent: Math.round((cashValue / total) * 100),
     };
   });
-  readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
-  readonly chartTimes = computed(
-    () =>
-      ({
-        '1D': ['9:30 AM', '11:00 AM', '12:30 PM', '2:00 PM', '4:00 PM'],
-        '1W': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-        '1M': ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Today'],
-        '3M': ['Feb', '', 'Mar', '', 'Apr'],
-        '1Y': ['May', 'Aug', 'Nov', 'Feb', 'Apr'],
-        ALL: ['2021', '2022', '2023', '2024', '2025'],
-      })[this.period()] || [],
-  );
-
+  /** Portfolio value at each bar of the selected period, rebuilt from real prices and fills. */
+  readonly portfolioSeries = signal<Point[]>([]);
+  readonly chartStatus = signal('Loading chart...');
+  readonly chartSpec = computed<ChartSpec>(() => ({ kind: 'area', data: this.portfolioSeries(), key: this.period() }));
+  /** Decorative sparkline for list rows (not price data). */
   makePath(width: number, height: number, seed = 0, down = false): string {
     const knots = [
       0.9, 0.76, 0.78, 0.65, 0.73, 0.59, 0.49, 0.68, 0.58, 0.45, 0.51, 0.35, 0.23, 0.31, 0.26, 0.25,
@@ -365,6 +364,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.marketData = new MarketDataClient(this.auth);
+    this.chartHistoryClient = new OrderHistoryClient(this.auth);
+  }
+  /** Switches the chart period and redraws straight away instead of waiting for the next tick. */
+  selectPeriod(period: string): void {
+    this.period.set(period);
+    void this.refreshChart();
   }
   ngOnDestroy(): void {
     this.destroyed = true;
@@ -389,6 +395,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     await this.refreshPrices();
     this.#schedulePrices();
+    await this.refreshChart();
   }
   /** Shows a loaded portfolio, valued at the latest bids already known. */
   applyPortfolio(portfolio: Portfolio): void {
@@ -450,6 +457,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         startWith(0),
         switchMap(async () => {
           await this.refreshQuotes();
+          await this.refreshChart();
           return true;
         }),
         takeUntil(this.destroy$),
@@ -458,6 +466,43 @@ export class NoviceDashboard implements OnInit, OnDestroy {
 
     void this.refreshPortfolio();
     void this.loadTradingData();
+  }
+
+  /**
+   * Rebuilds the portfolio-value line for the selected period from real candles and the client's
+   * fills. A client holding only cash still gets a flat line on the first stock's time axis.
+   * A failure keeps the last line shown.
+   */
+  async refreshChart(): Promise<void> {
+    const period = this.period();
+    const timeframe = timeframeFor(period);
+    try {
+      const fills = toFills(await this.chartHistoryClient.list());
+      const idBySymbol = new Map(this.instruments().map((i) => [i.symbol, i.instrumentId]));
+      for (const holding of this.#portfolio.holdings.filter((h) => h.instrumentId)) {
+        idBySymbol.set(holding.symbol, holding.instrumentId);
+      }
+      const symbols = new Set([...this.#portfolio.holdings.map((h) => h.symbol), ...fills.map((f) => f.symbol)]);
+      if (symbols.size === 0 && idBySymbol.size > 0) {
+        symbols.add([...idBySymbol.keys()][0]);
+      }
+      const ids = [...symbols].flatMap((symbol) => idBySymbol.get(symbol) ?? []);
+      const byId = await this.marketData.candlesFor(ids, timeframe);
+      if (this.destroyed || period !== this.period()) {
+        return;
+      }
+      const bySymbol = new Map(
+        [...symbols].flatMap((symbol) => {
+          const candles = byId.get(idBySymbol.get(symbol) ?? '');
+          return candles ? [[symbol, candles] as const] : [];
+        }),
+      );
+      const holdings = new Map(this.#portfolio.holdings.map((h) => [h.symbol, h.quantity]));
+      this.portfolioSeries.set(portfolioHistory(bySymbol, holdings, this.#portfolio.cash, fills, timeframe.interval));
+      this.chartStatus.set('No price history for this period yet.');
+    } catch {
+      this.chartStatus.set('Could not load the chart. Retrying...');
+    }
   }
 
   private async refreshQuotes(): Promise<void> {

@@ -449,61 +449,21 @@ h2 {
   box-shadow: inset 0 0 0 1px #a5e5a636;
 }
 .portfolio-chart {
-  display: flex;
-  margin-top: 17px;
-  height: 160px;
-  gap: 10px;
-  padding-top: 5px;
-}
-.chart-y-axis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 34px;
-  flex-shrink: 0;
-  padding-top: 0;
-  padding-bottom: 25px;
-  color: #c0c9d7;
-  font-size: 12px;
-}
-.chart-plot {
   position: relative;
-  min-width: 0;
-  flex: 1;
+  margin-top: 17px;
+  height: 180px;
 }
-.chart-plot > svg {
-  width: 100%;
-  height: 126px;
-  overflow: visible;
-  display: block;
+.portfolio-live-chart {
+  height: 100%;
 }
-.chart-price {
+.chart-empty {
   position: absolute;
-  z-index: 1;
-  right: -1px;
-  top: -32px;
-  padding: 5px 8px;
-  border-radius: 5px;
-  background: #253034;
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: 0 5px 15px #0002;
-}
-.chart-price::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  right: 11px;
-  border: 4px solid transparent;
-  border-top-color: #253034;
-  border-bottom: 0;
-}
-.chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  color: #c9d0dc;
-  font-size: 10px;
-  padding-top: 4px;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #9aa6b4;
+  font-size: 13px;
 }
 .portfolio-stats {
   display: grid;
@@ -1420,8 +1380,5 @@ th {
   }
   .watch-table td:last-child {
     padding-left: 8px;
-  }
-  .chart-x-axis {
-    font-size: 8px;
   }
 }

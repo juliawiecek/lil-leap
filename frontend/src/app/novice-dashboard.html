@@ -122,7 +122,7 @@
                       type="button"
                       [class.selected]="period() === item"
                       [attr.aria-pressed]="period() === item"
-                      (click)="period.set(item)"
+                      (click)="selectPeriod(item)"
                     >
                       {{ item }}
                     </button>
@@ -130,52 +130,18 @@
                 </div>
               </div>
               <div class="portfolio-chart">
-                <div class="chart-y-axis">
-                  <span>25.0K</span><span>24.5K</span><span>24.0K</span><span>23.5K</span>
-                </div>
-                <div class="chart-plot">
-                  @if (showBalance()) {
-                    <span class="chart-price">{{ portfolioValue() | currency }}</span>
+                @if (showBalance()) {
+                  <app-live-chart
+                    class="portfolio-live-chart"
+                    [spec]="chartSpec()"
+                    [label]="period() + ' portfolio value chart'"
+                  />
+                  @if (!chartSpec().data.length) {
+                    <p class="chart-empty" role="status">{{ chartStatus() }}</p>
                   }
-                  <svg
-                    viewBox="0 0 780 155"
-                    preserveAspectRatio="none"
-                    [attr.aria-label]="period() + ' portfolio value chart'"
-                  >
-                    <defs>
-                      <linearGradient id="novice-chart-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#63ca74" stop-opacity=".22" />
-                        <stop offset="100%" stop-color="#63ca74" stop-opacity=".015" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M0 15H780M0 55H780M0 95H780M0 135H780"
-                      stroke="#293333"
-                      stroke-dasharray="2 3"
-                      fill="none"
-                    />
-                    <path [attr.d]="chartPath() + 'L780 150H0Z'" fill="url(#novice-chart-fill)" />
-                    <path
-                      [attr.d]="chartPath()"
-                      fill="none"
-                      stroke="#8bdd88"
-                      stroke-width="1.6"
-                      vector-effect="non-scaling-stroke"
-                    />
-                    <circle
-                      cx="780"
-                      [attr.cy]="period() === '1D' ? 18 : 20"
-                      r="3.8"
-                      fill="#87df88"
-                    />
-                    <path d="M0 150H780" stroke="#2a3337" />
-                  </svg>
-                  <div class="chart-x-axis">
-                    @for (label of chartTimes(); track $index) {
-                      <span>{{ label }}</span>
-                    }
-                  </div>
-                </div>
+                } @else {
+                  <p class="chart-empty">Chart hidden with your balance.</p>
+                }
               </div>
               <div class="portfolio-stats">
                 <div>

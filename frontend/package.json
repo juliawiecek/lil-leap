@@ -21,8 +21,9 @@
     "@angular/core": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
-    "tslib": "^2.3.0",
-    "@lilleap/session-core": "file:../shared/session-core"
+    "@lilleap/session-core": "file:../shared/session-core",
+    "lightweight-charts": "^5.2.1",
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.1.5",
