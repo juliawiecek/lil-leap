@@ -6,15 +6,14 @@ import {
   IsEmail,
   IsEnum,
   IsOptional,
-  IsString,
   Matches,
   MaxLength,
-  MinLength,
   Validate,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { IsAccountPassword, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './password-rules';
 import { AccountType } from '../../onboarding/enums/account-type.enum';
 import { CitizenshipStatus } from '../../onboarding/enums/citizenship-status.enum';
 import { EmploymentStatus } from '../../onboarding/enums/employment-status.enum';
@@ -106,30 +105,21 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
   }
 
   private hasTraderIdentity(r: RegisterRequestDto): boolean {
-    return (
-      notBlank(r.firstName) &&
-      notBlank(r.lastName) &&
-      r.dateOfBirth != null &&
-      notBlank(r.phone) &&
-      notBlank(r.streetAddress) &&
-      notBlank(r.city) &&
-      notBlank(r.stateProvince) &&
-      notBlank(r.postalCode) &&
-      notBlank(r.country) &&
-      r.citizenshipStatus != null
-    );
+    const text = [r.firstName, r.lastName, r.phone, r.streetAddress, r.city, r.stateProvince, r.postalCode, r.country];
+    const values: unknown[] = [r.dateOfBirth, r.citizenshipStatus];
+    return text.every((value) => notBlank(value)) && values.every((value) => value != null);
   }
 
   private hasTraderFinancials(r: RegisterRequestDto): boolean {
-    return (
-      r.employmentStatus != null &&
-      notBlank(r.annualIncome) &&
-      r.netWorthBracket != null &&
-      r.riskProfile != null &&
-      notBlank(r.liquidityPosition) &&
-      r.accreditedInvestor != null &&
-      r.politicallyExposedPerson != null
-    );
+    const text = [r.annualIncome, r.liquidityPosition];
+    const values: unknown[] = [
+      r.employmentStatus,
+      r.netWorthBracket,
+      r.riskProfile,
+      r.accreditedInvestor,
+      r.politicallyExposedPerson,
+    ];
+    return text.every((value) => notBlank(value)) && values.every((value) => value != null);
   }
 
   private hasPair(left?: string | null, right?: unknown): boolean {
@@ -163,11 +153,9 @@ export class RegisterRequestDto {
   @MaxLength(320)
   email: string;
 
-  @ApiProperty({ name: 'password', minLength: 8, maxLength: 128, format: 'password' })
+  @ApiProperty({ name: 'password', minLength: PASSWORD_MIN_LENGTH, maxLength: PASSWORD_MAX_LENGTH, format: 'password' })
   @Expose({ name: 'password' })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
+  @IsAccountPassword()
   password: string;
 
   // ---- TRADER-only fields below; required only when userRole == TRADER ----

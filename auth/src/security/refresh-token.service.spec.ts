@@ -87,4 +87,25 @@ describe('RefreshTokenService', () => {
       expect.anything(),
     );
   });
+
+  it('revokeAllForUser ends every open session for the user inside the given transaction', async () => {
+    const manager = { update: jest.fn() };
+
+    await service.revokeAllForUser(user.userId, manager as any);
+
+    expect(manager.update).toHaveBeenCalledWith(
+      Session,
+      { user: { userId: user.userId }, revokedAt: IsNull() },
+      { revokedAt: expect.any(Date), lastActiveAt: expect.any(Date) },
+    );
+  });
+
+  it('revokeAllForUser uses the repository manager when no transaction is given', async () => {
+    const manager = { update: jest.fn() };
+    service = new RefreshTokenService({ ...repository, manager } as unknown as Repository<Session>);
+
+    await service.revokeAllForUser(user.userId);
+
+    expect(manager.update).toHaveBeenCalledTimes(1);
+  });
 });

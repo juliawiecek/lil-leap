@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, input, browser, animateFrame } from './dom-helper.mjs';
+import { Router, ActivatedRoute, convertToParamMap } from '@angular/router';
 const { App } = await import('../src/app/app.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { AuthApiError } = await import('../src/app/auth-api.ts');
@@ -8,7 +9,7 @@ const { AuthApiError } = await import('../src/app/auth-api.ts');
 async function setup(t, overrides = {}) {
   const auth = { login: t.mock.fn(async () => ({})), register: t.mock.fn(async () => {}),
     logout: t.mock.fn(async () => {}), traderLevel: 'ADVANCED', accessTokenExpiresAt: null, ...overrides };
-  const fixture = await render(t, App, {}, [{ provide: AuthService, useValue: auth }]);
+  const fixture = await render(t, App, {}, [{ provide: AuthService, useValue: auth }, { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } }, { provide: Router, useValue: { url: '/login', navigateByUrl: async () => true, navigate: async () => true } }]);
   const app = fixture.componentInstance;
   t.after(() => app.session.stop());
   return { fixture, app, auth };
@@ -105,7 +106,7 @@ test('registration errors keep the profile open and duplicate submissions are ig
   assert.equal(auth.login.mock.callCount(), 0);
 });
 
-test('password visibility, recovery, and restored-page reload work through app actions', async t => {
+test('password visibility, recovery, and bfcache return check the idle deadline', async t => {
   const { fixture, app } = await setup(t);
   app.togglePassword(); fixture.detectChanges();
   assert.equal(fixture.nativeElement.querySelector('#password').type, 'text');
@@ -113,9 +114,9 @@ test('password visibility, recovery, and restored-page reload work through app a
   assert.equal(fixture.nativeElement.querySelector('#password').type, 'password');
   const event = new Event('click', { cancelable: true }); app.showPasswordRecovery(event);
   assert.equal(event.defaultPrevented, true); assert.match(app.formStatus(), /Password recovery/);
-  const reload = t.mock.method(browser.location, 'reload', () => {});
-  app.onPageShow({ persisted: false }); assert.equal(reload.mock.callCount(), 0);
-  app.onPageShow({ persisted: true }); assert.equal(reload.mock.callCount(), 1);
+  const check = t.mock.method(app.session.keeper, 'check', async () => {});
+  app.onPageShow({ persisted: false }); assert.equal(check.mock.callCount(), 0);
+  app.onPageShow({ persisted: true }); assert.equal(check.mock.callCount(), 1);
 });
 
 test('canvas startup transitions directly to login without a centered logo phase', async t => {

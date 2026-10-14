@@ -11,7 +11,6 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +22,7 @@ import java.util.UUID;
  * included for downstream consumers.</p>
  */
 @Service
+@SuppressWarnings("java:S2143") // JJWT temporal claim API requires java.util.Date interop.
 public class JwtServiceImpl implements JwtService {
 
     /**
@@ -58,16 +58,15 @@ public class JwtServiceImpl implements JwtService {
     /**
      * Creates a new JWT service from configuration.
      *
-     * <p>{@code app.jwt.secret} should be set via the {@code APP_JWT_SECRET}
-     * environment variable in any real environment; the default here is
-     * dev-only and is not secure for production use.</p>
+     * <p>{@code app.jwt.secret} must be set via the {@code APP_JWT_SECRET}
+     * environment variable.</p>
      *
      * @param secret the HMAC signing secret, at least 32 bytes long
      * @param expirationMinutes how many minutes an issued token remains valid
      * @param clientId identifier for the client application embedded in issued tokens
      */
     public JwtServiceImpl(
-            @Value("${app.jwt.secret:nexttrade-shared-dev-secret-32bytes-min}") String secret,
+            @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-minutes:60}") long expirationMinutes,
             @Value("${app.jwt.client-id:nexttrade-web}") String clientId
     ) {
@@ -98,18 +97,20 @@ public class JwtServiceImpl implements JwtService {
      */
     public String issueToken(UUID userId, String email, String role) {
         Instant now = Instant.now();
-        Date issuedAt = Date.from(now); // NOSONAR: JJWT issuedAt/expiration API requires java.util.Date.
-        Date expiresAt = Date.from(now.plus(expiration)); // NOSONAR: Converted from java.time.Instant for JJWT compatibility.
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim(EMAIL_CLAIM, email)
                 .claim(CLIENT_ID_CLAIM, clientId)
                 .claim(ROLE_CLAIM, role)
-                .issuedAt(issuedAt)
-                .expiration(expiresAt)
+                .issuedAt(toLegacyDate(now))
+                .expiration(toLegacyDate(now.plus(expiration)))
                 .signWith(key)
                 .compact();
+    }
+
+    private static java.util.Date toLegacyDate(Instant instant) {
+        return java.util.Date.from(instant);
     }
 
     /**

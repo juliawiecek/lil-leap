@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
@@ -14,6 +15,12 @@ import {
 } from './order-history-api';
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
+
+const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
+  CONSERVATIVE: 7,
+  MODERATE: 5,
+  AGGRESSIVE: 3,
+};
 
 interface Quote {
   instrumentId: string;  // ← NOW PRESERVED
@@ -65,12 +72,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
+  #clockTimer: ReturnType<typeof setInterval> | undefined;
+  #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
+  #destroyed = false;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');
+  private routing?: PageBinding;
+  private destroyed = false;
+  readonly symbol = signal('AAPL');
   readonly submitting = signal(false);
   readonly submittedOrderId = signal<string | null>(null);
   readonly clientReference = signal<string>('');
@@ -85,6 +98,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     { name: 'Watchlist', icon: 'star' },
     { name: 'Portfolio', icon: 'chart' },
     { name: 'Orders', icon: 'orders' },
+    { name: 'History', icon: 'orders' },
     { name: 'Markets', icon: 'chart' },
     { name: 'Screeners', icon: 'search' },
     { name: 'Settings', icon: 'settings' },
@@ -102,13 +116,23 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly ticketTab = signal('Trade');
   readonly marketTab = signal('Sectors');
   readonly filter = signal('All stocks');
+  readonly currentTime = signal(new Date());
+  readonly formattedTime = computed(() => {
+    const now = this.currentTime();
+    return {
+      time: now.toLocaleTimeString('en-US', { hour12: false }),
+      date: now.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    };
+  });
   readonly quotes: Quote[] = [
     { instrumentId: 'aapl-uuid', symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
     { instrumentId: 'nvda-uuid', symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
     { instrumentId: 'msft-uuid', symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
-    { instrumentId: 'amd-uuid', symbol: 'AMD', name: 'Advanced Micro Devices', price: 162.14, change: 3.21, volume: '36.1M' },
-    { instrumentId: 'tsla-uuid', symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -1.24, volume: '45.7M' },
-    { instrumentId: 'meta-uuid', symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37, volume: '12.6M' },
     { instrumentId: 'amzn-uuid', symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
     { instrumentId: 'googl-uuid', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
   ];
@@ -121,8 +145,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly screened = computed(() =>
     this.quotes.filter((q) => {
       const filter = this.filter();
-      if (filter === 'Gainers') return q.change > 0;
-      if (filter === 'Decliners') return q.change < 0;
+      if (filter === 'Gainers') {
+        return q.change > 0;
+      }
+      if (filter === 'Decliners') {
+        return q.change < 0;
+      }
       return true;
     }),
   );
@@ -154,16 +182,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
-  readonly news: NewsItem[] = [
-    { symbol: 'AAPL', time: '2:45 PM', title: 'Apple releases new M4 chip', source: 'Reuters' },
-    { symbol: 'NVDA', time: '1:32 PM', title: 'NVIDIA beats Q3 earnings expectations', source: 'Bloomberg' },
-    { symbol: 'MSFT', time: '12:15 PM', title: 'Microsoft expands cloud services', source: 'CNBC' },
-  ];
+  readonly news: NewsItem[] = [];
   readonly article = signal(0);
   readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
   readonly filteredOrders = computed(() => {
     const status = this.orderStatus();
-    if (status === 'All') return this.orders();
+    if (status === 'All') {
+      return this.orders();
+    }
     return this.orders().filter((order) => order.status === status);
   });
   readonly orderType = signal('Limit');
@@ -178,6 +204,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly modal = signal('review');
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
+  readonly executionThresholdDollars = signal(5);
   readonly cost = computed(
     () =>
       Number(this.quantity()) *
@@ -234,18 +261,26 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
   }
   choose(quote: Quote): void {
+    this.symbol.set(quote.symbol);
+    this.setTicketQuote(quote);
+    this.query.set('');
+    this.message.set('');
+    this.page.set('Overview');
+    this.routing?.go('Overview');
+  }
+  private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
     this.limitPrice.set(quote.price.toFixed(2));
     this.profitPrice.set((quote.price * 1.05).toFixed(2));
     this.stopPrice.set((quote.price * 0.95).toFixed(2));
     this.alertPrice.set((quote.price * 1.02).toFixed(2));
-    this.query.set('');
-    this.message.set('');
-    this.page.set('Overview');
   }
   navigate(page: string): void {
     this.page.set(page);
-    if (page === 'Portfolio') this.bottomTab.set('Positions');
+    this.routing?.go(page);
+    if (page === 'Portfolio') {
+      this.bottomTab.set('Positions');
+    }
   }
   openModal(kind: string): void {
     this.modal.set(kind);
@@ -260,7 +295,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.dialog()?.nativeElement.close();
   }
   backdrop(event: MouseEvent): void {
-    if (event.target === this.dialog()?.nativeElement) this.closeModal();
+    if (event.target === this.dialog()?.nativeElement) {
+      this.closeModal();
+    }
   }
   spark(seed: number, down = false): string {
     return Array.from(
@@ -272,34 +309,42 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   validate(): string {
     const count = Number(this.quantity()),
       price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price;
-    if (!Number.isSafeInteger(count) || count <= 0)
+    if (!Number.isSafeInteger(count) || count <= 0) {
       return 'Enter a whole number of shares greater than zero.';
-    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total()))
+    }
+    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
       return 'Enter a valid order price.';
-    if (this.side() === 'Buy' && this.total() > this.buyingPower())
+    }
+    if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
+    }
     if (
       this.side() === 'Sell' &&
       count > (this.positions().find((p) => p.symbol === this.selected().symbol)?.quantity || 0)
-    )
+    ) {
       return 'You can only sell shares you hold.';
+    }
     if (
       this.takeProfit() &&
       (!Number.isFinite(Number(this.profitPrice())) || Number(this.profitPrice()) <= price)
-    )
+    ) {
       return 'Take profit must be above the order price.';
+    }
     if (
       this.stopLoss() &&
       (!Number.isFinite(Number(this.stopPrice())) ||
         Number(this.stopPrice()) <= 0 ||
         Number(this.stopPrice()) >= price)
-    )
+    ) {
       return 'Stop loss must be positive and below the order price.';
+    }
     return '';
   }
   reviewOrder(): void {
     this.message.set(this.validate());
-    if (!this.message()) this.openModal('review');
+    if (!this.message()) {
+      this.openModal('review');
+    }
   }
   async confirmOrder(): Promise<void> {
     const error = this.validate();
@@ -320,7 +365,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return;
     }
     // Prevent double-click while submission is in flight
-    if (this.submitting()) return;
+    if (this.submitting()) {
+      return;
+    }
     this.submitting.set(true);
     try {
       const count = Number(this.quantity());
@@ -341,6 +388,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: count,
         orderType: 'MARKET',
         clientReference: this.clientReference(),
+        bufferPercent: this.bufferPercentForPrice(quote.price),
       });
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
@@ -358,6 +406,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.submitting.set(false);
     }
   }
+
+  private bufferPercentForPrice(indicativePrice: number): number {
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
+    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
+    return Math.round(percent * 100) / 100;
+  }
+
+  private defaultThresholdDollars(): number {
+    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
+    if (byRisk) { return byRisk; }
+    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
+  }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
     try {
@@ -372,7 +432,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
   async refreshPortfolio(): Promise<void> {
     try {
-      this.applyPortfolio(await this.portfolioClient.load());
+      const portfolio = await this.portfolioClient.load();
+      if (this.destroyed) { return; }
+      this.applyPortfolio(portfolio);
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
       return;
@@ -388,18 +450,25 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
   async refreshPrices(): Promise<void> {
     const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
-    if (!ids.length) return;
+    if (!ids.length) {
+      return;
+    }
     try {
       const bids = await this.portfolioClient.latestBids(ids);
-      for (const [id, bid] of bids) this.#bids.set(id, bid);
+      for (const [id, bid] of bids) {
+        this.#bids.set(id, bid);
+      }
       this.#render();
     } catch {
       // Keep showing the last known values; the next tick retries.
     }
   }
   #schedulePrices(): void {
+    if (this.destroyed) { return; }
     clearTimeout(this.#priceTimer);
-    if (!this.#portfolio.holdings.length) return;
+    if (!this.#portfolio.holdings.length) {
+      return;
+    }
     this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
@@ -430,16 +499,36 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
     clearTimeout(this.#trackTimer);
-    if (!(await this.refreshOrders())) return;
+    if (!(await this.refreshOrders())) {
+      return;
+    }
     const order = this.orders().find((o) => o.id === orderId);
     if (order && FINAL_ORDER_STATUSES.has(order.status.toUpperCase())) {
       // Reload balances first so a load error never replaces the fill message.
-      if (order.status === 'Filled') await this.refreshPortfolio();
+      if (order.status === 'Filled') {
+        await this.refreshPortfolio();
+      }
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       return;
     }
-    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) return;
+    if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
+      this.message.set('Order is still processing. Status updates continue in Orders.');
+      return;
+    }
+    if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+  }
+
+  private async pollOrdersUntilDestroyed(): Promise<void> {
+    clearTimeout(this.#ordersPollTimer);
+    await this.refreshOrders();
+    // A refresh still in flight at destroy time must not re-arm the timer.
+    if (this.#destroyed) {
+      return;
+    }
+    this.#ordersPollTimer = setTimeout(() => {
+      void this.pollOrdersUntilDestroyed();
+    }, 5000);
   }
   createAlert(): void {
     const price = Number(this.alertPrice());
@@ -451,18 +540,35 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.message.set('Price alert added.');
   }
   constructor(private readonly auth: AuthService) {
+    this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
+      { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
+      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'orderStatus', value: this.orderStatus, allowed: ['All','Submitted','Accepted','Pending','Delayed','Filled','Rejected'] }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers','52W High/Low'] }
+    ], () => {
+      const quote = this.quote(this.symbol());
+      if (this.selected() !== quote) { this.setTicketQuote(quote); }
+      if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
+    });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
   }
 
   ngOnDestroy(): void {
+    this.#destroyed = true;
+    this.destroyed = true;
+    this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
+    clearTimeout(this.#ordersPollTimer);
+    if (this.#clockTimer) { clearInterval(this.#clockTimer); }
   }
 
   ngOnInit(): void {
+    this.executionThresholdDollars.set(this.defaultThresholdDollars());
+    this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.loadTradingData();
+    void this.refreshPortfolio();
+    void this.pollOrdersUntilDestroyed();
   }
 
   async loadTradingData(): Promise<void> {

@@ -19,6 +19,11 @@ import { PasswordEncoderService } from './security/password-encoder.service';
 import { SecureTransportMiddleware } from './security/secure-transport.middleware';
 import { AccessTokenGuard } from './security/access-token.guard';
 import { tlsKeystorePath } from './security/tls';
+import { PasswordResetToken } from './password-reset/entities/password-reset-token.entity';
+import { PasswordResetController } from './password-reset/password-reset.controller';
+import { PasswordResetService } from './password-reset/password-reset.service';
+import { PASSWORD_RESET_DELIVERY } from './password-reset/password-reset-delivery';
+import { FileOutboxDelivery } from './password-reset/file-outbox.delivery';
 
 @Module({
   imports: [
@@ -28,14 +33,14 @@ import { tlsKeystorePath } from './security/tls';
       port: Number(process.env.DB_PORT ?? 5432),
       database: process.env.DB_NAME ?? 'nexttrade',
       username: process.env.DB_APP_USERNAME ?? 'app_user',
-      password: process.env.DB_APP_PASSWORD ?? 'my_app_password',
-      entities: [User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile],
+      password: requiredEnv('DB_APP_PASSWORD'),
+      entities: [User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile, PasswordResetToken],
       synchronize: false, // schema is owned by the admin/migration role, not this service
       poolSize: 10,
     }),
-    TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile]),
+    TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile, PasswordResetToken]),
   ],
-  controllers: [AuthController, RulesController, HealthController],
+  controllers: [AuthController, PasswordResetController, RulesController, HealthController],
   providers: [
     UserService,
     RegistrationService,
@@ -45,6 +50,9 @@ import { tlsKeystorePath } from './security/tls';
     SsnEncryptionService,
     PasswordEncoderService,
     AccessTokenGuard,
+    PasswordResetService,
+    // The VM has no network: reset emails go to a local outbox. Swap the class here for SMTP (NEXT-219).
+    { provide: PASSWORD_RESET_DELIVERY, useClass: FileOutboxDelivery },
   ],
 })
 export class AppModule implements NestModule {
@@ -54,4 +62,12 @@ export class AppModule implements NestModule {
       consumer.apply(SecureTransportMiddleware).forRoutes('*');
     }
   }
+}
+
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before starting the service.`);
+  }
+  return value;
 }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { resolveTemplates } from './dom-helper.mjs';
+import { Router } from '@angular/router';
 import { APP_BOOTSTRAP_LISTENER, ErrorHandler, destroyPlatform } from '@angular/core';
 const { appConfig } = await import('../src/app/app.config.ts');
 const { SafeErrorHandler } = await import('../src/app/safe-error-handler.ts');
@@ -16,6 +17,10 @@ test('real entry point bootstraps the auth screen with the safe error handler', 
   t.after(() => { appConfig.providers.splice(appConfig.providers.indexOf(observer), 1); destroyPlatform(); });
   await import('../src/main.ts');
   const ref = await ready;
+  const router = ref.injector.get(Router);
+  await router.navigateByUrl('/login');
+  await resolveTemplates();
+  ref.changeDetectorRef.detectChanges();
   assert.match(document.querySelector('app-root').textContent, /Welcome back/);
   assert.ok(document.querySelector('#email'));
   assert.ok(ref.injector.get(ErrorHandler) instanceof SafeErrorHandler);

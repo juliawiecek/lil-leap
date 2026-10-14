@@ -1,3 +1,6 @@
+import { Router, ActivatedRoute } from '@angular/router';
+import { AppSessionService } from './app-session.service';
+import { safeReturnUrl } from './page-state';
 ﻿import {
   AfterViewInit,
   Component,
@@ -15,8 +18,7 @@ import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
-import { SESSION_INACTIVITY_MINUTES, SessionKeeper } from './session-keeper';
-import { StockDashboard, Experience } from './stock-dashboard';
+import type { Experience } from './stock-dashboard';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -35,8 +37,8 @@ interface VolumeBar {
 }
 
 @Component({
-  selector: 'app-root',
-  imports: [InvestorProfile, StockDashboard],
+  selector: 'app-login',
+  imports: [InvestorProfile],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   encapsulation: ViewEncapsulation.None,
@@ -51,7 +53,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private readonly renderer = inject(Renderer2);
   private readonly auth = inject(AuthService);
-  private readonly session = new SessionKeeper(this.auth, () => this.onSessionExpired());
+  private readonly session = inject(AppSessionService);
+  private readonly router = inject(Router, { optional: true });
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly riseColor = '#87bb66';
   private readonly neutralColor = '#c4cbbf';
@@ -84,6 +88,10 @@ export class App implements AfterViewInit, OnDestroy {
   readonly registrationError = signal('');
 
   openDashboard(level: Experience, fresh = true): void {
+    if (this.auth.userRole && this.auth.userRole !== 'TRADER') {
+      void this.auth.logout();
+      throw new AuthApiError('Please use a trader account to sign in to NextTrade.');
+    }
     this.traderLevel.set(level);
     this.newAccount.set(fresh);
     this.profileOpen.set(false);
@@ -93,7 +101,13 @@ export class App implements AfterViewInit, OnDestroy {
     this.confirmationDraft.set('');
     this.passwordStarted.set(false);
     const confirmation = document.getElementById('verify-password') as HTMLInputElement | null;
-    if (confirmation) confirmation.value = '';
+    if (confirmation) {
+      confirmation.value = '';
+    }
+    if (this.router) {
+      const target = safeReturnUrl(this.route?.snapshot.queryParamMap.get('returnUrl') ?? '') ?? '/dashboard';
+      void this.router.navigateByUrl(target);
+    }
   }
 
   signOut(): void {
@@ -145,8 +159,11 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
+    if (this.route?.snapshot.queryParamMap.has('returnUrl')) { this.showAuthPage(); }
     this.context = this.marketChart.nativeElement.getContext('2d');
-    if (!this.context) return;
+    if (!this.context) {
+      return;
+    }
 
     this.buildVolumeField();
     this.resizeChart();
@@ -162,7 +179,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   @HostListener('window:resize')
   onResize(): void {
-    if (!this.context) return;
+    if (!this.context) {
+      return;
+    }
     this.buildVolumeField();
     this.resizeChart();
     this.drawChart();
@@ -170,7 +189,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   @HostListener('window:pageshow', ['$event'])
   onPageShow(event: PageTransitionEvent): void {
-    if (event.persisted) window.location.reload();
+    if (event.persisted) {
+      void this.session.keeper.check();
+    }
   }
 
   setAuthMode(mode: AuthMode): void {
@@ -180,7 +201,9 @@ export class App implements AfterViewInit, OnDestroy {
     this.authMode.set(mode);
     this.formStatus.set('');
 
-    if (this.focusTimer) clearTimeout(this.focusTimer);
+    if (this.focusTimer) {
+      clearTimeout(this.focusTimer);
+    }
     this.focusTimer = setTimeout(() => {
       const target = mode === 'signup' ? this.fullName : this.email;
       target?.nativeElement.focus({ preventScroll: true });
@@ -234,7 +257,9 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private async signIn(): Promise<void> {
-    if (this.signingIn()) return;
+    if (this.signingIn()) {
+      return;
+    }
     this.signingIn.set(true);
     this.formStatus.set('');
     try {
@@ -250,7 +275,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   /** Registration issues no tokens, so a successful sign-up signs in with the same credentials. */
   async completeRegistration(answers: Record<string, string>): Promise<void> {
-    if (this.registering()) return;
+    if (this.registering()) {
+      return;
+    }
     this.registering.set(true);
     this.registrationError.set('');
     const email = this.applicantEmail();
@@ -277,11 +304,6 @@ export class App implements AfterViewInit, OnDestroy {
     this.session.recordActivity();
   }
 
-  private onSessionExpired(): void {
-    this.signOut();
-    this.formStatus.set(`You were signed out after ${SESSION_INACTIVITY_MINUTES} minutes of inactivity.`);
-  }
-
   private messageFor(error: unknown): string {
     return error instanceof AuthApiError ? error.userMessage : 'Something went wrong. Please try again.';
   }
@@ -304,7 +326,9 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private showAuthPage(): void {
-    if (this.pageReady()) return;
+    if (this.pageReady()) {
+      return;
+    }
     this.pageReady.set(true);
     this.renderer.addClass(document.body, 'auth-phase');
   }
@@ -393,7 +417,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private drawCandle(candle: Candle, x: number, progress = 1, opacity = 1): void {
     const context = this.context;
-    if (!context) return;
+    if (!context) {
+      return;
+    }
 
     const animatedClose = candle.open + (candle.close - candle.open) * progress;
     const animatedHigh =
@@ -435,7 +461,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private drawChart(): void {
     const context = this.context;
-    if (!context) return;
+    if (!context) {
+      return;
+    }
 
     context.clearRect(0, 0, this.width, this.height);
     context.shadowColor = 'transparent';

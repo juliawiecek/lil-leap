@@ -11,7 +11,7 @@
     Status
     <select [value]="status()" (change)="setStatus($any($event.target).value)">
       @for (option of statusOptions; track option.value) {
-        <option [value]="option.value">{{ option.label }}</option>
+        <option [value]="option.value" [selected]="status() === option.value">{{ option.label }}</option>
       }
     </select>
   </label>
@@ -31,6 +31,7 @@
 } @else {
   <div class="history-table" [class.refreshing]="loading()" aria-live="polite">
     <table>
+      <caption class="sr-only">Order history</caption>
       <thead>
         <tr>
           <th>Submitted</th>
