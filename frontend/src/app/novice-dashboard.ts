@@ -4,7 +4,10 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
-import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
+import { AccountSwitcher } from './account-switcher';
+import { AccountsService } from './accounts.service';
+import { canTrade } from './accounts-api';
 import {
   FINAL_ORDER_STATUSES,
   ORDER_TRACK_INTERVAL_MS,
@@ -46,7 +49,7 @@ interface Quote {
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -117,7 +120,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   /** Idempotency key for the order being reviewed; a retried confirm reuses it. */
   readonly clientReference = signal('');
-  readonly selectedAccount = signal<Account | null>(null);
+  /** The client's accounts; the header picker chooses which one this dashboard shows and trades from (PS-05). */
+  readonly accountState = inject(AccountsService, { optional: true }) ?? new AccountsService();
+  readonly selectedAccount = computed(() => this.accountState.selected());
+  readonly #stopAccountWatch: () => void;
+  #started = false;
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
   readonly executionThresholdDollars = signal(5);
@@ -282,6 +289,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.tradeMessage.set('We could not find an active trading account for you.');
       return;
     }
+    if (!canTrade(account)) {
+      this.tradeMessage.set('This account is not open for trading yet. Switch accounts at the top of the page.');
+      return;
+    }
     if (!instrument) {
       this.tradeMessage.set(`${quote.symbol} is not available to trade yet.`);
       return;
@@ -365,9 +376,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
   }
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.#stopAccountWatch();
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
@@ -380,7 +393,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   async refreshPortfolio(): Promise<void> {
     try {
-      const portfolio = await this.portfolioClient.load();
+      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
       if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch {
@@ -456,8 +469,22 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       )
       .subscribe();
 
+    void this.#start();
+  }
+
+  /** Accounts first, so the first portfolio load is already the selected account's. */
+  async #start(): Promise<void> {
+    await this.loadTradingData();
+    this.#started = true;
+    await this.refreshPortfolio();
+  }
+
+  /** Another account was picked, or cash moved between accounts: show its balances and holdings. */
+  #accountChanged(): void {
+    if (!this.#started || this.destroyed) { return; }
+    this.reviewing.set(false);
+    this.tradeMessage.set('');
     void this.refreshPortfolio();
-    void this.loadTradingData();
   }
 
   private async refreshQuotes(): Promise<void> {
@@ -489,8 +516,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
 
   private async loadTradingData(): Promise<void> {
     try {
-      const accounts = await this.orderSubmissionClient.getAccounts();
-      this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);
+      this.accountState.use(await this.orderSubmissionClient.getAccounts());
       this.instruments.set(await this.orderSubmissionClient.getInstruments());
     } catch {
       // confirmTrade reports the missing account or instrument in plain words.

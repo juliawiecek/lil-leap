@@ -47,11 +47,11 @@ class ClientFinancialControllerTest {
     @Test
     void holdingsUsesAuthenticatedPrincipalNotAClientRequestParameter() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(queryService.getHoldings(userId)).thenReturn(List.of());
+        when(queryService.getHoldings(userId, null)).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
         mockMvc.perform(get("/holdings").principal(authentication(userId)))
                 .andExpect(status().isOk());
-        verify(queryService).getHoldings(userId);
+        verify(queryService).getHoldings(userId, null);
     }
 
     @Test
@@ -67,11 +67,11 @@ class ClientFinancialControllerTest {
     @Test
     void cashUsesAuthenticatedPrincipalNotAClientRequestParameter() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(queryService.getCashBalances(userId)).thenReturn(List.of());
+        when(queryService.getCashBalances(userId, null)).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));
         mockMvc.perform(get("/cash").principal(authentication(userId)))
                 .andExpect(status().isOk());
-        verify(queryService).getCashBalances(userId);
+        verify(queryService).getCashBalances(userId, null);
     }
 
     @Test
@@ -135,7 +135,7 @@ class ClientFinancialControllerTest {
     void portfolioSummaryReturnsNotFoundWhenNoAccountsExist() throws Exception {
         UUID userId = UUID.randomUUID();
 
-        when(queryService.getHoldings(userId)).thenReturn(List.of());
+        when(queryService.getHoldings(userId, null)).thenReturn(List.of());
         when(queryService.getDefaultAccountId(userId)).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
 
         SecurityContextHolder.getContext().setAuthentication(authentication(userId));

@@ -1,6 +1,7 @@
 /**
  * Client for the signed-in user's cash and holdings (Holdings service: GET /cash, GET /holdings)
- * and the latest quotes used to value them. Cash and holdings are scoped to the access token's user.
+ * and the latest quotes used to value them. Cash and holdings are scoped to the access token's user,
+ * and optionally to one of their accounts (PS-05).
  */
 import type { AccessTokenSource } from './order-history-api';
 
@@ -84,13 +85,17 @@ export class PortfolioClient {
     this.#baseUrl = baseUrl;
   }
 
-  /** Loads cash and holdings together. Throws an Error whose message can be shown to the user. */
-  async load(): Promise<Portfolio> {
+  /**
+   * Loads cash and holdings together, for one account or across all of them when none is given.
+   * Throws an Error whose message can be shown to the user.
+   */
+  async load(accountId?: string): Promise<Portfolio> {
+    const scope = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
     const [cash, holdings] = await Promise.all([
-      this.#get<{ balance: number | string }[]>('/cash'),
+      this.#get<{ balance: number | string }[]>(`/cash${scope}`),
       this.#get<
         { instrumentId: string; symbol: string; instrumentName: string; quantity: number | string; averageCost: number | string }[]
-      >('/holdings'),
+      >(`/holdings${scope}`),
     ]);
     return {
       cash: round(cash.reduce((sum, row) => sum + Number(row.balance), 0)),

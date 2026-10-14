@@ -57,6 +57,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(404).body(Map.of(ERROR_KEY, CLIENT_NOT_FOUND, MESSAGE_KEY, "Client not found"));
     }
 
+    /**
+     * Reports a rejected account action with its fixed code and message.
+     * @param exception the rejection
+     * @return the reason's status, code and message
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.AccountActionException.class)
+    public ResponseEntity<Map<String, String>> accountAction(com.neueda.leap.portfolio.service.AccountActionException exception) {
+        var reason = exception.reason();
+        return ResponseEntity.status(reason.status()).body(Map.of(ERROR_KEY, reason.name(), MESSAGE_KEY, reason.message()));
+    }
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**

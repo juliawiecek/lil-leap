@@ -5,7 +5,10 @@ import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
-import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
+import { AccountSwitcher } from './account-switcher';
+import { AccountsService } from './accounts.service';
+import { canTrade } from './accounts-api';
 import {
   FINAL_ORDER_STATUSES,
   ORDER_TRACK_INTERVAL_MS,
@@ -62,7 +65,7 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -87,9 +90,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   readonly submittedOrderId = signal<string | null>(null);
   readonly clientReference = signal<string>('');
-  readonly accounts = signal<Account[]>([]);
+  /** The client's accounts; the header picker chooses which one this desk shows and trades from (PS-05). */
+  readonly accountState = inject(AccountsService, { optional: true }) ?? new AccountsService();
+  readonly accounts = computed(() => this.accountState.accounts());
   readonly instruments = signal<Instrument[]>([]);
-  readonly selectedAccount = signal<Account | null>(null);
+  readonly selectedAccount = computed(() => this.accountState.selected());
+  readonly #stopAccountWatch: () => void;
+  #started = false;
   readonly loadingAccounts = signal(false);
   readonly loadingInstruments = signal(false);
   readonly dataReady = computed(() => this.accounts().length > 0 && this.instruments().length > 0);
@@ -372,7 +379,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     try {
       const count = Number(this.quantity());
       const account = this.selectedAccount();
-      if (!account) {
+      if (!account || !canTrade(account)) {
         this.message.set('No active account selected.');
         return;
       }
@@ -421,7 +428,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
     try {
-      const rows = await this.orderHistoryClient.list();
+      const rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
       this.orders.set(rows.map(toOrder));
       return true;
     } catch (error) {
@@ -432,7 +439,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
   async refreshPortfolio(): Promise<void> {
     try {
-      const portfolio = await this.portfolioClient.load();
+      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
       if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch (error) {
@@ -551,10 +558,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
   }
 
   ngOnDestroy(): void {
     this.#destroyed = true;
+    this.#stopAccountWatch();
     this.destroyed = true;
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
@@ -566,18 +575,29 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
-    void this.loadTradingData();
-    void this.refreshPortfolio();
+    void this.#start();
+  }
+
+  /** Accounts first, so the first balances and orders shown are already the selected account's. */
+  async #start(): Promise<void> {
+    await this.loadTradingData();
+    this.#started = true;
     void this.pollOrdersUntilDestroyed();
+    await this.refreshPortfolio();
+  }
+
+  /** Another account was picked, or cash moved between accounts: show its balances, positions and orders. */
+  #accountChanged(): void {
+    if (!this.#started || this.#destroyed) { return; }
+    this.message.set('');
+    void this.refreshPortfolio();
+    void this.refreshOrders();
   }
 
   async loadTradingData(): Promise<void> {
     try {
       this.loadingAccounts.set(true);
-      const accountsData = await this.orderSubmissionClient.getAccounts();
-      const activeAccount = accountsData.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled);
-      this.accounts.set(accountsData);
-      this.selectedAccount.set(activeAccount || null);
+      this.accountState.use(await this.orderSubmissionClient.getAccounts());
     } catch (error) {
       console.error('Failed to load accounts:', error);
       this.message.set('Failed to load accounts.');

@@ -49,6 +49,7 @@ public class OrderHistoryController {
      * @param from first day to include, e.g. 2026-09-01
      * @param to last day to include
      * @param status one order status, e.g. FILLED
+     * @param accountId optional owned account to narrow to
      * @param principal authenticated identity from the bearer token
      * @return HTTP 200 with the matching orders
      */
@@ -65,10 +66,12 @@ public class OrderHistoryController {
             @Parameter(description = "Last day to include (ISO date)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @Parameter(description = "One order status, e.g. FILLED") @RequestParam(required = false) String status,
+            @Parameter(description = "Only this account; omit for all of the caller's accounts")
+            @RequestParam(required = false) UUID accountId,
             @AuthenticationPrincipal JwtPrincipal principal) {
         if (!id.equals(principal.userId())) {
             throw new ClientNotFoundException("Client not found");
         }
-        return ResponseEntity.ok(historyService.getHistory(principal.userId(), from, to, status));
+        return ResponseEntity.ok(historyService.getHistory(principal.userId(), accountId, from, to, status));
     }
 }

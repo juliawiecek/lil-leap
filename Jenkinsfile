@@ -107,7 +107,7 @@ pipeline {
             export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
             mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest,OrderIdempotencyPostgresTest test
             mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
-              -Dtest=HoldingsSettlementPostgresTest,InstrumentSearchRepositoryTest \
+              -Dtest=HoldingsSettlementPostgresTest,AccountTransferPostgresTest,InstrumentSearchRepositoryTest \
               -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
               -Dtest.holdings.postgres.user=orders_test \
               -Dtest.holdings.postgres.password=ci-test-only test
