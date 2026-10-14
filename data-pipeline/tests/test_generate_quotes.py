@@ -99,6 +99,14 @@ def test_validation_rejects_duplicate_quote() -> None:
     with pytest.raises(ValueError, match="must be unique"):
         validate_quotes(duplicate)
 
+def test_start_prices_continue_a_symbol_from_its_last_price() -> None:
+    quotes = generate_quotes(periods=2, seed=7, start_prices={"AAPL": 150.0})
+    first = quotes.groupby("symbol").head(1).set_index("symbol")["price"]
+
+    assert first["AAPL"] == 150.0
+    assert first["MSFT"] == 510.0
+
+
 def test_invalid_start_price_is_rejected() -> None:
     """Validation should reject a quote if it has a below zero start price."""
     rng = np.random.default_rng(seed=42)

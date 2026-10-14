@@ -33,12 +33,13 @@ public class SecurityConfig {
     private static final String[] PORTFOLIO_READ_ROUTES = {
             "/clients/*/portfolio-summary", "/accounts", "/holdings", "/holdings/**", "/cash", "/orders",
             "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*",
-            "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*",
+            "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*", "/quotes/candles/*",
             API_PREFIX + "/clients/*/portfolio-summary", API_PREFIX + "/accounts", API_PREFIX + "/holdings",
             API_PREFIX + "/holdings/**", API_PREFIX + "/cash", API_PREFIX + "/orders", API_PREFIX + "/instruments",
             API_PREFIX + "/instruments/*", API_PREFIX + "/clients/*/holdings", API_PREFIX + "/clients/*/cash",
             API_PREFIX + "/cash/balance/*", API_PREFIX + "/quotes/latest/by-instrument/*",
-            API_PREFIX + "/quotes/latest/by-market-symbol", API_PREFIX + "/quotes/history/*"
+            API_PREFIX + "/quotes/latest/by-market-symbol", API_PREFIX + "/quotes/history/*",
+            API_PREFIX + "/quotes/candles/*"
     };
 
     /** Creates the security configuration; Spring instantiates it. */

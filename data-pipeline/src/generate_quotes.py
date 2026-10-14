@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
+from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 from src.instrument_catalog import SYMBOL_CONFIG
@@ -69,7 +70,8 @@ def generate_price_path(
 def generate_quotes(
     periods: int = 390, 
     seed: int = 42,
-    start_timestamp: str = "2026-09-08T13:30:00Z",   
+    start_timestamp: str = "2026-09-08T13:30:00Z",
+    start_prices: Mapping[str, float] | None = None,
 ) -> pd.DataFrame:
     """
     Generate validated-format synthetic quotes for supported symbols.
@@ -78,6 +80,7 @@ def generate_quotes(
         periods: Number of one-minute quotes generated per symbol.
         seed: Seed used to make output reproducible.
         start_timestamp: UTC timestamp for the first generated quote.
+        start_prices: Optional price to continue from per symbol; others use the catalog start price.
 
     Returns:
         A DataFrame containing synthetic quote observations.
@@ -98,7 +101,7 @@ def generate_quotes(
     
     for symbol, config in SYMBOL_CONFIG.items():
         prices = generate_price_path(
-            start_price=config["start_price"],
+            start_price=(start_prices or {}).get(symbol, config["start_price"]),
             drift=config["drift"],
             volatility=config["volatility"],
             periods=periods,

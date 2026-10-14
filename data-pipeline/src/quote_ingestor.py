@@ -43,11 +43,21 @@ def ingest_frame(frame: pd.DataFrame, connection) -> tuple[int,int]:
         connection.rollback()
         raise
 
-def generate_current(periods: int, seed: int) -> pd.DataFrame:
+def generate_current(periods: int, seed: int, start_prices: dict[str, float] | None = None) -> pd.DataFrame:
     # Keep the most recent generated quote at "now" so execution freshness checks pass.
     latest = datetime.now(timezone.utc).replace(microsecond=0)
     start = (latest - timedelta(minutes=max(periods - 1, 0))).isoformat()
-    return generate_quotes(periods=periods, seed=seed, start_timestamp=start)
+    return generate_quotes(periods=periods, seed=seed, start_timestamp=start, start_prices=start_prices)
+
+def load_last_prices(connection) -> dict[str, float]:
+    """Latest stored midpoint per symbol, so a restarted pipeline continues where it stopped."""
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT i.symbol, ROUND((q.bid + q.ask) / 2, 4)
+            FROM v_latest_quotes q JOIN instruments i ON i.instrument_id = q.instrument_id
+            WHERE i.market_code = %s
+        """, (MARKET_CODE,))
+        return {symbol: float(price) for symbol, price in cur.fetchall()}
 
 def run_once(periods: int, seed: int) -> tuple[int,int,int]:
     frame=generate_current(periods, seed)
@@ -64,15 +74,19 @@ def run_once(periods: int, seed: int) -> tuple[int,int,int]:
 
 def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> None:
     should_stop=stop or (lambda: False); attempt=0; batch=0
+    last_prices: dict[str, float] | None = None
     while not should_stop():
         started=time.monotonic()
         try:
-            # Generate 3 prices per interval to get GBM variation (periods must be > 1 for price movement)
-            # We take the last price to show market movement over time
-            frame=generate_current(3, seed + batch)
-            # Keep only the most recent price for this interval
-            frame = frame.groupby('symbol', as_index=False).tail(1)
-            with connect() as conn: inserted, skipped=ingest_frame(frame, conn)
+            with connect() as conn:
+                if last_prices is None:
+                    last_prices=load_last_prices(conn)
+                # One GBM step from each symbol's previous price, so the series is a continuous
+                # random walk rather than fresh noise around the catalog start price.
+                frame=generate_current(2, seed + batch, last_prices)
+                frame=frame.groupby('symbol', as_index=False).tail(1)
+                inserted, skipped=ingest_frame(frame, conn)
+            last_prices=dict(zip(frame["symbol"], frame["price"].astype(float)))
             print(f"quote batch inserted={inserted} skipped={skipped} symbols={len(frame)}")
             attempt=0; batch += 1
         except DatabaseUnavailableError:

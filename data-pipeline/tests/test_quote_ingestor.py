@@ -79,12 +79,30 @@ def test_continuous_retries_then_advances_seed_and_respects_interval(monkeypatch
     monkeypatch.setattr(ingestor, "generate_current", generate)
     monkeypatch.setattr(ingestor, "connect", connect)
     monkeypatch.setattr(ingestor, "ingest_frame", Mock(return_value=(1, 0)))
+    load = Mock(return_value={"AAPL": 210.5})
+    monkeypatch.setattr(ingestor, "load_last_prices", load)
     monkeypatch.setattr(ingestor.time, "monotonic", Mock(side_effect=[0, 1, 3, 4, 10]))
     sleeps = []
     ingestor.run_continuous(5, 42, stop=lambda: len(sleeps) == 3, sleep=sleeps.append)
     assert sleeps == [1, 3, 0]
-    # Each tick generates a 3-step price path (so prices move) and keeps the latest step.
-    assert [c.args for c in generate.call_args_list] == [(3, 42), (3, 42), (3, 43)]
+    # The first tick continues from the stored price; later ticks continue from the last generated one.
+    assert [c.args for c in generate.call_args_list] == [(2, 42, {"AAPL": 210.5}), (2, 43, {"AAPL": 100.0})]
+    load.assert_called_once()
+
+
+def test_load_last_prices_reads_latest_midpoint_per_symbol():
+    from src import quote_ingestor as ingestor
+
+    class Cursor:
+        def __enter__(self): return self
+        def __exit__(self, *exc): return False
+        def execute(self, sql, params): self.sql, self.params = sql, params
+        def fetchall(self): return [("AAPL", Decimal("225.1234")), ("MSFT", Decimal("510"))]
+
+    cursor = Cursor()
+    connection = type("Connection", (), {"cursor": lambda self: cursor})()
+    assert ingestor.load_last_prices(connection) == {"AAPL": 225.1234, "MSFT": 510.0}
+    assert "v_latest_quotes" in cursor.sql and cursor.params == ("NASDAQ",)
 
 
 def test_continuous_stops_after_bounded_database_retries(monkeypatch):

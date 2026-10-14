@@ -35,4 +35,14 @@ public interface QuoteRepository {
      * @return list of quotes, ordered by timestamp descending, or empty when no quote exists
      */
     List<MarketQuote> findHistoryByInstrumentId(UUID instrumentId, int limit);
+
+    /**
+     * Groups an instrument's stored quotes into open/high/low/close midpoint candles.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param interval candle width
+     * @param limit how many of the most recent candles to cover (clamped to a safe maximum)
+     * @return candles ordered oldest first; empty when the instrument has no quotes in that window
+     */
+    List<PriceCandle> findCandles(UUID instrumentId, CandleInterval interval, int limit);
 }
