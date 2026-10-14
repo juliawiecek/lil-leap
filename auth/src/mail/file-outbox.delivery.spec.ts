@@ -1,11 +1,15 @@
 import { Logger } from '@nestjs/common';
 import { join, resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { FileOutboxDelivery, buildMessage, outboxDirectory } from './file-outbox.delivery';
+import { FileOutboxDelivery, outboxDirectory } from './file-outbox.delivery';
 
 jest.mock('node:fs/promises', () => ({ mkdir: jest.fn(), writeFile: jest.fn() }));
 
-const resetLink = 'http://localhost:4200/reset-password?token=sample-link-value';
+const message = {
+  to: 'trader@example.com',
+  subject: 'Reset your NextTrade password',
+  body: 'Open http://localhost:4200/reset-password?token=sample-link-value',
+};
 
 describe('FileOutboxDelivery', () => {
   const mkdirMock = mkdir as jest.Mock;
@@ -20,22 +24,24 @@ describe('FileOutboxDelivery', () => {
     delete process.env.PASSWORD_RESET_OUTBOX_DIR;
   });
 
-  it('writes one owner-only .eml file per reset into the outbox folder', async () => {
-    await new FileOutboxDelivery().send('trader@example.com', resetLink);
+  it('writes one owner-only .eml file per email with the right recipient and subject', async () => {
+    await new FileOutboxDelivery().send(message);
 
     expect(mkdirMock).toHaveBeenCalledWith(resolve('test-outbox'), { recursive: true });
+    expect(writeFileMock).toHaveBeenCalledTimes(1);
     const [filePath, content, options] = writeFileMock.mock.calls[0];
     expect(filePath.startsWith(join(resolve('test-outbox'), ''))).toBe(true);
     expect(filePath).toMatch(/\.eml$/);
     expect(content).toContain('To: trader@example.com\r\n');
-    expect(content).toContain(resetLink);
+    expect(content).toContain('Subject: Reset your NextTrade password\r\n');
+    expect(content).toContain('sample-link-value');
     expect(options).toEqual({ mode: 0o600, flag: 'wx' });
   });
 
-  it('logs the file name but never the link', async () => {
+  it('logs the file name but never the content', async () => {
     const log = jest.spyOn(Logger.prototype, 'log').mockReturnValue(undefined);
 
-    await new FileOutboxDelivery().send('trader@example.com', resetLink);
+    await new FileOutboxDelivery().send(message);
 
     const logged = log.mock.calls.flat().join(' ');
     expect(logged).toContain('.eml');
@@ -43,8 +49,10 @@ describe('FileOutboxDelivery', () => {
     log.mockRestore();
   });
 
-  it('refuses an address containing a line break, so no extra headers can be injected', async () => {
-    await expect(new FileOutboxDelivery().send('a@example.com\r\nBcc: b@example.com', resetLink)).rejects.toThrow(/line break/);
+  it('refuses a recipient containing a line break, so no extra headers can be injected', async () => {
+    await expect(new FileOutboxDelivery().send({ ...message, to: 'a@example.com\r\nBcc: b@example.com' })).rejects.toThrow(
+      /line break/,
+    );
     expect(writeFileMock).not.toHaveBeenCalled();
   });
 
@@ -52,16 +60,5 @@ describe('FileOutboxDelivery', () => {
     delete process.env.PASSWORD_RESET_OUTBOX_DIR;
 
     expect(outboxDirectory()).toBe(resolve('outbox'));
-  });
-});
-
-describe('buildMessage', () => {
-  it('addresses the user and includes the link and its 20-minute expiry', () => {
-    const message = buildMessage('trader@example.com', resetLink);
-
-    expect(message).toContain('To: trader@example.com\r\n');
-    expect(message).toContain('Subject: Reset your NextTrade password\r\n');
-    expect(message).toContain(`\r\n${resetLink}\r\n`);
-    expect(message).toContain('expires in 20 minutes');
   });
 });

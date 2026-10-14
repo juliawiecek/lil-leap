@@ -22,8 +22,7 @@ import { tlsKeystorePath } from './security/tls';
 import { PasswordResetToken } from './password-reset/entities/password-reset-token.entity';
 import { PasswordResetController } from './password-reset/password-reset.controller';
 import { PasswordResetService } from './password-reset/password-reset.service';
-import { PASSWORD_RESET_DELIVERY } from './password-reset/password-reset-delivery';
-import { FileOutboxDelivery } from './password-reset/file-outbox.delivery';
+import { mailDeliveryProvider } from './mail/mail-delivery.provider';
 
 @Module({
   imports: [
@@ -51,8 +50,8 @@ import { FileOutboxDelivery } from './password-reset/file-outbox.delivery';
     PasswordEncoderService,
     AccessTokenGuard,
     PasswordResetService,
-    // The VM has no network: reset emails go to a local outbox. Swap the class here for SMTP (NEXT-219).
-    { provide: PASSWORD_RESET_DELIVERY, useClass: FileOutboxDelivery },
+    // MAIL_DELIVERY=outbox (default, the VM) writes .eml files; smtp sends to Mailpit on dev laptops.
+    mailDeliveryProvider,
   ],
 })
 export class AppModule implements NestModule {

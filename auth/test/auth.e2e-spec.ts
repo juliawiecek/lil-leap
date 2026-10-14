@@ -7,7 +7,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { tlsKeystorePath } from '../src/security/tls';
-import { PASSWORD_RESET_DELIVERY, PasswordResetDelivery } from '../src/password-reset/password-reset-delivery';
+import { MAIL_DELIVERY, MailDelivery, MailMessage } from '../src/mail/mail-message';
 import { hashResetToken } from '../src/password-reset/password-reset.service';
 
 /**
@@ -24,11 +24,16 @@ describe('auth (e2e)', () => {
   const analystEmail = `e2e-analyst-${runId}@example.com`;
   const password = 'correct-horse-battery';
 
-  /** Captures reset links instead of writing .eml files. */
+  /** Captures emails instead of writing .eml files; resetLinks holds the link from each reset email. */
+  const sentEmails: MailMessage[] = [];
   const resetLinks: string[] = [];
-  const outbox: PasswordResetDelivery = {
-    send: async (_email, resetLink) => {
-      resetLinks.push(resetLink);
+  const outbox: MailDelivery = {
+    send: async (message) => {
+      sentEmails.push(message);
+      const link = /https?:\/\/\S+/.exec(message.body)?.[0];
+      if (link) {
+        resetLinks.push(link);
+      }
     },
   };
 
@@ -48,7 +53,7 @@ describe('auth (e2e)', () => {
     }
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PASSWORD_RESET_DELIVERY)
+      .overrideProvider(MAIL_DELIVERY)
       .useValue(outbox)
       .compile();
     app = moduleRef.createNestApplication({
@@ -394,6 +399,7 @@ describe('auth (e2e)', () => {
       await post('/auth/refresh', { refreshToken }).expect(401);
       await post('/auth/login', { email: traderEmail, password }).expect(401);
       await post('/auth/login', { email: traderEmail, password: newPassword }).expect(200);
+      expect(sentEmails.at(-1)).toMatchObject({ to: traderEmail, subject: 'Your NextTrade password was changed' });
       const reused = await post('/auth/reset-password', { token, newPassword: 'third-correct-horse' }).expect(400);
       expect(reused.body.error).toBe('INVALID_RESET_TOKEN');
     });
