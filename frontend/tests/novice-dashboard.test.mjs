@@ -245,3 +245,18 @@ test('a failed send shows the reason and a retry reuses the same order reference
   assert.equal(submitted.length, 2);
   assert.equal(submitted[0].clientReference, submitted[1].clientReference);
 });
+
+test('the header counts down to the market close and keeps the last status if a refresh fails', async t => {
+  const { desk } = await tradingDesk(t);
+  desk.marketStatusClient = { status: async () => ({ open: true, exchangeTimeZone: 'America/New_York',
+    nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' }) };
+  await desk.refreshMarketStatus();
+  desk.marketClock.set(new Date('2026-10-14T17:46:00Z'));
+  assert.equal(desk.marketOpen(), true);
+  assert.equal(desk.marketText(), 'Market closes in 2h 14m');
+
+  desk.marketStatusClient = { status: async () => { throw new Error('down'); } };
+  await desk.refreshMarketStatus();
+  desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
+  assert.equal(desk.marketText(), 'Market closes in 1h 0m');
+});

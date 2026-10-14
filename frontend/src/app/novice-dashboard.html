@@ -86,7 +86,7 @@
           <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
         </div>
         <div class="market-status">
-          <span><i></i>Market closes in 2h 14m</span><span>Wed, Apr 23, 2025</span>
+          <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketText() }}</span><span>Wed, Apr 23, 2025</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
