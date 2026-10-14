@@ -32,3 +32,37 @@
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
 }
 body { font-family: var(--font-ui); }
+
+/* Order ticket notices shared by both dashboards (TS-14.7, PS-02, PS-15). */
+.price-delayed,
+.closed-warning {
+  border-radius: 6px;
+  background: #241f12;
+  color: #f0c86a;
+}
+.price-delayed {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-style: normal;
+}
+.closed-warning {
+  padding: 9px 11px;
+  border: 1px solid #5a4a24;
+}
+.review-summary {
+  padding: 10px 12px;
+  border: 1px solid #2a4d3a;
+  border-radius: 6px;
+  background: #102019;
+  color: #e9f3ee;
+  font-weight: 600;
+}
+.review-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.review-actions > :last-child {
+  flex: 1;
+}

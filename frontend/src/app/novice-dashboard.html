@@ -80,6 +80,7 @@
         </button>
       </div>
     </header>
+    <app-market-ticker (pick)="openTrade('Buy', $event)" />
     <main class="novice-content">
       <div class="page-heading">
         <div>
@@ -87,7 +88,7 @@
           <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketText() }}</span><span>Wed, Apr 23, 2025</span>
+          <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
@@ -526,7 +527,8 @@
   @if (modal() === 'trade') {
     <div class="trade-quote">
       <span
-        >{{ tradeQuote().name }}<strong>{{ tradeQuote().price | currency }}</strong></span
+        >{{ tradeQuote().name }}<strong>{{ tradeQuote().price | currency }}</strong
+        >@if (tradePriceDelayed()) {<em class="price-delayed">Price delayed</em>}</span
       ><button class="secondary-button" type="button" (click)="toggleWatch()">
         {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
       </button>
@@ -569,15 +571,18 @@
       </div>
       <p>Buying power: {{ buyingPower() | currency }}</p>
       <p>Execution threshold: order is rejected if execution price moves more than ${{ executionThresholdDollars() }} from the indicative price.</p>
-      @if (reviewing()) {
-        <p class="review-confirmation">
-          {{ side() }} {{ quantity() }} shares of {{ tradeQuote().symbol }} at
-          {{ tradeQuote().price | currency }} per share. Review the details before confirming.
-        </p>
+      @if (closedWarning()) {
+        <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
-      <button class="green-button submit-trade" type="submit">
-        {{ reviewing() ? 'Confirm ' : 'Review ' }}{{ side().toLowerCase() }}
-      </button>
+      @if (reviewing()) {
+        <p class="review-confirmation review-summary" role="status">{{ reviewSummary() }}</p>
+        <div class="review-actions">
+          <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
+          <button class="green-button submit-trade" type="submit">Confirm {{ side().toLowerCase() }}</button>
+        </div>
+      } @else {
+        <button class="green-button submit-trade" type="submit">Review {{ side().toLowerCase() }}</button>
+      }
       <output>{{ tradeMessage() }}</output>
     </form>
   } @else if (modal() === 'allocation') {
@@ -607,3 +612,4 @@
     <p>You can change your workspace under Account settings.</p>
   }
 </dialog>
+<app-toasts (view)="viewOrders()" />
