@@ -18,6 +18,7 @@ import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './
 import { AuthService } from './auth.service';
 import { QuoteService } from './quote.service';
 import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
+import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient, marketStatusText } from './market-status-api';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
@@ -57,6 +58,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly orderSubmissionClient: OrderSubmissionClient;
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
+  readonly marketStatusClient: MarketStatusClient;
+  /** NYSE open/closed from the orders service (NEXT-212), counted down against the local clock. */
+  readonly marketStatus = signal<MarketStatus | null>(null);
+  readonly marketClock = signal(new Date());
+  readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
+  readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -377,6 +384,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
+    this.marketStatusClient = new MarketStatusClient(this.auth);
   }
   ngOnDestroy(): void {
     this.destroyed = true;
@@ -462,11 +470,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       .pipe(
         startWith(0),
         switchMap(async () => {
+          this.marketClock.set(new Date());
           await this.refreshQuotes();
           return true;
         }),
         takeUntil(this.destroy$),
       )
+      .subscribe();
+    interval(MARKET_STATUS_REFRESH_MS)
+      .pipe(startWith(0), switchMap(() => this.refreshMarketStatus()), takeUntil(this.destroy$))
       .subscribe();
 
     void this.#start();
@@ -485,6 +497,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.reviewing.set(false);
     this.tradeMessage.set('');
     void this.refreshPortfolio();
+  }
+
+  /** Re-reads whether the market is open; a failure keeps the last status shown. */
+  async refreshMarketStatus(): Promise<void> {
+    try {
+      this.marketStatus.set(await this.marketStatusClient.status());
+    } catch {
+      // The next refresh retries.
+    }
   }
 
   private async refreshQuotes(): Promise<void> {

@@ -254,6 +254,14 @@ export class InvestorProfile implements OnInit, AfterViewInit {
         "hint": "Cash and savings you can access quickly. Example: 10,000."
       },
       {
+        "id": "initial_deposit",
+        "label": "Initial deposit in USD",
+        "inputMode": "decimal",
+        "pattern": "[0-9,]+([.][0-9]{1,2})?",
+        "maxLength": 100,
+        "hint": "At least 5,000 (Advanced: 100,000). Cannot exceed your liquidity position."
+      },
+      {
         "id": "accredited_investor",
         "label": "Do you identify as an accredited investor?",
         "options": [
@@ -443,7 +451,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       this.formatInput(fieldId, input, event);
       return;
     }
-    if (fieldId === 'annual_income' || fieldId === 'liquidity_position') {
+    if (fieldId === 'annual_income' || fieldId === 'liquidity_position' || fieldId === 'initial_deposit') {
       this.formatCurrencyLikeInput(input);
     }
   }
@@ -599,7 +607,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   }
 
   private validateMoneyField(fieldId: string, value: string, control: HTMLInputElement): void {
-    const isMoneyField = fieldId === 'annual_income' || fieldId === 'liquidity_position';
+    const isMoneyField = fieldId === 'annual_income' || fieldId === 'liquidity_position' || fieldId === 'initial_deposit';
     if (isMoneyField && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replaceAll(',', ''))) {
       control.setCustomValidity('Enter a nonnegative amount with up to two decimal places.');
     }

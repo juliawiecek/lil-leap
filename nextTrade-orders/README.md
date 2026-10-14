@@ -17,6 +17,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | GET | `/api/v1/orders/{id}` | One caller-owned order, with its fill once executed (TRADER only) |
 | GET | `/api/v1/orders/{id}/status` | Current status and the latest status-history reason code (TRADER only) |
 | GET | `/api/v1/orders/quote-preview` | Indicative price and total before submitting (TRADER only) |
+| GET | `/api/v1/market/status` | `{ open, exchangeTimeZone, nextOpen, nextClose }` with UTC instants (any signed-in user) |
 
 Supply `accountId`, `clientReference`, `side`, `quantity` and exactly one of
 `symbol` or `instrumentId`. Reuse `clientReference` for retries.
@@ -27,6 +28,20 @@ an unknown id.
 Only clients whose profile country is the United States may trade, and only instruments on
 US markets (NASDAQ, NYSE, NYSE American, NYSE Arca, Cboe, IEX). Anything else, including a
 missing country, is rejected with 422 `LOCATION_RESTRICTED`.
+
+### Market hours
+
+Orders execute only during the NYSE regular session: 09:30-16:00 `America/New_York`, Monday to
+Friday, closed at exactly 16:00 and on full-day holidays. An order placed while the market is closed
+is accepted and stays `PENDING` with reason `MARKET_CLOSED`; it fills automatically at the next open.
+Half days are not modelled.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `nexttrade.market.respect-hours` | `true` | `false` lets orders fill at any time (demos, night-time testing); env `NEXTTRADE_MARKET_RESPECT_HOURS` |
+| `nexttrade.market.time-zone` | `America/New_York` | Exchange time zone |
+| `nexttrade.market.open` / `close` | `09:30` / `16:00` | Session in exchange time |
+| `nexttrade.market.holidays` | NYSE 2026-2027 | Comma-separated ISO dates of full-day closures |
 
 All business endpoints require a Bearer JWT. The service denies other routes and does not
 implement registration, login or password reset; Identity owns those operations.

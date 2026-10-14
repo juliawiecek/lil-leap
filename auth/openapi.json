@@ -515,6 +515,12 @@
             "example": "10,000",
             "description": "Required when user_role is TRADER. Dollars; commas allowed."
           },
+          "initial_deposit": {
+            "type": "string",
+            "maxLength": 32,
+            "example": "10,000",
+            "description": "Required when user_role is TRADER. Dollars; commas allowed. At least the assigned tier minimum ($5,000 Novice, $100,000 Advanced) and no more than liquidity_position."
+          },
           "accredited_investor": {
             "type": "boolean",
             "description": "Required when user_role is TRADER."
