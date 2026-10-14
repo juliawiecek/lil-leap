@@ -18,3 +18,9 @@ test('toTraderRegistration converts yes/no answers to booleans and drops blank f
     broker_firm_name: 'true',
   });
 });
+
+test('toTraderRegistration sends the initial deposit with the other financial answers (NEXT-214)', () => {
+  const request = toTraderRegistration({ liquidity_position: '10,000', initial_deposit: ' 5,000 ' }, 'ada@example.com', 'pw');
+  assert.equal(request.initial_deposit, '5,000');
+  assert.equal(request.liquidity_position, '10,000');
+});

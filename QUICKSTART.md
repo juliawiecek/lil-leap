@@ -76,21 +76,21 @@ npm run start:dev
 ### Terminal 2: Orders Service
 ```cmd
 cd nextTrade-orders
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8082"
 
 ### Terminal 3: Holdings Service
 ```cmd
 cd nextTrade-holdings
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8080"
 
 ### Terminal 4: Insights Service
 ```cmd
 cd insights
-mvn spring-boot:run '-Dspring.profiles.active=local'
+mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8084"
 
@@ -120,6 +120,18 @@ npm start
 ```
 **Ready when:** "Angular Live Development Server is listening on localhost:4301"
 
+> **Profiles:** use `-Dspring-boot.run.profiles=local`. `-Dspring.profiles.active=local` sets the
+> property on Maven, not on the app, so the app starts without its local settings and fails on
+> `APP_JWT_SECRET`.
+
+### Optional Terminal 8: Mailpit (password reset emails)
+Download `mailpit-windows-amd64.zip` from https://github.com/axllent/mailpit/releases, unzip it, then:
+```cmd
+mailpit.exe --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
+```
+In `auth/.env` set `MAIL_DELIVERY=smtp` and `PASSWORD_RESET_URL=http://localhost:4300/reset-password`,
+then restart auth. Without Mailpit, leave `MAIL_DELIVERY=outbox` and open the `.eml` files in `auth/outbox/`.
+
 ---
 
 ## Access the Apps
@@ -128,6 +140,7 @@ npm start
 - **Reporting Frontend:** http://localhost:4301
 - **Auth Health:** http://localhost:8081/health
 - **Auth Swagger:** http://localhost:8081/auth/docs
+- **Mailpit inbox (if running):** http://localhost:8025
 - **Orders Swagger:** http://localhost:8082/api/v1/swagger-ui.html
 - **Holdings Swagger:** http://localhost:8080/api/v1/swagger-ui.html
 - **Insights Swagger:** http://localhost:8084/api/v1/swagger-ui.html

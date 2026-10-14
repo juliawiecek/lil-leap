@@ -101,6 +101,27 @@ class OrderSufficiencyServiceTest {
         verifyNoInteractions(balances, quotes);
     }
 
+    @Test
+    void cashShortfallMessageShowsWhatTheOrderNeedsAndWhatIsAvailable() {
+        quote(new BigDecimal("100.00"));
+        when(balances.executionBufferPercent(account)).thenReturn(new BigDecimal("2.00"));
+        when(balances.cashBalance(account)).thenReturn(new BigDecimal("980.00"));
+
+        assertThatThrownBy(() -> service.validate(request("BUY", 10, null), instrument))
+                .isInstanceOfSatisfying(OrderSufficiencyException.class, e -> assertThat(e.reason()).isEqualTo(INSUFFICIENT_CASH))
+                .hasMessage("Insufficient cash: this order needs $1,020.00 (10 shares at the $100.00 ask plus a 2% price buffer), "
+                        + "but $980.00 is available.");
+    }
+
+    @Test
+    void holdingsShortfallMessageShowsSharesSoldAndHeld() {
+        when(balances.holdingQuantity(account, instrument)).thenReturn(4L);
+
+        assertThatThrownBy(() -> service.validate(request("SELL", 10, null), instrument))
+                .isInstanceOfSatisfying(OrderSufficiencyException.class, e -> assertThat(e.reason()).isEqualTo(INSUFFICIENT_HOLDINGS))
+                .hasMessage("Insufficient holdings: this order sells 10 shares but you hold 4.");
+    }
+
     private void quote(BigDecimal ask) {
         when(quotes.findLatestByInstrumentId(instrument)).thenReturn(Optional.of(new MarketQuote(
                 UUID.randomUUID(), instrument, "AAPL", "NASDAQ", BigDecimal.ONE, ask,

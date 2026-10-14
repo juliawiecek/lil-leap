@@ -19,6 +19,7 @@ import { type Point, portfolioHistory, timeframeFor, toFills } from './chart-dat
 import type { ChartSpec } from './lightweight-chart';
 import { LiveChart } from './live-chart';
 import { MarketDataClient } from './market-data-api';
+import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient, marketStatusText } from './market-status-api';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
@@ -61,6 +62,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketData: MarketDataClient;
   /** Separate from order tracking, so chart refreshes never interleave with a tracked order's reads. */
   readonly chartHistoryClient: OrderHistoryClient;
+  readonly marketStatusClient: MarketStatusClient;
+  /** NYSE open/closed from the orders service (NEXT-212), counted down against the local clock. */
+  readonly marketStatus = signal<MarketStatus | null>(null);
+  readonly marketClock = signal(new Date());
+  readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
+  readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -376,6 +383,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.marketStatusClient = new MarketStatusClient(this.auth);
     this.marketData = new MarketDataClient(this.auth);
     this.chartHistoryClient = new OrderHistoryClient(this.auth);
   }
@@ -469,12 +477,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         startWith(0),
         switchMap(async () => {
           this.now.set(new Date());
+          this.marketClock.set(new Date());
           await this.refreshQuotes();
           await this.refreshChart();
           return true;
         }),
         takeUntil(this.destroy$),
       )
+      .subscribe();
+    interval(MARKET_STATUS_REFRESH_MS)
+      .pipe(startWith(0), switchMap(() => this.refreshMarketStatus()), takeUntil(this.destroy$))
       .subscribe();
 
     void this.refreshPortfolio();
@@ -515,6 +527,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.chartStatus.set('No price history for this period yet.');
     } catch {
       this.chartStatus.set('Could not load the chart. Retrying...');
+    }
+  }
+
+  /** Re-reads whether the market is open; a failure keeps the last status shown. */
+  async refreshMarketStatus(): Promise<void> {
+    try {
+      this.marketStatus.set(await this.marketStatusClient.status());
+    } catch {
+      // The next refresh retries.
     }
   }
 

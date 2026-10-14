@@ -336,6 +336,9 @@ h2 {
   border-radius: 50%;
   background: #31bc60;
 }
+.market-status .closed i {
+  background: #ee535d;
+}
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.84fr) minmax(350px, 1fr);
