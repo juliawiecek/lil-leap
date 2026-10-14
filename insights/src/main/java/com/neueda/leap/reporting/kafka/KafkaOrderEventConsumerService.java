@@ -65,7 +65,7 @@ public class KafkaOrderEventConsumerService {
             sink.accept(event);
         } catch (JsonProcessingException ex) {
             log.warn("Discarding malformed Kafka order event payload", ex);
-        } catch (RuntimeException ex) {
+        } catch (IllegalStateException ex) {
             log.warn("Unable to persist Kafka order event payload to CSV output", ex);
         }
     }
