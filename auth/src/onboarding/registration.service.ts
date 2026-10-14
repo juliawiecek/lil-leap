@@ -13,6 +13,8 @@ import { FinancialProfile } from './entities/financial-profile.entity';
 import { Account } from './entities/account.entity';
 import { AnalystProfile } from './entities/analyst-profile.entity';
 import { assignTier, TierAssignment } from './tier-rules';
+import { InitialDepositBelowMinimumException } from './exceptions/initial-deposit-below-minimum.exception';
+import { InitialDepositAboveLiquidityException } from './exceptions/initial-deposit-above-liquidity.exception';
 
 function trimToNull(value?: string | null): string | null {
   if (value == null) {
@@ -20,6 +22,23 @@ function trimToNull(value?: string | null): string | null {
   }
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+const MONEY = /^\d{1,16}(?:\.\d{1,2})?$/;
+
+/** Whole cents of a dollar amount ("10,000.5" -> 1000050n), or null when it is not a valid amount. */
+function toCents(value?: string | null): bigint | null {
+  const plain = trimToNull(value)?.replaceAll(',', '');
+  if (plain == null || !MONEY.test(plain)) {
+    return null;
+  }
+  const [dollars, fraction = ''] = plain.split('.');
+  return BigInt(dollars) * 100n + BigInt(fraction.padEnd(2, '0'));
+}
+
+/** Formats cents for the numeric(18,2) columns (1000050n -> "10000.50"). */
+function centsToAmount(cents: bigint): string {
+  return `${cents / 100n}.${(cents % 100n).toString().padStart(2, '0')}`;
 }
 
 /** Registration business logic: one shared entry point, branching by role. */
@@ -40,6 +59,7 @@ export class RegistrationService {
 
       // Decided before any row is written, so a rejected applicant leaves nothing behind.
       const tier = request.userRole === UserRole.TRADER ? assignTier(request.netWorthBracket!, request.annualIncome) : null;
+      const initialDeposit = tier ? this.validateInitialDeposit(request, tier) : null;
 
       const user = manager.create(User, {
         email: normalizeEmail(request.email),
@@ -51,7 +71,7 @@ export class RegistrationService {
       if (request.userRole === UserRole.ANALYST) {
         await this.registerAnalyst(manager, request, savedUser);
       } else {
-        await this.registerTrader(manager, request, savedUser, tier!);
+        await this.registerTrader(manager, request, savedUser, tier!, initialDeposit!);
       }
 
       return savedUser;
@@ -73,15 +93,40 @@ export class RegistrationService {
   }
 
   /**
+   * The initial deposit (NEXT-214) must cover the assigned tier's minimum balance and may not
+   * exceed the declared liquidity position. Checked before anything is written.
+   * @returns the deposit formatted for the numeric(18,2) columns
+   */
+  private validateInitialDeposit(request: RegisterRequestDto, tier: TierAssignment): string {
+    const deposit = toCents(request.initialDeposit);
+    if (deposit == null) {
+      throw new BadRequestException('initial_deposit must be a nonnegative amount with up to two decimal places.');
+    }
+    const liquidity = toCents(request.liquidityPosition);
+    if (liquidity == null) {
+      throw new BadRequestException('liquidity_position must be a nonnegative amount with up to two decimal places.');
+    }
+    const minimum = toCents(tier.minBalanceRequirement)!;
+    if (deposit < minimum) {
+      throw new InitialDepositBelowMinimumException(Number(minimum / 100n).toLocaleString('en-US'));
+    }
+    if (deposit > liquidity) {
+      throw new InitialDepositAboveLiquidityException();
+    }
+    return centsToAmount(deposit);
+  }
+
+  /**
    * Persists the TRADER-only extension tables for a newly created user:
-   * identity/contact profile, financial onboarding profile, and a trading
-   * account at the server-assigned tier.
+   * identity/contact profile, financial onboarding profile, a trading account
+   * at the server-assigned tier, and the initial deposit that funds it.
    */
   private async registerTrader(
     manager: EntityManager,
     request: RegisterRequestDto,
     user: User,
     tier: TierAssignment,
+    initialDeposit: string,
   ): Promise<void> {
     this.validateAdult(request.dateOfBirth!);
 
@@ -129,8 +174,27 @@ export class RegistrationService {
       accountType: request.accountType!,
       traderLevel: tier.traderLevel,
       minBalanceRequirement: tier.minBalanceRequirement,
+      // Funded at registration, so the client can trade straight away (NEXT-214).
+      accountStatus: 'ACTIVE',
+      tradingEnabled: true,
     });
-    await manager.save(account);
+    const savedAccount = await manager.save(account);
+    await this.fundAccount(manager, user, savedAccount.accountId, initialDeposit);
+  }
+
+  /** Records the opening deposit in the cash ledger, its balance cache and the audit log. */
+  private async fundAccount(manager: EntityManager, user: User, accountId: string, amount: string): Promise<void> {
+    await manager.query(
+      `INSERT INTO cash_transactions (account_id, transaction_type, amount, settlement_status, settled_at)
+       VALUES ($1, 'DEPOSIT', $2, 'SETTLED', CURRENT_TIMESTAMP)`,
+      [accountId, amount],
+    );
+    await manager.query('INSERT INTO cash_balances (account_id, balance) VALUES ($1, $2)', [accountId, amount]);
+    await manager.query(
+      `INSERT INTO audit_log (user_id, account_id, actor_type, event_type, payload)
+       VALUES ($1, $2, 'USER', 'ACCOUNT_FUNDED', jsonb_build_object('amount', $3::numeric))`,
+      [user.userId, accountId, amount],
+    );
   }
 
   /** Validates that the user is at least 21 years old. */
