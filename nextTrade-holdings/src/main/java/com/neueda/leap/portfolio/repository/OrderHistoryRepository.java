@@ -14,6 +14,27 @@ import java.util.UUID;
 /** Reads owner-scoped order history and optional fill details from the primary. */
 @Repository
 public class OrderHistoryRepository {
+    private static final String HISTORY_SQL = """
+            SELECT o.order_id, i.symbol, o.side, o.quantity, o.status, o.submitted_at,
+                   f.execution_price, f.filled_quantity, f.filled_at
+            FROM orders o JOIN accounts a ON a.account_id = o.account_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            LEFT JOIN fills f ON f.order_id = o.order_id
+            WHERE a.user_id = :user AND o.status IN (:statuses)
+              AND o.submitted_at >= :from AND o.submitted_at < :to
+            ORDER BY o.submitted_at DESC, o.order_id
+            """;
+    private static final String ACCOUNT_HISTORY_SQL = """
+            SELECT o.order_id, i.symbol, o.side, o.quantity, o.status, o.submitted_at,
+                   f.execution_price, f.filled_quantity, f.filled_at
+            FROM orders o JOIN accounts a ON a.account_id = o.account_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            LEFT JOIN fills f ON f.order_id = o.order_id
+            WHERE a.user_id = :user AND a.account_id = :account AND o.status IN (:statuses)
+              AND o.submitted_at >= :from AND o.submitted_at < :to
+            ORDER BY o.submitted_at DESC, o.order_id
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     /**
@@ -34,19 +55,24 @@ public class OrderHistoryRepository {
      */
     public List<OrderHistoryResponse> findHistory(UUID userId, Collection<String> statuses,
             Instant from, Instant to) {
-        var parameters = new MapSqlParameterSource().addValue("user", userId)
+        return findHistory(userId, null, statuses, from, to);
+    }
+
+    /**
+     * Returns the caller's matching orders in one account, or in all of them, newest first.
+     * @param userId authenticated owner
+     * @param accountId account to read, or null for every owned account
+     * @param statuses allowed statuses to include
+     * @param from inclusive lower submission timestamp
+     * @param to exclusive upper submission timestamp
+     * @return matching history rows
+     */
+    public List<OrderHistoryResponse> findHistory(UUID userId, UUID accountId, Collection<String> statuses,
+            Instant from, Instant to) {
+        var parameters = new MapSqlParameterSource().addValue("user", userId).addValue("account", accountId)
                 .addValue("statuses", statuses).addValue("from", Timestamp.from(from))
                 .addValue("to", Timestamp.from(to));
-        return jdbc.query("""
-                SELECT o.order_id, i.symbol, o.side, o.quantity, o.status, o.submitted_at,
-                       f.execution_price, f.filled_quantity, f.filled_at
-                FROM orders o JOIN accounts a ON a.account_id = o.account_id
-                JOIN instruments i ON i.instrument_id = o.instrument_id
-                LEFT JOIN fills f ON f.order_id = o.order_id
-                WHERE a.user_id = :user AND o.status IN (:statuses)
-                  AND o.submitted_at >= :from AND o.submitted_at < :to
-                ORDER BY o.submitted_at DESC, o.order_id
-                """, parameters, (rs, row) -> {
+        return jdbc.query(accountId == null ? HISTORY_SQL : ACCOUNT_HISTORY_SQL, parameters, (rs, row) -> {
                     Timestamp filledAt = rs.getTimestamp("filled_at");
                     return new OrderHistoryResponse(rs.getObject("order_id", UUID.class),
                             rs.getString("symbol"), rs.getString("side"), rs.getLong("quantity"),

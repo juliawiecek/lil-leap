@@ -379,7 +379,7 @@ test('missing active account or stale instrument mapping prevents submission', a
   await desk.confirmOrder();
   assert.equal(desk.message(), 'No active account selected.');
   assert.equal(desk.submitting(), false);
-  desk.selectedAccount.set({ account_id: 'a1' });
+  desk.accountState.use([{ account_id: 'a1', account_status: 'ACTIVE', trading_enabled: true }]);
   desk.selected.set({ ...desk.selected(), instrumentId: 'stale-id' });
   await desk.confirmOrder();
   assert.match(desk.message(), /not available to trade/);
