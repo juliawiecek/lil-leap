@@ -297,3 +297,14 @@ test('a chart load failure keeps the last line and says it will retry', async t 
   assert.deepEqual(desk.portfolioSeries(), [{ time: 1, value: 2 }]);
   assert.match(desk.chartStatus(), /Could not load the chart/);
 });
+
+test('the header shows today\'s date and a greeting for the time of day', async t => {
+  const { desk } = await tradingDesk(t);
+  desk.now.set(new Date(2026, 9, 14, 9, 5));
+  assert.equal(desk.today(), 'Wed, Oct 14, 2026');
+  assert.equal(desk.greeting(), 'GOOD MORNING');
+  desk.now.set(new Date(2026, 9, 14, 13, 0));
+  assert.equal(desk.greeting(), 'GOOD AFTERNOON');
+  desk.now.set(new Date(2026, 9, 14, 19, 30));
+  assert.equal(desk.greeting(), 'GOOD EVENING');
+});

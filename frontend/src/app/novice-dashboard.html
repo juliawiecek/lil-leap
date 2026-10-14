@@ -82,11 +82,11 @@
     <main class="novice-content">
       <div class="page-heading">
         <div>
-          <span class="greeting">GOOD EVENING</span>
+          <span class="greeting">{{ greeting() }}</span>
           <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
         </div>
         <div class="market-status">
-          <span><i></i>Market closes in 2h 14m</span><span>Wed, Apr 23, 2025</span>
+          <span><i></i>Market closes in 2h 14m</span><span>{{ today() }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">

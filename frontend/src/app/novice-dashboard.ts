@@ -154,6 +154,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     };
   });
   /** Portfolio value at each bar of the selected period, rebuilt from real prices and fills. */
+  /** Wall-clock time, refreshed every tick so the header date and greeting stay current. */
+  readonly now = signal(new Date());
+  readonly today = computed(() =>
+    this.now().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+  );
+  readonly greeting = computed(() => {
+    const hour = this.now().getHours();
+    if (hour < 12) {
+      return 'GOOD MORNING';
+    }
+    return hour < 18 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
+  });
   readonly portfolioSeries = signal<Point[]>([]);
   readonly chartStatus = signal('Loading chart...');
   readonly chartSpec = computed<ChartSpec>(() => ({ kind: 'area', data: this.portfolioSeries(), key: this.period() }));
@@ -456,6 +468,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       .pipe(
         startWith(0),
         switchMap(async () => {
+          this.now.set(new Date());
           await this.refreshQuotes();
           await this.refreshChart();
           return true;
