@@ -414,6 +414,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const quote = this.quotes().find(q => q.symbol === this.symbol());
       if (quote) { this.tradeQuote.set(quote); }
       else if (this.quotes().length) { this.tradeMessage.set('That symbol is unavailable.'); }
+      else {
+        // Prices have not loaded yet; the feed opens the linked stock once it is listed.
+      }
     });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
