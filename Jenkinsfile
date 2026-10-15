@@ -4,6 +4,8 @@ pipeline {
   options {
     timestamps()
     disableConcurrentBuilds()
+    // Archived Playwright traces and reports add up; keep recent builds only.
+    buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
   }
 
   tools {
@@ -359,6 +361,22 @@ pipeline {
       steps {
         sh 'SMOKE_PROJECT="nexttrade-smoke-$BUILD_NUMBER" bash scripts/seeded-logins-smoke-test.sh'
       }
+    }
+  }
+
+  post {
+    // The e2e and smoke stacks build images under a new Compose project name on every run.
+    // Remove any left behind, plus untagged images and old build cache, so the agent's disk
+    // does not fill up (SonarQube on the same host stops indexing analyses when it does).
+    // Images used by a running container are kept.
+    cleanup {
+      sh '''
+        leftovers=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^nexttrade-(e2e|smoke)-' || true)
+        [ -z "$leftovers" ] || echo "$leftovers" | xargs docker rmi >/dev/null 2>&1 || true
+        docker image prune -f >/dev/null 2>&1 || true
+        docker builder prune -f --filter until=72h >/dev/null 2>&1 || true
+        df -h / || true
+      '''
     }
   }
 }

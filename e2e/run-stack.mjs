@@ -79,7 +79,8 @@ try {
       if (diagnostics.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Could not collect container logs: ${error.message}`); }
     try {
-      const cleanup = await run([...compose, 'down', '--volumes', '--remove-orphans']);
+      // Each run builds its own images; remove them with the stack so the agent's disk does not fill.
+      const cleanup = await run([...compose, 'down', '--volumes', '--remove-orphans', '--rmi', 'local']);
       if (cleanup.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Isolated stack cleanup failed: ${error.message}`); }
     try {

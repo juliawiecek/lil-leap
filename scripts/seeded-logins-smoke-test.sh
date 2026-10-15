@@ -56,7 +56,8 @@ cleanup() {
   if [[ "${KEEP:-0}" == "1" ]]; then
     echo "Smoke stack left running: ${DC[*]} down -v"
   else
-    "${DC[@]}" down -v --remove-orphans >/dev/null 2>&1
+    # The images are built for this project only; remove them with it.
+    "${DC[@]}" down -v --remove-orphans --rmi local >/dev/null 2>&1
   fi
 }
 trap cleanup EXIT
