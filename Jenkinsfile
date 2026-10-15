@@ -335,7 +335,9 @@ pipeline {
     stage('Playwright - Real Client Journey') {
       options { timeout(time: 30, unit: 'MINUTES') }
       steps {
-        // Publish only this build's evidence, never reports left by an older build.
+        // Publish only this build's evidence, never reports left by an older build. Older runs
+        // could leave root-owned files the Jenkins user cannot delete, so clear them through Docker.
+        sh 'docker run --rm -v "$WORKSPACE/e2e:/e2e" node:24-alpine rm -rf /e2e/artifacts'
         dir('e2e/artifacts') { deleteDir() }
         // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
         sh 'bash scripts/run_e2e_ci.sh'

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { chown, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -31,6 +31,13 @@ function run(args, capture = false) {
   });
 }
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { interrupted = true; activeChild?.kill('SIGTERM'); });
+// In CI this runner is root inside a container; hand what it writes to the Jenkins user so
+// Playwright (run as that user) can write reports here and the next build can delete them.
+const runnerUid = process.env.E2E_RUNNER_UID ?? process.getuid?.();
+const runnerGid = process.env.E2E_RUNNER_GID ?? process.getgid?.();
+const handBack = async path => {
+  if (process.getuid?.() === 0 && runnerUid !== undefined) await chown(path, Number(runnerUid), Number(runnerGid));
+};
 const must = async args => {
   if (interrupted) throw new Error('End-to-end run interrupted.');
   const result = await run(args);
@@ -47,14 +54,13 @@ try {
   const model = await readFile(new URL('../docker-compose.e2e.yml', import.meta.url), 'utf8');
   if (!model.includes(`playwright:v${pkg.devDependencies['@playwright/test']}-`)) throw new Error('Playwright package/image versions differ.');
   await mkdir(artifactDir, { recursive: true });
+  await handBack(artifactDir);
   console.log(`Isolated Compose project: ${project}`);
   console.log(`Reports: ${artifactDir}`);
   started = true;
   await must([...compose, 'config', '--quiet']);
   await must([...compose, 'up', '-d', '--build', 'gateway']);
-  const uid = process.env.E2E_RUNNER_UID ?? process.getuid?.();
-  const gid = process.env.E2E_RUNNER_GID ?? process.getgid?.();
-  const userArgs = uid !== undefined ? ['--user', `${uid}:${gid}`] : [];
+  const userArgs = runnerUid !== undefined ? ['--user', `${runnerUid}:${runnerGid}`] : [];
   const containerCommand = projectName =>
     `mkdir -p /tmp/e2e; cp /source/package*.json /source/playwright.config.ts /source/global-setup.ts /tmp/e2e/; cp -R /source/tests /tmp/e2e/; cd /tmp/e2e; npm ci --no-audit --no-fund; npx playwright test --project=${projectName}`;
   for (const phase of phases) {
@@ -76,6 +82,7 @@ try {
     try {
       const diagnostics = await run([...compose, 'logs', '--no-color'], true);
       await writeFile(`${artifactDir}/containers.log`, diagnostics.output);
+      await handBack(`${artifactDir}/containers.log`);
       if (diagnostics.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Could not collect container logs: ${error.message}`); }
     try {
@@ -88,6 +95,7 @@ try {
         project, startedAt, finishedAt: new Date().toISOString(), phases, completedPhases,
         status: failed || interrupted ? 'failed' : 'passed',
       }, null, 2));
+      await handBack(`${artifactDir}/run.json`);
     } catch (error) { failed = true; console.error(`Could not write run summary: ${error.message}`); }
   }
 }
