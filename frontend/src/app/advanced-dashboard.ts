@@ -141,6 +141,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly privateBalance = signal(false);
   readonly period = signal('1D');
   readonly periods = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y'];
+  /** How the price is drawn; candles show each bar's open, high, low and close. */
+  readonly chartTypes = ['Candles', 'Line', 'Area'] as const;
+  readonly chartType = signal<(typeof this.chartTypes)[number]>('Candles');
   readonly bottomTab = signal('Positions');
   readonly bottomTabs = ['Positions', 'Orders', 'Executions', 'Balances', 'Performance'];
   readonly orderStatus = signal('All');
@@ -296,9 +299,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly priceChart = computed<ChartSpec>(() => {
     const candles = this.priceCandles();
     const cost = this.averageCost();
+    const type = this.chartType();
     return {
-      kind: 'candles',
-      data: candles,
+      kind: type === 'Candles' ? 'candles' : type === 'Line' ? 'line' : 'area',
+      data: type === 'Candles' ? candles : closes(candles),
       key: this.chartKey(),
       overlays: [{ data: this.ema50(), color: EMA_50_COLOR }, { data: this.ema200(), color: EMA_200_COLOR }],
       markers: fillMarkers(toFills(this.historyRows()), this.selected().symbol, candles, timeframeFor(this.period()).interval),

@@ -22,6 +22,18 @@
       <span><i class="blue"></i>EMA (50) <b class="blue-text">{{ desk().indicators().ema50 === null ? '—' : (desk().indicators().ema50 | number: '1.2-2') }}</b></span
       ><span><i class="purple"></i>EMA (200) <b class="purple-text">{{ desk().indicators().ema200 === null ? '—' : (desk().indicators().ema200 | number: '1.2-2') }}</b></span>
     </div>
+    <div class="chart-periods chart-types" role="group" aria-label="Chart type">
+      @for (type of desk().chartTypes; track type) {
+        <button
+          type="button"
+          [class.active]="desk().chartType() === type"
+          [attr.aria-pressed]="desk().chartType() === type"
+          (click)="desk().chartType.set(type)"
+        >
+          {{ type }}
+        </button>
+      }
+    </div>
     <div class="chart-periods">
       @for (p of desk().periods; track p) {
         <button
@@ -39,7 +51,7 @@
     <div class="price-pane">
       <app-live-chart
         [spec]="desk().priceChart()"
-        [label]="desk().selected().symbol + ' ' + desk().period() + ' candlestick chart'"
+        [label]="desk().selected().symbol + ' ' + desk().period() + ' ' + desk().chartType().toLowerCase() + ' chart'"
       />
       @if (desk().chartStatus(); as status) {
         <p class="chart-status" role="status">{{ status }}</p>

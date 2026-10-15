@@ -97,3 +97,19 @@ test('switching period reloads that timeframe; a stale answer is dropped and a f
   await desk.refreshChart();
   assert.match(desk.chartStatus(), /Could not load the chart/);
 });
+
+test('the chart type switch draws the same bars as candles, a close-price line or an area', async t => {
+  const { desk } = chartDesk(t, bars(minute(13, 30), 150));
+  desk.historyRows.set(HISTORY);
+  await desk.refreshChart();
+  assert.equal(desk.chartType(), 'Candles');
+  assert.equal(desk.priceChart().kind, 'candles');
+  desk.chartType.set('Line');
+  const line = desk.priceChart();
+  assert.equal(line.kind, 'line');
+  assert.deepEqual(line.data[0], { time: minute(13, 30), value: 222 });
+  assert.equal(line.markers.length, 3, 'your trades stay marked on a line chart');
+  desk.chartType.set('Area');
+  assert.equal(desk.priceChart().kind, 'area');
+  assert.equal(desk.priceChart().data.length, 150);
+});

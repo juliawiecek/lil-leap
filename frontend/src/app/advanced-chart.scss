@@ -115,6 +115,9 @@ select:focus-visible {
   color: #0e2a1b;
   font-weight: 600;
 }
+.chart-types + .chart-periods {
+  margin-left: 6px;
+}
 .technical-chart {
   padding: 0 13px;
 }
@@ -229,6 +232,9 @@ select:focus-visible {
   }
   .chart-periods button {
     flex: 1;
+  }
+  .chart-periods.chart-types {
+    width: auto;
   }
   .price-pane {
     height: 189px;

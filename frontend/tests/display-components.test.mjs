@@ -63,12 +63,12 @@ test('chart period buttons reload real candles and update accessible labels', as
   const requests = [];
   desk.marketData = { candles: async (instrumentId, timeframe) => { requests.push([instrumentId, timeframe.interval]); return []; } };
   const fixture = await render(t, AdvancedChart, { desk });
-  assert.ok(fixture.nativeElement.querySelector('[aria-label="AAPL 1D candlestick chart"]'));
+  assert.ok(fixture.nativeElement.querySelector('[aria-label="AAPL 1D candles chart"]'));
   const weekly = button(fixture, '1W');
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
   assert.equal(desk.period(), '1W');
   assert.deepEqual(requests.at(-1), ['aapl-uuid', '15m']);
-  assert.ok(fixture.nativeElement.querySelector('[aria-label="AAPL 1W candlestick chart"]'));
+  assert.ok(fixture.nativeElement.querySelector('[aria-label="AAPL 1W candles chart"]'));
   // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
   desk.quote('NVDA').change = -2.36;
   desk.choose(desk.quote('NVDA')); fixture.detectChanges();
