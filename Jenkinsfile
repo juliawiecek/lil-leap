@@ -358,8 +358,8 @@ pipeline {
         // (Preflight already removed any the Jenkins user could not delete).
         dir('e2e/artifacts') { deleteDir() }
         // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
-        // Golden path only; the auth and session-expiry phases run locally with `node e2e/run-stack.mjs`.
-        sh 'bash scripts/run_e2e_ci.sh --project=golden'
+        // Only tests already proven in CI; the golden path and session-expiry tests run locally with `node e2e/run-stack.mjs`.
+        sh 'bash scripts/run_e2e_ci.sh --project=ci'
       }
       post {
         always {

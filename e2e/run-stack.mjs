@@ -8,10 +8,10 @@ const project = `nexttrade-e2e-${randomUUID().replaceAll('-', '').slice(0, 12)}`
 const artifactDir = fileURLToPath(new URL(`./artifacts/${project}/`, import.meta.url));
 const compose = ['compose', '-f', 'docker-compose.e2e.yml', '-p', project];
 const args = process.argv.slice(2);
-// Single-phase runs: auth checks only, or the golden path alone (the quick PR gate).
-const singlePhase = { '--project=auth': 'auth', '--project=golden': 'golden' };
+// Single-phase runs: auth checks only, the golden path alone, or the Jenkins gate.
+const singlePhase = { '--project=auth': 'auth', '--project=golden': 'golden', '--project=ci': 'ci' };
 if (args.length > 1 || (args.length === 1 && !singlePhase[args[0]])) {
-  console.error('Usage: node run-stack.mjs [--project=auth|--project=golden]');
+  console.error('Usage: node run-stack.mjs [--project=auth|--project=golden|--project=ci]');
   process.exit(1);
 }
 const phases = args.length ? [singlePhase[args[0]]] : ['auth', 'journey', 'default-timeout'];
