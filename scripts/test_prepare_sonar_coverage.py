@@ -1,30 +1,40 @@
-"""Shared-source LCOV remains resolvable and cannot escape the allowed roots."""
+"""Coverage paths must resolve for independent apps and the shared package."""
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
-from prepare_sonar_coverage import normalize_lcov
+import xml.etree.ElementTree as ET
+from prepare_sonar_coverage import normalize_lcov, normalize_jacoco
 
 
-class LcovPathTests(unittest.TestCase):
-    def test_shared_paths_and_service_paths_are_normalized_idempotently(self):
+class CoveragePathsTests(unittest.TestCase):
+    def test_java_package_paths_are_unique_without_changing_coverage(self):
+        original = ET.fromstring('<report name="service"><package name="com/example"><sourcefile name="SecurityConfig.java"><line nr="10" mi="0" ci="3" mb="1" cb="2" /></sourcefile></package></report>')
+        for service in ('nextTrade-orders', 'nextTrade-holdings', 'insights'):
+            qualified = normalize_jacoco(original, service)
+            self.assertEqual(qualified.find('package').get('name'), service + '/src/main/java/com/example')
+            self.assertEqual(qualified.find('.//line').attrib, original.find('.//line').attrib)
+            self.assertEqual(ET.tostring(normalize_jacoco(qualified, service)), ET.tostring(qualified))
+        self.assertEqual(original.find('package').get('name'), 'com/example')
+
+    def test_service_and_shared_windows_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for name in ('frontend/src/app.ts', 'frontend-shared/auth-api.ts'):
-                file = root / name
-                file.parent.mkdir(parents=True, exist_ok=True)
-                file.touch()
-            for source in ('../frontend-shared/auth-api.ts', 'frontend-shared/auth-api.ts',
-                           str(root / 'frontend-shared/auth-api.ts')):
-                normalized = normalize_lcov(f'SF:{source}\n', 'frontend', root)
-                self.assertEqual(normalized, 'SF:frontend-shared/auth-api.ts\n')
-                self.assertEqual(normalize_lcov(normalized, 'frontend', root), normalized)
-            self.assertEqual(normalize_lcov('SF:/app/src/app.ts\n', 'frontend', root),
-                             'SF:frontend/src/app.ts\n')
+            for service in ('frontend', 'insights-frontend', 'shared/session-core'):
+                source = root / service / 'src/session.ts'
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_text('export const active = true;')
+                expected = f'SF:{service}/src/session.ts\nDA:1,1\n'
+                self.assertEqual(normalize_lcov('SF:src\\session.ts\nDA:1,1\n', service, root), expected)
+                self.assertEqual(normalize_lcov('SF:/app/src/session.ts\nDA:1,1\n', service, root), expected)
+                self.assertEqual(normalize_lcov(expected, service, root), expected)
 
-    def test_paths_outside_service_and_shared_source_are_rejected(self):
+    def test_rejects_missing_and_outside_sources(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / 'secret.ts').touch()
-            for source in ('../secret.ts', str(root / 'secret.ts'), '../../outside.ts'):
-                with self.assertRaises(ValueError):
-                    normalize_lcov(f'SF:{source}\n', 'frontend', root)
+            for source in ('src/missing.ts', '../outside.ts'):
+                with self.assertRaisesRegex(ValueError, 'Unresolvable LCOV'):
+                    normalize_lcov('SF:' + source, 'shared/session-core', root)
+
+
+if __name__ == '__main__':
+    unittest.main()

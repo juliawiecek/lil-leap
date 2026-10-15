@@ -20,7 +20,7 @@ export interface OrderHistoryRow {
 export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED']);
 /** How often, and for how long, a dashboard re-reads a just-submitted order while it executes. */
 export const ORDER_TRACK_INTERVAL_MS = 2000;
-export const ORDER_TRACK_LIMIT_MS = 30000;
+export const ORDER_TRACK_LIMIT_MS = 300000;
 
 /** Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status. */
 export interface OrderHistoryFilters {
@@ -32,6 +32,7 @@ export interface OrderHistoryFilters {
 /** Anything that can supply the current access token, such as AuthService. */
 export interface AccessTokenSource {
   readonly accessToken: string | null;
+  unauthorized?(token: string | null): void;
 }
 
 export class OrderHistoryClient {
@@ -67,10 +68,13 @@ export class OrderHistoryClient {
     const query = params.size ? `?${params}` : '';
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`);
+      response = await this.#fetch(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
+    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
       const message = typeof body?.message === 'string' ? body.message : null;

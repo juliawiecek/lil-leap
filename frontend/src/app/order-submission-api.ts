@@ -77,6 +77,7 @@ export interface OrderSubmissionResponse {
 /** Anything that can supply the current access token. */
 export interface AccessTokenSource {
   readonly accessToken: string | null;
+  unauthorized?(token: string | null): void;
 }
 
 /**
@@ -123,8 +124,11 @@ export class OrderSubmissionClient {
     }
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/accounts`);
-      if (!response.ok) {
+      const response = await this.#fetch(`${this.#baseUrl}/accounts`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
+    if (!response.ok) {
         throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
       }
       return response.json();
@@ -147,8 +151,11 @@ export class OrderSubmissionClient {
     }
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/instruments`);
-      if (!response.ok) {
+      const response = await this.#fetch(`${this.#baseUrl}/instruments`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
+    if (!response.ok) {
         throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
       }
       return response.json();
@@ -181,14 +188,15 @@ export class OrderSubmissionClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
 
       const body = (await response.json()) as { message?: string; [key: string]: any };
 
-      if (!response.ok) {
+      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
+    if (!response.ok) {
         throw this.#toSubmitError(response.status, body.message);
       }
 

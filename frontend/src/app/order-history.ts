@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
@@ -13,10 +14,12 @@ import { OrderHistoryService } from './order-history.service';
   templateUrl: './order-history.html',
   styleUrl: './order-history.scss',
 })
-export class OrderHistory implements OnInit {
+export class OrderHistory implements OnInit, OnDestroy {
   readonly #orders = inject(OrderHistoryService);
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
+  #refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  #destroyed = false;
 
   readonly statusOptions = [
     { value: '', label: 'All' },
@@ -34,8 +37,22 @@ export class OrderHistory implements OnInit {
   readonly to = signal('');
   readonly status = signal('');
 
+  private routing?: PageBinding;
+  constructor() {
+    this.routing = inject(PageState, { optional: true })?.connect(signal('History'), PAGE_PATHS, [
+      { key: 'from', value: this.from, date: true }, { key: 'to', value: this.to, date: true },
+      { key: 'status', value: this.status, allowed: this.statusOptions.map(option => option.value) },
+    ], () => { if (this.routing) { void this.load(); } });
+  }
   ngOnInit(): void {
     void this.load();
+    this.#scheduleRefresh();
+  }
+
+  ngOnDestroy(): void {
+    ++this.#request; this.routing?.destroy();
+    this.#destroyed = true;
+    clearTimeout(this.#refreshTimer);
   }
 
   setFrom(value: string): void {
@@ -94,5 +111,17 @@ export class OrderHistory implements OnInit {
         this.loading.set(false);
       }
     }
+  }
+
+  #scheduleRefresh(): void {
+    clearTimeout(this.#refreshTimer);
+    // A load still in flight at destroy time must not re-arm the timer.
+    if (this.#destroyed) {
+      return;
+    }
+    this.#refreshTimer = setTimeout(async () => {
+      await this.load();
+      this.#scheduleRefresh();
+    }, 5000);
   }
 }

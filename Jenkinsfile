@@ -105,9 +105,9 @@ pipeline {
             test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
             export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
             export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
-            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest test
+            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest,OrderIdempotencyPostgresTest test
             mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
-              -Dtest=HoldingsSettlementPostgresTest \
+              -Dtest=HoldingsSettlementPostgresTest,InstrumentSearchRepositoryTest \
               -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
               -Dtest.holdings.postgres.user=orders_test \
               -Dtest.holdings.postgres.password=ci-test-only test
@@ -160,6 +160,19 @@ pipeline {
             node:24-alpine \
             sh -ec 'npm ci --no-audit --no-fund
             npm run test:cov'
+        '''
+      }
+    }
+
+    stage('Build and Test Shared Session Package') {
+      steps {
+        sh '''
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e npm_config_cache=/tmp/npm-cache \
+            -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE/shared/session-core" \
+            node:24-alpine sh -ec 'npm ci --no-audit --no-fund
+            npm run build
+            npm run test:coverage'
         '''
       }
     }
@@ -260,7 +273,7 @@ pipeline {
     stage('Archive Node Coverage') {
       steps {
         archiveArtifacts(
-          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**',
+          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**,shared/session-core/coverage/**',
           fingerprint: true,
           allowEmptyArchive: true
         )

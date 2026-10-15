@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
+import { PageState, PAGE_PATHS, PageBinding } from './page-state';
+import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
@@ -12,9 +13,18 @@ import {
 } from './order-history-api';
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
+import { QuoteService } from './quote.service';
+import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
+import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient, marketStatusText } from './market-status-api';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
+
+const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
+  CONSERVATIVE: 7,
+  MODERATE: 5,
+  AGGRESSIVE: 3,
+};
 
 interface Holding {
   symbol: string;
@@ -45,10 +55,21 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly orderSubmissionClient: OrderSubmissionClient;
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
+  readonly marketStatusClient: MarketStatusClient;
+  /** NYSE open/closed from the orders service (NEXT-212), counted down against the local clock. */
+  readonly marketStatus = signal<MarketStatus | null>(null);
+  readonly marketClock = signal(new Date());
+  readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
+  readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
+  private readonly quoteService = inject(QuoteService);
+  private readonly destroy$ = new Subject<void>();
+  private routing?: PageBinding;
+  private destroyed = false;
+  readonly symbol = signal('AAPL');
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
@@ -59,6 +80,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { label: 'Watchlist', icon: 'star' },
     { label: 'Portfolio', icon: 'chart' },
     { label: 'Orders', icon: 'orders' },
+    { label: 'History', icon: 'orders' },
     { label: 'Learn', icon: 'learn' },
     { label: 'Settings', icon: 'settings' },
   ];
@@ -68,24 +90,23 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly showBalance = signal(true);
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
+  private readonly supportedQuotes: Quote[] = [
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 0, change: 0 },
+    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 0, change: 0 },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 0, change: 0 },
+    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 0, change: 0 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 0, change: 0 },
+  ];
   /** Balances and holdings, loaded from the backend and reloaded after each fill. */
   readonly portfolioValue = signal(0);
   readonly buyingPower = signal(0);
   readonly invested = signal(0);
   readonly holdings = signal<Holding[]>([]);
-  readonly quotes: Quote[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.98 },
-    { symbol: 'TSLA', name: 'Tesla, Inc.', price: 142.2, change: -0.84 },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62 },
-    { symbol: 'META', name: 'Meta Platforms, Inc.', price: 521.48, change: -0.37 },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 276.57, change: 1.98 },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 278.09, change: 5.34 },
-  ];
-  readonly watched = signal(['AAPL', 'TSLA', 'AMZN', 'GOOGL', 'META']);
-  readonly watchlist = computed(() => this.quotes.filter((q) => this.watched().includes(q.symbol)));
+  readonly quotes = signal<Quote[]>(this.supportedQuotes);
+  readonly watched = signal(['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL']);
+  readonly watchlist = computed(() => this.quotes().filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
-    this.quotes.filter((q) =>
+    this.quotes().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
@@ -95,7 +116,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
   ];
   readonly modal = signal('trade');
-  readonly tradeQuote = signal(this.quotes[0]);
+  readonly tradeQuote = signal(this.quotes()[0]);
   readonly side = signal('Buy');
   readonly quantity = signal('');
   readonly reviewing = signal(false);
@@ -106,6 +127,32 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly selectedAccount = signal<Account | null>(null);
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
+  readonly executionThresholdDollars = signal(5);
+  readonly todayReturn = computed(() => this.holdings().reduce((sum, h) => sum + h.today, 0));
+  readonly todayReturnPercent = computed(() => {
+    const invested = this.invested();
+    return invested > 0 ? (this.todayReturn() / invested) * 100 : 0;
+  });
+  readonly totalReturn = computed(() => this.holdings().reduce((sum, h) => sum + h.total, 0));
+  readonly totalReturnPercent = computed(() => {
+    const invested = this.invested();
+    return invested > 0 ? (this.totalReturn() / invested) * 100 : 0;
+  });
+  readonly assetAllocation = computed(() => {
+    const stocksValue = this.holdings().reduce((sum, h) => sum + h.value, 0);
+    const cashValue = this.buyingPower();
+    const total = stocksValue + cashValue;
+    if (total <= 0) {
+      return { total: 0, stocksValue: 0, stocksPercent: 0, cashValue: 0, cashPercent: 100 };
+    }
+    return {
+      total,
+      stocksValue,
+      stocksPercent: Math.round((stocksValue / total) * 100),
+      cashValue,
+      cashPercent: Math.round((cashValue / total) * 100),
+    };
+  });
   readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
     () =>
@@ -141,6 +188,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   navigate(tab: string): void {
     this.activeTab.set(tab);
+    this.routing?.go(tab);
     this.notifications.set(false);
   }
   openModal(kind: string): void {
@@ -158,7 +206,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Stocks the trade dialog offers: those the backend can trade, or every quote until instruments load. */
   readonly tradableQuotes = computed(() => {
     const symbols = new Set(this.instruments().map((i) => i.symbol));
-    return symbols.size ? this.quotes.filter((q) => symbols.has(q.symbol)) : this.quotes;
+    return symbols.size ? this.quotes().filter((q) => symbols.has(q.symbol)) : this.quotes();
   });
   /**
    * Opens the trade dialog. Without a symbol, a sell starts on the first stock the user holds
@@ -166,7 +214,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   openTrade(side = 'Buy', symbol?: string): void {
     const start = this.resolveTradeStartSymbol(side, symbol);
-    this.tradeQuote.set(this.quotes.find((q) => q.symbol === start) || this.quotes[0]);
+    this.tradeQuote.set(this.quotes().find((q) => q.symbol === start) || this.quotes()[0]);
+    this.symbol.set(this.tradeQuote().symbol);
     this.side.set(side);
     this.quantity.set('');
     this.reviewing.set(false);
@@ -186,7 +235,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Switches the open trade to another stock and drops any review of the previous one. */
   chooseTradeSymbol(symbol: string): void {
-    const quote = this.quotes.find((q) => q.symbol === symbol);
+    const quote = this.quotes().find((q) => q.symbol === symbol);
     if (!quote) {
       return;
     }
@@ -253,6 +302,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         quantity: Number(this.quantity()),
         orderType: 'MARKET',
         clientReference: this.clientReference(),
+        bufferPercent: this.bufferPercentForPrice(quote.price),
       });
       this.reviewing.set(false);
       this.quantity.set('');
@@ -266,9 +316,20 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.submitting.set(false);
     }
   }
+
+  private bufferPercentForPrice(indicativePrice: number): number {
+    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
+    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
+    return Math.round(percent * 100) / 100;
+  }
+
+  private defaultThresholdDollars(): number {
+    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
+    if (byRisk) { return byRisk; }
+    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
+  }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
-    if (this.destroyed) return;
     clearTimeout(this.#trackTimer);
     let row;
     try {
@@ -296,19 +357,30 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (row?.status === 'ACCEPTED') {
       this.tradeMessage.set('Order accepted. Waiting for it to fill…');
     }
-    if (!this.destroyed) this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
+    if (this.destroyed) { return; }
+    this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
   }
   constructor(private readonly auth: AuthService) {
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, this.auth?.transport);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth, this.auth?.transport);
-    this.portfolioClient = new PortfolioClient(this.auth, this.auth?.transport);
+    this.routing = inject(PageState, { optional: true })?.connect(this.activeTab, PAGE_PATHS, [
+      { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
+      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.investmentTab, allowed: ['Holdings','Asset classes'] }
+    ], () => {
+      const quote = this.quotes().find(q => q.symbol === this.symbol());
+      if (quote) { this.tradeQuote.set(quote); }
+      else { this.tradeMessage.set('That symbol is unavailable.'); }
+    });
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth);
+    this.portfolioClient = new PortfolioClient(this.auth);
+    this.marketStatusClient = new MarketStatusClient(this.auth);
   }
-  private destroyed = false;
-
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
+    this.destroy$.next();
+    this.destroy$.complete();
   }
   /**
    * Reloads buying power and holdings, prices them, and keeps re-pricing them while any are
@@ -316,7 +388,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   async refreshPortfolio(): Promise<void> {
     try {
-      this.applyPortfolio(await this.portfolioClient.load());
+      const portfolio = await this.portfolioClient.load();
+      if (this.destroyed) { return; }
+      this.applyPortfolio(portfolio);
     } catch {
       // The trade dialog already reports order problems; balances refresh again after the next fill.
       return;
@@ -346,11 +420,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
   }
   #schedulePrices(): void {
+    if (this.destroyed) { return; }
     clearTimeout(this.#priceTimer);
     if (!this.#portfolio.holdings.length) {
       return;
     }
-    if (!this.destroyed) this.#priceTimer = setTimeout(async () => {
+    this.#priceTimer = setTimeout(async () => {
       await this.refreshPrices();
       this.#schedulePrices();
     }, QUOTE_REFRESH_MS);
@@ -364,8 +439,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         value: h.value,
         shares: h.quantity,
         average: h.averageCost,
-        today: 0,
-        change: 0,
+        today: h.gain,
+        change: h.gainPercent,
         total: h.gain,
         totalPercent: h.gainPercent,
         logo: LOGOS[h.symbol] ?? '',
@@ -377,8 +452,60 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
+    this.executionThresholdDollars.set(this.defaultThresholdDollars());
+    interval(5000)
+      .pipe(
+        startWith(0),
+        switchMap(async () => {
+          this.marketClock.set(new Date());
+          await this.refreshQuotes();
+          return true;
+        }),
+        takeUntil(this.destroy$),
+      )
+      .subscribe();
+    interval(MARKET_STATUS_REFRESH_MS)
+      .pipe(startWith(0), switchMap(() => this.refreshMarketStatus()), takeUntil(this.destroy$))
+      .subscribe();
+
     void this.refreshPortfolio();
     void this.loadTradingData();
+  }
+
+  /** Re-reads whether the market is open; a failure keeps the last status shown. */
+  async refreshMarketStatus(): Promise<void> {
+    try {
+      this.marketStatus.set(await this.marketStatusClient.status());
+    } catch {
+      // The next refresh retries.
+    }
+  }
+
+  private async refreshQuotes(): Promise<void> {
+    const next = [...this.quotes()];
+    await Promise.all(
+      next.map(async (current, i) => {
+        try {
+          const apiQuote = await firstValueFrom(
+            this.quoteService.getLatestByMarketSymbol('NASDAQ', current.symbol),
+          );
+          const midpoint = Number(apiQuote.midpoint ?? 0);
+          const previousPrice = current.price || midpoint;
+          const change = previousPrice > 0 ? ((midpoint - previousPrice) / previousPrice) * 100 : 0;
+          next[i] = {
+            ...current,
+            price: midpoint,
+            change,
+          };
+        } catch {
+          // Keep last visible price when quote fetch fails.
+        }
+      }),
+    );
+    this.quotes.set(next);
+    const selected = this.tradeQuote();
+    const refreshed = next.find((q) => q.symbol === selected.symbol);
+    if (refreshed) { this.tradeQuote.set(refreshed); }
   }
 
   private async loadTradingData(): Promise<void> {

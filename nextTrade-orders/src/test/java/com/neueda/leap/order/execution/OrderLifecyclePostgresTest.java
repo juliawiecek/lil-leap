@@ -2,6 +2,8 @@ package com.neueda.leap.order.execution;
 
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
+import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.security.JwtServiceImpl;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,10 @@ import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 /** Real production schema and transaction manager; no mocks of settlement or persistence. */
 @SpringBootTest(properties = "orders.execution.enabled=false")
@@ -31,6 +37,7 @@ class OrderLifecyclePostgresTest {
     @Autowired OrderExecutor executor;
     @Autowired OrderSubmissionService submissions;
     @Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired JwtServiceImpl tokens;
     private UUID user, account, instrument;
     private OrderExecutionWorker worker;
 
@@ -62,6 +69,7 @@ class OrderLifecyclePostgresTest {
         jdbc.execute("TRUNCATE users, instruments CASCADE");
         user = UUID.randomUUID(); account = UUID.randomUUID(); instrument = UUID.randomUUID();
         jdbc.update("INSERT INTO users(user_id,email,password_hash) VALUES (?, 'trader@example.test', 'test-only')", user);
+        jdbc.update("INSERT INTO customer_profiles(user_id,first_name,last_name,phone,address,country,date_of_birth,ssn_encrypted) VALUES (?, 'Test', 'Trader', '555-0100', '1 Main St', 'US', DATE '1990-01-01', decode('00','hex'))", user);
         jdbc.update("""
                 INSERT INTO accounts(account_id,user_id,account_number,account_name,account_status,trading_enabled,min_balance_requirement)
                 VALUES (?, ?, 'TEST', 'Test', 'ACTIVE', TRUE, 1)
@@ -86,7 +94,9 @@ class OrderLifecyclePostgresTest {
                         .get("/api/v1/v3/api-docs").contextPath("/api/v1"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/orders'].post").exists())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/clients/{id}/orders']").doesNotExist());
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/clients/{id}/orders']").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/cash/buy']").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/cash/sell']").doesNotExist());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .get("/api/v1/swagger-ui/index.html").contextPath("/api/v1"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
@@ -119,6 +129,43 @@ class OrderLifecyclePostgresTest {
     }
 
     @Test
+    void ownerReadsOrderDetailAndStatusThroughTheLifecycle() throws Exception {
+        UUID id = submit("BUY", 10);
+        String bearer = "Bearer " + tokens.issueToken(user, "trader@example.test");
+        mvc.perform(get("/api/v1/orders/{id}/status", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.status").value("SUBMITTED"))
+                .andExpect(jsonPath("$.reasonCode").value("SUBMISSION_VALIDATED"));
+
+        worker.execute(worker.claimNext());
+        mvc.perform(get("/api/v1/orders/{id}", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.orderId").value(id.toString()))
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.status").value("FILLED"))
+                .andExpect(jsonPath("$.filledQuantity").value(10))
+                .andExpect(jsonPath("$.executionPrice").value(100.0))
+                .andExpect(jsonPath("$.acceptedAt").isNotEmpty());
+        mvc.perform(get("/api/v1/orders/{id}/status", id).contextPath("/api/v1").header("Authorization", bearer))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.status").value("FILLED"))
+                .andExpect(jsonPath("$.reasonCode").value("EXECUTION_SUCCESS"));
+    }
+
+    @Test
+    void anotherClientsOrderIsIndistinguishableFromAnUnknownOne() throws Exception {
+        UUID id = submit("BUY", 1);
+        String stranger = "Bearer " + tokens.issueToken(UUID.randomUUID(), "other@example.test");
+        for (UUID target : new UUID[]{id, UUID.randomUUID()}) {
+            for (String path : new String[]{"/api/v1/orders/{id}", "/api/v1/orders/{id}/status"}) {
+                mvc.perform(get(path, target).contextPath("/api/v1").header("Authorization", stranger))
+                        .andExpect(MockMvcResultMatchers.status().isNotFound())
+                        .andExpect(jsonPath("$.error").value("ORDER_NOT_FOUND"));
+            }
+        }
+    }
+
+    @Test
     void sellPreservesRemainingAverageCostAndCreditsCash() {
         submit("BUY", 10); worker.execute(worker.claimNext());
         UUID sell = submit("SELL", 4); worker.execute(worker.claimNext());
@@ -126,6 +173,61 @@ class OrderLifecyclePostgresTest {
         assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(6);
         assertThat(jdbc.queryForObject("SELECT avg_cost FROM holdings", BigDecimal.class)).isEqualByComparingTo("100");
         assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("9396");
+    }
+
+    @Test
+    void sellAfterSpendingBelowOpeningMinimumFillsAndKeepsLedgerConsistent() {
+        jdbc.update("UPDATE accounts SET min_balance_requirement=5000 WHERE account_id=?", account);
+        jdbc.update("UPDATE cash_balances SET balance=5000 WHERE account_id=?", account);
+        jdbc.update("UPDATE cash_transactions SET amount=5000 WHERE account_id=? AND transaction_type='DEPOSIT'", account);
+        UUID buy = submit("BUY", 40);
+        worker.execute(worker.claimNext());
+        assertThat(status(buy)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("1000");
+
+        assertThatThrownBy(() -> submit("BUY", 11)).isInstanceOfSatisfying(OrderSufficiencyException.class,
+                error -> assertThat(error.reason()).isEqualTo(OrderSufficiencyException.Reason.INSUFFICIENT_CASH));
+        assertThatThrownBy(() -> submit("SELL", 41)).isInstanceOfSatisfying(OrderSufficiencyException.class,
+                error -> assertThat(error.reason()).isEqualTo(OrderSufficiencyException.Reason.INSUFFICIENT_HOLDINGS));
+        assertThat(count("orders")).isEqualTo(1);
+
+        UUID sell = submit("SELL", 10);
+        var claim = worker.claimNext();
+        worker.execute(claim);
+        worker.execute(claim);
+        assertThat(status(sell)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("1990");
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("1990");
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(30);
+        assertThat(count("fills")).isEqualTo(2);
+        assertThat(count("holding_movements")).isEqualTo(2);
+        assertThat(count("cash_transactions")).isEqualTo(3);
+    }
+
+    @Test
+    void affordableBuyBelowOpeningMinimumStillFills() {
+        jdbc.update("UPDATE accounts SET min_balance_requirement=100000 WHERE account_id=?", account);
+        UUID buy = submit("BUY", 1);
+        worker.execute(worker.claimNext());
+        assertThat(status(buy)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("9900");
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("9900");
+    }
+
+    @Test
+    void sellWithZeroCashStillFills() {
+        jdbc.update("UPDATE accounts SET min_balance_requirement=5000 WHERE account_id=?", account);
+        submit("BUY", 40);
+        worker.execute(worker.claimNext());
+        jdbc.update("INSERT INTO cash_transactions(account_id,transaction_type,amount) VALUES (?,'WITHDRAWAL',-6000)", account);
+        jdbc.update("UPDATE cash_balances SET balance=0 WHERE account_id=?", account);
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("0");
+        UUID sell = submit("SELL", 10);
+        worker.execute(worker.claimNext());
+        assertThat(status(sell)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("990");
+        assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM cash_transactions", BigDecimal.class)).isEqualByComparingTo("990");
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(30);
     }
 
     @Test
@@ -204,7 +306,7 @@ class OrderLifecyclePostgresTest {
 
     @Test
     void absentProjectionIsRejectedBeforeTheWorkerCanTrade() {
-        var verifier = new JdbcOrderExecutor(jdbc, null, 1);
+        var verifier = new JdbcOrderExecutor(jdbc, null, null, 1);
         verifier.requireHoldingsProjection();
         jdbc.execute("ALTER TABLE holding_movements DISABLE TRIGGER tg_holding_movement_projection");
         try {

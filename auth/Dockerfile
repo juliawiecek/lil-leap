@@ -6,10 +6,13 @@ COPY . .
 RUN npm run build
 
 FROM node:20-alpine
+LABEL maintainer="Lil Leap"
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# The outbox must exist and belong to appuser before a named volume is mounted on it (password reset emails).
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/outbox && chown appuser:appgroup /app/outbox
 
 COPY package*.json ./
 RUN npm install --omit=dev

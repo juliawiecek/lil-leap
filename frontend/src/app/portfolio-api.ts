@@ -128,10 +128,11 @@ export class PortfolioClient {
     }
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`);
+      response = await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
     } catch {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
+    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
     if (!response.ok) {
       throw new Error('Could not load your balances. Please try again.');
     }

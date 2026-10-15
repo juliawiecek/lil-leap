@@ -1,30 +1,19 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, inject } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter, Router } from '@angular/router';
-import { routes } from './routes';
-import { jwtInterceptor } from './jwt-interceptor';
+import { SESSION_AUTH } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
-import { LIVE_REPORTS, type LiveReports } from './live-reports';
+import { inject, provideAppInitializer } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { routes } from './app.routes';
+import { AppSessionService } from './app-session.service';
+import { authInterceptor } from './auth-routing';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([jwtInterceptor])),
+    { provide: SESSION_AUTH, useExisting: AuthService },
     provideRouter(routes),
-    { provide: LIVE_REPORTS, useFactory: (): LiveReports => {
-      const auth = inject(AuthService);
-      const router = inject(Router);
-      return {
-        async load() {
-          const response = await auth.transport('/api/v1/reports/summary');
-          if (!response.ok) throw new Error('Could not load reporting summary.');
-          return response.json();
-        },
-        async logout() {
-          await auth.logout();
-          await router.navigate(['/login'], { replaceUrl: true });
-        },
-      };
-    } },
+    provideHttpClient(withInterceptors([authInterceptor])),
+    provideAppInitializer(() => inject(AppSessionService).initialize()),
+    provideBrowserGlobalErrorListeners(),
   ],
 };

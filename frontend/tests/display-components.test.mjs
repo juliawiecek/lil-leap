@@ -22,11 +22,11 @@ test('icons render requested paths and fall back for unknown names', async t => 
 test('server tier selects the visible dashboard and child sign-out reaches the parent', async t => {
   const fixture = await render(t, StockDashboard, { name: 'Ada', level: 'NOVICE' });
   const root = fixture.nativeElement;
-  assert.equal(root.querySelector('app-novice-dashboard').hidden, false);
-  assert.equal(root.querySelector('app-advanced-dashboard').hidden, true);
+  assert.ok(root.querySelector('app-novice-dashboard'));
+  assert.equal(root.querySelector('app-advanced-dashboard'), null);
   fixture.componentRef.setInput('level', 'ADVANCED'); fixture.detectChanges();
-  assert.equal(root.querySelector('app-novice-dashboard').hidden, true);
-  assert.equal(root.querySelector('app-advanced-dashboard').hidden, false);
+  assert.equal(root.querySelector('app-novice-dashboard'), null);
+  assert.ok(root.querySelector('app-advanced-dashboard'));
   let emitted = 0; fixture.componentInstance.signOut.subscribe(() => emitted++);
   const settings = [...root.querySelectorAll('app-advanced-dashboard button')].find(b => b.textContent.trim() === 'Settings');
   assert.ok(settings); settings.click(); fixture.detectChanges();
@@ -39,10 +39,10 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   const desk = component(t, AdvancedDashboard);
   desk.applyPortfolio({ cash: 48230.12, holdings: [] });
   const fixture = await render(t, AdvancedTicket, { desk });
-  input(fixture, '#pro-symbol', 'TSLA', 'change');
+  input(fixture, '#pro-symbol', 'NVDA', 'change');
   input(fixture, '#pro-type', 'Market', 'change');
   input(fixture, '#pro-quantity', '2');
-  assert.equal(desk.selected().symbol, 'TSLA');
+  assert.equal(desk.selected().symbol, 'NVDA');
   assert.equal(desk.orderType(), 'Market'); assert.equal(desk.quantity(), '2');
   assert.equal(fixture.nativeElement.querySelector('#pro-limit'), null);
   const review = t.mock.method(desk, 'openModal', () => {});
@@ -64,7 +64,9 @@ test('chart period buttons update accessible labels and plotted candles', async 
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
   assert.equal(desk.period(), '1W'); assert.notDeepEqual(desk.candles(), before);
   assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1W candlestick chart"]'));
-  desk.choose(desk.quote('TSLA')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.textContent, /Tesla/);
+  // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
+  desk.quote('NVDA').change = -2.36;
+  desk.choose(desk.quote('NVDA')); fixture.detectChanges();
+  assert.match(fixture.nativeElement.textContent, /NVIDIA/);
   assert.ok(fixture.nativeElement.querySelector('.loss'));
 });

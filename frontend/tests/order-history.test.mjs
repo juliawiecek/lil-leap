@@ -33,7 +33,7 @@ test('client calls the caller’s own history with only the filters supplied and
   const rows = await client.list({ from: '2026-09-01', to: '', status: 'FILLED' });
 
   assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders?from=2026-09-01&status=FILLED`);
-  assert.equal(calls[0].init?.headers?.Authorization, undefined);
+  assert.equal(calls[0].init.headers.Authorization, `Bearer ${token}`);
   assert.equal(rows[0].fillPrice, 225.05);
 });
 

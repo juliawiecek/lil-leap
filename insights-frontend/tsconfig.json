@@ -3,7 +3,6 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "rewriteRelativeImportExtensions": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
@@ -11,7 +10,7 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "experimentalDecorators": true,
-    "importHelpers": false,
+    "importHelpers": true,
     "target": "ES2022",
     "module": "preserve"
   },

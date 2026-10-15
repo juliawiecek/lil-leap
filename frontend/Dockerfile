@@ -1,16 +1,22 @@
 FROM node:24-alpine AS build
-WORKDIR /workspace/frontend
+WORKDIR /repo
+COPY shared/session-core/package*.json shared/session-core/
+RUN npm ci --prefix shared/session-core
+COPY shared/session-core/src shared/session-core/src
+COPY shared/session-core/tsconfig.json shared/session-core/tsconfig.json
+RUN npm run build --prefix shared/session-core
+WORKDIR /repo/frontend
 
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
 RUN npm ci
 
 COPY frontend/ ./
-COPY frontend-shared/ /workspace/frontend-shared/
 RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
+LABEL maintainer="Lil Leap"
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /workspace/frontend/dist/nexttrade-angular/browser/ /usr/share/nginx/html/
+COPY --from=build /repo/frontend/dist/nexttrade-angular/browser/ /usr/share/nginx/html/
 RUN sed -i 's|pid        /var/run/nginx.pid;|pid        /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 

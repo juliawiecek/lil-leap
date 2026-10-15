@@ -1,9 +1,9 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
-import { Shell } from './app/shell';
+import { AppRoot } from './app/app-root';
 
 try {
-  await bootstrapApplication(Shell, appConfig);
+  await bootstrapApplication(AppRoot, appConfig);
 } catch (err) {
-  console.error(err);
+  console.error('Application startup failed.');
 }

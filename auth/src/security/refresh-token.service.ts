@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomBytes, createHash } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, MoreThan, Repository } from 'typeorm';
+import { EntityManager, IsNull, MoreThan, Repository } from 'typeorm';
 import { Session } from './entities/session.entity';
 import { User } from '../user/entities/user.entity';
 import { InvalidRefreshTokenException } from '../user/exceptions/invalid-refresh-token.exception';
@@ -65,6 +65,15 @@ export class RefreshTokenService {
   /** Ends the session behind a refresh token. Idempotent: an unknown, expired, or already-revoked token is a no-op. */
   async revoke(rawRefreshToken: string): Promise<void> {
     await this.revokeActive(this.hash(rawRefreshToken));
+  }
+
+  /**
+   * Ends every still-open session for a user, e.g. after a password reset, so a stolen
+   * refresh token stops working. Pass the caller's transaction manager to make it atomic with the change.
+   */
+  async revokeAllForUser(userId: string, manager: EntityManager = this.sessionRepository.manager): Promise<void> {
+    const now = new Date();
+    await manager.update(Session, { user: { userId }, revokedAt: IsNull() }, { revokedAt: now, lastActiveAt: now });
   }
 
   /** Revokes the session only if it is still active; returns whether it was. */

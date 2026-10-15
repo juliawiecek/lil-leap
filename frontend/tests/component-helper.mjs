@@ -18,7 +18,7 @@ const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier.startsWith('.') && context.parentURL?.startsWith(appRoot)) {
-      const candidate = new URL(specifier.replace(/\.js$/, '') + '.ts', context.parentURL);
+      const candidate = new URL(specifier + '.ts', context.parentURL);
       if (existsSync(candidate)) return nextResolve(candidate.href, context);
     }
     return nextResolve(specifier, context);
@@ -45,6 +45,11 @@ registerHooks({
 
 export function component(t, Type, providers = []) {
   const injector = createEnvironmentInjector(providers, Injector.NULL);
-  t.after(() => injector.destroy());
-  return runInInjectionContext(injector, () => new Type());
+  const instance = runInInjectionContext(injector, () => new Type());
+  // Mirror Angular teardown so polling timers started in ngOnInit can't keep the test process alive.
+  t.after(() => {
+    instance.ngOnDestroy?.();
+    injector.destroy();
+  });
+  return instance;
 }

@@ -1,7 +1,7 @@
 ﻿<a class="skip-link" href="#workspace">Skip to content</a>
 <div class="shell" [class.compact]="compact()">
   <aside class="sidebar" [class.open]="mobileNav()">
-    <a class="brand" href="#" (click)="$event.preventDefault(); navigate('Overview')"
+    <a class="brand" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
         <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" /></svg
@@ -35,21 +35,6 @@
     </div>
   </aside>
   <div class="workspace">
-    @if (liveReports) {
-      <section class="live-summary" aria-label="Live reporting summary">
-        <h2>Live reporting summary</h2>
-        <dl>
-          <div><dt>Accounts</dt><dd data-testid="summary-accounts">{{ summary()?.accounts ?? '?' }}</dd></div>
-          <div><dt>Orders</dt><dd data-testid="summary-orders">{{ summary()?.orders ?? '?' }}</dd></div>
-          <div><dt>Fills</dt><dd data-testid="summary-fills">{{ summary()?.fills ?? '?' }}</dd></div>
-          <div><dt>Gross executed value</dt><dd data-testid="summary-value">{{ (summary()?.gross_executed_value ?? 0) | currency }}</dd></div>
-        </dl>
-        <button type="button" (click)="refreshSummary()">Refresh summary</button>
-        <button type="button" (click)="signOut()">Sign out</button>
-        <p role="status">{{ summaryError() }}</p>
-      </section>
-    }
-
     <header class="topbar">
       <button
         class="menu icon-button"
@@ -59,7 +44,7 @@
       >
         <app-dashboard-icon name="orders" />
       </button>
-      <form class="global-search" (submit)="$event.preventDefault(); search()">
+      <form class="global-search" method="post" (submit)="$event.preventDefault(); search()">
         <app-dashboard-icon name="search" /><input
           aria-label="Search clients or trades"
           placeholder="Search clients, instruments, or order IDs…"
@@ -69,6 +54,7 @@
         /><button type="submit" aria-label="Run search">↵</button>
       </form>
       <div class="top-actions">
+        <button type="button" (click)="session?.logout()">Sign out</button>
         <button
           class="icon-button"
           aria-label="Notifications"
@@ -78,8 +64,8 @@
         </button>
         <div class="avatar">{{ role() === 'Analyst' ? 'PS' : 'DC' }}</div>
         <label class="identity"
-          ><strong>{{ role() === 'Analyst' ? 'Priya Shah' : 'David Chen' }}</strong
-          ><select aria-label="Workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
+          ><strong>{{ auth?.email || 'Insights workspace' }}</strong
+          ><select aria-label="Preview workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
             <option value="Analyst">Analyst</option>
             <option value="Operations">Operations</option>
           </select></label
@@ -281,6 +267,7 @@
             </div>
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">Most active instruments</caption>
                 <thead>
                   <tr>
                     <th>Instrument</th>
@@ -431,6 +418,7 @@
           </div>
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">Portfolio segment breakdown</caption>
               <thead>
                 <tr>
                   <th>Segment</th>
@@ -504,6 +492,7 @@
               </div>
               <div class="table-wrap">
                 <table>
+                  <caption class="sr-only">{{ detailTab() === 'Overview' ? 'Recent trading activity' : 'Client orders' }}</caption>
                   <thead>
                     <tr>
                       <th>Submitted (UTC)</th>
@@ -560,6 +549,7 @@
             </div>
             <div class="table-wrap">
               <table>
+                <caption class="sr-only">Client directory</caption>
                 <thead>
                   <tr>
                     <th>Client</th>
@@ -698,6 +688,7 @@
           </div>
           <div class="table-wrap">
             <table>
+              <caption class="sr-only">Recent exports</caption>
               <thead>
                 <tr>
                   <th>Report</th>
@@ -763,6 +754,7 @@
               </div>
               <div class="table-wrap results">
                 <table>
+                  <caption class="sr-only">Investigation results</caption>
                   <thead>
                     <tr>
                       <th>Order / client</th>

@@ -42,6 +42,11 @@ export class QuoteService {
 
   constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
 
+  private headers(): Record<string, string> {
+    const token = this.auth.accessToken;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   /**
    * Retrieves the latest quote for a specific instrument.
    *
@@ -52,7 +57,7 @@ export class QuoteService {
    */
   getLatestByInstrument(instrumentId: string): Observable<Quote> {
     return this.http
-      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`)
+      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`, { headers: this.headers() })
       .pipe(catchError(this.handleError));
   }
 
@@ -70,6 +75,7 @@ export class QuoteService {
   getLatestByMarketSymbol(market: string, symbol: string): Observable<Quote> {
     return this.http
       .get<Quote>(`${this.baseUrl}/latest/by-market-symbol`, {
+        headers: this.headers(),
         params: { market, symbol }
       })
       .pipe(catchError(this.handleError));
@@ -89,6 +95,7 @@ export class QuoteService {
   getHistory(instrumentId: string, limit: number = 100): Observable<Quote[]> {
     return this.http
       .get<Quote[]>(`${this.baseUrl}/history/${instrumentId}`, {
+        headers: this.headers(),
         params: { limit: limit.toString() }
       })
       .pipe(catchError(this.handleError));
