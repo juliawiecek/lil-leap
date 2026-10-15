@@ -33,6 +33,7 @@ export class OrderHistory implements OnInit, OnDestroy {
     { value: 'DELAYED', label: 'Delayed' },
     { value: 'FILLED', label: 'Filled' },
     { value: 'REJECTED', label: 'Rejected' },
+    { value: 'CANCELLED', label: 'Cancelled' },
   ];
   readonly rows = signal<OrderHistoryRow[]>([]);
   readonly loading = signal(false);
@@ -84,6 +85,36 @@ export class OrderHistory implements OnInit, OnDestroy {
 
   hasFilters(): boolean {
     return !!(this.from() || this.to() || this.status());
+  }
+
+  /** Statuses in which an order is still waiting and can be cancelled (PS-14). */
+  static readonly CANCELLABLE: ReadonlySet<string> = new Set(['SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED']);
+  /** The order whose one-line "Cancel this order?" confirm is showing, if any. */
+  readonly confirming = signal<string | null>(null);
+  readonly cancelling = signal(false);
+  /** Outcome of the last cancel, e.g. "Order cancelled." */
+  readonly notice = signal('');
+
+  canCancel(order: OrderHistoryRow): boolean {
+    return OrderHistory.CANCELLABLE.has(order.status);
+  }
+
+  /** Cancels the confirmed order; the list then reloads, so it shows "Cancelled" or the order's real status. */
+  async confirmCancel(order: OrderHistoryRow): Promise<void> {
+    if (this.cancelling()) {
+      return;
+    }
+    this.cancelling.set(true);
+    try {
+      await this.#orders.cancel(order.orderId);
+      this.notice.set(`Order cancelled: ${order.quantity} ${order.symbol}. Nothing was charged.`);
+    } catch (e) {
+      this.notice.set(e instanceof Error ? e.message : 'Could not cancel the order. Please try again.');
+    } finally {
+      this.cancelling.set(false);
+      this.confirming.set(null);
+      await this.load();
+    }
   }
 
   /** "FILLED" becomes "Filled" for display. */

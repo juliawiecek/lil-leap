@@ -93,6 +93,43 @@
   &.rejected {
     color: #d64545;
   }
+
+  &.cancelled {
+    opacity: 0.6;
+  }
+}
+
+/* PS-14: cancel a waiting order, with a one-line confirm in the same cell. */
+.actions {
+  text-align: right;
+
+  button {
+    font: inherit;
+    font-size: 0.8rem;
+    color: inherit;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-radius: 6px;
+    padding: 3px 9px;
+    cursor: pointer;
+  }
+
+  button.danger {
+    color: #d64545;
+    border-color: color-mix(in srgb, #d64545 50%, transparent);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
 }
 
 .sr-only {

@@ -163,5 +163,57 @@ test('status filters include the durable execution lifecycle', async t => {
   history.ngOnInit();
   await flush();
   assert.deepEqual(history.statusOptions.map(option => option.value),
-    ['', 'SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED', 'FILLED', 'REJECTED']);
+    ['', 'SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED', 'FILLED', 'REJECTED', 'CANCELLED']);
+});
+
+test('client cancels with a POST and the bearer token, and explains a refusal', async () => {
+  const ok = fakeFetch(json(200, { orderId: 'o 1', status: 'CANCELLED' }));
+  await new OrderHistoryClient({ accessToken: token }, ok.fetchImpl).cancel('o 1');
+  assert.equal(ok.calls[0].url, '/api/v1/orders/o%201/cancel');
+  assert.equal(ok.calls[0].init.method, 'POST');
+  assert.equal(ok.calls[0].init.headers.Authorization, `Bearer ${token}`);
+
+  const executing = fakeFetch(json(409, { error: 'ORDER_EXECUTING', message: 'Order is already executing.' }));
+  await assert.rejects(new OrderHistoryClient({ accessToken: token }, executing.fetchImpl).cancel('o-1'), /already executing/);
+  const missing = fakeFetch(json(404, { error: 'ORDER_NOT_FOUND', message: 'The order was not found.' }));
+  await assert.rejects(new OrderHistoryClient({ accessToken: token }, missing.fetchImpl).cancel('o-1'), /That order was not found/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }).cancel('o-1'), /Sign in/);
+});
+
+/** A history whose service also records cancels; the orders it lists can change after one. */
+function cancellableHistory(t, { cancel = async () => {} } = {}) {
+  let status = 'PENDING';
+  const cancelled = [];
+  const service = {
+    list: async () => [row({ orderId: 'waiting', status, fillPrice: null }), row({ orderId: 'done' })],
+    cancel: async (id) => { cancelled.push(id); await cancel(id); status = 'CANCELLED'; },
+  };
+  const history = component(t, OrderHistory, [{ provide: OrderHistoryService, useValue: service }]);
+  return { history, cancelled };
+}
+
+test('only waiting orders offer Cancel, and a confirmed cancel shows Cancelled after reloading', async t => {
+  const { history, cancelled } = cancellableHistory(t);
+  history.ngOnInit();
+  await flush();
+  const [waiting, done] = history.rows();
+  assert.equal(history.canCancel(waiting), true);
+  assert.equal(history.canCancel(done), false);
+
+  history.confirming.set('waiting');
+  await history.confirmCancel(waiting);
+  assert.deepEqual(cancelled, ['waiting']);
+  assert.equal(history.confirming(), null);
+  assert.match(history.notice(), /^Order cancelled: 1 AAPL\. Nothing was charged\.$/);
+  assert.equal(history.rows()[0].status, 'CANCELLED');
+  assert.equal(history.canCancel(history.rows()[0]), false);
+});
+
+test('a refused cancel shows the reason and reloads the real status', async t => {
+  const { history } = cancellableHistory(t, { cancel: async () => { throw new Error('Order is already executing.'); } });
+  history.ngOnInit();
+  await flush();
+  await history.confirmCancel(history.rows()[0]);
+  assert.equal(history.notice(), 'Order is already executing.');
+  assert.equal(history.cancelling(), false);
 });

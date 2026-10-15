@@ -92,6 +92,33 @@ export class OrderHistoryClient {
       filledQuantity: row.filledQuantity === null ? null : Number(row.filledQuantity),
     }));
   }
+
+  /**
+   * Cancels one of the caller's orders while it is still waiting (PS-14). Resolves when the orders
+   * service has recorded it as CANCELLED; otherwise throws with a sentence the user can read, e.g.
+   * when the order already started executing.
+   */
+  async cancel(orderId: string): Promise<void> {
+    const token = this.#tokens.accessToken;
+    if (!token) {
+      throw new Error('Sign in to cancel an order.');
+    }
+    let response: Response;
+    try {
+      response = await this.#fetch(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
+    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+      const message = typeof body?.message === 'string' ? body.message : null;
+      throw new Error(response.status === 404 ? 'That order was not found.' : message ?? 'Could not cancel the order. Please try again.');
+    }
+  }
 }
 
 /** Reads the JWT subject (the user id) without verifying it; the server verifies every request. */
