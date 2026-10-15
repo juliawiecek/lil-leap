@@ -351,28 +351,10 @@ pipeline {
       }
     }
 
-    stage('Playwright - Real Client Journey') {
-      options { timeout(time: 30, unit: 'MINUTES') }
-      steps {
-        // Publish only this build's evidence, never reports left by an older build
-        // (Preflight already removed any the Jenkins user could not delete).
-        dir('e2e/artifacts') { deleteDir() }
-        // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
-        // Branches run the golden path only; main also runs the auth and session-expiry phases.
-        script {
-          sh(onMain() ? 'bash scripts/run_e2e_ci.sh' : 'bash scripts/run_e2e_ci.sh --project=golden')
-        }
-      }
-      post {
-        always {
-          junit testResults: 'e2e/artifacts/**/junit.xml', allowEmptyResults: true
-          archiveArtifacts artifacts: 'e2e/artifacts/**', allowEmptyArchive: true
-        }
-      }
-    }
+    // The Playwright e2e suite is not part of the Jenkins gate; run it locally with `node e2e/run-stack.mjs`.
 
     stage('Build Compose Services') {
-      // The e2e stage already built every image from this commit; main still checks the release compose file.
+      // Building every image is slow, so only main checks the release compose file.
       when { expression { onMain() } }
       steps {
         // A second attempt covers a registry or Maven Central blip; finished layers are cached.
