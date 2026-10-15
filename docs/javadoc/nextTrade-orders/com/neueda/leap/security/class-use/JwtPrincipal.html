@@ -54,17 +54,44 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
 <div class="col-last even-row-color">
+<div class="block">Caller-scoped reads of a single order's detail and current status.</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
+<div class="col-last even-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
 </div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
+<li>
+<section class="detail" id="com.neueda.leap.order.query">
+<h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../order/query/package-summary.html">com.neueda.leap.order.query</a></h2>
+<div class="caption"><span>Methods in <a href="../../order/query/package-summary.html">com.neueda.leap.order.query</a> with parameters of type <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../order/query/OrderDetailResponse.html" title="class in com.neueda.leap.order.query">OrderDetailResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderQueryController.</span><code><a href="../../order/query/OrderQueryController.html#detail(com.neueda.leap.security.JwtPrincipal,java.util.UUID)" class="member-name-link">detail</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Returns the full detail of one of the caller's orders.</div>
+</div>
+<div class="col-first odd-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../order/query/OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">OrderQueryController.</span><code><a href="../../order/query/OrderQueryController.html#status(com.neueda.leap.security.JwtPrincipal,java.util.UUID)" class="member-name-link">status</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Returns the current status of one of the caller's orders and its latest status reason.</div>
+</div>
+</div>
+</section>
+</li>
 <li>
 <section class="detail" id="com.neueda.leap.order.submission.controller">
 <h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a></h2>

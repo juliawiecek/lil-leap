@@ -6,6 +6,7 @@ com.neueda.leap.reporting.controller
 com.neueda.leap.reporting.dto
 com.neueda.leap.reporting.entity
 com.neueda.leap.reporting.enums
+com.neueda.leap.reporting.kafka
 com.neueda.leap.reporting.model
 com.neueda.leap.reporting.repository
 com.neueda.leap.reporting.service

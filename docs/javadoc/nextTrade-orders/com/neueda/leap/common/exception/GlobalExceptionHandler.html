@@ -127,9 +127,19 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidRequest(java.lang.Exception)" class="member-name-link">handleInvalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleIdempotencyConflict(com.neueda.leap.order.submission.service.IdempotencyConflictException)" class="member-name-link">handleIdempotencyConflict</a><wbr>(<a href="../../order/submission/service/IdempotencyConflictException.html" title="class in com.neueda.leap.order.submission.service">IdempotencyConflictException</a>&nbsp;exception)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Rejects a retry whose client reference already created a different order.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleInvalidRequest(java.lang.Exception)" class="member-name-link">handleInvalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a>&nbsp;exception)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Rejects invalid payloads without rendering or logging rejected values.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleOrderNotFound(com.neueda.leap.order.query.OrderNotFoundException)" class="member-name-link">handleOrderNotFound</a><wbr>(<a href="../../order/query/OrderNotFoundException.html" title="class in com.neueda.leap.order.query">OrderNotFoundException</a>&nbsp;exception)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Reports an unknown or unowned order identically, so other users' order ids are not revealed.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleOrderRule(com.neueda.leap.order.rules.OrderRuleException)" class="member-name-link">handleOrderRule</a><wbr>(<a href="../../order/rules/OrderRuleException.html" title="class in com.neueda.leap.order.rules">OrderRuleException</a>&nbsp;exception)</code></div>
@@ -208,6 +218,34 @@ loadScripts(document, 'script');</script>
 <dd><code>exception</code> - sufficiency rule rejection</dd>
 <dt>Returns:</dt>
 <dd>HTTP 422 with a safe reason code and message</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="handleOrderNotFound(com.neueda.leap.order.query.OrderNotFoundException)">
+<h3>handleOrderNotFound</h3>
+<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../order/query/OrderNotFoundException.html" title="class in com.neueda.leap.order.query">OrderNotFoundException.class</a>)
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleOrderNotFound</span><wbr><span class="parameters">(<a href="../../order/query/OrderNotFoundException.html" title="class in com.neueda.leap.order.query">OrderNotFoundException</a>&nbsp;exception)</span></div>
+<div class="block">Reports an unknown or unowned order identically, so other users' order ids are not revealed.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>exception</code> - order lookup miss</dd>
+<dt>Returns:</dt>
+<dd>HTTP 404 with a fixed ORDER_NOT_FOUND response</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="handleIdempotencyConflict(com.neueda.leap.order.submission.service.IdempotencyConflictException)">
+<h3>handleIdempotencyConflict</h3>
+<div class="member-signature"><span class="annotations">@ExceptionHandler(<a href="../../order/submission/service/IdempotencyConflictException.html" title="class in com.neueda.leap.order.submission.service">IdempotencyConflictException.class</a>)
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</span>&nbsp;<span class="element-name">handleIdempotencyConflict</span><wbr><span class="parameters">(<a href="../../order/submission/service/IdempotencyConflictException.html" title="class in com.neueda.leap.order.submission.service">IdempotencyConflictException</a>&nbsp;exception)</span></div>
+<div class="block">Rejects a retry whose client reference already created a different order.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>exception</code> - idempotency conflict</dd>
+<dt>Returns:</dt>
+<dd>HTTP 409 with a fixed IDEMPOTENCY_CONFLICT response</dd>
 </dl>
 </section>
 </li>

@@ -11,7 +11,17 @@ import org.springframework.kafka.core.ConsumerFactory;
 @EnableKafka
 public class KafkaOrderEventConfiguration {
 
-    /** Creates the Kafka listener factory used by the three Insights consumers. */
+    /** Creates the Kafka configuration; Spring instantiates it. */
+    public KafkaOrderEventConfiguration() {
+        // No state to initialize.
+    }
+
+    /**
+     * Creates the Kafka listener factory used by the three Insights consumers.
+     *
+     * @param consumerFactory consumer factory configured from the Spring Kafka properties
+     * @return the listener container factory
+     */
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
             ConsumerFactory<String, String> consumerFactory) {

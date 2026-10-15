@@ -93,9 +93,10 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="annotations">@Service
 </span><span class="modifiers">public class </span><span class="element-name type-name-label">IndicativePriceService</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides pre-trade indicative prices (TS-14.1, BR-13).
- Reads from the cached quote without calling a fresh provider, so it's cheap to call
- on every instrument/quantity change in the UI.</div>
+<div class="block">Estimates what an order would cost before it is submitted (TS-14.1, BR-13).
+ Reads the latest stored quote rather than calling a provider, so it is cheap enough to
+ call on every quantity change. Buys are priced at the ask and sells at the bid, the same
+ sides execution fills at, but the result is never a guaranteed fill price.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -109,9 +110,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Class</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>static final record&nbsp;</code></div>
-<div class="col-second even-row-color"><code><a href="IndicativePriceService.IndicativePriceResponse.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePriceResponse</a></code></div>
+<div class="col-second even-row-color"><code><a href="IndicativePriceService.IndicativePrice.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePrice</a></code></div>
 <div class="col-last even-row-color">
-<div class="block">Response object for indicative price queries.</div>
+<div class="block">An estimate for an order that has not been submitted.</div>
 </div>
 </div>
 </section>
@@ -124,9 +125,11 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.marketdata.QuoteRepository)" class="member-name-link">IndicativePriceService</a><wbr>(<a href="../../../marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a>&nbsp;quoteRepository)</code></div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.marketdata.QuoteRepository,com.neueda.leap.order.execution.quote.QuoteFreshnessPolicy,java.time.Clock)" class="member-name-link">IndicativePriceService</a><wbr>(<a href="../../../marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a>&nbsp;quotes,
+ <a href="QuoteFreshnessPolicy.html" title="class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy</a>&nbsp;freshness,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
 <div class="col-last even-row-color">
-<div class="block">Creates an IndicativePriceService with the supplied dependencies.</div>
+<div class="block">Creates the service.</div>
 </div>
 </div>
 </section>
@@ -142,10 +145,12 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="IndicativePriceService.IndicativePriceResponse.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePriceResponse</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getIndicativePrice(java.util.UUID)" class="member-name-link">getIndicativePrice</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="IndicativePriceService.IndicativePrice.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePrice</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#estimate(java.util.UUID,java.lang.String,long)" class="member-name-link">estimate</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side,
+ long&nbsp;quantity)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns an indicative (not binding) price for an instrument (AC1, AC3).</div>
+<div class="block">Estimates the price and total for an order from the latest stored quote.</div>
 </div>
 </div>
 </div>
@@ -165,13 +170,17 @@ loadScripts(document, 'script');</script>
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(com.neueda.leap.marketdata.QuoteRepository)">
+<section class="detail" id="&lt;init&gt;(com.neueda.leap.marketdata.QuoteRepository,com.neueda.leap.order.execution.quote.QuoteFreshnessPolicy,java.time.Clock)">
 <h3>IndicativePriceService</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">IndicativePriceService</span><wbr><span class="parameters">(<a href="../../../marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a>&nbsp;quoteRepository)</span></div>
-<div class="block">Creates an IndicativePriceService with the supplied dependencies.</div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">IndicativePriceService</span><wbr><span class="parameters">(<a href="../../../marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a>&nbsp;quotes,
+ <a href="QuoteFreshnessPolicy.html" title="class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy</a>&nbsp;freshness,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
+<div class="block">Creates the service.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
-<dd><code>quoteRepository</code> - quote repository (returns cached quotes only)</dd>
+<dd><code>quotes</code> - latest stored quotes</dd>
+<dd><code>freshness</code> - the age limit execution applies, used to flag stale estimates</dd>
+<dd><code>clock</code> - UTC clock shared with execution</dd>
 </dl>
 </section>
 </li>
@@ -184,17 +193,19 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="getIndicativePrice(java.util.UUID)">
-<h3>getIndicativePrice</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="IndicativePriceService.IndicativePriceResponse.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePriceResponse</a></span>&nbsp;<span class="element-name">getIndicativePrice</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)</span></div>
-<div class="block">Returns an indicative (not binding) price for an instrument (AC1, AC3).
- Reads from cache only; does NOT call a fresh quote provider.
- If no cached quote exists, returns a "no quote available" result.</div>
+<section class="detail" id="estimate(java.util.UUID,java.lang.String,long)">
+<h3>estimate</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="IndicativePriceService.IndicativePrice.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePrice</a>&gt;</span>&nbsp;<span class="element-name">estimate</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side,
+ long&nbsp;quantity)</span></div>
+<div class="block">Estimates the price and total for an order from the latest stored quote.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
-<dd><code>instrumentId</code> - persistent instrument identifier</dd>
+<dd><code>instrumentId</code> - instrument to price</dd>
+<dd><code>side</code> - <code>BUY</code> or <code>SELL</code></dd>
+<dd><code>quantity</code> - positive number of shares</dd>
 <dt>Returns:</dt>
-<dd>indicative price response (never guaranteed fill price)</dd>
+<dd>the estimate, or empty when no quote has been stored for the instrument</dd>
 </dl>
 </section>
 </li>

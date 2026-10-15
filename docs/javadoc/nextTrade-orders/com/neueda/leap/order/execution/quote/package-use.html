@@ -62,6 +62,10 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color">
 <div class="block">Execution-time quote selection, timestamp freshness and retry decisions.</div>
 </div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last even-row-color">
+<div class="block">Transactional order submission with ownership checks and retry handling.</div>
+</div>
 </div>
 <section class="package-uses">
 <ul class="block-list">
@@ -106,11 +110,11 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color"><a href="class-use/IndicativePriceService.html#com.neueda.leap.order.execution.quote">IndicativePriceService</a></div>
 <div class="col-last odd-row-color">
-<div class="block">Provides pre-trade indicative prices (TS-14.1, BR-13).</div>
+<div class="block">Estimates what an order would cost before it is submitted (TS-14.1, BR-13).</div>
 </div>
-<div class="col-first even-row-color"><a href="class-use/IndicativePriceService.IndicativePriceResponse.html#com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePriceResponse</a></div>
+<div class="col-first even-row-color"><a href="class-use/IndicativePriceService.IndicativePrice.html#com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePrice</a></div>
 <div class="col-last even-row-color">
-<div class="block">Response object for indicative price queries.</div>
+<div class="block">An estimate for an order that has not been submitted.</div>
 </div>
 <div class="col-first odd-row-color"><a href="class-use/QuoteFreshnessPolicy.html#com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy</a></div>
 <div class="col-last odd-row-color">
@@ -120,9 +124,18 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Timestamp classification relative to the configured age and clock-skew limits.</div>
 </div>
-<div class="col-first odd-row-color"><a href="class-use/QuotePreviewController.QuotePreviewResponse.html#com.neueda.leap.order.execution.quote">QuotePreviewController.QuotePreviewResponse</a></div>
-<div class="col-last odd-row-color">
-<div class="block">Response object for quote preview requests.</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.service">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.order.execution.quote</a> used by <a href="../../submission/service/package-summary.html">com.neueda.leap.order.submission.service</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/IndicativePriceService.html#com.neueda.leap.order.submission.service">IndicativePriceService</a></div>
+<div class="col-last even-row-color">
+<div class="block">Estimates what an order would cost before it is submitted (TS-14.1, BR-13).</div>
 </div>
 </div>
 </section>
