@@ -1,6 +1,16 @@
+import { apiHttp } from './http-helper.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 const { PortfolioClient, valuePortfolio } = await import('../src/app/portfolio-api.ts');
+import { HttpErrorResponse } from '@angular/common/http';
+import { throwError } from 'rxjs';
+
+test('portfolio distinguishes transport failures from HTTP rejection', async () => {
+  for (const failure of [new TypeError('offline'), new HttpErrorResponse({ status: 0 }), new HttpErrorResponse({ status: 503 })]) {
+    const client = new PortfolioClient({ accessToken: 'token' }, { get: () => throwError(() => failure) });
+    await assert.rejects(client.load(), failure.status === 503 ? /Could not load your balances/ : /Could not reach the server/);
+  }
+});
 
 const holding = (instrumentId, quantity, averageCost) => ({ instrumentId, symbol: instrumentId.toUpperCase(), instrumentName: instrumentId, quantity, averageCost });
 
@@ -32,9 +42,9 @@ test('load sums cash, keeps instrument ids and drops empty positions', async () 
          { instrumentId: 'i2', symbol: 'MSFT', instrumentName: 'Microsoft', quantity: 0, averageCost: 300 }];
     return new Response(JSON.stringify(body), { status: 200 });
   };
-  const portfolio = await new PortfolioClient({ accessToken: 'tok' }, fetchImpl).load();
+  const portfolio = await new PortfolioClient({ accessToken: 'tok' }, apiHttp(fetchImpl)).load();
   assert.deepEqual(portfolio, { cash: 105.1, holdings: [{ instrumentId: 'i1', symbol: 'AAPL', instrumentName: 'Apple', quantity: 3, averageCost: 150.5 }] });
-  assert.deepEqual(requests.map(([url, auth]) => [url, auth]).sort(), [['/api/v1/cash', 'Bearer tok'], ['/api/v1/holdings', 'Bearer tok']]);
+  assert.deepEqual(requests.map(([url, auth]) => [url, auth]).sort(), [['/api/v1/cash', undefined], ['/api/v1/holdings', undefined]]);
 });
 
 test('latestBids reads each quote and leaves out the ones that fail', async () => {
@@ -43,7 +53,7 @@ test('latestBids reads each quote and leaves out the ones that fail', async () =
     if (url.endsWith('/zero')) return new Response(JSON.stringify({ bid: 0 }), { status: 200 });
     return new Response(JSON.stringify({ bid: '225.10' }), { status: 200 });
   };
-  const bids = await new PortfolioClient({ accessToken: 'tok' }, fetchImpl).latestBids(['good', 'bad', 'zero']);
+  const bids = await new PortfolioClient({ accessToken: 'tok' }, apiHttp(fetchImpl)).latestBids(['good', 'bad', 'zero']);
   assert.deepEqual([...bids], [['good', 225.1]]);
 });
 

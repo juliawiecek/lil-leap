@@ -1507,3 +1507,9 @@ footer {
   padding-top: 8px;
   padding-bottom: 8px;
 }
+
+.live-summary {
+  margin-bottom: 24px;
+  dl { display: flex; flex-wrap: wrap; gap: 24px; }
+  dd { margin: 6px 0; font-size: 20px; }
+}

@@ -44,7 +44,11 @@ export class SessionCoordinator {
     window.addEventListener('pageshow', this.visible);
   }
   get authenticated(): boolean {
-    return !!this.auth.accessToken && this.auth.userRole === this.requiredRole;
+    if (!this.auth.accessToken || this.auth.userRole !== this.requiredRole) {
+      return false;
+    }
+    const expiresAt = this.auth.accessTokenExpiresAt;
+    return expiresAt !== null && Number.isFinite(expiresAt) && expiresAt > Date.now();
   }
   initialize(): Promise<boolean> {
     return (this.ready ??= this.restore().finally(() => {

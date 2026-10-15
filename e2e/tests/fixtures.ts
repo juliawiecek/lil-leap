@@ -1,7 +1,6 @@
 import { test as base, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { randomUUID, randomInt } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import pg from 'pg';
 
 export const tradingUrl = process.env.TRADING_URL ?? 'http://localhost:4200';
 export const insightsUrl = process.env.INSIGHTS_URL ?? 'http://localhost:4201';
@@ -34,7 +33,7 @@ export function traderPayload(c: Credentials) {
     first_name: 'Golden', last_name: 'Trader', date_of_birth: '1990-12-10', phone: '312-555-0123',
     street_address: '1 Main Street', city: 'Springfield', state_province: 'IL', postal_code: '62701',
     country: 'US', citizenship_status: 'CITIZEN', ssn: c.ssn, employment_status: 'RETIRED',
-    annual_income: '50000', net_worth_bracket: '$25k-100k', risk_profile: 'MODERATE', liquidity_position: '25000',
+    annual_income: '50000', net_worth_bracket: '$25k-100k', risk_profile: 'MODERATE', liquidity_position: '25000', initial_deposit: '25000',
     accredited_investor: false, is_politically_exposed_person: false,
     account_name: 'Golden path account', account_type: 'INDIVIDUAL_CASH',
   };
@@ -42,20 +41,29 @@ export function traderPayload(c: Credentials) {
 export async function login(page: Page, credentials: Credentials, insights = false) {
   await page.goto(`${insights ? insightsUrl : tradingUrl}/login`);
   const response = page.waitForResponse(r => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
-  await page.locator(insights ? '#analyst-email' : '#email').fill(credentials.email);
-  await page.locator(insights ? '#analyst-password' : '#password').fill(credentials.password);
+  await page.locator('#email').fill(credentials.email);
+  await page.locator('#password').fill(credentials.password);
   await page.getByRole('button', { name: insights ? 'Sign in' : 'Continue securely', exact: true }).click();
   const loggedIn = await response;
   expect(loggedIn.status()).toBe(200);
   await expect(page).toHaveURL(/\/dashboard$/);
   return loggedIn.json();
 }
-export async function registerThroughBrowser(page: Page, credentials: Credentials) {
-  await page.goto(`${tradingUrl}/register`);
+export async function openRegistration(page: Page) {
+  await page.goto(`${tradingUrl}/login`);
+  await page.getByRole('tab', { name: 'Create account', exact: true }).click();
+}
+
+export async function fillCredentials(page: Page, credentials: Credentials) {
   await page.locator('#full-name').fill('Golden Trader');
   await page.locator('#email').fill(credentials.email);
   await page.locator('#password').fill(credentials.password);
   await page.locator('#verify-password').fill(credentials.password);
+}
+
+export async function prepareRegistration(page: Page, credentials: Credentials) {
+  await openRegistration(page);
+  await fillCredentials(page, credentials);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   const fields = {
     first_name: 'Golden', last_name: 'Trader', date_of_birth: '1990-12-10', phone: '3125550123',
@@ -70,6 +78,7 @@ export async function registerThroughBrowser(page: Page, credentials: Credential
   await page.locator('#profile-net_worth_bracket').selectOption('$25k-100k');
   await page.locator('#profile-risk_profile').selectOption('MODERATE');
   await page.locator('#profile-liquidity_position').fill('25000');
+  await page.locator('#profile-initial_deposit').fill('25000');
   await page.locator('#profile-accredited_investor').selectOption('false');
   await page.getByRole('button', { name: /^Continue/ }).click();
   await page.locator('#profile-account_name').fill('Golden path account');
@@ -78,6 +87,10 @@ export async function registerThroughBrowser(page: Page, credentials: Credential
     await page.locator(`#profile-${id}`).selectOption('false');
   }
   await page.getByRole('button', { name: /^Review details/ }).click();
+}
+
+export async function registerThroughBrowser(page: Page, credentials: Credentials) {
+  await prepareRegistration(page, credentials);
   const registration = page.waitForResponse(r => r.url().endsWith('/auth/register') && r.request().method() === 'POST');
   const automaticLogin = page.waitForResponse(r => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
   await page.getByRole('button', { name: /^Explore my workspace/ }).click();
@@ -86,26 +99,15 @@ export async function registerThroughBrowser(page: Page, credentials: Credential
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-/** Approval/funding is fixture setup; no order, fill, or holding is written here. */
-export async function fundAccount(email: string) {
-  if (!email.startsWith('e2e-trader-')) throw new Error('Only suite-generated traders may be funded.');
-  const db = new pg.Client();
-  try {
-    await db.connect();
-    await db.query('BEGIN');
-    const result = await db.query(`SELECT a.account_id, a.account_status, a.trader_level FROM accounts a
-      JOIN users u USING (user_id) WHERE u.email = $1 FOR UPDATE OF a`, [email]);
-    expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].account_status).toBe('PENDING');
-    expect(result.rows[0].trader_level).toBe('NOVICE');
-    const id = result.rows[0].account_id;
-    await db.query("UPDATE accounts SET account_status = 'ACTIVE', trading_enabled = true WHERE account_id = $1", [id]);
-    await db.query("INSERT INTO cash_transactions (account_id, transaction_type, amount, settlement_status, settled_at) VALUES ($1, 'DEPOSIT', 25000, 'SETTLED', now())", [id]);
-    await db.query("INSERT INTO cash_balances (account_id, currency, balance) VALUES ($1, 'USD', 25000) ON CONFLICT (account_id, currency) DO UPDATE SET balance = 25000", [id]);
-    await db.query('COMMIT');
-    return id;
-  } catch (error) { await db.query('ROLLBACK').catch(() => {}); throw error; }
-  finally { await db.end(); }
+/** Registration owns activation and the opening deposit; fixtures only read the result. */
+export async function openedAccount(request: APIRequestContext, token: string) {
+  const accounts = await authedGet(request, '/api/v1/accounts', token);
+  expect(accounts).toHaveLength(1);
+  expect(accounts[0].account_status).toBe('ACTIVE');
+  expect(accounts[0].trading_enabled).toBe(true);
+  const cash = await authedGet(request, '/api/v1/cash', token);
+  expect(Number(cash.find(row => row.accountId === accounts[0].account_id).balance)).toBe(25000);
+  return accounts[0].account_id;
 }
 
 /** Wait for the server's signed expiry using real elapsed time, never browser time. */

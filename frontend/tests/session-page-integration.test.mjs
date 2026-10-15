@@ -7,9 +7,6 @@ const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { PageState } = await import('../src/app/page-state.ts');
 const { QuoteService } = await import('../src/app/quote.service.ts');
-const { OrderSubmissionClient } = await import('../src/app/order-submission-api.ts');
-const { OrderHistoryClient } = await import('../src/app/order-history-api.ts');
-const { PortfolioClient } = await import('../src/app/portfolio-api.ts');
 
 function workspace(t, Type) {
   let select, fields;
@@ -60,44 +57,4 @@ test('novice URL hydration selects a supported stock and reports an unavailable 
   f.selectSymbol('UNKNOWN');
   assert.match(f.desk.tradeMessage(), /unavailable/);
 });
-test('all fetch clients invalidate the token sent on a 401 without replaying requests', async () => {
-  const token =
-    'test.' +
-    Buffer.from(JSON.stringify({ sub: '00000000-0000-4000-8000-000000000001' })).toString(
-      'base64url',
-    ) +
-    '.test';
-  for (const method of ['accounts', 'instruments', 'submit', 'history', 'portfolio']) {
-    const invalidated = [];
-    let requests = 0;
-    const auth = {
-      accessToken: token,
-      unauthorized: (sent) => {
-        invalidated.push(sent);
-      },
-    };
-    const fetch = async () => {
-      requests++;
-      return Response.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-    };
-    const submit = new OrderSubmissionClient(auth, fetch);
-    const request = {
-      accountId: 'a1',
-      instrumentId: 'i1',
-      side: 'BUY',
-      quantity: 1,
-      clientReference: 'r1',
-    };
-    const invoke = {
-      accounts: () => submit.getAccounts(),
-      instruments: () => submit.getInstruments(),
-      submit: () => submit.submit(request),
-      history: () => new OrderHistoryClient(auth, fetch).list(),
-      portfolio: () => new PortfolioClient(auth, fetch).load(),
-    };
-    await assert.rejects(invoke[method]());
-    const expectedRequests = method === 'portfolio' ? 2 : 1;
-    assert.deepEqual(invalidated, Array(expectedRequests).fill(token));
-    assert.equal(requests, expectedRequests);
-  }
-});
+// Shared HTTP pipeline and invalidation are exercised in http-auth.test.mjs.

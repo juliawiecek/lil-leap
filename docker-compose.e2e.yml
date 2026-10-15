@@ -63,6 +63,8 @@ services:
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: e2e-app-password
       PORT: 8082
+      # Keep the real order journey deterministic at night and on weekends.
+      NEXTTRADE_MARKET_RESPECT_HOURS: 'false'
     depends_on:
       db:
         condition: service_healthy
@@ -97,6 +99,10 @@ services:
       REPORTING_DB_HOST: reporting-db
       REPORTING_DB_USERNAME: reporting_user
       REPORTING_DB_PASSWORD: e2e-reporting-password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://reporting-db:5432/nexttrade
+      SPRING_DATASOURCE_USERNAME: reporting_user
+      SPRING_DATASOURCE_PASSWORD: e2e-reporting-password
+      SPRING_DATASOURCE_HIKARI_READ_ONLY: 'true'
     depends_on:
       reporting-db:
         condition: service_healthy
@@ -163,6 +169,7 @@ services:
     init: true
     ipc: host
     environment:
+      E2E_ARTIFACTS: /artifacts
       TRADING_URL: http://gateway:4200
       INSIGHTS_URL: http://gateway:4201
       PGHOST: db
@@ -173,7 +180,7 @@ services:
       npm_config_cache: /tmp/npm-cache
     volumes:
     - ./e2e:/source:ro
-    - ./e2e/artifacts:/artifacts
+    - ./e2e/artifacts/${E2E_ARTIFACT_SUBDIR:-manual}:/artifacts
     entrypoint:
     - sh
     - -ec

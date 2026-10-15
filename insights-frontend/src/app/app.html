@@ -73,6 +73,19 @@
       </div>
     </header>
     <main id="workspace" tabindex="-1" class="content">
+      @if (liveReports) {
+        <section class="panel live-summary" aria-label="Live reporting summary">
+          <h2>Live trading summary</h2>
+          <dl>
+            <div><dt>Accounts</dt><dd data-testid="summary-accounts">{{ summary()?.accounts ?? '?' }}</dd></div>
+            <div><dt>Orders</dt><dd data-testid="summary-orders">{{ summary()?.orders ?? '?' }}</dd></div>
+            <div><dt>Fills</dt><dd data-testid="summary-fills">{{ summary()?.fills ?? '?' }}</dd></div>
+            <div><dt>Gross executed value</dt><dd data-testid="summary-value">{{ (summary()?.gross_executed_value ?? 0) | currency }}</dd></div>
+          </dl>
+          <button type="button" (click)="refreshSummary()">Refresh summary</button>
+          <p role="status">{{ summaryError() }}</p>
+        </section>
+      }
       <div class="page-heading">
         <div>
           <p class="eyebrow">NEXTTRADE / {{ page() | uppercase }}</p>

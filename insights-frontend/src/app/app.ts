@@ -1,3 +1,4 @@
+import { LIVE_REPORTS, type ReportSummary } from './live-reports';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { AuthService } from './auth.service';
 import { AppSessionService } from './app-session.service';
@@ -33,6 +34,31 @@ import {
   styleUrl: './app.scss',
 })
 export class App implements OnDestroy {
+  readonly liveReports = inject(LIVE_REPORTS, { optional: true });
+  readonly summary = signal<ReportSummary | null>(null);
+  readonly summaryError = signal('');
+  private destroyed = false;
+  private summaryPending = false;
+
+  async refreshSummary(): Promise<void> {
+    if (!this.liveReports || this.summaryPending || this.destroyed) {
+      return;
+    }
+    this.summaryPending = true;
+    this.summaryError.set('');
+    try {
+      const summary = await this.liveReports.load();
+      if (!this.destroyed) {
+        this.summary.set(summary);
+      }
+    } catch {
+      if (!this.destroyed) {
+        this.summaryError.set('Could not load reporting summary. Please try again.');
+      }
+    } finally { this.summaryPending = false; }
+  }
+
+  signOut(): void { void this.liveReports?.logout(); }
   readonly auth = inject(AuthService, { optional: true });
   readonly session = inject(AppSessionService, { optional: true });
   private routing?: PageBinding;
@@ -183,6 +209,9 @@ export class App implements OnDestroy {
       })[this.page()],
   );
   constructor() {
+    if (this.liveReports) {
+      void this.refreshSummary();
+    }
     this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
       { key: 'q', value: this.query }, { key: 'start', value: this.start, date: true },
       { key: 'end', value: this.end, date: true }, { key: 'asset', value: this.asset, allowed: ['All', ...this.classes] },
@@ -203,7 +232,7 @@ export class App implements OnDestroy {
       if (parts[1] && !this.selectedClient() && !this.selectedTrade()) { this.notice.set('That record is unavailable.'); }
     });
   }
-  ngOnDestroy(): void { this.routing?.destroy(); }
+  ngOnDestroy(): void { this.destroyed = true; this.routing?.destroy(); }
   navigate(page: string) {
     this.page.set(page);
     this.mobileNav.set(false);

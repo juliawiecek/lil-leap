@@ -383,57 +383,76 @@ scripts/auth-integration-test.sh --down      # also stop the stack afterwards
 
 Needs bash, curl and Docker (run it on Linux, macOS or WSL).
 
-### Real-stack browser tests (NEXT-164 / NEXT-163)
+### Real-stack browser tests (NEXT-157, NEXT-164, NEXT-163)
 
-Both apps now use JWT interception and guarded `/dashboard` routes. NextTrade
-starts at `/login` (registration at `/register`); Insights requires an analyst
-account at `/login`. Tokens remain in memory, so refreshing a page requires a
-new login. Insights includes a live backend reporting summary; its other
-reporting views still use the existing sample datasets.
+Both Angular apps use the shared session package and guarded routes. NextTrade
+registration starts from the **Create account** tab at `/login`; Insights has an
+analyst login screen. Reload restores the tab's session and page (NEXT-220).
+Insights also displays a live reporting summary alongside its sample-data views.
 
-Run the full Playwright suite from the repository root with **Node 24 and a
-running Docker engine with Compose v2**:
+From the repository root, with **Node 24 and Docker Compose v2** available:
 
 ```powershell
 npm --prefix e2e ci
 npm --prefix e2e run test:stack
 ```
 
-The runner builds the real services, starts a uniquely named isolated Compose
-project without host ports, waits for services and fresh quotes, and runs
-Chromium in the pinned Playwright image. It always collects container logs and
-removes only its own containers and database volumes. A second invocation uses
-fresh databases and users, providing a repeatability check. No API responses,
-Identity tokens, orders, fills, or holdings are mocked.
+To run only NEXT-157's 13 authentication cases against the same real stack:
 
-| Acceptance criterion | Browser coverage |
+```powershell
+npm --prefix e2e run test:auth
+```
+
+Both apps also expose this command as `npm run test:e2e:auth` from their own
+directory. The shared runner builds and tests both apps for every invocation.
+
+The runner builds the production Dockerfiles and starts a uniquely named Compose
+project with isolated databases and no published host ports. Chromium runs in the
+pinned Playwright container. Identity is the final NestJS service from `auth/`,
+using the production schema and real PostgreSQL. No auth/API responses, tokens,
+orders, fills, or holdings are mocked. Analyst fixtures use the real registration
+API because Insights does not offer public registration.
+
+| NEXT-157 acceptance criterion | Browser coverage |
 |---|---|
-| AC1 | Browser registration, explicit login, one AAPL buy, real `FILLED` order, matching portfolio holdings and cash |
-| AC2 | One-minute test-only real server inactivity expiry; access and refresh both rejected; idle user returned to login |
-| AC3 | Real server-expired JWT triggers `401` and login redirect in both apps; unauthenticated route guards |
-| AC4 | Real NestJS Identity, Spring services, PostgreSQL, quote pipeline, gateway, and reporting replica |
+| AC1 | Root Playwright suite exercises NextTrade and Insights through the real gateway |
+| AC2 | Complete trader registration; missing fields, malformed email, weak/mismatched passwords, incomplete profile, and real duplicate-email rejection |
+| AC3 | Valid login, wrong password, and unknown account in both apps; authenticated workspace and real refresh after reload |
+| AC4 | Production NestJS Identity and PostgreSQL, with real gateway and application services |
 
-Registration creates a pending, unfunded account. The golden-path fixture
-activates and funds only its generated trader with a settled $25,000 deposit
-in the ledger and cash cache; account approval/funding is outside this browser
-journey. Orders and holdings are produced entirely by the real application.
-The short server-expiry phase uses one-minute tokens and sessions. A second
-phase restores ten-minute Identity settings and advances the browser clock to
-check the default client inactivity boundary separately from server expiry.
-Production timeout settings are unchanged.
+Registration supplies a $25,000 opening deposit and creates an ACTIVE trading
+account. Tests verify its balance through authenticated APIs; fixtures do not
+activate accounts or write cash, orders, fills, or holdings directly to SQL.
+The existing golden path buys AAPL and checks the real fill, holdings, and cash.
+Market hours are disabled only in the E2E stack to permit overnight execution.
 
-Jenkins requires the suite to pass and publishes JUnit results plus failure
-screenshots, traces, HTML reports, and container logs under `e2e/artifacts/`.
-`npm --prefix e2e exec -- playwright test --list` lists cases without starting
-the stack; use the stack runner for execution. The standalone test Compose model
-reuses production Dockerfiles, gateway routing, schema, and initialization scripts;
-keep its service wiring aligned when production Compose changes.
+Three phases run in order: `auth` with normal ten-minute sessions, `journey`
+with one-minute server expiry, and `default-timeout` with ten-minute sessions.
+The latter checks the client inactivity boundary using the browser clock.
+Production session settings are unchanged.
 
-Both Angular Docker builds now need the repository root as their build context:
-`docker build -f frontend/Dockerfile .` or
-`docker build -f insights-frontend/Dockerfile .`.
+Jenkins runs the same command, fails on test/infrastructure errors, and publishes
+JUnit, failure screenshots/traces, HTML reports, and container logs under
+`e2e/artifacts/<compose-project>/`. Each invocation keeps separate reports and
+a `run.json` summary with completed phases and final status. Jenkins clears old
+artifacts before its run so previous results cannot be published as new evidence.
+Cleanup removes only that invocation's containers and volumes.
+Run `test:stack` twice to verify repeatability with fresh users and databases.
+`npm --prefix e2e test -- --list` lists cases without starting
+the stack; listing is not proof that real-service tests passed.
+
+See [NEXT-157 verification](docs/stories/NEXT-157.md) for the acceptance mapping
+and the current verification status.
+
+The separate `npm --prefix frontend run test:e2e` command covers NEXT-220 with
+mocked APIs. It remains useful regression coverage but does not satisfy NEXT-157.
+Both Angular Docker builds use the repository root as their build context.
 
 ### Frontend build validation
+
+Both apps use the shared Angular HTTP wrapper, JWT interceptor, and route guards
+for business APIs. See [NEXT-163 implementation and verification](docs/stories/NEXT-163.md)
+for request scope, invalid-session behavior, and quality-gate evidence.
 
 ```bat
 cd frontend

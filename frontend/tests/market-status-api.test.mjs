@@ -1,7 +1,15 @@
+import { apiHttp } from './http-helper.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import './component-helper.mjs';
 const { MarketStatusClient, countdown, marketStatusText } = await import('../src/app/market-status-api.ts');
+import { throwError } from 'rxjs';
+
+test('unexpected transport failures propagate from market status', async () => {
+  const failure = new TypeError('offline');
+  const client = new MarketStatusClient({ accessToken: 'token' }, { get: () => throwError(() => failure) });
+  await assert.rejects(client.status(), error => error === failure);
+});
 
 const now = new Date('2026-10-14T17:46:00Z');
 const status = (open, nextOpen, nextClose) => ({ open, exchangeTimeZone: 'America/New_York', nextOpen, nextClose });
@@ -20,20 +28,20 @@ test('open, closed-soon and closed-for-the-weekend each read naturally', () => {
   assert.equal(marketStatusText(null, now), 'Market status unavailable');
 });
 
-test('the client sends the token and reports failures', async () => {
+test('the client uses the shared transport and reports failures', async () => {
   let seen;
   const body = status(true, '2026-10-15T13:30:00Z', '2026-10-14T20:00:00Z');
-  const ok = new MarketStatusClient({ accessToken: 't' }, async (url, init) => {
+  const ok = new MarketStatusClient({ accessToken: 't' }, apiHttp(async (url, init) => {
     seen = { url, auth: init.headers.Authorization };
     return { ok: true, status: 200, json: async () => body };
-  });
+  }));
   assert.deepEqual(await ok.status(), body);
-  assert.deepEqual(seen, { url: '/api/v1/market/status', auth: 'Bearer t' });
+  assert.deepEqual(seen, { url: '/api/v1/market/status', auth: undefined });
 
   await assert.rejects(new MarketStatusClient({ accessToken: null }).status(), /Sign in/);
   let expired = null;
   const failing = new MarketStatusClient({ accessToken: 'old', unauthorized: token => { expired = token; } },
-    async () => ({ ok: false, status: 401, json: async () => ({}) }));
+    apiHttp(async () => ({ ok: false, status: 401, json: async () => ({}) })));
   await assert.rejects(failing.status(), /Could not load the market status/);
-  assert.equal(expired, 'old');
+  assert.equal(expired, null); // Only the interceptor invalidates sessions.
 });

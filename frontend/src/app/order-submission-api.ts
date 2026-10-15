@@ -1,3 +1,6 @@
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 /**
  * Client for the orders service. Calls relative /api/v1/orders path via the gateway.
  * Tokens are supplied by the injected AuthService.
@@ -77,7 +80,6 @@ export interface OrderSubmissionResponse {
 /** Anything that can supply the current access token. */
 export interface AccessTokenSource {
   readonly accessToken: string | null;
-  unauthorized?(token: string | null): void;
 }
 
 /**
@@ -100,16 +102,16 @@ export class OrderSubmissionError extends Error {
  */
 export class OrderSubmissionClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1'
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -124,47 +126,29 @@ export class OrderSubmissionClient {
     }
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/accounts`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-        throw new OrderSubmissionError('Could not fetch your accounts. Please try again.');
-      }
-      return response.json();
+      return await firstValueFrom(this.#http.get<Account[]>(`${this.#baseUrl}/accounts`));
     } catch (error) {
-      if (error instanceof OrderSubmissionError) {
-        throw error;
-      }
-      throw new OrderSubmissionError('Connection error. Check your network and try again.');
+      throw this.#lookupError(error, 'Could not fetch your accounts. Please try again.');
     }
   }
 
-  /**
-   * Fetches the instrument catalog.
-   * @throws OrderSubmissionError on network failure or server error
-   */
+  /** Fetches the instrument catalog. */
   async getInstruments(): Promise<Instrument[]> {
-    const token = this.#tokens.accessToken;
-    if (!token) {
+    if (!this.#tokens.accessToken) {
       throw new OrderSubmissionError('You must be signed in to fetch instruments.');
     }
-
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/instruments`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-        throw new OrderSubmissionError('Could not fetch instruments. Please try again.');
-      }
-      return response.json();
+      return await firstValueFrom(this.#http.get<Instrument[]>(`${this.#baseUrl}/instruments`));
     } catch (error) {
-      if (error instanceof OrderSubmissionError) {
-        throw error;
-      }
-      throw new OrderSubmissionError('Connection error. Check your network and try again.');
+      throw this.#lookupError(error, 'Could not fetch instruments. Please try again.');
     }
+  }
+
+  #lookupError(error: unknown, message: string): OrderSubmissionError {
+    if (error instanceof HttpErrorResponse && error.status !== 0) {
+      return new OrderSubmissionError(message, error.status);
+    }
+    return new OrderSubmissionError('Connection error. Check your network and try again.');
   }
 
   /**
@@ -184,26 +168,11 @@ export class OrderSubmissionClient {
     const payload = this.#buildSubmitPayload(request);
 
     try {
-      const response = await this.#fetch(`${this.#baseUrl}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const body = (await response.json()) as { message?: string; [key: string]: any };
-
-      if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-        throw this.#toSubmitError(response.status, body.message);
-      }
-
-      return body as OrderSubmissionResponse;
+      return await firstValueFrom(this.#http.post<OrderSubmissionResponse>(`${this.#baseUrl}/orders`, payload));
     } catch (error) {
-      if (error instanceof OrderSubmissionError) {
-        throw error;
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        const message = typeof error.error?.message === 'string' ? error.error.message : undefined;
+        throw this.#toSubmitError(error.status, message);
       }
       throw new OrderSubmissionError('Connection error. Check your network and try again.');
     }

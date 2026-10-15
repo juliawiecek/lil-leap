@@ -1,12 +1,12 @@
-import { test, expect, uniqueCredentials, registerThroughBrowser, fundAccount, login, authedGet } from './fixtures';
+import { test, expect, uniqueCredentials, registerThroughBrowser, openedAccount, login, authedGet } from './fixtures';
 
 test('AC1/AC4: register ? login ? real order fill ? holdings', async ({ page, request }) => {
   const credentials = uniqueCredentials('trader');
   await registerThroughBrowser(page, credentials);
   await page.getByRole('button', { name: /^Sign out/ }).first().click();
   await expect(page).toHaveURL(/\/login$/);
-  const accountId = await fundAccount(credentials.email);
   const tokens = await login(page, credentials);
+  const accountId = await openedAccount(request, tokens.accessToken);
   expect(await authedGet(request, '/api/v1/holdings', tokens.accessToken)).toEqual([]);
   const cashBefore = await authedGet(request, '/api/v1/cash', tokens.accessToken);
   expect(Number(cashBefore.find(row => row.accountId === accountId).balance)).toBe(25000);

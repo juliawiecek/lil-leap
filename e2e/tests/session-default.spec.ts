@@ -12,8 +12,8 @@ for (const app of ['NextTrade', 'Insights']) {
     await page.clock.fastForward(599_000);
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.clock.fastForward(16_000);
-    await expect(page).toHaveURL(/\/login\?expired=1$/);
-    await expect(page.locator('app-stock-dashboard, app-insights-chart')).toHaveCount(0);
+    await expect(page).toHaveURL(url => url.pathname === '/login');
+    await expect(page.locator('app-trading-workspace, app-insights-workspace')).toHaveCount(0);
     expect(refreshes).toBe(0);
   });
 }

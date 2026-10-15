@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { AuthService } from './auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -40,12 +40,7 @@ export interface QuoteError {
 export class QuoteService {
   private readonly baseUrl = '/api/v1/quotes';
 
-  constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
-
-  private headers(): Record<string, string> {
-    const token = this.auth.accessToken;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
+  constructor(private readonly http: ApiHttpClient) {}
 
   /**
    * Retrieves the latest quote for a specific instrument.
@@ -57,7 +52,7 @@ export class QuoteService {
    */
   getLatestByInstrument(instrumentId: string): Observable<Quote> {
     return this.http
-      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`, { headers: this.headers() })
+      .get<Quote>(`${this.baseUrl}/latest/by-instrument/${instrumentId}`)
       .pipe(catchError(this.handleError));
   }
 
@@ -75,7 +70,6 @@ export class QuoteService {
   getLatestByMarketSymbol(market: string, symbol: string): Observable<Quote> {
     return this.http
       .get<Quote>(`${this.baseUrl}/latest/by-market-symbol`, {
-        headers: this.headers(),
         params: { market, symbol }
       })
       .pipe(catchError(this.handleError));
@@ -95,7 +89,6 @@ export class QuoteService {
   getHistory(instrumentId: string, limit: number = 100): Observable<Quote[]> {
     return this.http
       .get<Quote[]>(`${this.baseUrl}/history/${instrumentId}`, {
-        headers: this.headers(),
         params: { limit: limit.toString() }
       })
       .pipe(catchError(this.handleError));

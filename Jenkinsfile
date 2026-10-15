@@ -333,6 +333,8 @@ pipeline {
     stage('Playwright - Real Client Journey') {
       options { timeout(time: 30, unit: 'MINUTES') }
       steps {
+        // Publish only this build's evidence, never reports left by an older build.
+        dir('e2e/artifacts') { deleteDir() }
         // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
         sh 'bash scripts/run_e2e_ci.sh'
       }

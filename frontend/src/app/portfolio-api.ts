@@ -1,3 +1,6 @@
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 /**
  * Client for the signed-in user's cash and holdings (Holdings service: GET /cash, GET /holdings)
  * and the latest quotes used to value them. Cash and holdings are scoped to the access token's user.
@@ -71,16 +74,16 @@ function round(value: number): number {
 
 export class PortfolioClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -126,16 +129,13 @@ export class PortfolioClient {
     if (!token) {
       throw new Error('Sign in to see your balances.');
     }
-    let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-    } catch {
+      return await firstValueFrom(this.#http.get<T>(`${this.#baseUrl}${path}`));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        throw new Error('Could not load your balances. Please try again.');
+      }
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
-    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-      throw new Error('Could not load your balances. Please try again.');
-    }
-    return (await response.json()) as T;
   }
 }

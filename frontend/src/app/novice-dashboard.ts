@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
@@ -369,10 +370,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       if (quote) { this.tradeQuote.set(quote); }
       else { this.tradeMessage.set('That symbol is unavailable.'); }
     });
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
-    this.marketStatusClient = new MarketStatusClient(this.auth);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, inject(ApiHttpClient));
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, inject(ApiHttpClient));
+    this.portfolioClient = new PortfolioClient(this.auth, inject(ApiHttpClient));
+    this.marketStatusClient = new MarketStatusClient(this.auth, inject(ApiHttpClient));
   }
   ngOnDestroy(): void {
     this.destroyed = true;

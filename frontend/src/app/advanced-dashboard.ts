@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
@@ -548,9 +549,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, inject(ApiHttpClient));
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, inject(ApiHttpClient));
+    this.portfolioClient = new PortfolioClient(this.auth, inject(ApiHttpClient));
   }
 
   ngOnDestroy(): void {
