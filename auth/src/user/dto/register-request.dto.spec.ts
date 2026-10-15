@@ -86,6 +86,10 @@ describe('RegisterRequestDto', () => {
     );
   });
 
+  it('does not let anyone register as OPERATIONS; operations staff are seeded', async () => {
+    expect(await errorsFor({ ...analyst, user_role: 'OPERATIONS' })).toContain('user_role must be TRADER or ANALYST');
+  });
+
   it('rejects a malformed email, short password, unknown role and bad SSN', async () => {
     const errors = await errorsFor({ ...analyst, email: 'nope', password: 'short', user_role: 'ADMIN', ssn: '12-34' });
     expect(errors.length).toBeGreaterThanOrEqual(4);

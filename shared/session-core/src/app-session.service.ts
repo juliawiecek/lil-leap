@@ -17,18 +17,19 @@ export class SessionCoordinator {
     }
   };
   private readonly events = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
-  readonly requiredRole: string;
+  /** Roles allowed into this app, e.g. Insights admits both ANALYST and OPERATIONS staff. */
+  readonly requiredRoles: readonly string[];
   private readonly returnUrl: (value: string) => string | null;
 
   constructor(
     auth: AuthClient,
     router: Router | null,
-    role: string,
+    role: string | readonly string[],
     returnUrl: (value: string) => string | null,
   ) {
     this.auth = auth;
     this.router = router;
-    this.requiredRole = role;
+    this.requiredRoles = typeof role === 'string' ? [role] : [...role];
     this.returnUrl = returnUrl;
     this.keeper = new SessionKeeper(auth, () => this.toLogin(), {
       onActivity: (at) => auth.recordActivity?.(at),
@@ -44,7 +45,7 @@ export class SessionCoordinator {
     window.addEventListener('pageshow', this.visible);
   }
   get authenticated(): boolean {
-    return !!this.auth.accessToken && this.auth.userRole === this.requiredRole;
+    return !!this.auth.accessToken && this.requiredRoles.includes(this.auth.userRole ?? '');
   }
   initialize(): Promise<boolean> {
     return (this.ready ??= this.restore().finally(() => {
