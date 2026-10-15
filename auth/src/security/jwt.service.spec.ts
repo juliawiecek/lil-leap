@@ -72,6 +72,11 @@ describe('JwtService', () => {
       ['an expired token', () => jwt.sign({}, process.env.APP_JWT_SECRET as string, { subject: userId, expiresIn: -1 })],
       ['a token without a subject', () => jwt.sign({}, process.env.APP_JWT_SECRET as string)],
       ['an unsigned token', () => jwt.sign({}, '', { subject: userId, algorithm: 'none' })],
+      ['a token without an expiry, which would never expire', () => jwt.sign({}, process.env.APP_JWT_SECRET as string, { subject: userId })],
+      ['a token that is not valid yet', () => jwt.sign({}, process.env.APP_JWT_SECRET as string, { subject: userId, expiresIn: '5m', notBefore: '1m' })],
+      ['an HS512 token, which is not the pinned algorithm', () => jwt.sign({}, process.env.APP_JWT_SECRET as string, { subject: userId, expiresIn: '5m', algorithm: 'HS512' })],
+      ['a token with only two parts', () => 'e30.e30'],
+      ['an empty string', () => ''],
     ])('rejects %s', (_label, makeToken) => {
       expect(() => new JwtService().verifyToken(makeToken())).toThrow(InvalidAccessTokenException);
     });

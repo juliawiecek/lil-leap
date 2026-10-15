@@ -25,11 +25,15 @@ export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJ
 export const ORDER_TRACK_INTERVAL_MS = 2000;
 export const ORDER_TRACK_LIMIT_MS = 300000;
 
-/** Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status. */
+/**
+ * Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status;
+ * accountId narrows to one of the user's accounts (PS-05).
+ */
 export interface OrderHistoryFilters {
   from?: string;
   to?: string;
   status?: string;
+  accountId?: string;
 }
 
 /** Anything that can supply the current access token, such as AuthService. */
@@ -61,7 +65,7 @@ export class OrderHistoryClient {
     }
 
     const params = new URLSearchParams();
-    for (const key of ['from', 'to', 'status'] as const) {
+    for (const key of ['from', 'to', 'status', 'accountId'] as const) {
       const value = filters[key]?.trim();
       if (value) {
         params.set(key, value);

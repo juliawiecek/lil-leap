@@ -13,7 +13,7 @@ if [ "$ready" != true ]; then
     echo 'Kafka did not become ready within 120 seconds' >&2
     exit 1
 fi
-for topic in orders-events holdings-events insights-events; do
+for topic in order-events; do
     kafka-topics --create --bootstrap-server kafka:9092 --topic "$topic" \
         --partitions 1 --replication-factor 1 --if-not-exists
 done

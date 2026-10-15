@@ -18,7 +18,7 @@ From the repository root:
 psql -h localhost -p 5432 -U postgres -d postgres -f db\setup-local.sql
 ```
 
-This single script creates the local roles, creates the `nexttrade` database if needed, loads the schema, seeds instrument data, and applies the app permissions.
+This single script creates the local roles, creates the `nexttrade` database if needed, loads the schema, seeds instrument data, adds the [test logins](#test-logins), and applies the app permissions. It is safe to run again; an existing database keeps its data and gets any missing test logins.
 
 ### 3. Create Per-Service Local Config Where Needed
 
@@ -43,6 +43,8 @@ Two files need to be updated (they already exist, just need verification):
   "/rules/**": { "target": "http://localhost:8081", "secure": false },
   "/api/v1/orders": { "target": "http://localhost:8082", "secure": false },
   "/api/v1/accounts": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/cash": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/holdings": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/instruments": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/clients/**": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/quotes/latest/**": { "target": "http://localhost:8080", "secure": false },
@@ -58,6 +60,38 @@ Two files need to be updated (they already exist, just need verification):
   "/api/**": { "target": "http://localhost:8084", "secure": false }
 }
 ```
+
+### 5. Optional: Start Kafka Locally (No Docker)
+
+If you want the Orders service to publish terminal events and Insights to write the CSV/audit outputs without Docker, install Apache Kafka locally and start the broker from the Kafka distribution directory.
+Use your downloaded Kafka install directory (for example `C:\kafka\kafka_3.7.1`), not this repository's `kafka/` folder.
+
+**Prerequisites**
+- Java 17+ installed and `JAVA_HOME` set
+- Apache Kafka 3.7.x extracted somewhere on disk, for example `C:\kafka\kafka_3.7.1`
+
+**Terminal A — ZooKeeper**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\zookeeper-server-start.bat config\zookeeper.properties
+```
+
+**Terminal B — Kafka broker**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-server-start.bat config\server.properties
+```
+
+**Terminal C — create the topic**
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-topics.bat --create --bootstrap-server localhost:9092 --topic order-events --partitions 1 --replication-factor 1
+bin\windows\kafka-topics.bat --list --bootstrap-server localhost:9092
+```
+
+The Spring Boot local profiles for `nextTrade-orders` and `insights` now default Kafka bootstrap servers to `localhost:9092`, so they connect to the locally started broker automatically. If you prefer the Docker broker instead, use the optional Compose override in `kafka/README.md`.
+
+When using the native Kafka broker, keep 3 terminals open for ZooKeeper, the Kafka broker, and topic creation before you start the 7 application terminals below.
 
 ---
 
@@ -144,6 +178,18 @@ then restart auth. Without Mailpit, leave `MAIL_DELIVERY=outbox` and open the `.
 - **Orders Swagger:** http://localhost:8082/api/v1/swagger-ui.html
 - **Holdings Swagger:** http://localhost:8080/api/v1/swagger-ui.html
 - **Insights Swagger:** http://localhost:8084/api/v1/swagger-ui.html
+
+### Test Logins
+
+All three share one password, posted in the team's secure chat (development only).
+
+| Email | Opens |
+|-------|-------|
+| `novice@nexttrade.local` | Novice dashboard: $10,000 cash, 2 holdings, order history |
+| `advanced@nexttrade.local` | Advanced dashboard: $150,000 cash, 5 holdings, order history |
+| `analyst@nexttrade.local` | Reporting frontend |
+
+See [Test Logins](README.md#test-logins-development-only) in the root README for details.
 
 ---
 

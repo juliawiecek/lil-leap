@@ -268,13 +268,19 @@ nav button.active {
   font-size: 12px;
   font-weight: 500;
 }
-.identity select {
-  padding: 0;
-  background: transparent;
-  border: 0;
+.identity span {
+  display: block;
   font-size: 10px;
   color: var(--muted);
-  max-width: 150px;
+}
+.workspace-role {
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+.workspace-role small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 11px;
 }
 .menu {
   display: none;

@@ -298,3 +298,29 @@ select:focus-visible {
     font-size: 7px;
   }
 }
+.trade-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.trade-summary b {
+  color: #eef1f5;
+}
+.average-cost line {
+  stroke: #e8bc0b;
+  stroke-width: 1;
+}
+.average-cost text {
+  fill: #e8bc0b;
+  font-size: 9px;
+}
+.trade-mark path {
+  stroke: #0b1215;
+  stroke-width: 0.8;
+}
+.trade-mark.buy path {
+  fill: #27b779;
+}
+.trade-mark.sell path {
+  fill: #ef5660;
+}

@@ -11,6 +11,17 @@
       ({{ desk().selected().change > 0 ? '+' : ''
       }}{{ desk().selected().change | number: '1.2-2' }}%)</b
     >
+    @if (desk().tradeMarks().length) {
+      <p class="trade-summary">
+        Your trades: {{ desk().tradeMarks().length }}
+        @if (desk().averageCost(); as cost) {
+          · average cost <b>{{ cost | currency }}</b>
+        }
+        @if (desk().tradesOutsidePeriod()) {
+          · {{ desk().tradesOutsidePeriod() }} earlier, choose a longer period to see them
+        }
+      </p>
+    }
     <div class="indicators">
       <span><i class="blue"></i>EMA (50) <b class="blue-text">173.24</b></span
       ><span><i class="purple"></i>EMA (200) <b class="purple-text">169.11</b></span
@@ -78,13 +89,29 @@
             [attr.fill]="c.up ? '#27b779' : '#ef5660'"
           />
         }
+        @if (desk().averageCostY() !== null) {
+          <g class="average-cost">
+            <line x1="0" x2="824" [attr.y1]="desk().averageCostY()" [attr.y2]="desk().averageCostY()" stroke-dasharray="5 4" />
+            <text x="820" [attr.y]="desk().averageCostY()! - 4" text-anchor="end">
+              Avg cost {{ desk().averageCost() | currency }}
+            </text>
+          </g>
+        }
+        @for (mark of desk().plottedTrades(); track mark.at) {
+          <g class="trade-mark" [class.buy]="mark.side === 'BUY'" [class.sell]="mark.side === 'SELL'">
+            <title>{{ mark.label }}</title>
+            <path
+              [attr.d]="mark.side === 'BUY'
+                ? 'M' + mark.x + ' ' + (mark.y + 1) + 'l-6 10h12z'
+                : 'M' + mark.x + ' ' + (mark.y - 1) + 'l-6 -10h12z'"
+            />
+          </g>
+        }
       </svg>
       <div class="price-axis">
-        <span>{{ desk().selected().price * 1.02 | number: '1.2-2' }}</span
-        ><b>{{ desk().selected().price | number: '1.2-2' }}</b
-        ><span>{{ desk().selected().price * 0.985 | number: '1.2-2' }}</span
-        ><span>{{ desk().selected().price * 0.963 | number: '1.2-2' }}</span
-        ><span>{{ desk().selected().price * 0.94 | number: '1.2-2' }}</span>
+        @for (price of desk().priceAxis(); track $index) {
+          <span>{{ price | number: '1.2-2' }}</span>
+        }
       </div>
     </div>
     <div class="volume-pane">

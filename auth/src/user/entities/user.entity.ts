@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
-export type UserRole = 'TRADER' | 'ANALYST';
+export type UserRole = 'TRADER' | 'ANALYST' | 'OPERATIONS';
 
 /** Auth-only user record -- identity/financial detail lives in the onboarding entities. */
 @Entity({ name: 'users' })

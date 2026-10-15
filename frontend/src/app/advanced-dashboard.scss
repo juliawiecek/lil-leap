@@ -1353,3 +1353,6 @@ kbd {
     grid-template-columns: 58px minmax(0, 1fr);
   }
 }
+.session-line .closed i {
+  background: #f0c86a;
+}

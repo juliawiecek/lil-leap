@@ -65,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = header.substring(BEARER_PREFIX.length());
-        Optional<JwtPrincipal> principal = jwtService.validate(token);
+        Optional<JwtPrincipal> principal = validate(token);
 
         if (principal.isEmpty()) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -82,5 +82,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         List.of(new SimpleGrantedAuthority("ROLE_" + principal.get().role()))));
 
         filterChain.doFilter(request, response);
+    }
+
+    /** Fails closed (TS-SEC-01): a validator that throws is treated as a rejected token, never as a pass. */
+    private Optional<JwtPrincipal> validate(String token) {
+        try {
+            return jwtService.validate(token);
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
     }
 }

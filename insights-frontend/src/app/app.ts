@@ -74,7 +74,12 @@ export class App implements OnDestroy {
   ];
   readonly page = signal('Overview');
   readonly mobileNav = signal(false);
-  readonly role = signal('Analyst');
+  /** Pages shown to each role (TS-03.5): analysts get reporting, operations staff get trade investigation. */
+  readonly pagesByRole: Record<'Analyst' | 'Operations', readonly string[]> = {
+    Analyst: ['Overview', 'Trading Activity', 'Client Activity', 'Clients', 'Reports', 'Settings'],
+    Operations: ['Trade Investigation', 'Compliance', 'Settings'],
+  };
+  readonly visibleNav = computed(() => this.nav.filter((item) => this.canSee(item.label)));
   readonly notice = signal('');
   readonly query = signal('');
   readonly start = signal('2026-09-01');
@@ -222,7 +227,6 @@ export class App implements OnDestroy {
       { key: 'detailTab', value: this.detailTab, allowed: ['Overview','Orders','Documents','Lifecycle','Audit Trail'] },
       { key: 'reportType', value: this.reportType, allowed: this.reportTypes },
       { key: 'reportTab', value: this.reportTab, allowed: ['Standard Reports','Custom Reports','Scheduled Reports'] },
-      { key: 'view', value: this.role, allowed: ['Analyst','Operations'] },
       { key: 'definitions', value: this.definitions }, { key: 'compact', value: this.compact },
     ], parts => {
       const tabs = parts[0] === 'clients' ? ['Overview','Orders','Documents'] : parts[0] === 'orders' ? ['Overview','Lifecycle','Audit Trail'] : ['Overview'];
@@ -231,9 +235,25 @@ export class App implements OnDestroy {
       this.selectedTrade.set(parts[0] === 'orders' && parts[1] ? trades.find(t => t.id === parts[1]) ?? null : null);
       if (parts[1] && !this.selectedClient() && !this.selectedTrade()) { this.notice.set('That record is unavailable.'); }
     });
+    // A link or bookmark to another role's page opens this role's own workspace instead.
+    if (!this.canSee(this.page())) {
+      this.navigate(this.homePage());
+    }
   }
   ngOnDestroy(): void { this.destroyed = true; this.routing?.destroy(); }
-  navigate(page: string) {
+  /** The workspace the signed-in role opens: from the token, never chosen in the page. */
+  role(): 'Analyst' | 'Operations' {
+    return this.auth?.userRole === 'OPERATIONS' ? 'Operations' : 'Analyst';
+  }
+  canSee(page: string): boolean {
+    return this.pagesByRole[this.role()].includes(page);
+  }
+  /** Where the role lands: reporting for analysts, trade investigation for operations. */
+  homePage(): string {
+    return this.pagesByRole[this.role()][0];
+  }
+  navigate(requested: string) {
+    const page = this.canSee(requested) ? requested : this.homePage();
     this.page.set(page);
     this.mobileNav.set(false);
     this.query.set('');
@@ -277,13 +297,6 @@ export class App implements OnDestroy {
     this.selectedClient.set(null);
     this.selectedTrade.set(null);
     this.routing?.go(this.page());
-  }
-  useRole(role: string) {
-    this.role.set(role);
-    this.selectedTrade.set(null);
-    if (role === 'Analyst' && this.page() === 'Trade Investigation') {
-      this.navigate('Overview');
-    }
   }
   percent(value: number, total: number) {
     return total ? (value / total) * 100 : 0;

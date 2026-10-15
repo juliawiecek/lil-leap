@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission.dto;
 
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Digits;
@@ -20,9 +21,9 @@ import java.util.Locale;
  * @param side BUY or SELL, case-insensitive
  * @param quantity positive whole-unit quantity
  * @param orderType MARKET, case-insensitive, or null to use MARKET
- * @param bufferPercent optional nonnegative buffer percentage, at most three integer
- *        and two fractional digits; overrides the account default for buying-power
- *        checks without reserving funds at submission
+ * @param bufferPercent optional price protection between 0.1% and 10%, two decimals at most;
+ *        overrides the account default for execution and buying-power checks without
+ *        reserving funds at submission
  * @param instrumentId alternative to symbol for catalog-ID submissions
  */
 public record SubmitOrderRequest(
@@ -32,7 +33,7 @@ public record SubmitOrderRequest(
         @NotBlank @Pattern(regexp = "(?i)BUY|SELL") String side,
         @Positive long quantity,
         @Pattern(regexp = "(?i)MARKET") String orderType,
-        @DecimalMin(value = "0.0", inclusive = true) @Digits(integer = 3, fraction = 2) BigDecimal bufferPercent,
+        @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer = 2, fraction = 2) BigDecimal bufferPercent,
         UUID instrumentId
 ) {
     /**

@@ -1,7 +1,6 @@
 package com.neueda.leap.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -128,13 +127,18 @@ public class JwtServiceImpl implements JwtService {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+            // A token without an expiry would never expire, and one without a subject names nobody.
+            if (claims.getExpiration() == null || claims.getSubject() == null) {
+                return Optional.empty();
+            }
 
             UUID userId = UUID.fromString(claims.getSubject());
             String email = claims.get(EMAIL_CLAIM, String.class);
             String role = claims.get(ROLE_CLAIM, String.class);
 
             return Optional.of(new JwtPrincipal(userId, email, role == null || role.isBlank() ? "TRADER" : role));
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (RuntimeException e) {
+            // Fail closed (TS-SEC-01): any verification failure, expected or not, denies access.
             return Optional.empty();
         }
     }

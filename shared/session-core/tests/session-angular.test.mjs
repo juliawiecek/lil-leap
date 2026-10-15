@@ -28,7 +28,7 @@ test('public package entrypoints expose the shared contracts', () => {
   assert.equal(angularApi.PageState, PageState);
 });
 
-function coordinator(t, role = 'TRADER', restored = true) {
+function coordinator(t, role = 'TRADER', restored = true, allowed = 'TRADER') {
   let invalidate;
   const navigations = [];
   const router = {
@@ -61,7 +61,7 @@ function coordinator(t, role = 'TRADER', restored = true) {
       invalidate?.();
     },
   };
-  const session = new SessionCoordinator(auth, router, 'TRADER', returnUrl);
+  const session = new SessionCoordinator(auth, router, allowed, returnUrl);
   t.after(() => session.destroy());
   return { session, auth, router, navigations };
 }
@@ -100,6 +100,13 @@ test('authentication requires a current token, the app role, and finite future e
   auth.accessToken = 'valid';
   auth.userRole = 'ANALYST';
   assert.equal(session.authenticated, false);
+});
+
+test('an app can admit several roles, such as Insights for analysts and operations staff', async (t) => {
+  const staff = ['ANALYST', 'OPERATIONS'];
+  assert.equal(await coordinator(t, 'OPERATIONS', true, staff).session.initialize(), true);
+  assert.equal(await coordinator(t, 'ANALYST', true, staff).session.initialize(), true);
+  assert.equal(await coordinator(t, 'TRADER', true, staff).session.initialize(), false);
 });
 
 test('logout and idle expiry clear the coordinator and preserve a safe destination', async (t) => {

@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission.service;
 
+import com.neueda.leap.order.execution.quote.IndicativePriceService;
 import com.neueda.leap.order.rules.LocationPolicy;
 import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.instrument.dto.InstrumentResponse;
@@ -26,18 +27,21 @@ public class OrderSubmissionService {
     private final OrderSubmissionRepository repository;
     private final OrderSufficiencyService sufficiency;
     private final InstrumentService instruments;
+    private final IndicativePriceService prices;
     /**
      * Creates a {@code OrderSubmissionService} with the supplied dependencies.
      *
      * @param repository persistence operations used by this service
      * @param sufficiency cash and holdings validation service
      * @param instruments current metadata shared with the instrument catalog API
+     * @param prices latest stored quote, recorded as the order's reference price for price protection
      */
     public OrderSubmissionService(OrderSubmissionRepository repository, OrderSufficiencyService sufficiency,
-                                  InstrumentService instruments) {
+                                  InstrumentService instruments, IndicativePriceService prices) {
         this.repository = repository;
         this.sufficiency = sufficiency;
         this.instruments = instruments;
+        this.prices = prices;
     }
 
     /**
@@ -83,7 +87,10 @@ public class OrderSubmissionService {
         if (!LocationPolicy.permits(country, instrument.marketCode())) throw new OrderRuleException(LOCATION_RESTRICTED);
 
         sufficiency.validate(request, instrument.instrumentId());
-        var saved = repository.insert(request, instrument.instrumentId(), symbol);
+        // Price protection (PS-12) measures moves from the price orders itself saw; never one sent by the client.
+        BigDecimal referencePrice = prices.estimate(instrument.instrumentId(), request.normalizedSide(), request.quantity())
+                .map(IndicativePriceService.IndicativePrice::indicativePrice).orElse(null);
+        var saved = repository.insert(request, instrument.instrumentId(), symbol, referencePrice);
         return saved.map(order -> new OrderSubmissionResult(order, true))
                 .orElseGet(() -> repository.findByAccountAndClientReference(
                                 request.accountId(), request.clientReference())

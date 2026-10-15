@@ -77,3 +77,31 @@ export class MarketStatusClient {
     }
   }
 }
+
+/** "14:30" today, or "Mon 14:30" on another day, in the user's time zone. */
+export function localOpeningTime(instant: string, now: Date, locale?: string): string {
+  const when = new Date(instant);
+  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(when);
+  if (when.toDateString() === now.toDateString()) {
+    return time;
+  }
+  return `${new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(when)} ${time}`;
+}
+
+/** Header badge (PS-02): "Open · Closes 21:00" or "Closed · Opens 14:30", in the user's local time. */
+export function marketBadgeText(status: MarketStatus | null, now: Date, locale?: string): string {
+  if (!status) {
+    return 'Market status unavailable';
+  }
+  return status.open
+    ? `Open · Closes ${localOpeningTime(status.nextClose, now, locale)}`
+    : `Closed · Opens ${localOpeningTime(status.nextOpen, now, locale)}`;
+}
+
+/** Order-ticket warning while the market is closed (PS-02); empty while it is open or unknown. */
+export function closedMarketWarning(status: MarketStatus | null, now: Date, locale?: string): string {
+  if (!status || status.open) {
+    return '';
+  }
+  return `The market is closed. Your order will fill when it opens at ${localOpeningTime(status.nextOpen, now, locale)}.`;
+}

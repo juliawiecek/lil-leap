@@ -1,5 +1,7 @@
 package com.neueda.leap.order.submission;
 
+import com.neueda.leap.order.execution.quote.IndicativePriceService;
+import com.neueda.leap.order.execution.quote.QuoteFreshnessPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.instrument.repository.JdbcInstrumentRepository;
@@ -49,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtServiceImpl.class, InstrumentService.class,
         JdbcInstrumentRepository.class, OrderSubmissionService.class, JdbcOrderSubmissionRepository.class,
         OrderSufficiencyService.class, JdbcOrderSufficiencyRepository.class, JdbcQuoteRepository.class,
-        InstrumentTradabilitySubmissionTest.Database.class})
+        IndicativePriceService.class, InstrumentTradabilitySubmissionTest.Database.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InstrumentTradabilitySubmissionTest {
     @Autowired MockMvc mvc;
@@ -212,6 +214,10 @@ class InstrumentTradabilitySubmissionTest {
         }
 
         @Bean JdbcTemplate jdbcTemplate(DataSource source) { return new JdbcTemplate(source); }
+        @Bean java.time.Clock executionClock() { return java.time.Clock.systemUTC(); }
+        @Bean QuoteFreshnessPolicy quoteFreshnessPolicy() {
+            return new QuoteFreshnessPolicy(java.time.Duration.ofSeconds(60), java.time.Duration.ofSeconds(2));
+        }
         @Bean DataSourceTransactionManager transactionManager(DataSource source) {
             return new DataSourceTransactionManager(source);
         }

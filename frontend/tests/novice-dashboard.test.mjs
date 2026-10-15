@@ -1,17 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { of } from 'rxjs';
 import { component } from './component-helper.mjs';
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
-const { QuoteService } = await import('../src/app/quote.service.ts');
+import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { ORDER_TRACK_LIMIT_MS } = await import('../src/app/order-history-api.ts');
 
 // A fixed live quote per stock, so prices are known once the dashboard's first quote refresh runs.
 const PRICES = { AAPL: 176.56, MSFT: 276.57, NVDA: 278.09, AMZN: 180.34, GOOGL: 155.91 };
-const fixedQuotes = [{
-  provide: QuoteService,
-  useValue: { getLatestByMarketSymbol: (_market, symbol) => of({ midpoint: PRICES[symbol] }) },
-}];
+const NAMES = { AAPL: 'Apple Inc.', MSFT: 'Microsoft Corporation', NVDA: 'NVIDIA Corporation', AMZN: 'Amazon.com, Inc.', GOOGL: 'Alphabet Inc.' };
+// The shared live-price feed, listing the seeded stocks at fixed prices.
+const listed = () => Object.entries(PRICES).map(([symbol, price]) => ({ symbol, name: NAMES[symbol], price, instrumentId: `${symbol.toLowerCase()}-id` }));
+const feedWith = () => fakeFeed(listed());
 
 const instrument = (symbol) => ({
   instrumentId: `${symbol.toLowerCase()}-id`, symbol, instrumentName: symbol, assetClass: 'COMMON_STOCK',
@@ -30,7 +29,8 @@ const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), 
 // and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
 async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'] } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
-  const desk = component(t, NoviceDashboard, fixedQuotes);
+  const feed = feedWith();
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
   let loads = 0;
   desk.portfolioClient = { load: async () => portfolios[Math.min(loads++, portfolios.length - 1)] };
   const submitted = [];
@@ -45,7 +45,7 @@ async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], 
   // ngOnInit reads the signed-in user's tier to pick the default execution threshold.
   desk.auth = { traderLevel: 'NOVICE', riskProfile: null };
   await desk.ngOnInit(); await flush();
-  return { desk, submitted, historyCalls: () => historyCalls };
+  return { desk, feed, submitted, historyCalls: () => historyCalls };
 }
 
 test('balances and holdings come from the backend, valued at average cost', async t => {
@@ -104,7 +104,8 @@ test('a filled sell reloads balances so cash goes up and the shares go down', as
 });
 
 test('quote search matches symbols and company names regardless of case or surrounding spaces', t => {
-  const desk = component(t, NoviceDashboard, fixedQuotes);
+  const feed = feedWith();
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
   for (const query of [' msft ', 'MICROSOFT']) {
     desk.query.set(query);
     assert.deepEqual(desk.results().map(q => q.symbol), ['MSFT']);
@@ -116,7 +117,8 @@ test('quote search matches symbols and company names regardless of case or surro
 });
 
 test('watchlist toggling removes and restores the selected quote without duplicates', t => {
-  const desk = component(t, NoviceDashboard, fixedQuotes);
+  const feed = feedWith();
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
   desk.openTrade('Buy', 'AAPL');
   desk.toggleWatch();
   assert.ok(!desk.watchlist().some(q => q.symbol === 'AAPL'));
@@ -125,7 +127,8 @@ test('watchlist toggling removes and restores the selected quote without duplica
 });
 
 test('opening a different trade clears stale review, quantity, search, and errors', t => {
-  const desk = component(t, NoviceDashboard, fixedQuotes);
+  const feed = feedWith();
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
   desk.quantity.set('2'); desk.reviewing.set(true);
   desk.tradeMessage.set('old error'); desk.query.set('apple');
   desk.openTrade('Sell', 'MSFT');
@@ -166,8 +169,8 @@ test('confirming a buy sends a market order and leaves balances to the backend',
   desk.openTrade('Buy', 'AAPL'); desk.quantity.set('2'); await desk.confirmTrade();
   assert.equal(submitted.length, 1);
   const { clientReference, ...order } = submitted[0];
-  // A novice's default $6 execution threshold on a $176.56 quote is a 3.4% price buffer.
-  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET', bufferPercent: 3.4 });
+  // With nothing saved, price protection is the 2% default.
+  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET', bufferPercent: 2 });
   assert.ok(clientReference);
   assert.deepEqual({ cash: desk.buyingPower(), invested: desk.invested(), holdings: desk.holdings() }, before);
   assert.equal(desk.quantity(), '');
@@ -201,14 +204,40 @@ test('a sent order shows its progress until it fills, then tracking stops', asyn
   assert.match(desk.tradeMessage(), /Order accepted/);
   t.mock.timers.tick(2000); await flush();
   assert.equal(desk.tradeMessage(), 'Bought 2 AAPL at $225.10. You can see it under Orders.');
+  assert.deepEqual(desk.toasts.toasts().map(toast => [toast.kind, toast.title]), [['filled', 'Order filled: 2 AAPL at $225.10']]);
   t.mock.timers.tick(10000); await flush();
   assert.equal(historyCalls(), 3);
 });
 
-test('a rejected order is reported in plain words', async t => {
+test('a rejected order is reported in plain words, with the reason in a toast', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('REJECTED')]] });
+  desk.orderStatusClient = { status: async () => ({ status: 'REJECTED', reasonCode: 'INSUFFICIENT_CASH' }) };
   await desk.trackOrder('o1');
-  assert.match(desk.tradeMessage(), /was not filled/);
+  assert.equal(desk.tradeMessage(), 'Your order was not filled. There was not enough cash in this account to pay for it.');
+  const [toast] = desk.toasts.toasts();
+  assert.deepEqual([toast.kind, toast.title, toast.detail],
+    ['rejected', 'Order rejected: 2 AAPL', 'There was not enough cash in this account to pay for it.']);
+  desk.orderStatusClient = { status: async () => { throw new Error('down'); } };
+  await desk.trackOrder('o1');
+  assert.match(desk.tradeMessage(), /Check Orders for details/);
+});
+
+test('the ticket follows live prices, flags a stale quote, and reviews in one line with a closed-market warning', async t => {
+  const { desk, feed } = await tradingDesk(t);
+  desk.openTrade('Buy', 'AAPL'); desk.quantity.set('10');
+  feed.push([{ symbol: 'AAPL', name: 'Apple Inc.', price: 227.4, instrumentId: 'aapl-id' }]);
+  assert.equal(desk.tradeQuote().price, 227.4);
+  assert.equal(desk.tradePriceDelayed(), false);
+  feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-15T20:00:00Z' });
+  desk.marketClock.set(new Date('2026-10-15T09:00:00Z'));
+  desk.orderTolerance.set(2);
+  assert.match(desk.closedWarning(), /^The market is closed\. Your order will fill when it opens at /);
+  assert.match(desk.reviewSummary(), /^Buy 10 AAPL · about \$2,274\.00 · fills at up to \$2,319\.48 · market closed, fills at the open/);
+  assert.equal(desk.protectionNote(), 'Fills at up to $231.95 (2% above $227.40)');
+  feed.push([{ symbol: 'AAPL', name: 'Apple Inc.', price: 227.4, quotedAt: new Date(Date.now() - 61000).toISOString() }]);
+  assert.equal(desk.tradePriceDelayed(), true);
+  desk.viewOrders();
+  assert.equal(desk.activeTab(), 'History');
 });
 
 test('an order still running past the tracking limit points the user to Orders', async t => {
@@ -246,17 +275,13 @@ test('a failed send shows the reason and a retry reuses the same order reference
   assert.equal(submitted[0].clientReference, submitted[1].clientReference);
 });
 
-test('the header counts down to the market close and keeps the last status if a refresh fails', async t => {
-  const { desk } = await tradingDesk(t);
-  desk.marketStatusClient = { status: async () => ({ open: true, exchangeTimeZone: 'America/New_York',
-    nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' }) };
-  await desk.refreshMarketStatus();
+test('the header counts down to the market close from the shared market status', async t => {
+  const { desk, feed } = await tradingDesk(t);
+  feed.status.set({ open: true, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
   desk.marketClock.set(new Date('2026-10-14T17:46:00Z'));
   assert.equal(desk.marketOpen(), true);
   assert.equal(desk.marketText(), 'Market closes in 2h 14m');
-
-  desk.marketStatusClient = { status: async () => { throw new Error('down'); } };
-  await desk.refreshMarketStatus();
+  assert.equal(desk.closedWarning(), '');
   desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
   assert.equal(desk.marketText(), 'Market closes in 1h 0m');
 });

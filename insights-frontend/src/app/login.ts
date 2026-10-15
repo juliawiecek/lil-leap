@@ -35,9 +35,9 @@ export class Login {
     this.pending.set(true); this.message.set('');
     try {
       await this.auth.login(email, password);
-      if (this.auth.userRole !== 'ANALYST') {
+      if (this.auth.userRole !== 'ANALYST' && this.auth.userRole !== 'OPERATIONS') {
         void this.auth.logout();
-        throw new AuthApiError('Please use an analyst account to sign in to Insights.');
+        throw new AuthApiError('Please use an analyst or operations account to sign in to Insights.');
       }
       this.session.start();
       await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '') ?? '/dashboard');

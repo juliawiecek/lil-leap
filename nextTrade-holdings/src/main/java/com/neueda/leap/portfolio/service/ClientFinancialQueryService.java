@@ -6,6 +6,7 @@ import com.neueda.leap.portfolio.dto.HoldingResponse;
 import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
 import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,12 +54,29 @@ public class ClientFinancialQueryService {
             ORDER BY i.symbol, h.account_id
             """;
 
+    private static final String ACCOUNT_HOLDINGS_SQL = """
+            SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                   h.quantity, h.avg_cost, h.updated_at
+            FROM holdings h
+            JOIN accounts a ON a.account_id = h.account_id
+            JOIN instruments i ON i.instrument_id = h.instrument_id
+            WHERE a.user_id = ? AND a.account_id = ?
+            ORDER BY i.symbol
+            """;
+
     private static final String CASH_SQL = """
             SELECT cb.account_id, cb.currency, cb.balance, cb.updated_at
             FROM cash_balances cb
             JOIN accounts a ON a.account_id = cb.account_id
             WHERE a.user_id = ?
             ORDER BY cb.account_id
+            """;
+
+    private static final String ACCOUNT_CASH_SQL = """
+            SELECT cb.account_id, cb.currency, cb.balance, cb.updated_at
+            FROM cash_balances cb
+            JOIN accounts a ON a.account_id = cb.account_id
+            WHERE a.user_id = ? AND a.account_id = ?
             """;
 
     private static final String CASH_DETAIL_SQL = """
@@ -102,16 +120,30 @@ public class ClientFinancialQueryService {
      * @throws IllegalArgumentException if the authenticated identity is null
      */
     public List<HoldingResponse> getHoldings(UUID authenticatedUserId) {
+        return getHoldings(authenticatedUserId, null);
+    }
+
+    /**
+     * Reads holdings in one of the user's accounts, or across all of them when no account is given.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @param accountId account to read, or null for every owned account
+     * @return owned holdings, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List<HoldingResponse> getHoldings(UUID authenticatedUserId, UUID accountId) {
         requireAuthenticatedUser(authenticatedUserId);
-        return jdbcTemplate.query(HOLDINGS_SQL, (rs, rowNum) -> new HoldingResponse(
+        RowMapper<HoldingResponse> mapper = (rs, rowNum) -> new HoldingResponse(
                 rs.getObject(COL_ACCOUNT_ID, UUID.class),
                 rs.getObject(COL_INSTRUMENT_ID, UUID.class),
                 rs.getString(COL_SYMBOL),
                 rs.getString(COL_INSTRUMENT_NAME),
                 rs.getLong(COL_QUANTITY),
                 rs.getBigDecimal(COL_AVG_COST),
-                rs.getTimestamp(COL_UPDATED_AT).toInstant()
-        ), authenticatedUserId);
+                rs.getTimestamp(COL_UPDATED_AT).toInstant());
+        return accountId == null
+                ? jdbcTemplate.query(HOLDINGS_SQL, mapper, authenticatedUserId)
+                : jdbcTemplate.query(ACCOUNT_HOLDINGS_SQL, mapper, authenticatedUserId, accountId);
     }
 
     /**
@@ -121,13 +153,27 @@ public class ClientFinancialQueryService {
      * @throws IllegalArgumentException if the authenticated identity is null
      */
     public List<CashBalanceResponse> getCashBalances(UUID authenticatedUserId) {
+        return getCashBalances(authenticatedUserId, null);
+    }
+
+    /**
+     * Reads the cash balance of one of the user's accounts, or of all of them when no account is given.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @param accountId account to read, or null for every owned account
+     * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List<CashBalanceResponse> getCashBalances(UUID authenticatedUserId, UUID accountId) {
         requireAuthenticatedUser(authenticatedUserId);
-        return jdbcTemplate.query(CASH_SQL, (rs, rowNum) -> new CashBalanceResponse(
+        RowMapper<CashBalanceResponse> mapper = (rs, rowNum) -> new CashBalanceResponse(
                 rs.getObject(COL_ACCOUNT_ID, UUID.class),
                 rs.getString(COL_CURRENCY),
                 rs.getBigDecimal("balance"),
-                rs.getTimestamp(COL_UPDATED_AT).toInstant()
-        ), authenticatedUserId);
+                rs.getTimestamp(COL_UPDATED_AT).toInstant());
+        return accountId == null
+                ? jdbcTemplate.query(CASH_SQL, mapper, authenticatedUserId)
+                : jdbcTemplate.query(ACCOUNT_CASH_SQL, mapper, authenticatedUserId, accountId);
     }
 
     /**

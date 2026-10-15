@@ -38,8 +38,9 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
 
-    -- User role for access control (TRADER: client self-service; ANALYST: internal staff)
-    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST')),
+    -- User role for access control (TRADER: client self-service; ANALYST: internal reporting staff;
+    -- OPERATIONS: trading operations staff who investigate trades, seeded rather than self-registered)
+    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST', 'OPERATIONS')),
 
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
@@ -396,6 +397,10 @@ CREATE TABLE orders (
     -- Per-order price tolerance override (NULL = use account default)
     buffer_percent NUMERIC(5,2) CHECK (buffer_percent IS NULL OR buffer_percent >= 0),
 
+    -- Price protection (PS-12): the quote orders saw at submission (ask for BUY, bid for SELL)
+    reference_price NUMERIC(18,4) CONSTRAINT chk_orders_reference_price
+        CHECK (reference_price IS NULL OR reference_price > 0),
+
     CONSTRAINT fk_orders_account
         FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
     CONSTRAINT fk_orders_instrument
@@ -597,7 +602,7 @@ CREATE TABLE cash_transactions (
     transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL,
     fill_id UUID,  -- NULL for deposits/withdrawals/dividends/fees
-    transaction_type VARCHAR(20) NOT NULL,  -- 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION'
+    transaction_type VARCHAR(20) NOT NULL,  -- 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION', 'TRANSFER'
     amount NUMERIC(18,2) NOT NULL,  -- signed: negative for outflow, positive for inflow
     currency CHAR(3) NOT NULL DEFAULT 'USD',
     settlement_status VARCHAR(20) NOT NULL DEFAULT 'SETTLED',  -- 'PENDING', 'SETTLED'
@@ -609,7 +614,7 @@ CREATE TABLE cash_transactions (
     CONSTRAINT fk_transaction_fill
         FOREIGN KEY (fill_id) REFERENCES fills(fill_id) ON DELETE SET NULL,
     CONSTRAINT chk_transaction_type CHECK (
-        transaction_type IN ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION')
+        transaction_type IN ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION', 'TRANSFER')
     ),
     CONSTRAINT chk_transaction_currency CHECK (currency = 'USD'),
     CONSTRAINT chk_settlement_status CHECK (settlement_status IN ('PENDING', 'SETTLED')),
@@ -788,4 +793,4 @@ CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
 -- 10. Test v_account_cash, v_account_holdings, v_latest_quotes views
 -- 11. Test v_trader_tier_eligibility for tier enforcement
 -- 12. Create user with user_role='ANALYST' → analyst_profiles (not customer/financial_profiles)
--- 13. Confirm user_role CHECK rejects any value other than 'TRADER' or 'ANALYST'
+-- 13. Confirm user_role CHECK rejects any value other than 'TRADER', 'ANALYST' or 'OPERATIONS'

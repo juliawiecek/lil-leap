@@ -1,0 +1,225 @@
+// Equal-width copies let the ticker loop without a gap or visible reset.
+.login-screen .tape-track { width: max-content; gap: 0; animation-duration: 65s; }
+.login-screen .tape-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  min-width: calc(100vw - 60px);
+  gap: 20px;
+  padding-right: 20px;
+}
+
+// Opening chart reference: broad dashed grid, green light, and visible volume.
+.login-screen {
+  .market-grid {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='72' viewBox='0 0 120 72'%3E%3Cpath d='M120 0H0V72' fill='none' stroke='%239aafa0' stroke-opacity='.19' stroke-dasharray='3 3'/%3E%3C/svg%3E");
+    background-size: 120px 72px;
+    opacity: .65;
+  }
+  .ambient-light {
+    inset: 0;
+    background: radial-gradient(ellipse at 75% 28%, rgba(113, 192, 76, .11), transparent 36%),
+      radial-gradient(ellipse at 46% 64%, rgba(49, 108, 70, .06), transparent 52%);
+    opacity: 1;
+    animation: none;
+  }
+  .edge-shade { background: radial-gradient(ellipse at 50% 48%, transparent 38%, rgba(0, 0, 0, .55) 100%); }
+  .volume-field { left: 3.5%; right: 17%; bottom: 5%; height: 17%; opacity: .4; mask-image: linear-gradient(to top, #000 10%, #000b 70%, transparent); }
+  .volume-bar { max-width: 10px; background: linear-gradient(to top, #1e3d2c, #477a50); }
+  .volume-bar.accent { background: linear-gradient(to top, #294a31, #70ad65); }
+  .tape-track { color: #adb5a8; }
+  .tape-track .up { color: #88b66a; }
+}
+
+// Login styling stays separate from the opening chart.
+.login-screen.auth-visible {
+  --login-green: #80b95c;
+  position: fixed;
+  inset: 0;
+  border: 10px solid transparent;
+  border-top-width: 5px;
+  background: transparent;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border: 10px solid #181918;
+    border-top-width: 5px;
+    background: linear-gradient(90deg, #050907 0%, #050907 60%, #0b0e0c 60%, #090c0a 100%);
+    animation: login-logo-arrive 1200ms ease both;
+  }
+
+  .market-grid, .ambient-light, .market-scan, .edge-shade { opacity: 0; transition: opacity 1200ms ease; pointer-events: none; }
+  .chart-stage { opacity: 0; transform: none; filter: none; transition: opacity 1200ms ease; }
+  .market-tape {
+    inset: 5px 10px auto;
+    height: 34px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    opacity: 1;
+    background: #090b09;
+    border-bottom: 1px solid #141714;
+    box-shadow: none;
+    mask-image: none;
+  }
+  .tape-track {
+    width: max-content;
+    gap: 0;
+    animation: tape-scroll 65s linear infinite;
+    color: #747a70;
+    font-size: clamp(10px, 1vw, 12px);
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+  .signin-stock-background {
+    inset: 39px auto 10px 10px;
+    width: calc((100% - 20px) * .60);
+    opacity: 1;
+    mask-image: none;
+    border-right: 1px solid #1b2018;
+  }
+  .signin-stock-background svg { animation: login-logo-arrive 1200ms ease backwards; }
+  // Soften only the chart behind the copy; keep the right-hand candles crisp.
+  .signin-stock-background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 9, 7, .62);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    -webkit-mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
+    mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    pointer-events: none;
+  }
+  .login-candles { fill: #7fa459; stroke: #7fa459; stroke-width: .4; }
+  .login-candles .falling { fill: #4b5b42; stroke: #647653; }
+  .login-candles rect { stroke: none; }
+  .volume-field {
+    left: 18px;
+    right: 40%;
+    bottom: 10px;
+    height: 40px;
+    gap: 5px;
+    opacity: .05;
+    transition: opacity 1200ms ease, left 1200ms ease, right 1200ms ease, bottom 1200ms ease, height 1200ms ease;
+  }
+  .volume-bar { animation: none; }
+  .brand-lockup {
+    top: 11%;
+    left: 3.2%;
+    transform: none;
+    opacity: 1;
+    animation: login-logo-arrive 650ms ease both;
+    gap: 9px;
+  }
+  .brand-mark path { opacity: 1; transform: none; animation: none; }
+  .brand-name span { transform: none; animation: none; }
+  .auth-shell {
+    inset: 39px 10px 10px;
+    padding: 28px 4% 22px;
+    gap: 20px;
+    transition: opacity 650ms ease, transform 650ms ease, visibility 0s;
+  }
+  .auth-header { min-height: 18px; }
+  .secure-status { font-size: 9px; letter-spacing: .12em; gap: 7px; color: #93958f; }
+  .secure-status::before { width: 5px; height: 5px; box-shadow: none; }
+  .auth-content {
+    width: 100%;
+    grid-template-columns: 59% 41%;
+    gap: 0;
+    margin: auto 0;
+  }
+  .auth-copy { padding-right: 15%; }
+  .auth-eyebrow { font-size: clamp(7px, .85vw, 11px); margin-bottom: 26px; letter-spacing: .13em; }
+  .auth-eyebrow::before { display: none; }
+  .auth-copy h1 {
+    font-family: var(--font-ui);
+    font-size: clamp(42px, 5.2vw, 72px);
+    font-weight: 500;
+    letter-spacing: -.045em;
+    line-height: 1.12;
+  }
+  .auth-copy h1 em { display: block; color: var(--login-green); }
+  .auth-copy h1 .headline-trade, .auth-copy h1 .headline-period { margin: 0; }
+  .auth-copy > p { max-width: min(100%, 34vw); margin-top: 24px; font-size: clamp(14px, 1.4vw, 18px); line-height: 1.7; color: #a4a6a0; }
+  .auth-panel {
+    left: 1.8vw;
+    width: 88%;
+    max-width: 520px;
+    justify-self: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .auth-panel::before { display: none; }
+  .auth-panel h2 { font-family: var(--font-ui); font-size: clamp(32px, 3vw, 44px); font-weight: 500; letter-spacing: -.04em; margin-bottom: 9px; }
+  .auth-panel .auth-subtitle { font-size: 16px; color: #93958f; margin-bottom: 30px; }
+  .auth-divider { display: flex; align-items: center; gap: 16px; margin: 22px 0 18px; color: #8c938b; font-size: 11px; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #ffffff12; }
+  .secondary-action { width: 100%; min-height: 54px; border: 1px solid #667060; border-radius: 6px; background: transparent; color: #e1e5dc; font: 500 16px var(--font-ui); cursor: pointer; transition: background 180ms, border-color 180ms; }
+  .secondary-action:hover { background: #80b95c0d; border-color: #9ab587; }
+  .auth-fields { grid-auto-rows: auto; gap: 24px; }
+  .field-row { min-height: 16px; margin-bottom: 7px; gap: 8px; }
+  .field-group label { font-size: 16px; font-weight: 400; }
+  .field-row a { font-size: 13px; color: #8cad78; }
+  .auth-fields .field-group input { height: 56px; padding-left: 15px; border-radius: 6px; font-size: 17px; background: #090a09; }
+  .field-group input::placeholder { color: #858982; }
+  .password-toggle { font-size: 12px; color: #a3a69e; font-weight: 400; }
+  .primary-action { min-height: 56px; margin-top: 22px; border-radius: 6px; border-color: #80b95c; background: var(--login-green); font-size: 16px; font-weight: 500; }
+  .primary-action:hover { background: #90c66d; }
+  .primary-action:disabled { opacity: .65; cursor: wait; }
+  .form-status:empty { min-height: 0; margin: 0; }
+  .auth-footer { color: #8b9088; font-size: clamp(8px, .95vw, 11px); gap: 12px; }
+  .auth-footer > span { transform: translateX(-16px); }
+  .auth-footer nav { gap: 18px; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--login-green); outline-offset: 3px; }
+  .signup-layout .auth-panel { padding-block: 12px; }
+  .signup-layout .auth-fields { gap: 12px; }
+
+  @media (max-width: 900px) {
+    border-width: 5px;
+    &::before { border-width: 5px; background: #090a09; }
+    .market-tape { inset-inline: 5px; }
+    .signin-stock-background { inset: 39px 5px auto; width: auto; height: 340px; opacity: .55; border: 0; }
+    .volume-field { display: none; }
+    .brand-lockup { top: 53px; left: 17px; }
+    .brand-name { font-size: 28px; }
+    .auth-shell { inset: 39px 5px 5px; padding: 22px 20px; gap: 28px; }
+    .auth-header { min-height: 24px; }
+    .secure-status { max-width: none; font-size: 8px; }
+    .auth-content { grid-template-columns: 1fr; gap: 38px; margin: 24px auto 0; max-width: 520px; }
+    .auth-copy { padding: 0; }
+    .auth-eyebrow { margin-bottom: 16px; font-size: 8px; }
+    .auth-copy h1 { font-size: 42px; }
+    .auth-copy > p { max-width: 350px; font-size: 14px; margin-top: 18px; }
+    .auth-panel { width: 100%; left: 0; }
+    .auth-panel h2 { font-size: 32px; }
+    .auth-panel .auth-subtitle { font-size: 15px; }
+    .field-group label, .primary-action { font-size: 16px; }
+    .auth-fields .field-group input { font-size: 16px; height: 52px; }
+    .primary-action { min-height: 52px; }
+    .field-row a { font-size: 12px; }
+    .auth-footer { flex-direction: column; align-items: center; padding-top: 4px; font-size: 9px; }
+    .auth-footer > span { transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tape-track { animation: none; }
+    .brand-lockup { animation: none; }
+    .chart-stage { transition: none; }
+    &::before, .signin-stock-background svg { animation: none; }
+    .auth-shell { transition: none; }
+    .market-grid, .ambient-light, .market-scan, .edge-shade, .volume-field { transition: none; }
+  }
+}
+@keyframes login-logo-arrive { from { opacity: 0; } to { opacity: 1; } }
