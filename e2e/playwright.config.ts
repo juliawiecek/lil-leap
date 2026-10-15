@@ -27,5 +27,7 @@ export default defineConfig({
     { name: 'journey', testIgnore: ['**/session-default.spec.ts', '**/auth.spec.ts'] },
     { name: 'default-timeout', testMatch: '**/session-default.spec.ts' },
     { name: 'golden', testMatch: '**/golden-path.spec.ts' },
+    // The Jenkins gate: tests already proven in CI, minus the ones that sit out a real token expiry.
+    { name: 'ci', testMatch: ['**/auth.spec.ts', '**/session.spec.ts'], grepInvert: /server expiry|server-expired/ },
   ],
 });
