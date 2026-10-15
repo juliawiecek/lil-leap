@@ -581,8 +581,8 @@ These sites document production Java APIs, including package overviews, paramete
 return values, exceptions, ownership checks and execution/retry contracts. The
 TypeScript and Python applications are outside Javadoc's scope.
 
-See the [documentation landing page](docs/javadoc/index.html) for snapshot provenance
-and any source issues that must be resolved before regeneration.
+The [documentation landing page](docs/javadoc/index.html) summarises what each site covers
+and how to browse the docs over HTTP.
 
 To regenerate all three snapshots from the repository root, use **JDK 21**, Maven
 and Python 3:

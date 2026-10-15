@@ -42,12 +42,18 @@ public interface OrderExecutor {
         /** Prefix that marks a reason as transient (requeued) rather than terminal (rejected). */
         public static final String RETRY_PREFIX = "RETRY_";
 
-        /** @return a fill with its settlement */
+        /**
+         * Creates a fill result.
+         *
+         * @return a fill with its settlement
+         */
         public static Result filled() {
             return new Result(Outcome.FILLED, null);
         }
 
         /**
+         * Creates a terminal rejection result.
+         *
          * @param reason terminal reason code, e.g. {@code STALE_QUOTE}
          * @return a terminal rejection
          */
@@ -56,6 +62,8 @@ public interface OrderExecutor {
         }
 
         /**
+         * Creates a result that puts the order back in the queue.
+         *
          * @param cause transient cause, e.g. {@code STALE_QUOTE}
          * @return a requeue whose reason is the cause with the {@code RETRY_} prefix
          */

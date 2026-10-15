@@ -99,13 +99,13 @@ loadScripts(document, 'script');</script>
 <dd><code><span id="param-side">side</span></code> - BUY or SELL, case-insensitive</dd>
 <dd><code><span id="param-quantity">quantity</span></code> - positive whole-unit quantity</dd>
 <dd><code><span id="param-orderType">orderType</span></code> - MARKET, case-insensitive, or null to use MARKET</dd>
-<dd><code><span id="param-bufferPercent">bufferPercent</span></code> - optional nonnegative buffer percentage, at most three integer
-        and two fractional digits; overrides the account default for buying-power
-        checks without reserving funds at submission</dd>
+<dd><code><span id="param-bufferPercent">bufferPercent</span></code> - optional price protection between 0.1% and 10%, two decimals at most;
+        overrides the account default for execution and buying-power checks without
+        reserving funds at submission</dd>
 <dd><code><span id="param-instrumentId">instrumentId</span></code> - alternative to symbol for catalog-ID submissions</dd>
 </dl>
 <hr>
-<div class="type-signature"><span class="modifiers">public record </span><span class="element-name type-name-label">SubmitOrderRequest</span>(@NotNull <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId, @Pattern(regexp="^[A-Za-z0-9.-]{1,20}$") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol, @NotNull <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientReference, @NotBlank @Pattern(regexp="(?i)BUY|SELL") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side, @jakarta.validation.constraints.Positive long&nbsp;quantity, @Pattern(regexp="(?i)MARKET") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType, @DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)
+<div class="type-signature"><span class="modifiers">public record </span><span class="element-name type-name-label">SubmitOrderRequest</span>(@NotNull <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId, @Pattern(regexp="^[A-Za-z0-9.-]{1,20}$") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol, @NotNull <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;clientReference, @NotBlank @Pattern(regexp="(?i)BUY|SELL") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side, @jakarta.validation.constraints.Positive long&nbsp;quantity, @Pattern(regexp="(?i)MARKET") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType, @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Record.html" title="class or interface in java.lang" class="external-link">Record</a></span></div>
 <div class="block">Input for a market-order submission; Bean Validation runs at the API boundary.</div>
 </section>
@@ -125,7 +125,7 @@ loadScripts(document, 'script');</script>
  @NotBlank @Pattern(regexp="(?i)BUY|SELL") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;side,
  @jakarta.validation.constraints.Positive long&nbsp;quantity,
  @Pattern(regexp="(?i)MARKET") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType,
- @DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent,
+ @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates an instance of a <code>SubmitOrderRequest</code> record class.</div>
@@ -159,7 +159,7 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the value of the <a href="#param-accountId"><code>accountId</code></a> record component.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>@DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a></code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>@DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#bufferPercent()" class="member-name-link">bufferPercent</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the value of the <a href="#param-bufferPercent"><code>bufferPercent</code></a> record component.</div>
@@ -284,8 +284,8 @@ loadScripts(document, 'script');</script>
  @jakarta.validation.constraints.Positive long&nbsp;quantity,
  @Pattern(regexp="(?i)MARKET")
  @Pattern(regexp="(?i)MARKET") <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;orderType,
- @DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2)
- @DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent,
+ @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2)
+ @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;bufferPercent,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId)</span></div>
 <div class="block">Creates an instance of a <code>SubmitOrderRequest</code> record class.</div>
 <dl class="notes">
@@ -472,11 +472,11 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="bufferPercent()">
 <h3>bufferPercent</h3>
-<div class="member-signature"><span class="annotations">@DecimalMin(value="0.0",
-            inclusive=true)
-@Digits(integer=3,
+<div class="member-signature"><span class="annotations">@DecimalMin("0.1")
+@DecimalMax("10.0")
+@Digits(integer=2,
         fraction=2)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">@DecimalMin(value="0.0",inclusive=true) @Digits(integer=3,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a></span>&nbsp;<span class="element-name">bufferPercent</span>()</div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">@DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer=2,fraction=2) <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a></span>&nbsp;<span class="element-name">bufferPercent</span>()</div>
 <div class="block">Returns the value of the <a href="#param-bufferPercent"><code>bufferPercent</code></a> record component.</div>
 <dl class="notes">
 <dt>Returns:</dt>

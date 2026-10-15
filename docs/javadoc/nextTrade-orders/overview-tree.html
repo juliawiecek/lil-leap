@@ -61,9 +61,14 @@ loadScripts(document, 'script');</script>
 <li><a href="com/neueda/leap/marketdata/package-tree.html">com.neueda.leap.marketdata</a>, </li>
 <li><a href="com/neueda/leap/order/package-tree.html">com.neueda.leap.order</a>, </li>
 <li><a href="com/neueda/leap/order/execution/package-tree.html">com.neueda.leap.order.execution</a>, </li>
+<li><a href="com/neueda/leap/order/execution/cash/package-tree.html">com.neueda.leap.order.execution.cash</a>, </li>
+<li><a href="com/neueda/leap/order/execution/event/package-tree.html">com.neueda.leap.order.execution.event</a>, </li>
 <li><a href="com/neueda/leap/order/execution/quote/package-tree.html">com.neueda.leap.order.execution.quote</a>, </li>
+<li><a href="com/neueda/leap/order/market/package-tree.html">com.neueda.leap.order.market</a>, </li>
+<li><a href="com/neueda/leap/order/query/package-tree.html">com.neueda.leap.order.query</a>, </li>
 <li><a href="com/neueda/leap/order/rules/package-tree.html">com.neueda.leap.order.rules</a>, </li>
 <li><a href="com/neueda/leap/order/service/package-tree.html">com.neueda.leap.order.service</a>, </li>
+<li><a href="com/neueda/leap/order/settlement/package-tree.html">com.neueda.leap.order.settlement</a>, </li>
 <li><a href="com/neueda/leap/order/submission/controller/package-tree.html">com.neueda.leap.order.submission.controller</a>, </li>
 <li><a href="com/neueda/leap/order/submission/dto/package-tree.html">com.neueda.leap.order.submission.dto</a>, </li>
 <li><a href="com/neueda/leap/order/submission/repository/package-tree.html">com.neueda.leap.order.submission.repository</a>, </li>
@@ -106,32 +111,47 @@ loadScripts(document, 'script');</script>
 <li class="circle">com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" class="type-name-link" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/IndicativePriceService.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a></li>
 <li class="circle">com.neueda.leap.instrument.service.<a href="com/neueda/leap/instrument/service/InstrumentService.html" class="type-name-link" title="class in com.neueda.leap.instrument.service">InstrumentService</a></li>
+<li class="circle">com.neueda.leap.order.execution.cash.<a href="com/neueda/leap/order/execution/cash/JdbcCashMovementAdapter.html" class="type-name-link" title="class in com.neueda.leap.order.execution.cash">JdbcCashMovementAdapter</a> (implements com.neueda.leap.order.execution.cash.<a href="com/neueda/leap/order/execution/cash/CashMovementAdapter.html" title="interface in com.neueda.leap.order.execution.cash">CashMovementAdapter</a>)</li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/JdbcExecutionOrderContextRepository.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">JdbcExecutionOrderContextRepository</a> (implements com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/ExecutionOrderContextRepository.html" title="interface in com.neueda.leap.order.execution.quote">ExecutionOrderContextRepository</a>)</li>
 <li class="circle">com.neueda.leap.instrument.repository.<a href="com/neueda/leap/instrument/repository/JdbcInstrumentRepository.html" class="type-name-link" title="class in com.neueda.leap.instrument.repository">JdbcInstrumentRepository</a> (implements com.neueda.leap.instrument.repository.<a href="com/neueda/leap/instrument/repository/InstrumentRepository.html" title="interface in com.neueda.leap.instrument.repository">InstrumentRepository</a>)</li>
 <li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/JdbcOrderExecutor.html" class="type-name-link" title="class in com.neueda.leap.order.execution">JdbcOrderExecutor</a> (implements com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>)</li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/JdbcOrderQueryRepository.html" class="type-name-link" title="class in com.neueda.leap.order.query">JdbcOrderQueryRepository</a> (implements com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderQueryRepository.html" title="interface in com.neueda.leap.order.query">OrderQueryRepository</a>)</li>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/JdbcOrderSubmissionRepository.html" class="type-name-link" title="class in com.neueda.leap.order.submission.repository">JdbcOrderSubmissionRepository</a> (implements com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>)</li>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/JdbcOrderSufficiencyRepository.html" class="type-name-link" title="class in com.neueda.leap.order.submission.repository">JdbcOrderSufficiencyRepository</a> (implements com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/OrderSufficiencyRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSufficiencyRepository</a>)</li>
 <li class="circle">com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/JdbcQuoteRepository.html" class="type-name-link" title="class in com.neueda.leap.marketdata">JdbcQuoteRepository</a> (implements com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a>)</li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtServiceImpl.html" class="type-name-link" title="class in com.neueda.leap.security">JwtServiceImpl</a> (implements com.neueda.leap.security.<a href="com/neueda/leap/security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a>)</li>
+<li class="circle">com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.html" class="type-name-link" title="class in com.neueda.leap.order.execution.event">KafkaOrderLifecycleEventPublisher</a> (implements com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>)</li>
+<li class="circle">com.neueda.leap.order.rules.<a href="com/neueda/leap/order/rules/LocationPolicy.html" class="type-name-link" title="class in com.neueda.leap.order.rules">LocationPolicy</a></li>
 <li class="circle">com.neueda.leap.<a href="com/neueda/leap/Main.html" class="type-name-link" title="class in com.neueda.leap">Main</a></li>
+<li class="circle">com.neueda.leap.order.market.<a href="com/neueda/leap/order/market/MarketHours.html" class="type-name-link" title="class in com.neueda.leap.order.market">MarketHours</a></li>
+<li class="circle">com.neueda.leap.order.market.<a href="com/neueda/leap/order/market/MarketHoursConfiguration.html" class="type-name-link" title="class in com.neueda.leap.order.market">MarketHoursConfiguration</a></li>
+<li class="circle">com.neueda.leap.order.market.<a href="com/neueda/leap/order/market/MarketStatusController.html" class="type-name-link" title="class in com.neueda.leap.order.market">MarketStatusController</a></li>
 <li class="circle">com.neueda.leap.config.<a href="com/neueda/leap/config/OpenApiConfig.html" class="type-name-link" title="class in com.neueda.leap.config">OpenApiConfig</a></li>
 <li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutionConfiguration.html" class="type-name-link" title="class in com.neueda.leap.order.execution">OrderExecutionConfiguration</a></li>
 <li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutionWorker.html" class="type-name-link" title="class in com.neueda.leap.order.execution">OrderExecutionWorker</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderQueryController.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderQueryController</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderQueryService.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderQueryService</a></li>
 <li class="circle">com.neueda.leap.order.submission.controller.<a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html" class="type-name-link" title="class in com.neueda.leap.order.submission.controller">OrderSubmissionController</a></li>
 <li class="circle">com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" class="type-name-link" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></li>
 <li class="circle">com.neueda.leap.order.service.<a href="com/neueda/leap/order/service/OrderSufficiencyService.html" class="type-name-link" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/QuoteFreshnessPolicy.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/QuotePreviewController.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">QuotePreviewController</a></li>
 <li class="circle">com.neueda.leap.config.<a href="com/neueda/leap/config/SecurityConfig.html" class="type-name-link" title="class in com.neueda.leap.config">SecurityConfig</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementController.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementController</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementIntegrityCheck.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementIntegrityCheck</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementRecoveryService</a></li>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" class="type-name-link external-link" title="class or interface in java.lang">Throwable</a> (implements java.io.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Serializable.html" title="class or interface in java.io" class="external-link">Serializable</a>)
 <ul>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" class="type-name-link external-link" title="class or interface in java.lang">Exception</a>
 <ul>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/RuntimeException.html" class="type-name-link external-link" title="class or interface in java.lang">RuntimeException</a>
 <ul>
+<li class="circle">com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/IdempotencyConflictException.html" class="type-name-link" title="class in com.neueda.leap.order.submission.service">IdempotencyConflictException</a></li>
 <li class="circle">com.neueda.leap.instrument.service.<a href="com/neueda/leap/instrument/service/InstrumentNotFoundException.html" class="type-name-link" title="class in com.neueda.leap.instrument.service">InstrumentNotFoundException</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderNotFoundException.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderNotFoundException</a></li>
 <li class="circle">com.neueda.leap.order.rules.<a href="com/neueda/leap/order/rules/OrderRuleException.html" class="type-name-link" title="class in com.neueda.leap.order.rules">OrderRuleException</a></li>
 <li class="circle">com.neueda.leap.order.service.<a href="com/neueda/leap/order/service/OrderSufficiencyException.html" class="type-name-link" title="class in com.neueda.leap.order.service">OrderSufficiencyException</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementException.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementException</a></li>
 </ul>
 </li>
 </ul>
@@ -145,10 +165,13 @@ loadScripts(document, 'script');</script>
 <section class="hierarchy">
 <h2 title="Interface Hierarchy">Interface Hierarchy</h2>
 <ul>
+<li class="circle">com.neueda.leap.order.execution.cash.<a href="com/neueda/leap/order/execution/cash/CashMovementAdapter.html" class="type-name-link" title="interface in com.neueda.leap.order.execution.cash">CashMovementAdapter</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/ExecutionOrderContextRepository.html" class="type-name-link" title="interface in com.neueda.leap.order.execution.quote">ExecutionOrderContextRepository</a></li>
 <li class="circle">com.neueda.leap.instrument.repository.<a href="com/neueda/leap/instrument/repository/InstrumentRepository.html" class="type-name-link" title="interface in com.neueda.leap.instrument.repository">InstrumentRepository</a></li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtService.html" class="type-name-link" title="interface in com.neueda.leap.security">JwtService</a></li>
 <li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.html" class="type-name-link" title="interface in com.neueda.leap.order.execution">OrderExecutor</a></li>
+<li class="circle">com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/OrderLifecycleEventPublisher.html" class="type-name-link" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderQueryRepository.html" class="type-name-link" title="interface in com.neueda.leap.order.query">OrderQueryRepository</a></li>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/OrderSubmissionRepository.html" class="type-name-link" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a></li>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/OrderSufficiencyRepository.html" class="type-name-link" title="interface in com.neueda.leap.order.submission.repository">OrderSufficiencyRepository</a></li>
 <li class="circle">com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/QuoteRepository.html" class="type-name-link" title="interface in com.neueda.leap.marketdata">QuoteRepository</a></li>
@@ -167,6 +190,7 @@ loadScripts(document, 'script');</script>
 <li class="circle">com.neueda.leap.order.rules.<a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html" class="type-name-link" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></li>
 <li class="circle">com.neueda.leap.order.service.<a href="com/neueda/leap/order/service/OrderSufficiencyException.Reason.html" class="type-name-link" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/QuoteFreshnessPolicy.Freshness.html" class="type-name-link" title="enum class in com.neueda.leap.order.execution.quote">QuoteFreshnessPolicy.Freshness</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementPart.html" class="type-name-link" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></li>
 </ul>
 </li>
 </ul>
@@ -183,15 +207,20 @@ loadScripts(document, 'script');</script>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/AccountTradingProfile.html" class="type-name-link" title="class in com.neueda.leap.order.submission.repository">AccountTradingProfile</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/ExecutionOrderContext.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">ExecutionOrderContext</a></li>
 <li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteDecision</a></li>
-<li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/IndicativePriceService.IndicativePriceResponse.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePriceResponse</a></li>
+<li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/IndicativePriceService.IndicativePrice.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService.IndicativePrice</a></li>
 <li class="circle">com.neueda.leap.instrument.dto.<a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" class="type-name-link" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></li>
 <li class="circle">com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/InstrumentTradingProfile.html" class="type-name-link" title="class in com.neueda.leap.order.submission.repository">InstrumentTradingProfile</a></li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" class="type-name-link" title="class in com.neueda.leap.security">JwtPrincipal</a></li>
 <li class="circle">com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/MarketQuote.html" class="type-name-link" title="class in com.neueda.leap.marketdata">MarketQuote</a></li>
+<li class="circle">com.neueda.leap.order.market.<a href="com/neueda/leap/order/market/MarketStatus.html" class="type-name-link" title="class in com.neueda.leap.order.market">MarketStatus</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderDetailResponse.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderDetailResponse</a></li>
 <li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutionWorker.Claim.html" class="type-name-link" title="class in com.neueda.leap.order.execution">OrderExecutionWorker.Claim</a></li>
+<li class="circle">com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Result.html" class="type-name-link" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></li>
+<li class="circle">com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/OrderLifecycleEvent.html" class="type-name-link" title="class in com.neueda.leap.order.execution.event">OrderLifecycleEvent</a></li>
+<li class="circle">com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderStatusResponse.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></li>
 <li class="circle">com.neueda.leap.order.submission.dto.<a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html" class="type-name-link" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a></li>
 <li class="circle">com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionResult.html" class="type-name-link" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></li>
-<li class="circle">com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/QuotePreviewController.QuotePreviewResponse.html" class="type-name-link" title="class in com.neueda.leap.order.execution.quote">QuotePreviewController.QuotePreviewResponse</a></li>
+<li class="circle">com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementResult.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementResult</a></li>
 <li class="circle">com.neueda.leap.order.submission.dto.<a href="com/neueda/leap/order/submission/dto/SubmitOrderRequest.html" class="type-name-link" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></li>
 </ul>
 </li>
