@@ -31,7 +31,7 @@
             [value]="desk().selected()?.symbol"
             (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
           >
-            @for (q of desk().quotes; track q.symbol) {
+            @for (q of desk().quotes(); track q.symbol) {
               <option [value]="q.symbol" [selected]="q.symbol === desk().selected()?.symbol">{{ q.symbol }}</option>
             }</select
           ><span>{{ desk().selected()?.name }}</span
@@ -126,6 +126,12 @@
             <strong>Total</strong><strong>{{ desk().total() | currency }}</strong>
           </div>
         </div>
+        @if (desk().priceDelayed()) {
+          <p class="ticket-warning" role="note">Price delayed: the last quote is over a minute old.</p>
+        }
+        @if (desk().closedWarning()) {
+          <p class="ticket-warning" role="note">{{ desk().closedWarning() }}</p>
+        }
         <p class="ticket-note">Execution threshold: order is rejected if execution price moves more than ${{ desk().executionThresholdDollars() }} from the indicative price.</p>
         <button class="primary-button review-button" type="submit">Review Order</button>
       </form>
