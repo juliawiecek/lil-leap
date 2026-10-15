@@ -17,10 +17,11 @@ FROM nginx:1.27-alpine AS runtime
 LABEL maintainer="Lil Leap"
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/frontend/dist/nexttrade-angular/browser/ /usr/share/nginx/html/
-RUN sed -i 's|pid        /var/run/nginx.pid;|pid        /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+RUN sed -i 's|^pid[[:space:]][^;]*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 
 USER nginx
+RUN nginx -t
 
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

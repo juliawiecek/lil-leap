@@ -54,17 +54,34 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.common.exception">com.neueda.leap.common.exception</a></div>
 <div class="col-last even-row-color">
+<div class="block">REST exception translation with client-facing error responses.</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last even-row-color">
 <div class="block">Transactional order submission with ownership checks and retry handling.</div>
 </div>
 </div>
 <section class="package-uses">
 <ul class="block-list">
+<li>
+<section class="detail" id="com.neueda.leap.common.exception">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.order.submission.service</a> used by <a href="../../../common/exception/package-summary.html">com.neueda.leap.common.exception</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/IdempotencyConflictException.html#com.neueda.leap.common.exception">IdempotencyConflictException</a></div>
+<div class="col-last even-row-color">
+<div class="block">A client reference was reused for an order that differs from the one it first created.</div>
+</div>
+</div>
+</section>
+</li>
 <li>
 <section class="detail" id="com.neueda.leap.order.submission.controller">
 <div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.order.submission.service</a> used by <a href="../controller/package-summary.html">com.neueda.leap.order.submission.controller</a></span></div>

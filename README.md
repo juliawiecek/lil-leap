@@ -6,13 +6,13 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 ## Team
 
-| Team Member     | Role                              |
+| Team Member     | Role                                |
 | ---------------- | ---------------------------------- |
-| Tanush Kaushik   | Technical Lead, Data Engineer      |
-| Julia Wiecek     | Developer, Spring Boot (Scrum Master) |
+| Tanush Kaushik   | Developer, Data Engineer           |
+| Julia Wiecek     | Developer, Spring Boot             |
 | Kevin Marin      | Developer, Spring Boot             |
-| Lalima Karri     | Developer, Angular                 |
-| Ilhan Gelle      | Developer, Security                |
+| Lalima Karri     | Developer, Angular (Scrum Master)  |
+| Ilhan Gelle      | Developer, Security (Tech Lead)    |
 
 ## Quick Start
 
@@ -140,7 +140,7 @@ restricted `app_user` role; the schema is owned by the admin role.
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
-| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the shared `order-events` topic is created on startup for the Orders producer and the three Insights consumer groups. See [kafka/README.md](kafka/README.md). |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Optional event broker; when the Kafka Compose override is enabled, the shared `order-events` topic serves the Orders producer and three Insights consumer groups. See [Kafka Order Events](#kafka-order-events). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 
 ### Authentication Flow
@@ -163,6 +163,34 @@ sequenceDiagram
 The access token carries `sub`, `email`, `client_id` and, for traders,
 `trader_level`, which the frontend uses to pick the Novice or Advanced
 dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
+
+### Kafka Order Events
+
+Kafka is used for asynchronous reporting of terminal order lifecycle events. The
+Orders service publishes one JSON event to the shared `order-events` topic when
+an order reaches `FILLED` or `REJECTED`. The Insights service receives that
+event through three independent consumer groups:
+
+| Consumer group | Filter | Output |
+|---|---|---|
+| `insights-completed-trades` | `FILLED` events | `completed-trades.csv` |
+| `insights-failed-trades` | `REJECTED` events | `failed-trades.csv` |
+| `insights-order-audit` | Every terminal event | `trade-audit.csv` |
+
+The database transaction remains the source of truth for order settlement.
+Kafka publication is best-effort after the transaction completes, so a Kafka
+failure does not undo a completed order. The broker is development-only and is
+started through the optional Compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d kafka kafka-topics orders insights
+```
+
+#### Kafka Files and Directories
+
+- [kafka/](kafka/) contains the broker image, topic setup, and Kafka-specific documentation.
+
+For broker commands and local setup details, see [kafka/README.md](kafka/README.md).
 
 ## Technology Stack
 
@@ -253,7 +281,9 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines twelve services:
+`docker-compose.yml` defines the main application stack. The table also shows
+the optional Kafka services, which are added by
+[docker-compose.kafka.yml](docker-compose.kafka.yml) when that override is used:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
@@ -544,8 +574,8 @@ These sites document production Java APIs, including package overviews, paramete
 return values, exceptions, ownership checks and execution/retry contracts. The
 TypeScript and Python applications are outside Javadoc's scope.
 
-See the [documentation landing page](docs/javadoc/index.html) for snapshot provenance
-and any source issues that must be resolved before regeneration.
+The [documentation landing page](docs/javadoc/index.html) summarises what each site covers
+and how to browse the docs over HTTP.
 
 To regenerate all three snapshots from the repository root, use **JDK 21**, Maven
 and Python 3:

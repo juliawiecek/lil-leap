@@ -126,7 +126,8 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cash(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash</a><wbr>(<a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cash(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Lists cash balances owned by the authenticated caller.</div>
 </div>
@@ -143,7 +144,8 @@ loadScripts(document, 'script');</script>
 <div class="block">TS-11.3 AC1: Returns combined portfolio summary for a client.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#holdings(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Lists holdings owned by the authenticated caller.</div>
 </div>
@@ -189,14 +191,17 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="holdings(com.neueda.leap.security.JwtPrincipal)">
+<section class="detail" id="holdings(java.util.UUID,com.neueda.leap.security.JwtPrincipal)">
 <h3>holdings</h3>
 <div class="member-signature"><span class="annotations">@GetMapping("/holdings")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</span>&nbsp;<span class="element-name">holdings</span><wbr><span class="parameters">(@AuthenticationPrincipal
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a>&gt;&gt;</span>&nbsp;<span class="element-name">holdings</span><wbr><span class="parameters">(@RequestParam(required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ @AuthenticationPrincipal
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</span></div>
 <div class="block">Lists holdings owned by the authenticated caller.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
+<dd><code>accountId</code> - optional owned account to narrow to</dd>
 <dd><code>principal</code> - identity supplied by Spring Security</dd>
 <dt>Returns:</dt>
 <dd>HTTP 200 with owned holdings, including an empty list when absent</dd>
@@ -224,14 +229,17 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="cash(com.neueda.leap.security.JwtPrincipal)">
+<section class="detail" id="cash(java.util.UUID,com.neueda.leap.security.JwtPrincipal)">
 <h3>cash</h3>
 <div class="member-signature"><span class="annotations">@GetMapping("/cash")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;&gt;</span>&nbsp;<span class="element-name">cash</span><wbr><span class="parameters">(@AuthenticationPrincipal
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;&gt;</span>&nbsp;<span class="element-name">cash</span><wbr><span class="parameters">(@RequestParam(required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ @AuthenticationPrincipal
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</span></div>
 <div class="block">Lists cash balances owned by the authenticated caller.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
+<dd><code>accountId</code> - optional owned account to narrow to</dd>
 <dd><code>principal</code> - identity supplied by Spring Security</dd>
 <dt>Returns:</dt>
 <dd>HTTP 200 with owned balances, including an empty list when absent</dd>

@@ -172,7 +172,7 @@ implements <a href="JwtService.html" title="interface in com.neueda.leap.securit
 <li>
 <section class="detail" id="&lt;init&gt;(java.lang.String,long,java.lang.String)">
 <h3>JwtServiceImpl</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">JwtServiceImpl</span><wbr><span class="parameters">(@Value("${app.jwt.secret:nexttrade-shared-dev-secret-32bytes-min}")
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">JwtServiceImpl</span><wbr><span class="parameters">(@Value("${app.jwt.secret}")
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;secret,
  @Value("${app.jwt.expiration-minutes:60}")
  long&nbsp;expirationMinutes,
@@ -180,9 +180,8 @@ implements <a href="JwtService.html" title="interface in com.neueda.leap.securit
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;clientId)</span></div>
 <div class="block">Creates a new JWT service from configuration.
 
- <p><code>app.jwt.secret</code> should be set via the <code>APP_JWT_SECRET</code>
- environment variable in any real environment; the default here is
- dev-only and is not secure for production use.</p></div>
+ <p><code>app.jwt.secret</code> must be set via the <code>APP_JWT_SECRET</code>
+ environment variable.</p></div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>secret</code> - the HMAC signing secret, at least 32 bytes long</dd>
