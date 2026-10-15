@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission;
 
+import com.neueda.leap.order.execution.quote.IndicativePriceService;
 import com.neueda.leap.order.rules.OrderRuleException;
 import com.neueda.leap.instrument.dto.InstrumentResponse;
 import com.neueda.leap.instrument.service.InstrumentService;
@@ -30,7 +31,7 @@ class OrderTradingRulesTest {
     private final InstrumentService instruments = mock(InstrumentService.class);
     @BeforeEach void setUp() {
         repository = mock(OrderSubmissionRepository.class); sufficiency = mock(OrderSufficiencyService.class);
-        service = new OrderSubmissionService(repository, sufficiency, instruments);
+        service = new OrderSubmissionService(repository, sufficiency, instruments, mock(IndicativePriceService.class));
         when(repository.accountBelongsToUser(account, user)).thenReturn(true);
         when(repository.findByAccountAndClientReference(any(), any())).thenReturn(Optional.empty());
         when(repository.findClientCountry(account)).thenReturn(Optional.of("US"));
@@ -57,7 +58,7 @@ class OrderTradingRulesTest {
         var saved = new OrderSubmissionResponse(UUID.randomUUID(), account, instrument, "AAPL", request.clientReference(),
                 side, 1, "MARKET", "SUBMITTED", Instant.now(), BigDecimal.ZERO);
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrument, true, true)));
-        when(repository.insert(request, instrument, "AAPL")).thenReturn(Optional.of(saved));
+        when(repository.insert(request, instrument, "AAPL", null)).thenReturn(Optional.of(saved));
 
         var result = service.submit(user, request);
 
@@ -65,7 +66,7 @@ class OrderTradingRulesTest {
         assertThat(result.order()).isEqualTo(saved);
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrument);
-        sequence.verify(repository).insert(request, instrument, "AAPL");
+        sequence.verify(repository).insert(request, instrument, "AAPL", null);
     }
     @ParameterizedTest
     @CsvSource({"BUY,INSUFFICIENT_CASH", "SELL,INSUFFICIENT_HOLDINGS"})
@@ -78,7 +79,7 @@ class OrderTradingRulesTest {
 
         assertThatThrownBy(() -> service.submit(user, request)).isInstanceOfSatisfying(OrderSufficiencyException.class,
                 error -> assertThat(error.reason()).isEqualTo(reason));
-        verify(repository, never()).insert(any(), any(), any());
+        verify(repository, never()).insert(any(), any(), any(), any());
     }
     @Test void unsupportedInstrumentHasSpecificReason() { expect(request("NOPE"), INSTRUMENT_UNSUPPORTED); }
     @Test void disabledInstrumentHasSpecificReason() {

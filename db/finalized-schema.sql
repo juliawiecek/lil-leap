@@ -396,6 +396,10 @@ CREATE TABLE orders (
     -- Per-order price tolerance override (NULL = use account default)
     buffer_percent NUMERIC(5,2) CHECK (buffer_percent IS NULL OR buffer_percent >= 0),
 
+    -- Price protection (PS-12): the quote orders saw at submission (ask for BUY, bid for SELL)
+    reference_price NUMERIC(18,4) CONSTRAINT chk_orders_reference_price
+        CHECK (reference_price IS NULL OR reference_price > 0),
+
     CONSTRAINT fk_orders_account
         FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
     CONSTRAINT fk_orders_instrument
