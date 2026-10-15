@@ -133,11 +133,14 @@
           <p class="ticket-warning" role="note">{{ desk().closedWarning() }}</p>
         }
         @if (desk().protectionNote()) {
-          <p class="ticket-note protection-note">
-            {{ desk().protectionNote() }}
+          <div class="protection-row">
+            <div class="protection-copy">
+              <span>Price protection <b>{{ desk().tolerance() }}%</b></span>
+              <small>{{ desk().protectionNote() }}</small>
+            </div>
             @if (desk().editingTolerance()) {
-              <label class="order-tolerance">
-                Protection for this order
+              <label class="tolerance-field">
+                <span class="sr-only">Price protection for this order only, percent</span>
                 <input
                   type="number"
                   min="0.1"
@@ -146,12 +149,12 @@
                   [value]="desk().tolerance()"
                   (change)="desk().setOrderTolerance($any($event.target).value)"
                 />
-                %
+                <span aria-hidden="true">%</span>
               </label>
             } @else {
-              <button type="button" class="text-link" (click)="desk().editingTolerance.set(true)">Change for this order only</button>
+              <button type="button" class="text-link" (click)="desk().editingTolerance.set(true)">Change for this order</button>
             }
-          </p>
+          </div>
         }
         <button class="primary-button review-button" type="submit">Review Order</button>
       </form>

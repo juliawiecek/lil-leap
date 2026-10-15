@@ -82,19 +82,19 @@ test('settings set the default with a quick choice or a custom value, and manage
   button(fixture, '5%');
   assert.equal(settings.store.settings().default, 5);
 
-  input(fixture, 'label input[type="number"]', '0.5', 'change');
+  input(fixture, '.custom input', '0.5', 'change');
   assert.equal(settings.store.settings().default, 0.5);
   assert.equal(settings.custom(), 0.5);
-  input(fixture, 'label input[type="number"]', '25', 'change');
+  input(fixture, '.custom input', '25', 'change');
   assert.match(fixture.nativeElement.textContent, /Choose a value from 0\.1% to 10%/);
   assert.equal(settings.store.settings().default, 0.5);
 
-  assert.match(fixture.nativeElement.textContent, /None yet/);
   fixture.nativeElement.querySelector('select').value = 'MSFT';
   input(fixture, 'input[aria-label="Override percentage"]', '3');
-  button(fixture, 'Add override');
+  button(fixture, 'Add');
   assert.deepEqual(settings.overrides(), [{ symbol: 'MSFT', percent: 3 }]);
-  assert.match(fixture.nativeElement.textContent, /MSFT\s*3%/);
-  button(fixture, 'Remove');
+  assert.match(fixture.nativeElement.querySelector('.chip').textContent, /MSFT\s*3%/);
+  fixture.nativeElement.querySelector('[aria-label="Remove MSFT override"]').click();
+  fixture.detectChanges();
   assert.deepEqual(settings.overrides(), []);
 });

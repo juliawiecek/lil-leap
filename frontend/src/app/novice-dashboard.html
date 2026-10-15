@@ -572,11 +572,14 @@
       </div>
       <p>Buying power: {{ buyingPower() | currency }}</p>
       @if (protectionNote()) {
-        <p class="protection-note">
-          {{ protectionNote() }}
+        <div class="protection-row">
+          <div class="protection-copy">
+            <span>Price protection <b>{{ tolerance() }}%</b></span>
+            <small>{{ protectionNote() }}</small>
+          </div>
           @if (editingTolerance()) {
-            <label class="order-tolerance">
-              Protection for this order
+            <label class="tolerance-field">
+              <span class="sr-only">Price protection for this order only, percent</span>
               <input
                 type="number"
                 min="0.1"
@@ -585,12 +588,12 @@
                 [value]="tolerance()"
                 (change)="setOrderTolerance($any($event.target).value)"
               />
-              %
+              <span aria-hidden="true">%</span>
             </label>
           } @else {
-            <button type="button" class="text-link" (click)="editingTolerance.set(true)">Change for this order only</button>
+            <button type="button" class="text-link" (click)="editingTolerance.set(true)">Change for this order</button>
           }
-        </p>
+        </div>
       }
       @if (closedWarning()) {
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>

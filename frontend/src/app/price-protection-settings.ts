@@ -5,17 +5,20 @@ import {
 
 const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION}%.`;
 
-/** Settings section for price protection (PS-12): a default and per-stock overrides. */
+/**
+ * Settings rows for price protection (PS-12): a default and per-stock overrides. Laid out like the
+ * other settings rows (label on the left, control on the right) and themed by the dashboard's
+ * --line, --muted and --green colours.
+ */
 @Component({
   selector: 'app-price-protection-settings',
   template: `
-    <section class="protection-settings" aria-labelledby="protection-heading">
-      <h3 id="protection-heading">Price protection</h3>
-      <p class="hint">
-        If the price moves against you by more than this before your order fills, it is rejected and
-        nothing is charged.
-      </p>
-      <div class="choices" role="group" aria-label="Default price protection">
+    <div class="setting-row">
+      <div class="setting-label">
+        <span id="protection-label">Price protection</span>
+        <small>Orders are rejected, with nothing charged, if the price moves against you by more than this before they fill.</small>
+      </div>
+      <div class="segmented" role="group" aria-labelledby="protection-label">
         @for (choice of choices; track choice) {
           <button
             type="button"
@@ -26,61 +29,105 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
             {{ choice }}%
           </button>
         }
-        <label>
-          Custom
+        <label class="custom" [class.selected]="custom() !== null">
+          <span class="sr-only">Custom percentage</span>
           <input
             type="number"
             [min]="min"
             [max]="max"
             step="0.1"
+            placeholder="Custom"
             [value]="custom() ?? ''"
             (change)="setDefault($any($event.target).value)"
           />
-          %
+          <span aria-hidden="true">%</span>
         </label>
       </div>
+    </div>
 
-      <h4>Per-stock overrides</h4>
-      @for (entry of overrides(); track entry.symbol) {
-        <div class="override">
-          <span>{{ entry.symbol }}</span><strong>{{ entry.percent }}%</strong>
-          <button type="button" class="text-link" (click)="remove(entry.symbol)">Remove</button>
-        </div>
-      } @empty {
-        <p class="hint">None yet. Every stock uses your default.</p>
-      }
-      <div class="override-form" role="group" aria-label="Add a per-stock override">
-        <label>
-          Stock
+    <div class="setting-row">
+      <div class="setting-label">
+        <span id="overrides-label">Per-stock overrides</span>
+        <small>A different limit for particular stocks.</small>
+      </div>
+      <div class="overrides" role="group" aria-labelledby="overrides-label">
+        @for (entry of overrides(); track entry.symbol) {
+          <span class="chip">
+            {{ entry.symbol }} <b>{{ entry.percent }}%</b>
+            <button type="button" [attr.aria-label]="'Remove ' + entry.symbol + ' override'" (click)="remove(entry.symbol)">×</button>
+          </span>
+        }
+        <div class="add-override">
           <select #stock aria-label="Stock for an override">
             @for (symbol of symbols(); track symbol) {
               <option [value]="symbol">{{ symbol }}</option>
             }
           </select>
-        </label>
-        <label>
-          Protection
-          <input #percent type="number" [min]="min" [max]="max" step="0.1" aria-label="Override percentage" />
-          %
-        </label>
-        <button type="button" class="secondary-button" (click)="addOverride(stock.value, percent.value)">Add override</button>
+          <label class="percent-field">
+            <input #percent type="number" [min]="min" [max]="max" step="0.1" placeholder="2" aria-label="Override percentage" />
+            <span aria-hidden="true">%</span>
+          </label>
+          <button type="button" class="add" (click)="addOverride(stock.value, percent.value)">Add</button>
+        </div>
       </div>
-      @if (message()) {
-        <p class="message" role="alert">{{ message() }}</p>
-      }
-    </section>
+    </div>
+    @if (message()) {
+      <p class="message" role="alert">{{ message() }}</p>
+    }
   `,
   styles: [
     `
-      .protection-settings { display: grid; gap: 10px; }
-      h3, h4 { margin: 4px 0 0; }
-      .hint { margin: 0; color: var(--muted, #8b98a5); font-size: 12px; }
-      .choices, .override-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-      .choices button { min-width: 48px; padding: 5px 10px; border: 1px solid var(--line, #2b3941); border-radius: 6px; }
-      .choices button.selected { background: var(--green, #63d68c); color: #0e2a1b; font-weight: 600; }
-      input { width: 64px; }
-      .override { display: flex; align-items: center; gap: 12px; }
-      .message { margin: 0; color: #f0a35e; }
+      :host { display: block; }
+      .setting-row {
+        display: flex; justify-content: space-between; align-items: center; gap: 24px;
+        padding: 22px 0; border-bottom: 1px solid var(--line);
+      }
+      .setting-label { display: grid; gap: 4px; max-width: 360px; }
+      .setting-label small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+      .segmented {
+        display: flex; align-items: center; gap: 2px; height: 28px; padding: 1px;
+        border: 1px solid var(--line); border-radius: 6px;
+      }
+      .segmented button, .segmented .custom {
+        display: inline-flex; align-items: center; height: 100%; min-width: 40px; justify-content: center;
+        padding: 0 9px; border-radius: 5px; color: #c0cad9; font-size: 11px;
+      }
+      .segmented .selected { background: var(--green); color: #0e2a1b; font-weight: 600; }
+      .custom input {
+        width: 46px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: right;
+      }
+      .custom input::placeholder { color: var(--muted); }
+      .overrides { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px;
+        border: 1px solid var(--line); border-radius: 999px; font-size: 11px;
+      }
+      .chip b { color: var(--green); font-weight: 600; }
+      .chip button { width: 20px; height: 20px; border-radius: 50%; color: var(--muted); font-size: 13px; line-height: 1; }
+      .chip button:hover { color: #eef1f5; background: rgba(255, 255, 255, 0.06); }
+      .add-override { display: flex; align-items: center; gap: 6px; }
+      select, .percent-field {
+        height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03); color: inherit; font-size: 11px;
+      }
+      .percent-field { display: inline-flex; align-items: center; gap: 2px; }
+      .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: right; }
+      .add {
+        height: 28px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+        color: #d5e0eb; font-size: 11px; background: rgba(255, 255, 255, 0.04);
+      }
+      .add:hover { border-color: var(--green); }
+      input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+      input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+      .message { margin: 10px 0 0; color: #f0c86a; font-size: 11px; }
+      .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+        clip-path: inset(50%); white-space: nowrap; border: 0;
+      }
+      @media (max-width: 760px) {
+        .setting-row { flex-direction: column; align-items: stretch; gap: 12px; }
+        .overrides { justify-content: flex-start; }
+      }
     `,
   ],
 })
