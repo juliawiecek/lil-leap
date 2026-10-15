@@ -56,7 +56,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
