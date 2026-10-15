@@ -73,6 +73,15 @@ try {
   console.error(error.code === 'ENOENT' ? 'Docker is unavailable. Install and start Docker with Compose v2 to run the real-stack suite.' : error.message);
 } finally {
   if (started) {
+    if (failed || interrupted) {
+      try {
+        await run([...compose, 'ps', '--all']);
+        for (const service of ['gateway', 'frontend', 'insights-frontend', 'auth', 'holdings', 'orders', 'quote-service', 'insights']) {
+          console.error(`Last container log lines: ${service}`);
+          await run([...compose, 'logs', '--no-color', '--tail', '30', service]);
+        }
+      } catch (error) { console.error(`Could not print startup diagnostics: ${error.message}`); }
+    }
     try {
       const diagnostics = await run([...compose, 'logs', '--no-color'], true);
       await writeFile(`${artifactDir}/containers.log`, diagnostics.output);

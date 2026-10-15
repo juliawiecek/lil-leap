@@ -15,12 +15,20 @@ export default async function setup() {
     for (const [url, status, method = 'GET'] of checks) {
       const deadline = Date.now() + 240_000;
       let ready = false;
+      let lastResult = 'No response received';
       while (Date.now() < deadline) {
-        try { ready = (await http.fetch(url, { method, timeout: 5000 })).status() === status; } catch {}
+        try {
+          const response = await http.fetch(url, { method, timeout: 5000 });
+          lastResult = `HTTP ${response.status()} ${response.statusText()}`;
+          ready = response.status() === status;
+          await response.dispose();
+        } catch (error) {
+          lastResult = error instanceof Error ? error.message : String(error);
+        }
         if (ready) break;
         await delay(1000);
       }
-      if (!ready) throw new Error(`Real service did not become ready: ${url}`);
+      if (!ready) throw new Error(`Real service did not become ready: ${method} ${url}; expected HTTP ${status}; last result: ${lastResult}`);
     }
     const deadline = Date.now() + 60_000;
     let quoteReady = false;
