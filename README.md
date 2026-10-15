@@ -179,23 +179,6 @@ docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d k
 #### Kafka Files and Directories
 
 - [kafka/](kafka/) contains the broker image, topic setup, and Kafka-specific documentation.
-- [kafka/Dockerfile](kafka/Dockerfile) builds the Confluent 7.5.0 broker and configures the internal `kafka:9092` listener and loopback host listener `localhost:29092`.
-- [kafka/topics/create-topics.sh](kafka/topics/create-topics.sh) waits for the broker and creates `order-events` with one partition and replication factor one.
-- [kafka/broker-config/server.properties](kafka/broker-config/server.properties) is a configuration reference; the active Docker settings come from the Dockerfile environment.
-- [docker-compose.kafka.yml](docker-compose.kafka.yml) adds ZooKeeper, Kafka, the topic initialization job, Kafka health checks, persistent volumes, and the Orders/Insights Kafka environment variables.
-- [nextTrade-orders/pom.xml](nextTrade-orders/pom.xml) adds Spring Kafka to the producer service.
-- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.java) loads the committed terminal order state, serializes the event, and publishes it using the order ID as the Kafka key.
-- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/OrderLifecycleEvent.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/OrderLifecycleEvent.java) defines the producer's JSON event payload.
-- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/OrderExecutionWorker.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/OrderExecutionWorker.java) invokes the publisher after successful terminal execution.
-- [nextTrade-orders/src/main/resources/application.yml](nextTrade-orders/src/main/resources/application.yml) configures the producer bootstrap server and the configurable `ORDERS_KAFKA_TOPIC` value.
-- [insights/pom.xml](insights/pom.xml) adds Spring Kafka to the consumer service.
-- [insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.java](insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.java) defines the three listeners, consumer groups, status filters, and malformed-message handling.
-- [insights/src/main/java/com/neueda/leap/config/KafkaOrderEventConfiguration.java](insights/src/main/java/com/neueda/leap/config/KafkaOrderEventConfiguration.java) enables Kafka listeners and creates the listener container factory.
-- [insights/src/main/java/com/neueda/leap/reporting/kafka/OrderLifecycleEvent.java](insights/src/main/java/com/neueda/leap/reporting/kafka/OrderLifecycleEvent.java) defines the consumer's matching JSON payload record.
-- [insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.java](insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.java) writes filtered events to the completed, failed, and audit CSV files.
-- [insights/src/main/resources/application.yml](insights/src/main/resources/application.yml) configures the consumer bootstrap server, topic, and `INSIGHTS_KAFKA_OUTPUT_DIR`.
-- [insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerServiceTest.java](insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerServiceTest.java) verifies the three consumer filters and their writer calls.
-- [insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriterTest.java](insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriterTest.java) verifies the generated completed, failed, and audit CSV output.
 
 For broker commands and local setup details, see [kafka/README.md](kafka/README.md).
 
