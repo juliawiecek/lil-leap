@@ -130,7 +130,7 @@ restricted `app_user` role; the schema is owned by the admin role.
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
-| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the shared `order-events` topic is created on startup for the Orders producer and the three Insights consumer groups. See [kafka/README.md](kafka/README.md). |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Optional event broker; when the Kafka Compose override is enabled, the shared `order-events` topic serves the Orders producer and three Insights consumer groups. See [Kafka Order Events](#kafka-order-events). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 
 ### Authentication Flow
@@ -153,6 +153,51 @@ sequenceDiagram
 The access token carries `sub`, `email`, `client_id` and, for traders,
 `trader_level`, which the frontend uses to pick the Novice or Advanced
 dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
+
+### Kafka Order Events
+
+Kafka is used for asynchronous reporting of terminal order lifecycle events. The
+Orders service publishes one JSON event to the shared `order-events` topic when
+an order reaches `FILLED` or `REJECTED`. The Insights service receives that
+event through three independent consumer groups:
+
+| Consumer group | Filter | Output |
+|---|---|---|
+| `insights-completed-trades` | `FILLED` events | `completed-trades.csv` |
+| `insights-failed-trades` | `REJECTED` events | `failed-trades.csv` |
+| `insights-order-audit` | Every terminal event | `trade-audit.csv` |
+
+The database transaction remains the source of truth for order settlement.
+Kafka publication is best-effort after the transaction completes, so a Kafka
+failure does not undo a completed order. The broker is development-only and is
+started through the optional Compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d kafka kafka-topics orders insights
+```
+
+#### Kafka Files and Directories
+
+- [kafka/](kafka/) contains the broker image, topic setup, and Kafka-specific documentation.
+- [kafka/Dockerfile](kafka/Dockerfile) builds the Confluent 7.5.0 broker and configures the internal `kafka:9092` listener and loopback host listener `localhost:29092`.
+- [kafka/topics/create-topics.sh](kafka/topics/create-topics.sh) waits for the broker and creates `order-events` with one partition and replication factor one.
+- [kafka/broker-config/server.properties](kafka/broker-config/server.properties) is a configuration reference; the active Docker settings come from the Dockerfile environment.
+- [docker-compose.kafka.yml](docker-compose.kafka.yml) adds ZooKeeper, Kafka, the topic initialization job, Kafka health checks, persistent volumes, and the Orders/Insights Kafka environment variables.
+- [nextTrade-orders/pom.xml](nextTrade-orders/pom.xml) adds Spring Kafka to the producer service.
+- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.java) loads the committed terminal order state, serializes the event, and publishes it using the order ID as the Kafka key.
+- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/OrderLifecycleEvent.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/event/OrderLifecycleEvent.java) defines the producer's JSON event payload.
+- [nextTrade-orders/src/main/java/com/neueda/leap/order/execution/OrderExecutionWorker.java](nextTrade-orders/src/main/java/com/neueda/leap/order/execution/OrderExecutionWorker.java) invokes the publisher after successful terminal execution.
+- [nextTrade-orders/src/main/resources/application.yml](nextTrade-orders/src/main/resources/application.yml) configures the producer bootstrap server and the configurable `ORDERS_KAFKA_TOPIC` value.
+- [insights/pom.xml](insights/pom.xml) adds Spring Kafka to the consumer service.
+- [insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.java](insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.java) defines the three listeners, consumer groups, status filters, and malformed-message handling.
+- [insights/src/main/java/com/neueda/leap/config/KafkaOrderEventConfiguration.java](insights/src/main/java/com/neueda/leap/config/KafkaOrderEventConfiguration.java) enables Kafka listeners and creates the listener container factory.
+- [insights/src/main/java/com/neueda/leap/reporting/kafka/OrderLifecycleEvent.java](insights/src/main/java/com/neueda/leap/reporting/kafka/OrderLifecycleEvent.java) defines the consumer's matching JSON payload record.
+- [insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.java](insights/src/main/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.java) writes filtered events to the completed, failed, and audit CSV files.
+- [insights/src/main/resources/application.yml](insights/src/main/resources/application.yml) configures the consumer bootstrap server, topic, and `INSIGHTS_KAFKA_OUTPUT_DIR`.
+- [insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerServiceTest.java](insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerServiceTest.java) verifies the three consumer filters and their writer calls.
+- [insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriterTest.java](insights/src/test/java/com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriterTest.java) verifies the generated completed, failed, and audit CSV output.
+
+For broker commands and local setup details, see [kafka/README.md](kafka/README.md).
 
 ## Technology Stack
 
@@ -243,7 +288,9 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines twelve services:
+`docker-compose.yml` defines the main application stack. The table also shows
+the optional Kafka services, which are added by
+[docker-compose.kafka.yml](docker-compose.kafka.yml) when that override is used:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
