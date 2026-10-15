@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render } from './dom-helper.mjs';
-const { createLightweightChart, UP_COLOR, DOWN_COLOR, AREA_COLOR } = await import('../src/app/lightweight-chart.ts');
+const { createLightweightChart, tooltipLines, UP_COLOR, DOWN_COLOR, AREA_COLOR } = await import('../src/app/lightweight-chart.ts');
 const { LiveChart, CHART_FACTORY } = await import('../src/app/live-chart.ts');
 
 /** Records every call the adapter makes, standing in for lightweight-charts. */
@@ -20,6 +20,7 @@ function fakeLibrary() {
     createChart(element, options) {
       log.element = element; log.options = options;
       return { addSeries: series, removeSeries: s => log.removed.push(s), timeScale: () => ({ fitContent: () => { log.fits++; } }),
+        subscribeCrosshairMove: handler => { log.crosshair = handler; },
         remove: () => { log.removedChart = true; } };
     },
     createSeriesMarkers(s) { return { setMarkers: m => { s.markers = m; } }; },
@@ -81,6 +82,40 @@ test('switching kind rebuilds the series; overlays and a fixed range are applied
   assert.equal(line.type, 'Line');
   assert.equal(line.options.color, '#abc');
   assert.deepEqual(line.applied.at(-1).autoscaleInfoProvider(), { priceRange: { minValue: 0, maxValue: 100 } });
+});
+
+test('tooltip lines show open/high/low/close for candles, dollars for values and a plain number for RSI', () => {
+  const minute = Date.UTC(2026, 9, 15, 14, 35) / 1000;
+  const [when, high, low] = tooltipLines('candles', { time: minute, open: 225.1, high: 226.456, low: 224, close: 225.75 }, minute, 'money', 'en-US');
+  assert.match(when, /^Oct 15, \d\d:\d\d/);
+  assert.equal(high, 'O 225.10  H 226.46');
+  assert.equal(low, 'L 224.00  C 225.75');
+  assert.deepEqual(tooltipLines('area', { time: minute, value: 10250.5 }, minute, 'money', 'en-US').slice(1), ['$10,250.50']);
+  assert.deepEqual(tooltipLines('line', { time: minute, value: 62.345 }, minute, 'number', 'en-US').slice(1), ['62.35']);
+  const day = Date.UTC(2026, 9, 15) / 1000;
+  assert.equal(tooltipLines('line', { time: day, value: 1 }, day, 'money', 'en-US')[0], 'Oct 15, 2026');
+});
+
+test('hovering a bar shows its values next to the pointer; moving off the data hides them', () => {
+  const { lib, log } = fakeLibrary();
+  const element = document.createElement('div');
+  Object.defineProperty(element, 'clientWidth', { value: 400 });
+  const chart = createLightweightChart(lib, element);
+  const bar = { time: 60, open: 1, high: 2, low: 0.5, close: 1.5 };
+  chart.render({ kind: 'candles', data: [bar], key: 'AAPL-1D' });
+  const box = element.querySelector('.chart-tooltip');
+  assert.equal(box.style.display, 'none');
+
+  log.crosshair({ time: 60, point: { x: 40, y: 50 }, seriesData: new Map([[log.added[0], bar]]) });
+  assert.equal(box.style.display, 'block');
+  assert.match(box.textContent, /O 1\.00 {2}H 2\.00L 0\.50 {2}C 1\.50/);
+  assert.equal(box.style.left, '52px');
+  // Near the right edge the box flips to the left of the pointer so it stays inside the chart.
+  log.crosshair({ time: 60, point: { x: 395, y: 50 }, seriesData: new Map([[log.added[0], bar]]) });
+  assert.equal(box.style.left, '383px');
+
+  log.crosshair({ time: undefined, point: undefined, seriesData: new Map() });
+  assert.equal(box.style.display, 'none');
 });
 
 test('the component creates one chart, redraws on new specs and destroys it with the view', async t => {

@@ -310,7 +310,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     };
   });
   readonly rsiChart = computed<ChartSpec>(() => ({
-    kind: 'line', data: this.rsiLine(), color: RSI_COLOR, range: { min: 0, max: 100 }, key: this.chartKey(),
+    kind: 'line', data: this.rsiLine(), color: RSI_COLOR, range: { min: 0, max: 100 }, key: this.chartKey(), valueFormat: 'number',
   }));
   /** Fills earlier than the first bar shown, so not marked on this period. */
   readonly tradesOutsidePeriod = computed(() => {
