@@ -37,8 +37,8 @@ superseded by the current guides above:
 - [Original database hardening runbook](RUN_DATABASE_HARDENING.md)
 
 [NEXT-95/NEXT-145 notes](stories/NEXT-95-NEXT-145.md) include the corrected
-instrument ownership. Checked-in coverage HTML and Javadocs are historical
-snapshots; use current source and regenerated reports when reviewing NEXT-193.
+instrument ownership. Checked-in coverage HTML is a historical snapshot; use
+current source and regenerated reports when reviewing NEXT-193.
 
 - [Historical atomic-settlement design](architecture/ADR-TS-10.1-atomic-settlement.md)
 - [Optional Kafka development setup](../kafka/README.md)
