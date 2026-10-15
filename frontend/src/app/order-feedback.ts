@@ -2,6 +2,9 @@
  * What the client is told about an order (PS-15): the one-line review before it is sent, and the
  * plain-English reason when it is rejected. Every rejection code is mapped here and nowhere else.
  */
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
 
 const REJECTION_REASONS: Record<string, string> = {
@@ -76,32 +79,33 @@ export interface OrderStatus {
 /** Reads one order's latest status and reason from the orders service. */
 export class OrderStatusClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
   /** The order's status and reason code; throws when it cannot be read. */
   async status(orderId: string): Promise<OrderStatus> {
-    const token = this.#tokens.accessToken;
-    if (!token) {
+    if (!this.#tokens.accessToken) {
       throw new Error('Sign in to see your orders.');
     }
-    const response = await this.#fetch(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/status`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      throw new Error('Could not load the order status.');
+    let body: { status: string; reasonCode?: string | null; reasonText?: string | null };
+    try {
+      body = await firstValueFrom(this.#http.get<typeof body>(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/status`));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse) {
+        throw new Error('Could not load the order status.');
+      }
+      throw error;
     }
-    const body = (await response.json()) as { status: string; reasonCode?: string | null; reasonText?: string | null };
     return { status: body.status, reasonCode: body.reasonCode ?? null, reasonText: body.reasonText ?? null };
   }
 }

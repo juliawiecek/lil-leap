@@ -14,9 +14,7 @@ export function createAuthGuard(
     const session = inject(sessionType);
     const router = inject(Router);
     await session.initialize();
-    if (session.authenticated) {
-      await session.keeper.check();
-    }
+    await session.keeper.check();
     return (
       session.authenticated ||
       router.createUrlTree(['/login'], {
@@ -33,6 +31,7 @@ export function createGuestGuard(
     const session = inject(sessionType);
     const router = inject(Router);
     await session.initialize();
+    await session.keeper.check();
     if (!session.authenticated) {
       return true;
     }

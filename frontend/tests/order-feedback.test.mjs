@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
+import { apiHttp } from './http-helper.mjs';
 const { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason, usd } = await import('../src/app/order-feedback.ts');
 const { ToastService, Toasts, TOAST_MS } = await import('../src/app/toasts.ts');
 
@@ -30,19 +31,19 @@ test('every rejection code reads as plain English, and unknown codes still say w
   assert.match(rejectionReason(null), /Check Orders/);
 });
 
-test('the order status client reads the reason code with the bearer token', async () => {
+test('the order status client reads the reason code through the shared transport', async () => {
   const requests = [];
-  const client = new OrderStatusClient({ accessToken: 'tok' }, async (url, init) => {
+  const client = new OrderStatusClient({ accessToken: 'tok' }, apiHttp(async (url, init) => {
     requests.push([url, init.headers.Authorization]);
     return url.includes('missing')
       ? new Response('{}', { status: 404 })
       : Response.json({ orderId: 'o 1', status: 'REJECTED', reasonCode: 'INSUFFICIENT_CASH' });
-  });
+  }));
   assert.deepEqual(await client.status('o 1'), { status: 'REJECTED', reasonCode: 'INSUFFICIENT_CASH', reasonText: null });
-  assert.deepEqual(requests, [['/api/v1/orders/o%201/status', 'Bearer tok']]);
+  assert.deepEqual(requests, [['/api/v1/orders/o%201/status', undefined]]);
   await assert.rejects(client.status('missing'), /Could not load/);
   await assert.rejects(new OrderStatusClient({ accessToken: null }).status('x'), /Sign in/);
-  const noReason = new OrderStatusClient({ accessToken: 'tok' }, async () => Response.json({ status: 'FILLED' }));
+  const noReason = new OrderStatusClient({ accessToken: 'tok' }, apiHttp(async () => Response.json({ status: 'FILLED' })));
   assert.deepEqual(await noReason.status('x'), { status: 'FILLED', reasonCode: null, reasonText: null });
 });
 

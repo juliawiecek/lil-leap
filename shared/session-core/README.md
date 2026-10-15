@@ -6,6 +6,21 @@ state, the coordinator, guards, and the `SESSION_AUTH` injection token used by
 the interceptor. App adapters supply their existing AuthService, allowed return
 URLs and required role. Storage keys and route tables stay app-specific.
 
+`./angular` also exports `ApiHttpClient`, the shared typed GET/POST wrapper for
+business services (NEXT-153/NEXT-163). It delegates to Angular `HttpClient`, so
+both apps use the registered interceptor for all business API requests. Only
+same-origin `/api/` calls receive the current JWT. Identity calls, static assets,
+and external URLs receive no automatically added token. Business clients keep
+their domain validation and error messages; they do not attach tokens or handle
+session invalidation themselves.
+
+An API 401 invalidates the token captured for that request before domain error
+handling. The coordinator clears the session and redirects to login with a safe
+return destination. Older requests cannot invalidate a newer session, and no
+requests are automatically replayed. Guards check readiness, app role, inactivity,
+and finite future token expiry. The NestJS service remains responsible for JWT
+signature verification.
+
 From the repository root:
 
 ```sh

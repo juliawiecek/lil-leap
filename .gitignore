@@ -79,6 +79,10 @@ yarn-error.log*
 .settings
 .vscode
 node_modules/
+**/.angular/
+**/__pycache__/
+shared/session-core/coverage/
+e2e/artifacts/
 .scannerwork/
 auth/coverage/
 frontend/coverage/

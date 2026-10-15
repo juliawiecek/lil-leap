@@ -2,6 +2,9 @@
  * Client for the caller's accounts on the Holdings service (PS-05): list them, open another one,
  * and move cash between them. Every call is scoped by the access token's user on the server.
  */
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
 import type { Account } from './order-submission-api';
 
@@ -70,16 +73,16 @@ export function pickAccount<T extends Account>(accounts: readonly T[], preferred
 
 export class AccountsClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -98,28 +101,20 @@ export class AccountsClient {
     return this.#request<TransferResult>('POST', '/accounts/transfers', { fromAccountId, toAccountId, amount });
   }
 
+  /** The shared transport adds the bearer token, and its interceptor ends the session on a 401. */
   async #request<T>(method: 'GET' | 'POST', path: string, body?: object): Promise<T> {
-    const token = this.#tokens.accessToken;
-    if (!token) {
+    if (!this.#tokens.accessToken) {
       throw new Error('Sign in to manage your accounts.');
     }
-    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-    if (body) {
-      headers['Content-Type'] = 'application/json';
-    }
-    let response: Response;
+    const url = `${this.#baseUrl}${path}`;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`, { method, headers, body: body && JSON.stringify(body) });
-    } catch {
-      throw new Error(NETWORK);
+      return await firstValueFrom(method === 'GET' ? this.#http.get<T>(url) : this.#http.post<T>(url, body));
+    } catch (error) {
+      if (!(error instanceof HttpErrorResponse) || error.status === 0) {
+        throw new Error(NETWORK);
+      }
+      const code = (error.error as { error?: unknown } | null)?.error;
+      throw new Error((typeof code === 'string' && MESSAGES[code]) || FALLBACK);
     }
-    if (response.status === 401) {
-      this.#tokens.unauthorized?.(token);
-    }
-    if (!response.ok) {
-      const error = (await response.json().catch(() => null)) as { error?: unknown } | null;
-      throw new Error((typeof error?.error === 'string' && MESSAGES[error.error]) || FALLBACK);
-    }
-    return (await response.json()) as T;
   }
 }

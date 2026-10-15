@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
 import { QUOTE_REFRESH_MS } from './portfolio-api';
 import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient } from './market-status-api';
@@ -13,8 +14,9 @@ import { LiveQuote, MarketFeedClient, changeFrom, unpriced } from './market-feed
  */
 @Injectable({ providedIn: 'root' })
 export class MarketFeed {
-  client = new MarketFeedClient(inject(AuthService, { optional: true }) ?? { accessToken: null });
-  statusClient = new MarketStatusClient(inject(AuthService, { optional: true }) ?? { accessToken: null });
+  readonly #tokens = inject(AuthService, { optional: true }) ?? { accessToken: null };
+  client = new MarketFeedClient(this.#tokens, inject(ApiHttpClient));
+  statusClient = new MarketStatusClient(this.#tokens, inject(ApiHttpClient));
 
   readonly quotes = signal<LiveQuote[]>([]);
   readonly status = signal<MarketStatus | null>(null);

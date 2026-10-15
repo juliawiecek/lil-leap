@@ -11,7 +11,8 @@
     "test:ci": "node --test --test-concurrency=2 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=test-results/security.xml tests/*.test.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test:e2e": "playwright test --config=playwright.config.mjs"
+    "test:e2e": "playwright test --config=playwright.config.mjs",
+    "test:e2e:auth": "node ../e2e/run-stack.mjs --project=auth"
   },
   "private": true,
   "packageManager": "npm@11.9.0",

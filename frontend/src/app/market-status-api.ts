@@ -1,3 +1,6 @@
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
 
 /** GET /market/status: instants are UTC ISO strings. */
@@ -45,16 +48,16 @@ export function marketStatusText(status: MarketStatus | null, now: Date, locale?
 /** Client for the exchange's open/closed status. */
 export class MarketStatusClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -64,16 +67,14 @@ export class MarketStatusClient {
     if (!token) {
       throw new Error('Sign in to see the market status.');
     }
-    const response = await this.#fetch(`${this.#baseUrl}/market/status`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (response.status === 401) {
-      this.#tokens.unauthorized?.(token);
+    try {
+      return await firstValueFrom(this.#http.get<MarketStatus>(`${this.#baseUrl}/market/status`));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse) {
+        throw new Error('Could not load the market status.');
+      }
+      throw error;
     }
-    if (!response.ok) {
-      throw new Error('Could not load the market status.');
-    }
-    return (await response.json()) as MarketStatus;
   }
 }
 

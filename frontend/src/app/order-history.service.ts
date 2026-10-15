@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
 import { OrderHistoryClient } from './order-history-api';
@@ -6,6 +7,6 @@ import { OrderHistoryClient } from './order-history-api';
 @Injectable({ providedIn: 'root' })
 export class OrderHistoryService extends OrderHistoryClient {
   constructor() {
-    super(inject(AuthService));
+    super(inject(AuthService), inject(ApiHttpClient));
   }
 }

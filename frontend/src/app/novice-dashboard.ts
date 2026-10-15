@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
@@ -415,10 +416,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         // Prices have not loaded yet; the feed opens the linked stock once it is listed.
       }
     });
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
-    this.orderStatusClient = new OrderStatusClient(this.auth);
+    const http = inject(ApiHttpClient);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, http);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, http);
+    this.portfolioClient = new PortfolioClient(this.auth, http);
+    this.orderStatusClient = new OrderStatusClient(this.auth, http);
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();

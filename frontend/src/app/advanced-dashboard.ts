@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
@@ -658,10 +659,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
-    this.orderStatusClient = new OrderStatusClient(this.auth);
+    const http = inject(ApiHttpClient);
+    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, http);
+    this.orderHistoryClient = new OrderHistoryClient(this.auth, http);
+    this.portfolioClient = new PortfolioClient(this.auth, http);
+    this.orderStatusClient = new OrderStatusClient(this.auth, http);
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();

@@ -1,4 +1,6 @@
 import '@angular/compiler';
+import { ApiHttpClient } from '@lilleap/session-core/angular';
+import { of } from 'rxjs';
 import { createEnvironmentInjector, Injector, runInInjectionContext } from '@angular/core';
 import { existsSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -44,7 +46,7 @@ registerHooks({
 });
 
 export function component(t, Type, providers = []) {
-  const injector = createEnvironmentInjector(providers, Injector.NULL);
+  const injector = createEnvironmentInjector([{ provide: ApiHttpClient, useValue: { get: () => of([]), post: () => of({}) } }, ...providers], Injector.NULL);
   const instance = runInInjectionContext(injector, () => new Type());
   // Mirror Angular teardown so polling timers started in ngOnInit can't keep the test process alive.
   t.after(() => {
@@ -53,3 +55,5 @@ export function component(t, Type, providers = []) {
   });
   return instance;
 }
+
+export { ApiHttpClient };
