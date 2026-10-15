@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QuoteResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.marketdata.dto</a> &gt; <span class="el_source">QuoteResponse.java</span></div><h1>QuoteResponse.java</h1><pre class="source lang-java linenums">package com.neueda.leap.marketdata.dto;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Stable API representation of a market quote for display purposes.
+ *
+ * &lt;p&gt;Contains immutable quote evidence with timestamp for staleness detection.
+ * The execution service has its own durable quote selection logic independent of this display API.
+ *
+ * @param quoteId identifier of the source quote
+ * @param instrumentId persistent instrument identifier
+ * @param symbol instrument trading symbol
+ * @param marketCode market identifier
+ * @param bid bid price per unit
+ * @param ask ask price per unit
+ * @param midpoint arithmetic mean of bid and ask
+ * @param quotedAt timestamp supplied by the quote source
+ * @param currency currency code
+ * @param source quote provider name
+ * @param synthetic whether the quote was generated synthetically
+ */
+<span class="fc" id="L25">public record QuoteResponse(</span>
+        UUID quoteId,
+        UUID instrumentId,
+        String symbol,
+        String marketCode,
+        BigDecimal bid,
+        BigDecimal ask,
+        BigDecimal midpoint,
+        OffsetDateTime quotedAt,
+        String currency,
+        String source,
+        boolean synthetic) {
+
+    /**
+     * Creates a QuoteResponse from a MarketQuote.
+     *
+     * @param quote market quote evidence
+     * @return stable API representation
+     */
+    public static QuoteResponse from(com.neueda.leap.marketdata.MarketQuote quote) {
+<span class="fc" id="L45">        return new QuoteResponse(</span>
+<span class="fc" id="L46">                quote.quoteId(),</span>
+<span class="fc" id="L47">                quote.instrumentId(),</span>
+<span class="fc" id="L48">                quote.symbol(),</span>
+<span class="fc" id="L49">                quote.marketCode(),</span>
+<span class="fc" id="L50">                quote.bid(),</span>
+<span class="fc" id="L51">                quote.ask(),</span>
+<span class="fc" id="L52">                quote.midpoint(),</span>
+<span class="fc" id="L53">                quote.quotedAt(),</span>
+                &quot;USD&quot;,  // from database via instrument currency
+<span class="fc" id="L55">                quote.source(),</span>
+<span class="fc" id="L56">                quote.synthetic()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

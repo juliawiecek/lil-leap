@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderHistoryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.service</a> &gt; <span class="el_source">OrderHistoryService.java</span></div><h1>OrderHistoryService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.service;
+
+import com.neueda.leap.portfolio.dto.OrderHistoryResponse;
+import com.neueda.leap.portfolio.service.InvalidFilterException;
+import com.neueda.leap.portfolio.repository.OrderHistoryRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Reads a client's order history (BR-11).
+ *
+ * &lt;p&gt;The three filters are independent and optional: {@code from} and {@code to} are
+ * calendar days in UTC, both inclusive, and {@code status} is one order status. An
+ * omitted filter matches everything, so no filters returns the full history.&lt;/p&gt;
+ */
+@Service
+@Transactional(readOnly = true)
+public class OrderHistoryService {
+
+    /** Every value allowed by the orders.status check constraint. */
+<span class="fc" id="L29">    static final Set&lt;String&gt; ALL_STATUSES =</span>
+<span class="fc" id="L30">            Set.of(&quot;SUBMITTED&quot;, &quot;ACCEPTED&quot;, &quot;PENDING&quot;, &quot;DELAYED&quot;, &quot;FILLED&quot;, &quot;REJECTED&quot;);</span>
+
+<span class="fc" id="L32">    private static final Instant EARLIEST = Instant.EPOCH;</span>
+<span class="fc" id="L33">    private static final Instant LATEST = Instant.parse(&quot;9999-12-31T00:00:00Z&quot;);</span>
+
+    private final OrderHistoryRepository orderRepository;
+
+    /**
+     * Creates the order history service.
+     *
+     * @param orderRepository order persistence
+     */
+<span class="fc" id="L42">    public OrderHistoryService(OrderHistoryRepository orderRepository) {</span>
+<span class="fc" id="L43">        this.orderRepository = orderRepository;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Returns the user's orders, newest first, narrowed by any filters supplied.
+     *
+     * @param userId authenticated user's identifier
+     * @param from first day to include (UTC), or null for no lower bound
+     * @param to last day to include (UTC), or null for no upper bound
+     * @param status status to include, case-insensitive, or null for all statuses
+     * @return matching orders with fill details where filled
+     * @throws InvalidFilterException if the status is unknown or {@code from} is after {@code to}
+     */
+    public List&lt;OrderHistoryResponse&gt; getHistory(UUID userId, LocalDate from, LocalDate to, String status) {
+<span class="fc" id="L57">        return getHistory(userId, null, from, to, status);</span>
+    }
+
+    /**
+     * Returns the user's orders in one account (or all accounts), newest first, narrowed by any filters.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     *
+     * @param userId authenticated user's identifier
+     * @param accountId account to read, or null for every owned account
+     * @param from first day to include (UTC), or null for no lower bound
+     * @param to last day to include (UTC), or null for no upper bound
+     * @param status status to include, case-insensitive, or null for all statuses
+     * @return matching orders with fill details where filled
+     * @throws InvalidFilterException if the status is unknown or {@code from} is after {@code to}
+     */
+    public List&lt;OrderHistoryResponse&gt; getHistory(UUID userId, UUID accountId, LocalDate from, LocalDate to,
+            String status) {
+<span class="pc bpc" id="L74" title="1 of 6 branches missed.">        if (from != null &amp;&amp; to != null &amp;&amp; from.isAfter(to)) {</span>
+<span class="fc" id="L75">            throw new InvalidFilterException(&quot;from must not be after to&quot;);</span>
+        }
+<span class="fc" id="L77">        Set&lt;String&gt; statuses = ALL_STATUSES;</span>
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">        if (status != null &amp;&amp; !status.isBlank()) {</span>
+<span class="fc" id="L79">            String normalized = status.trim().toUpperCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (!ALL_STATUSES.contains(normalized)) {</span>
+<span class="fc" id="L81">                throw new InvalidFilterException(&quot;Unknown status: &quot; + status);</span>
+            }
+<span class="fc" id="L83">            statuses = Set.of(normalized);</span>
+        }
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        Instant lower = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : EARLIEST;</span>
+        // &quot;to&quot; is a whole day, so the bound is the start of the following day (exclusive).
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        Instant upper = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : LATEST;</span>
+<span class="fc" id="L88">        return orderRepository.findHistory(userId, accountId, statuses, lower, upper);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

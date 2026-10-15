@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccountController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.controller</a> &gt; <span class="el_source">AccountController.java</span></div><h1>AccountController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.controller;
+
+import com.neueda.leap.portfolio.dto.AccountResponse;
+import com.neueda.leap.portfolio.dto.OpenAccountRequest;
+import com.neueda.leap.portfolio.dto.TransferRequest;
+import com.neueda.leap.portfolio.dto.TransferResponse;
+import com.neueda.leap.portfolio.service.AccountService;
+import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.Map;
+
+/** The caller's trading accounts: list for selection, open another, and move cash between them (PS-05). */
+@RestController
+@Tag(name = &quot;Accounts&quot;, description = &quot;The caller's own accounts and transfers between them&quot;)
+@SecurityRequirement(name = &quot;bearerAuth&quot;)
+public class AccountController {
+    private final AccountService accounts;
+
+    /**
+     * Creates the account API.
+     * @param accounts account queries and changes scoped to the caller
+     */
+<span class="fc" id="L36">    public AccountController(AccountService accounts) { this.accounts = accounts; }</span>
+
+    /**
+     * Lists accounts owned by the authenticated caller.
+     * @param principal identity verified from the JWT
+     * @return owned accounts, oldest first, or an empty list
+     */
+    @GetMapping(&quot;/accounts&quot;)
+    @Operation(summary = &quot;List my accounts&quot;, description = &quot;Oldest first, with settled cash available to move or trade.&quot;)
+    public List&lt;Map&lt;String, Object&gt;&gt; accounts(@AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L46">        return accounts.list(principal.userId());</span>
+    }
+
+    /**
+     * Opens another individual cash account in USD, ACTIVE with $0.
+     * @param request nickname for the account
+     * @param principal identity verified from the JWT
+     * @return HTTP 201 with the new account
+     */
+    @PostMapping(&quot;/accounts&quot;)
+    @PreAuthorize(&quot;hasRole('TRADER')&quot;)
+    @Operation(summary = &quot;Open another account&quot;, description = &quot;Type and currency are fixed: INDIVIDUAL_CASH, USD.&quot;)
+    @ApiResponse(responseCode = &quot;201&quot;, description = &quot;Account opened&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Nickname missing or invalid&quot;)
+    @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Account limit reached&quot;)
+    public ResponseEntity&lt;AccountResponse&gt; open(@Valid @RequestBody OpenAccountRequest request,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L63">        return ResponseEntity.status(HttpStatus.CREATED).body(accounts.open(principal.userId(), request.nickname()));</span>
+    }
+
+    /**
+     * Moves settled cash between two of the caller's accounts.
+     * @param request source, target and amount
+     * @param principal identity verified from the JWT
+     * @return HTTP 200 with both balances after the transfer
+     */
+    @PostMapping(&quot;/accounts/transfers&quot;)
+    @PreAuthorize(&quot;hasRole('TRADER')&quot;)
+    @Operation(summary = &quot;Transfer cash between my accounts&quot;, description = &quot;Internal book transfer of settled USD cash.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Transfer committed&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Invalid amount, or the same account twice&quot;)
+    @ApiResponse(responseCode = &quot;403&quot;, description = &quot;An account is not the caller's&quot;)
+    @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Not enough available cash, or an account is not open&quot;)
+    public TransferResponse transfer(@Valid @RequestBody TransferRequest request,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L81">        return accounts.transfer(principal.userId(), request);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

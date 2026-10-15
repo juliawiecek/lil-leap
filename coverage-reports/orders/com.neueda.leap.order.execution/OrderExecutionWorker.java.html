@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderExecutionWorker.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution</a> &gt; <span class="el_source">OrderExecutionWorker.java</span></div><h1>OrderExecutionWorker.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution;
+
+import com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher;
+import com.neueda.leap.order.market.MarketHours;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.UUID;
+
+/** Database-backed queue: acceptance, claim, and execution commit independently. */
+public class OrderExecutionWorker {
+    private static final String CLAIM_NEXT_SQL = &quot;&quot;&quot;
+            WITH candidate AS (
+                SELECT order_id FROM orders
+                WHERE status IN ('ACCEPTED', 'PENDING') AND accepted_at IS NOT NULL
+                  AND next_execution_at &lt;= CURRENT_TIMESTAMP
+                ORDER BY next_execution_at, order_id
+                LIMIT 1 FOR UPDATE SKIP LOCKED
+            )
+            UPDATE orders o SET status = 'PENDING', execution_attempts = execution_attempts + 1,
+                next_execution_at = CURRENT_TIMESTAMP + (? * INTERVAL '1 second'),
+                updated_at = CURRENT_TIMESTAMP, last_execution_error = NULL
+            FROM candidate c WHERE o.order_id = c.order_id
+            RETURNING o.order_id, o.execution_attempts
+            &quot;&quot;&quot;;
+
+    private static final String ACCEPT_NEXT_SQL = &quot;&quot;&quot;
+            WITH candidate AS (
+                SELECT order_id FROM orders WHERE status = 'SUBMITTED'
+                  AND EXISTS (SELECT 1 FROM order_status_history h
+                              WHERE h.order_id = orders.order_id
+                                AND h.status = 'SUBMITTED' AND h.reason_code = 'SUBMISSION_VALIDATED')
+                ORDER BY submitted_at, order_id LIMIT 1 FOR UPDATE SKIP LOCKED
+            ), accepted AS (
+                UPDATE orders o SET status = 'ACCEPTED', accepted_at = CURRENT_TIMESTAMP,
+                    next_execution_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                FROM candidate c WHERE o.order_id = c.order_id RETURNING o.order_id, o.account_id
+            ), audited AS (
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'ORDER_ACCEPTED',
+                       jsonb_build_object('status', 'ACCEPTED') FROM accepted
+            )
+            INSERT INTO order_status_history(order_id, status, reason_code)
+            SELECT order_id, 'ACCEPTED', 'ORDER_ACCEPTED' FROM accepted
+            &quot;&quot;&quot;;
+
+    private static final String DEFER_SQL = &quot;&quot;&quot;
+            WITH deferred AS (
+                UPDATE orders SET next_execution_at = CURRENT_TIMESTAMP + (? * INTERVAL '1 second'),
+                    last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                RETURNING order_id, account_id, execution_attempts, next_execution_at, last_execution_error
+            )
+            INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+            SELECT account_id, order_id, 'SYSTEM', 'ORDER_REQUEUED',
+                   jsonb_build_object('attemptNumber', execution_attempts, 'reasonCode', last_execution_error,
+                                      'nextExecutionTime', next_execution_at) FROM deferred
+            &quot;&quot;&quot;;
+
+    /** Holds a claimed order until the market opens; it executes on the first claim after that. */
+    private static final String HOLD_UNTIL_OPEN_SQL = &quot;&quot;&quot;
+            WITH held AS (
+                UPDATE orders SET next_execution_at = ?, last_execution_error = 'MARKET_CLOSED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                RETURNING order_id, account_id, execution_attempts, next_execution_at
+            ), history AS (
+                INSERT INTO order_status_history(order_id, status, reason_code)
+                SELECT order_id, 'PENDING', 'MARKET_CLOSED' FROM held
+            )
+            INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+            SELECT account_id, order_id, 'SYSTEM', 'ORDER_REQUEUED',
+                   jsonb_build_object('attemptNumber', execution_attempts, 'reasonCode', 'MARKET_CLOSED',
+                                      'nextExecutionTime', next_execution_at) FROM held
+            &quot;&quot;&quot;;
+
+    private static final String LOCK_FOR_EXECUTION_SQL = &quot;&quot;&quot;
+            SELECT order_id FROM orders WHERE order_id = ? AND execution_attempts = ?
+                AND status = 'PENDING' AND accepted_at IS NOT NULL
+            FOR UPDATE SKIP LOCKED
+            &quot;&quot;&quot;;
+
+    private static final String REJECT_SQL = &quot;&quot;&quot;
+            WITH rejected AS (
+                UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
+                RETURNING order_id, account_id, execution_attempts
+            ), history AS (
+                INSERT INTO order_status_history(order_id, status, reason_code)
+                SELECT order_id, 'REJECTED', ? FROM rejected
+            )
+            INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+            SELECT account_id, order_id, 'SYSTEM', 'ORDER_REJECTED',
+                   jsonb_build_object('reasonCode', CAST(? AS text), 'attemptNumber', execution_attempts) FROM rejected
+            &quot;&quot;&quot;;
+
+    /** Default attempt limit for unexpected failures, matching the quote and price retry limits. */
+    public static final long DEFAULT_MAX_ATTEMPTS = 10;
+    static final String EXECUTION_FAILED = &quot;EXECUTION_FAILED&quot;;
+
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transaction;
+    private final OrderExecutor executor;
+    private final OrderLifecycleEventPublisher eventPublisher;
+    private final int retrySeconds;
+    private final long maxAttempts;
+    private final MarketHours marketHours;
+    private final Clock clock;
+
+    /**
+     * Creates a {@code OrderExecutionWorker} with the default attempt limit for unexpected failures.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @throws IllegalArgumentException if the retry delay is less than one second
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, int retrySeconds) {
+<span class="fc" id="L126">        this(jdbc, manager, executor, orderId -&gt; { }, retrySeconds);</span>
+<span class="fc" id="L127">    }</span>
+
+    /**
+     * Creates a {@code OrderExecutionWorker} with terminal-event publishing and the default attempt limit.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param eventPublisher Kafka publisher invoked after terminal commits
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @throws IllegalArgumentException if the retry delay is less than one second
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, OrderLifecycleEventPublisher eventPublisher,
+                                int retrySeconds) {
+<span class="fc" id="L142">        this(jdbc, manager, executor, eventPublisher, retrySeconds, DEFAULT_MAX_ATTEMPTS, null,</span>
+<span class="fc" id="L143">                Clock.systemUTC());</span>
+<span class="fc" id="L144">    }</span>
+
+    /**
+     * Creates a {@code OrderExecutionWorker} with the supplied attempt limit.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @param maxAttempts attempts after which an unexpected failure rejects the order instead of requeueing it
+     * @throws IllegalArgumentException if the retry delay or attempt limit is less than one
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, int retrySeconds, long maxAttempts) {
+<span class="fc" id="L158">        this(jdbc, manager, executor, orderId -&gt; { }, retrySeconds, maxAttempts, null, Clock.systemUTC());</span>
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * Creates a {@code OrderExecutionWorker} that only executes during market hours (NEXT-212).
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @param maxAttempts attempts after which an unexpected failure rejects the order instead of requeueing it
+     * @param marketHours session rules; null executes at any time
+     * @param clock source of the current time
+     * @throws IllegalArgumentException if the retry delay or attempt limit is less than one
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, int retrySeconds, long maxAttempts,
+                                MarketHours marketHours, Clock clock) {
+<span class="pc" id="L176">        this(jdbc, manager, executor, orderId -&gt; { }, retrySeconds, maxAttempts, marketHours, clock);</span>
+<span class="fc" id="L177">    }</span>
+
+    /**
+     * Creates a {@code OrderExecutionWorker} with the supplied dependencies.
+     *
+     * @param jdbc JDBC operations participating in Spring transactions
+     * @param manager transaction manager used for independent claim and execution transactions
+     * @param executor executor invoked while the order row is locked
+     * @param eventPublisher Kafka publisher invoked after terminal commits
+     * @param retrySeconds positive delay in seconds before a claimed order is eligible again
+     * @param maxAttempts attempts after which an unexpected failure rejects the order instead of requeueing it
+     * @param marketHours session rules; null executes at any time
+     * @param clock source of the current time
+     * @throws IllegalArgumentException if the retry delay or attempt limit is less than one
+     */
+    public OrderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                OrderExecutor executor, OrderLifecycleEventPublisher eventPublisher,
+<span class="fc" id="L194">                                int retrySeconds, long maxAttempts, MarketHours marketHours, Clock clock) {</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        if (retrySeconds &lt; 1) {</span>
+<span class="fc" id="L196">            throw new IllegalArgumentException(&quot;Retry delay must be positive&quot;);</span>
+        }
+<span class="fc bfc" id="L198" title="All 2 branches covered.">        if (maxAttempts &lt; 1) {</span>
+<span class="fc" id="L199">            throw new IllegalArgumentException(&quot;Attempt limit must be positive&quot;);</span>
+        }
+<span class="fc" id="L201">        this.jdbc = jdbc;</span>
+<span class="fc" id="L202">        this.executor = executor;</span>
+<span class="fc" id="L203">        this.eventPublisher = eventPublisher;</span>
+<span class="fc" id="L204">        this.retrySeconds = retrySeconds;</span>
+<span class="fc" id="L205">        this.maxAttempts = maxAttempts;</span>
+<span class="fc" id="L206">        this.marketHours = marketHours;</span>
+<span class="fc" id="L207">        this.clock = clock;</span>
+<span class="fc" id="L208">        transaction = new TransactionTemplate(manager);</span>
+<span class="fc" id="L209">        transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Claims one committed order; SKIP LOCKED permits multiple application instances.
+     *
+     * @return persisted claim, or null when no due unlocked order exists
+     */
+    public Claim claimNext() {
+<span class="fc" id="L218">        acceptNext();</span>
+<span class="fc" id="L219">        return transaction.execute(tx -&gt; jdbc.query(CLAIM_NEXT_SQL, (rs, n) -&gt; new Claim(rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L220">                rs.getLong(&quot;execution_attempts&quot;)), retrySeconds).stream().findFirst().orElse(null));</span>
+    }
+
+    private void acceptNext() {
+        // Acceptance is durable before execution. Resource availability is checked
+        // again under the account lock at settlement; acceptance is not a reservation.
+<span class="fc" id="L226">        transaction.executeWithoutResult(tx -&gt; jdbc.update(ACCEPT_NEXT_SQL));</span>
+<span class="fc" id="L227">    }</span>
+
+    /**
+     * Executes a matching, locked claim in a new transaction; stale or locked claims are skipped.
+     * FILLED requires exactly one persisted fill. REJECTED requires a rejection audit entry
+     * and relies on the executor to set terminal status. PENDING rolls back trade effects and
+     * requeues with the executor's {@code RETRY_} reason. An unexpected failure is requeued as
+     * {@code RETRY_EXECUTION_FAILED} until the attempt limit, then rejected as {@code EXECUTION_FAILED}.
+     * Requeues and failure rejections are written in a separate transaction.
+     *
+     * @param claim persisted claim and attempt number
+     */
+    public void execute(Claim claim) {
+<span class="fc" id="L240">        Instant now = clock.instant();</span>
+<span class="fc bfc" id="L241" title="All 4 branches covered.">        if (marketHours != null &amp;&amp; !marketHours.isOpen(now)) {</span>
+<span class="fc" id="L242">            holdUntilOpen(claim, marketHours.nextOpen(now));</span>
+<span class="fc" id="L243">            return;</span>
+        }
+        try {
+<span class="fc" id="L246">            OrderExecutor.Result result = executeClaimTransaction(claim);</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">            if (result == null) {</span>
+<span class="fc" id="L248">                return;</span>
+            }
+<span class="fc bfc" id="L250" title="All 2 branches covered.">            if (result.outcome() == OrderExecutor.Outcome.PENDING) {</span>
+<span class="fc" id="L251">                defer(claim, result.reason());</span>
+<span class="fc" id="L252">                return;</span>
+            }
+<span class="fc" id="L254">            publishTerminalEvent(claim.orderId());</span>
+<span class="fc" id="L255">        } catch (RuntimeException failure) {</span>
+            // The committed claim survives even if this diagnostic update also fails.
+<span class="fc bfc" id="L257" title="All 2 branches covered.">            if (claim.attempt() &gt;= maxAttempts) {</span>
+<span class="fc" id="L258">                reject(claim, EXECUTION_FAILED);</span>
+            } else {
+<span class="fc" id="L260">                defer(claim, OrderExecutor.Result.RETRY_PREFIX + EXECUTION_FAILED);</span>
+            }
+<span class="fc" id="L262">            return;</span>
+<span class="fc" id="L263">        }</span>
+<span class="fc" id="L264">    }</span>
+
+    private OrderExecutor.Result executeClaimTransaction(Claim claim) {
+<span class="fc" id="L267">        return transaction.execute(tx -&gt; {</span>
+<span class="fc" id="L268">            var locked = jdbc.query(LOCK_FOR_EXECUTION_SQL,</span>
+<span class="fc" id="L269">                    (rs, n) -&gt; rs.getObject(1, UUID.class), claim.orderId(), claim.attempt());</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">            if (locked.isEmpty()) {</span>
+<span class="fc" id="L271">                return null;</span>
+            }
+<span class="fc" id="L273">            return processResult(claim, executor.execute(claim.orderId()), tx);</span>
+        });
+    }
+
+    private void defer(Claim claim, String reason) {
+<span class="fc" id="L278">        transaction.executeWithoutResult(tx -&gt; jdbc.update(DEFER_SQL, retrySeconds, reason, claim.orderId(), claim.attempt()));</span>
+<span class="fc" id="L279">    }</span>
+
+    /** Keeps the order PENDING until the next session; fenced by attempt like a requeue. */
+    private void holdUntilOpen(Claim claim, Instant open) {
+<span class="fc" id="L283">        transaction.executeWithoutResult(tx -&gt; jdbc.update(HOLD_UNTIL_OPEN_SQL, Timestamp.from(open),</span>
+<span class="fc" id="L284">                claim.orderId(), claim.attempt()));</span>
+<span class="fc" id="L285">    }</span>
+
+    /** Ends retries for an order that keeps failing unexpectedly; fenced by attempt like a requeue. */
+    private void reject(Claim claim, String reason) {
+<span class="fc" id="L289">        transaction.executeWithoutResult(tx -&gt; jdbc.update(REJECT_SQL, reason, claim.orderId(), claim.attempt(), reason, reason));</span>
+<span class="fc" id="L290">    }</span>
+
+    /** Processes the executor result inside the worker transaction and returns it for post-commit handling. */
+    private OrderExecutor.Result processResult(Claim claim, OrderExecutor.Result result,
+                                              org.springframework.transaction.TransactionStatus tx) {
+<span class="fc bfc" id="L295" title="All 2 branches covered.">        if (result == null) {</span>
+<span class="fc" id="L296">            throw new IllegalStateException(&quot;Execution result is required&quot;);</span>
+        }
+<span class="fc bfc" id="L298" title="All 3 branches covered.">        return switch (result.outcome()) {</span>
+            case FILLED -&gt; {
+<span class="fc" id="L300">                validateFill(claim.orderId());</span>
+<span class="fc" id="L301">                jdbc.update(&quot;UPDATE orders SET status = 'FILLED', updated_at = CURRENT_TIMESTAMP, last_execution_error = NULL WHERE order_id = ?&quot;,</span>
+<span class="fc" id="L302">                        claim.orderId());</span>
+<span class="fc" id="L303">                yield result;</span>
+            }
+            case REJECTED -&gt; {
+<span class="fc" id="L306">                validateRejection(claim.orderId());</span>
+<span class="fc" id="L307">                yield result;</span>
+            }
+            case PENDING -&gt; {
+                // Roll back any accidental partial effects from an unavailable executor.
+<span class="fc" id="L311">                tx.setRollbackOnly();</span>
+<span class="fc" id="L312">                yield result;</span>
+            }
+        };
+    }
+
+    private void publishTerminalEvent(UUID orderId) {
+        try {
+<span class="fc" id="L319">            eventPublisher.publishTerminalEvent(orderId);</span>
+<span class="nc" id="L320">        } catch (RuntimeException failure) {</span>
+            // Kafka is best-effort for the demo flow; order completion still stands.
+<span class="fc" id="L322">        }</span>
+<span class="fc" id="L323">    }</span>
+
+    private void validateFill(UUID orderId) {
+<span class="fc" id="L326">        Integer fills = jdbc.queryForObject(&quot;SELECT count(*) FROM fills WHERE order_id = ?&quot;, Integer.class, orderId);</span>
+<span class="fc bfc" id="L327" title="All 4 branches covered.">        if (fills == null || fills != 1) {</span>
+<span class="fc" id="L328">            throw new IllegalStateException(&quot;Execution must persist a fill&quot;);</span>
+        }
+<span class="fc" id="L330">    }</span>
+
+    private void validateRejection(UUID orderId) {
+<span class="fc" id="L333">        Integer rejections = jdbc.queryForObject(</span>
+                &quot;SELECT count(*) FROM order_status_history WHERE order_id = ? AND status = 'REJECTED'&quot;,
+                Integer.class,
+                orderId);
+<span class="fc bfc" id="L337" title="All 4 branches covered.">        if (rejections == null || rejections == 0) {</span>
+<span class="fc" id="L338">            throw new IllegalStateException(&quot;Rejection must record reason in order_status_history&quot;);</span>
+        }
+<span class="fc" id="L340">    }</span>
+
+    /**
+     * Persisted order claim whose attempt number prevents execution by a stale worker.
+     *
+     * @param orderId persistent order identifier
+     * @param attempt attempt number used to fence stale worker claims
+     */
+<span class="fc" id="L348">    public record Claim(UUID orderId, long attempt) { }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QuoteFreshnessPolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution.quote</a> &gt; <span class="el_source">QuoteFreshnessPolicy.java</span></div><h1>QuoteFreshnessPolicy.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution.quote;
+
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.Objects;
+
+/**
+ * Validates quote timestamps against the execution instant. Age and future-skew boundaries are
+ * inclusive; this policy does not inspect quote prices.
+ */
+public class QuoteFreshnessPolicy {
+    private final Duration maximumAge;
+    private final Duration allowedFutureSkew;
+
+    /**
+     * Creates a quote timestamp policy with explicit age and future-skew limits.
+     *
+     * @param maximumAge positive maximum permitted quote age
+     * @param allowedFutureSkew nonnegative allowance for future quote timestamps
+     * @throws IllegalArgumentException if either duration is null, age is not positive or skew is negative
+     */
+<span class="fc" id="L22">    public QuoteFreshnessPolicy(Duration maximumAge, Duration allowedFutureSkew) {</span>
+<span class="pc bpc" id="L23" title="3 of 6 branches missed.">        if (maximumAge == null || maximumAge.isZero() || maximumAge.isNegative())</span>
+<span class="nc" id="L24">            throw new IllegalArgumentException(&quot;Maximum quote age must be positive&quot;);</span>
+<span class="pc bpc" id="L25" title="2 of 4 branches missed.">        if (allowedFutureSkew == null || allowedFutureSkew.isNegative())</span>
+<span class="nc" id="L26">            throw new IllegalArgumentException(&quot;Allowed future skew cannot be negative&quot;);</span>
+<span class="fc" id="L27">        this.maximumAge = maximumAge;</span>
+<span class="fc" id="L28">        this.allowedFutureSkew = allowedFutureSkew;</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * Classifies a quote timestamp. The maximum age and future-skew boundaries are inclusive.
+     * Future timestamps within the skew allowance have an effective age of zero.
+     *
+     * @param quotedAt timestamp supplied by the quote source
+     * @param evaluatedAt instant at which freshness is evaluated
+     * @return freshness classification
+     * @throws NullPointerException if either timestamp is null
+     */
+    public Freshness evaluate(OffsetDateTime quotedAt, OffsetDateTime evaluatedAt) {
+<span class="fc" id="L41">        Objects.requireNonNull(quotedAt);</span>
+<span class="fc" id="L42">        Objects.requireNonNull(evaluatedAt);</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (quotedAt.isAfter(evaluatedAt.plus(allowedFutureSkew)))</span>
+<span class="fc" id="L44">            return Freshness.INVALID_FUTURE_TIMESTAMP;</span>
+<span class="fc" id="L45">        Duration age = Duration.between(quotedAt, evaluatedAt);</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        if (age.isNegative()) age = Duration.ZERO;</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        return age.compareTo(maximumAge) &lt;= 0 ? Freshness.FRESH : Freshness.STALE;</span>
+    }
+
+    /** Timestamp classification relative to the configured age and clock-skew limits. */
+<span class="fc" id="L51">    public enum Freshness {</span>
+        /** The quote is within both timestamp limits. */
+<span class="fc" id="L53">        FRESH,</span>
+        /** The quote is older than the maximum permitted age. */
+<span class="fc" id="L55">        STALE,</span>
+        /** The quote is too far in the future. */
+<span class="fc" id="L57">        INVALID_FUTURE_TIMESTAMP</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

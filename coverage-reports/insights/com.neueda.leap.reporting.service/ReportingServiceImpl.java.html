@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportingServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.reporting.service</a> &gt; <span class="el_source">ReportingServiceImpl.java</span></div><h1>ReportingServiceImpl.java</h1><pre class="source lang-java linenums">package com.neueda.leap.reporting.service;
+
+import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
+import com.neueda.leap.reporting.dto.OverviewDto;
+import com.neueda.leap.reporting.dto.TopInstrumentDto;
+import com.neueda.leap.reporting.entity.TradeFillEntity;
+import com.neueda.leap.reporting.model.ReportDateRange;
+import com.neueda.leap.reporting.repository.TradeReportingRepository;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+/**
+ * Default {@link ReportingService} for current-day insights and file-based BR-16 report generation.
+ */
+@Service
+public class ReportingServiceImpl implements ReportingService {
+
+    private static final String REPORTS_RESOURCE_PATH = &quot;classpath:reports/trades.csv&quot;;
+    private static final String INSTRUMENT_REPORT_FILENAME = &quot;instrument-report.csv&quot;;
+    private static final String CLIENT_SEGMENT_REPORT_FILENAME = &quot;client-segment-report.csv&quot;;
+    private static final String TRADING_ACTIVITY_REPORT_FILENAME = &quot;trading-activity-report.csv&quot;;
+    private static final String REPORTING_DATASET = &quot;Reporting dataset&quot;;
+    private static final String REPORTING_DATASET_ROW = REPORTING_DATASET + &quot; row&quot;;
+    private static final String HEADER_TRADE_COUNT = &quot;trade_count&quot;;
+    private static final String HEADER_TOTAL_QUANTITY = &quot;total_quantity&quot;;
+    private static final String HEADER_TOTAL_NOTIONAL = &quot;total_notional&quot;;
+
+<span class="fc" id="L59">    private static final List&lt;String&gt; INPUT_HEADERS = List.of(</span>
+            &quot;fill_id&quot;,
+            &quot;order_id&quot;,
+            &quot;filled_at&quot;,
+            &quot;instrument_id&quot;,
+            &quot;instrument_symbol&quot;,
+            &quot;instrument_name&quot;,
+            &quot;asset_class&quot;,
+            &quot;market_code&quot;,
+            &quot;user_id&quot;,
+            &quot;client_email&quot;,
+            &quot;account_id&quot;,
+            &quot;account_number&quot;,
+            &quot;account_status&quot;,
+            &quot;trader_level&quot;,
+            &quot;side&quot;,
+            &quot;filled_quantity&quot;,
+            &quot;execution_price&quot;);
+
+<span class="fc" id="L78">    private static final List&lt;String&gt; INSTRUMENT_REPORT_HEADERS = List.of(</span>
+            &quot;instrument_symbol&quot;,
+            &quot;instrument_name&quot;,
+            &quot;asset_class&quot;,
+            &quot;market_code&quot;,
+            HEADER_TRADE_COUNT,
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL,
+            &quot;average_execution_price&quot;);
+
+<span class="fc" id="L88">    private static final List&lt;String&gt; CLIENT_SEGMENT_REPORT_HEADERS = List.of(</span>
+            &quot;client_segment&quot;,
+            HEADER_TRADE_COUNT,
+            &quot;unique_clients&quot;,
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL);
+
+<span class="fc" id="L95">    private static final List&lt;String&gt; TRADING_ACTIVITY_REPORT_HEADERS = List.of(</span>
+            &quot;trade_date&quot;,
+            &quot;trade_hour&quot;,
+            HEADER_TRADE_COUNT,
+            &quot;unique_clients&quot;,
+            HEADER_TOTAL_QUANTITY,
+            HEADER_TOTAL_NOTIONAL);
+
+<span class="fc" id="L103">    private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern(&quot;HH:mm&quot;, Locale.ROOT);</span>
+<span class="fc" id="L104">    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;</span>
+<span class="fc" id="L105">    private static final BigDecimal ZERO_MONEY = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L106">    private static final MediaType TEXT_CSV_UTF8 = new MediaType(&quot;text&quot;, &quot;csv&quot;, StandardCharsets.UTF_8);</span>
+
+    private final TradeReportingRepository repository;
+    private final Clock clock;
+    private final ResourceLoader resourceLoader;
+
+    /**
+     * Creates the reporting service.
+     *
+     * @param repository existing read-only reporting repository used by the dashboard insights endpoints
+     * @param clock UTC-aware clock used to derive the current day window
+     * @param resourceLoader classpath resource loader used to read the BR-16 CSV dataset
+     */
+<span class="fc" id="L119">    public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {</span>
+<span class="fc" id="L120">        this.repository = repository;</span>
+<span class="fc" id="L121">        this.clock = clock;</span>
+<span class="fc" id="L122">        this.resourceLoader = resourceLoader;</span>
+<span class="fc" id="L123">    }</span>
+
+    @Override
+    public OverviewDto getOverview() {
+<span class="fc" id="L127">        ReportDateRange range = currentUtcDayRange();</span>
+<span class="fc" id="L128">        TradeReportingRepository.OverviewProjection overview =</span>
+<span class="fc" id="L129">                repository.summarize(range.startInclusive(), range.endExclusive());</span>
+
+<span class="fc" id="L131">        return new OverviewDto(</span>
+<span class="fc bfc" id="L132" title="All 2 branches covered.">                defaultLong(overview == null ? null : overview.getTradeVolumeToday()),</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">                defaultLong(overview == null ? null : overview.getActiveClientsToday()),</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">                scaleMoney(overview == null ? null : overview.getTradeValueToday()));</span>
+    }
+
+    @Override
+    public List&lt;TopInstrumentDto&gt; getTopInstruments() {
+<span class="fc" id="L139">        ReportDateRange range = currentUtcDayRange();</span>
+<span class="fc" id="L140">        return repository.findTopInstrumentsByTradeCount(</span>
+<span class="fc" id="L141">                        range.startInclusive(),</span>
+<span class="fc" id="L142">                        range.endExclusive(),</span>
+<span class="fc" id="L143">                        PageRequest.of(0, TOP_INSTRUMENTS_LIMIT))</span>
+<span class="fc" id="L144">                .stream()</span>
+<span class="fc" id="L145">                .map(item -&gt; new TopInstrumentDto(item.getInstrument(), defaultLong(item.getTradeCount())))</span>
+<span class="fc" id="L146">                .toList();</span>
+    }
+
+    @Override
+    public List&lt;ClientActivityTrendDto&gt; getClientActivityTrend() {
+<span class="fc" id="L151">        ReportDateRange range = currentUtcDayRange();</span>
+<span class="fc" id="L152">        Map&lt;String, Long&gt; countsByHour = repository</span>
+<span class="fc" id="L153">                .findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(</span>
+<span class="fc" id="L154">                        range.startInclusive(),</span>
+<span class="fc" id="L155">                        range.endExclusive())</span>
+<span class="fc" id="L156">                .stream()</span>
+<span class="fc" id="L157">                .map(TradeFillEntity::getFilledAt)</span>
+<span class="fc" id="L158">                .map(this::toUtcHourLabel)</span>
+<span class="fc" id="L159">                .collect(Collectors.toMap(</span>
+<span class="fc" id="L160">                        label -&gt; label,</span>
+<span class="fc" id="L161">                        ignored -&gt; 1L,</span>
+                        Long::sum,
+                        LinkedHashMap::new));
+
+<span class="fc" id="L165">        return IntStream.range(0, 24)</span>
+<span class="fc" id="L166">                .mapToObj(hour -&gt; String.format(Locale.ROOT, &quot;%02d:00&quot;, hour))</span>
+<span class="fc" id="L167">                .map(hourLabel -&gt; new ClientActivityTrendDto(hourLabel, countsByHour.getOrDefault(hourLabel, 0L)))</span>
+<span class="fc" id="L168">                .toList();</span>
+    }
+
+    @Override
+    public ResponseEntity&lt;Resource&gt; generateInstrumentReport() {
+<span class="fc" id="L173">        List&lt;TradeRow&gt; trades = loadTrades();</span>
+<span class="fc" id="L174">        List&lt;List&lt;String&gt;&gt; rows = aggregateByInstrument(trades).stream()</span>
+<span class="fc" id="L175">                .map(this::instrumentReportRow)</span>
+<span class="fc" id="L176">                .toList();</span>
+<span class="fc" id="L177">        return buildCsvAttachment(INSTRUMENT_REPORT_FILENAME, INSTRUMENT_REPORT_HEADERS, rows);</span>
+    }
+
+    @Override
+    public ResponseEntity&lt;Resource&gt; generateClientSegmentReport() {
+<span class="fc" id="L182">        List&lt;TradeRow&gt; trades = loadTrades();</span>
+<span class="fc" id="L183">        List&lt;List&lt;String&gt;&gt; rows = aggregateByClientSegment(trades).stream()</span>
+<span class="fc" id="L184">                .map(this::clientSegmentReportRow)</span>
+<span class="fc" id="L185">                .toList();</span>
+<span class="fc" id="L186">        return buildCsvAttachment(CLIENT_SEGMENT_REPORT_FILENAME, CLIENT_SEGMENT_REPORT_HEADERS, rows);</span>
+    }
+
+    @Override
+    public ResponseEntity&lt;Resource&gt; generateTradingActivityReport() {
+<span class="fc" id="L191">        List&lt;TradeRow&gt; trades = loadTrades();</span>
+<span class="fc" id="L192">        List&lt;List&lt;String&gt;&gt; rows = aggregateByTradingActivity(trades).stream()</span>
+<span class="fc" id="L193">                .map(this::tradingActivityReportRow)</span>
+<span class="fc" id="L194">                .toList();</span>
+<span class="fc" id="L195">        return buildCsvAttachment(TRADING_ACTIVITY_REPORT_FILENAME, TRADING_ACTIVITY_REPORT_HEADERS, rows);</span>
+    }
+
+    private ReportDateRange currentUtcDayRange() {
+<span class="fc" id="L199">        LocalDate todayUtc = LocalDate.now(clock);</span>
+<span class="fc" id="L200">        return new ReportDateRange(todayUtc, todayUtc);</span>
+    }
+
+    private String toUtcHourLabel(Instant executionTime) {
+<span class="fc" id="L204">        return executionTime.atOffset(ZoneOffset.UTC)</span>
+<span class="fc" id="L205">                .withMinute(0)</span>
+<span class="fc" id="L206">                .withSecond(0)</span>
+<span class="fc" id="L207">                .withNano(0)</span>
+<span class="fc" id="L208">                .toLocalTime()</span>
+<span class="fc" id="L209">                .format(HOUR_FORMATTER);</span>
+    }
+
+    private long defaultLong(Long value) {
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        return value == null ? 0L : value;</span>
+    }
+
+    private BigDecimal scaleMoney(BigDecimal value) {
+<span class="fc bfc" id="L217" title="All 2 branches covered.">        return value == null ? ZERO_MONEY : value.setScale(2, RoundingMode.HALF_UP);</span>
+    }
+
+    private ResponseEntity&lt;Resource&gt; buildCsvAttachment(String filename, List&lt;String&gt; headers, List&lt;List&lt;String&gt;&gt; rows) {
+<span class="fc" id="L221">        String csv = toCsv(headers, rows);</span>
+<span class="fc" id="L222">        ByteArrayResource resource = new ByteArrayResource(csv.getBytes(StandardCharsets.UTF_8));</span>
+
+<span class="fc" id="L224">        return ResponseEntity.ok()</span>
+<span class="fc" id="L225">                .contentType(TEXT_CSV_UTF8)</span>
+<span class="fc" id="L226">                .header(HttpHeaders.CONTENT_DISPOSITION,</span>
+<span class="fc" id="L227">                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())</span>
+<span class="fc" id="L228">                .contentLength(resource.contentLength())</span>
+<span class="fc" id="L229">                .body(resource);</span>
+    }
+
+    private List&lt;TradeRow&gt; loadTrades() {
+<span class="fc" id="L233">        Resource resource = resourceLoader.getResource(REPORTS_RESOURCE_PATH);</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">        if (!resource.exists()) {</span>
+<span class="fc" id="L235">            throw new IllegalStateException(REPORTING_DATASET + &quot; not found: &quot; + REPORTS_RESOURCE_PATH);</span>
+        }
+
+<span class="fc" id="L238">        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {</span>
+<span class="fc" id="L239">            String headerLine = reader.readLine();</span>
+<span class="fc bfc" id="L240" title="All 2 branches covered.">            if (headerLine == null) {</span>
+<span class="fc" id="L241">                throw new IllegalStateException(REPORTING_DATASET + &quot; is empty: &quot; + REPORTS_RESOURCE_PATH);</span>
+            }
+
+<span class="fc" id="L244">            List&lt;String&gt; actualHeaders = parseCsvLine(headerLine);</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">            if (!INPUT_HEADERS.equals(actualHeaders)) {</span>
+<span class="fc" id="L246">                throw new IllegalStateException(&quot;Unexpected &quot; + REPORTING_DATASET.toLowerCase(Locale.ROOT) + &quot; header: &quot; + actualHeaders);</span>
+            }
+
+<span class="fc" id="L249">            List&lt;TradeRow&gt; trades = new ArrayList&lt;&gt;();</span>
+            String line;
+<span class="fc bfc" id="L251" title="All 2 branches covered.">            while ((line = reader.readLine()) != null) {</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">                if (line.isBlank()) {</span>
+<span class="fc" id="L253">                    continue;</span>
+                }
+
+<span class="fc" id="L256">                List&lt;String&gt; columns = parseCsvLine(line);</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">                if (columns.size() != INPUT_HEADERS.size()) {</span>
+<span class="fc" id="L258">                    throw new IllegalStateException(&quot;Unexpected column count in &quot; + REPORTING_DATASET_ROW.toLowerCase(Locale.ROOT) + &quot;: &quot; + columns);</span>
+                }
+
+<span class="fc" id="L261">                trades.add(mapTradeRow(columns));</span>
+<span class="fc" id="L262">            }</span>
+
+<span class="fc" id="L264">            return trades;</span>
+<span class="fc" id="L265">        } catch (IOException ex) {</span>
+<span class="fc" id="L266">            throw new IllegalStateException(&quot;Failed to read &quot; + REPORTING_DATASET.toLowerCase(Locale.ROOT) + &quot; from &quot; + REPORTS_RESOURCE_PATH, ex);</span>
+        }
+    }
+
+    private TradeRow mapTradeRow(List&lt;String&gt; columns) {
+<span class="fc" id="L271">        return new TradeRow(</span>
+<span class="fc" id="L272">                columns.get(0),</span>
+<span class="fc" id="L273">                columns.get(1),</span>
+<span class="fc" id="L274">                Instant.parse(columns.get(2)),</span>
+<span class="fc" id="L275">                columns.get(3),</span>
+<span class="fc" id="L276">                columns.get(4),</span>
+<span class="fc" id="L277">                columns.get(5),</span>
+<span class="fc" id="L278">                columns.get(6),</span>
+<span class="fc" id="L279">                columns.get(7),</span>
+<span class="fc" id="L280">                columns.get(8),</span>
+<span class="fc" id="L281">                columns.get(9),</span>
+<span class="fc" id="L282">                columns.get(10),</span>
+<span class="fc" id="L283">                columns.get(11),</span>
+<span class="fc" id="L284">                columns.get(12),</span>
+<span class="fc" id="L285">                columns.get(13),</span>
+<span class="fc" id="L286">                columns.get(14),</span>
+<span class="fc" id="L287">                Long.parseLong(columns.get(15)),</span>
+<span class="fc" id="L288">                new BigDecimal(columns.get(16)));</span>
+    }
+
+    private List&lt;InstrumentAggregateRow&gt; aggregateByInstrument(List&lt;TradeRow&gt; trades) {
+<span class="fc" id="L292">        Map&lt;InstrumentKey, AggregateBucket&gt; aggregated = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L293" title="All 2 branches covered.">        for (TradeRow trade : trades) {</span>
+<span class="fc" id="L294">            aggregated.computeIfAbsent(trade.instrumentKey(), ignored -&gt; new AggregateBucket()).accept(trade);</span>
+<span class="fc" id="L295">        }</span>
+
+<span class="fc" id="L297">        return aggregated.entrySet().stream()</span>
+<span class="fc" id="L298">                .sorted(Comparator</span>
+<span class="fc" id="L299">                        .comparing((Map.Entry&lt;InstrumentKey, AggregateBucket&gt; entry) -&gt; entry.getValue().tradeCount())</span>
+<span class="fc" id="L300">                        .reversed()</span>
+<span class="fc" id="L301">                        .thenComparing(entry -&gt; entry.getKey().instrumentSymbol()))</span>
+<span class="fc" id="L302">                .map(entry -&gt; new InstrumentAggregateRow(</span>
+<span class="fc" id="L303">                        entry.getKey().instrumentSymbol(),</span>
+<span class="fc" id="L304">                        entry.getKey().instrumentName(),</span>
+<span class="fc" id="L305">                        entry.getKey().assetClass(),</span>
+<span class="fc" id="L306">                        entry.getKey().marketCode(),</span>
+<span class="fc" id="L307">                        entry.getValue().tradeCount(),</span>
+<span class="fc" id="L308">                        entry.getValue().totalQuantity(),</span>
+<span class="fc" id="L309">                        entry.getValue().totalNotional()))</span>
+<span class="fc" id="L310">                .toList();</span>
+    }
+
+    private List&lt;ClientSegmentAggregateRow&gt; aggregateByClientSegment(List&lt;TradeRow&gt; trades) {
+<span class="fc" id="L314">        Map&lt;String, AggregateBucket&gt; aggregated = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L315" title="All 2 branches covered.">        for (TradeRow trade : trades) {</span>
+<span class="fc" id="L316">            aggregated.computeIfAbsent(trade.traderLevel(), ignored -&gt; new AggregateBucket()).accept(trade);</span>
+<span class="fc" id="L317">        }</span>
+
+<span class="fc" id="L319">        return aggregated.entrySet().stream()</span>
+<span class="fc" id="L320">                .sorted(Comparator</span>
+<span class="fc" id="L321">                        .comparing((Map.Entry&lt;String, AggregateBucket&gt; entry) -&gt; entry.getValue().tradeCount())</span>
+<span class="fc" id="L322">                        .reversed()</span>
+<span class="fc" id="L323">                        .thenComparing(Map.Entry::getKey))</span>
+<span class="fc" id="L324">                .map(entry -&gt; new ClientSegmentAggregateRow(</span>
+<span class="fc" id="L325">                        entry.getKey(),</span>
+<span class="fc" id="L326">                        entry.getValue().tradeCount(),</span>
+<span class="fc" id="L327">                        entry.getValue().uniqueClients().size(),</span>
+<span class="fc" id="L328">                        entry.getValue().totalQuantity(),</span>
+<span class="fc" id="L329">                        entry.getValue().totalNotional()))</span>
+<span class="fc" id="L330">                .toList();</span>
+    }
+
+    private List&lt;TradingActivityAggregateRow&gt; aggregateByTradingActivity(List&lt;TradeRow&gt; trades) {
+<span class="fc" id="L334">        Map&lt;ActivityKey, AggregateBucket&gt; aggregated = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        for (TradeRow trade : trades) {</span>
+<span class="fc" id="L336">            aggregated.computeIfAbsent(trade.activityKey(), ignored -&gt; new AggregateBucket()).accept(trade);</span>
+<span class="fc" id="L337">        }</span>
+
+<span class="fc" id="L339">        return aggregated.entrySet().stream()</span>
+<span class="fc" id="L340">                .sorted(Comparator</span>
+<span class="fc" id="L341">                        .comparing((Map.Entry&lt;ActivityKey, AggregateBucket&gt; entry) -&gt; entry.getKey().tradeDate())</span>
+<span class="fc" id="L342">                        .thenComparingInt(entry -&gt; entry.getKey().hour()))</span>
+<span class="fc" id="L343">                .map(entry -&gt; new TradingActivityAggregateRow(</span>
+<span class="fc" id="L344">                        entry.getKey().tradeDate(),</span>
+<span class="fc" id="L345">                        entry.getKey().hour(),</span>
+<span class="fc" id="L346">                        entry.getValue().tradeCount(),</span>
+<span class="fc" id="L347">                        entry.getValue().uniqueClients().size(),</span>
+<span class="fc" id="L348">                        entry.getValue().totalQuantity(),</span>
+<span class="fc" id="L349">                        entry.getValue().totalNotional()))</span>
+<span class="fc" id="L350">                .toList();</span>
+    }
+
+    private List&lt;String&gt; instrumentReportRow(InstrumentAggregateRow row) {
+<span class="fc" id="L354">        return List.of(</span>
+<span class="fc" id="L355">                row.instrumentSymbol(),</span>
+<span class="fc" id="L356">                row.instrumentName(),</span>
+<span class="fc" id="L357">                row.assetClass(),</span>
+<span class="fc" id="L358">                row.marketCode(),</span>
+<span class="fc" id="L359">                Long.toString(row.tradeCount()),</span>
+<span class="fc" id="L360">                Long.toString(row.totalQuantity()),</span>
+<span class="fc" id="L361">                formatMoney(row.totalNotional()),</span>
+<span class="fc" id="L362">                formatMoney(row.averageExecutionPrice()));</span>
+    }
+
+    private List&lt;String&gt; clientSegmentReportRow(ClientSegmentAggregateRow row) {
+<span class="fc" id="L366">        return List.of(</span>
+<span class="fc" id="L367">                row.clientSegment(),</span>
+<span class="fc" id="L368">                Long.toString(row.tradeCount()),</span>
+<span class="fc" id="L369">                Long.toString(row.uniqueClients()),</span>
+<span class="fc" id="L370">                Long.toString(row.totalQuantity()),</span>
+<span class="fc" id="L371">                formatMoney(row.totalNotional()));</span>
+    }
+
+    private List&lt;String&gt; tradingActivityReportRow(TradingActivityAggregateRow row) {
+<span class="fc" id="L375">        return List.of(</span>
+<span class="fc" id="L376">                DATE_FORMATTER.format(row.tradeDate()),</span>
+<span class="fc" id="L377">                String.format(Locale.ROOT, &quot;%02d:00&quot;, row.hour()),</span>
+<span class="fc" id="L378">                Long.toString(row.tradeCount()),</span>
+<span class="fc" id="L379">                Long.toString(row.uniqueClients()),</span>
+<span class="fc" id="L380">                Long.toString(row.totalQuantity()),</span>
+<span class="fc" id="L381">                formatMoney(row.totalNotional()));</span>
+    }
+
+    private String formatMoney(BigDecimal value) {
+<span class="fc" id="L385">        return value.setScale(2, RoundingMode.HALF_UP).toPlainString();</span>
+    }
+
+    private String toCsv(List&lt;String&gt; headers, List&lt;List&lt;String&gt;&gt; rows) {
+<span class="fc" id="L389">        StringBuilder csv = new StringBuilder();</span>
+<span class="fc" id="L390">        csv.append(toCsvLine(headers));</span>
+<span class="fc bfc" id="L391" title="All 2 branches covered.">        for (List&lt;String&gt; row : rows) {</span>
+<span class="fc" id="L392">            csv.append('\n').append(toCsvLine(row));</span>
+<span class="fc" id="L393">        }</span>
+<span class="fc" id="L394">        csv.append('\n');</span>
+<span class="fc" id="L395">        return csv.toString();</span>
+    }
+
+    private String toCsvLine(List&lt;String&gt; values) {
+<span class="fc" id="L399">        return values.stream()</span>
+<span class="fc" id="L400">                .map(this::escapeCsvValue)</span>
+<span class="fc" id="L401">                .collect(Collectors.joining(&quot;,&quot;));</span>
+    }
+
+    private String escapeCsvValue(String value) {
+<span class="fc" id="L405">        String safeValue = Objects.toString(value, &quot;&quot;);</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">        return requiresCsvQuoting(safeValue)</span>
+<span class="fc" id="L407">                ? '&quot;' + safeValue.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + '&quot;'</span>
+<span class="fc" id="L408">                : safeValue;</span>
+    }
+
+    private boolean requiresCsvQuoting(String value) {
+<span class="pc bpc" id="L412" title="3 of 8 branches missed.">        return value.contains(&quot;,&quot;) || value.contains(&quot;\&quot;&quot;) || value.contains(&quot;\n&quot;) || value.contains(&quot;\r&quot;);</span>
+    }
+
+    private List&lt;String&gt; parseCsvLine(String line) {
+<span class="fc" id="L416">        List&lt;String&gt; values = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L417">        StringBuilder current = new StringBuilder();</span>
+<span class="fc" id="L418">        boolean[] inQuotes = {false};</span>
+
+<span class="fc" id="L420">        int index = 0;</span>
+<span class="fc bfc" id="L421" title="All 2 branches covered.">        while (index &lt; line.length()) {</span>
+<span class="fc" id="L422">            index = consumeCsvCharacter(line, index, values, current, inQuotes);</span>
+        }
+
+<span class="fc" id="L425">        values.add(current.toString());</span>
+<span class="fc" id="L426">        return values;</span>
+    }
+
+    private boolean isEscapedQuote(String line, int index) {
+<span class="fc bfc" id="L430" title="All 6 branches covered.">        return line.charAt(index) == '&quot;' &amp;&amp; index + 1 &lt; line.length() &amp;&amp; line.charAt(index + 1) == '&quot;';</span>
+    }
+
+    private int consumeCsvCharacter(String line, int index, List&lt;String&gt; values, StringBuilder current, boolean[] inQuotes) {
+<span class="fc" id="L434">        char character = line.charAt(index);</span>
+<span class="fc bfc" id="L435" title="All 2 branches covered.">        if (inQuotes[0]) {</span>
+<span class="fc bfc" id="L436" title="All 2 branches covered.">            if (isEscapedQuote(line, index)) {</span>
+<span class="fc" id="L437">                current.append('&quot;');</span>
+<span class="fc" id="L438">                return index + 2;</span>
+            }
+<span class="fc bfc" id="L440" title="All 2 branches covered.">            if (character == '&quot;') {</span>
+<span class="fc" id="L441">                inQuotes[0] = false;</span>
+            } else {
+<span class="fc" id="L443">                current.append(character);</span>
+            }
+<span class="fc" id="L445">            return index + 1;</span>
+        }
+
+<span class="fc bfc" id="L448" title="All 2 branches covered.">        if (character == ',') {</span>
+<span class="fc" id="L449">            values.add(current.toString());</span>
+<span class="fc" id="L450">            current.setLength(0);</span>
+<span class="fc" id="L451">            return index + 1;</span>
+        }
+<span class="fc bfc" id="L453" title="All 2 branches covered.">        if (character == '&quot;') {</span>
+<span class="fc" id="L454">            inQuotes[0] = true;</span>
+<span class="fc" id="L455">            return index + 1;</span>
+        }
+<span class="fc" id="L457">        current.append(character);</span>
+<span class="fc" id="L458">        return index + 1;</span>
+    }
+
+<span class="fc" id="L461">    private record TradeRow(</span>
+            String fillId,
+            String orderId,
+            Instant filledAt,
+            String instrumentId,
+            String instrumentSymbol,
+            String instrumentName,
+            String assetClass,
+            String marketCode,
+            String userId,
+            String clientEmail,
+            String accountId,
+            String accountNumber,
+            String accountStatus,
+            String traderLevel,
+            String side,
+            long filledQuantity,
+            BigDecimal executionPrice) {
+
+        private InstrumentKey instrumentKey() {
+<span class="fc" id="L481">            return new InstrumentKey(instrumentSymbol, instrumentName, assetClass, marketCode);</span>
+        }
+
+        private ActivityKey activityKey() {
+<span class="fc" id="L485">            LocalDate tradeDate = filledAt.atOffset(ZoneOffset.UTC).toLocalDate();</span>
+<span class="fc" id="L486">            int hour = filledAt.atOffset(ZoneOffset.UTC).getHour();</span>
+<span class="fc" id="L487">            return new ActivityKey(tradeDate, hour);</span>
+        }
+
+        private BigDecimal notional() {
+<span class="fc" id="L491">            return executionPrice.multiply(BigDecimal.valueOf(filledQuantity));</span>
+        }
+    }
+
+<span class="fc" id="L495">    private record InstrumentKey(String instrumentSymbol, String instrumentName, String assetClass, String marketCode) {</span>
+    }
+
+<span class="fc" id="L498">    private record ActivityKey(LocalDate tradeDate, int hour) {</span>
+    }
+
+<span class="fc" id="L501">    private record InstrumentAggregateRow(</span>
+            String instrumentSymbol,
+            String instrumentName,
+            String assetClass,
+            String marketCode,
+            long tradeCount,
+            long totalQuantity,
+            BigDecimal totalNotional) {
+
+        private BigDecimal averageExecutionPrice() {
+<span class="fc bfc" id="L511" title="All 2 branches covered.">            if (totalQuantity == 0L) {</span>
+<span class="fc" id="L512">                return ZERO_MONEY;</span>
+            }
+<span class="fc" id="L514">            return totalNotional.divide(BigDecimal.valueOf(totalQuantity), 2, RoundingMode.HALF_UP);</span>
+        }
+    }
+
+<span class="fc" id="L518">    private record ClientSegmentAggregateRow(</span>
+            String clientSegment,
+            long tradeCount,
+            long uniqueClients,
+            long totalQuantity,
+            BigDecimal totalNotional) {
+    }
+
+<span class="fc" id="L526">    private record TradingActivityAggregateRow(</span>
+            LocalDate tradeDate,
+            int hour,
+            long tradeCount,
+            long uniqueClients,
+            long totalQuantity,
+            BigDecimal totalNotional) {
+    }
+
+<span class="fc" id="L535">    private static final class AggregateBucket {</span>
+
+        private long tradeCount;
+        private long totalQuantity;
+<span class="fc" id="L539">        private BigDecimal totalNotional = ZERO_MONEY;</span>
+<span class="fc" id="L540">        private final Set&lt;String&gt; uniqueClients = new HashSet&lt;&gt;();</span>
+
+        private void accept(TradeRow trade) {
+<span class="fc" id="L543">            tradeCount++;</span>
+<span class="fc" id="L544">            totalQuantity += trade.filledQuantity();</span>
+<span class="fc" id="L545">            totalNotional = totalNotional.add(trade.notional());</span>
+<span class="fc" id="L546">            uniqueClients.add(trade.accountNumber());</span>
+<span class="fc" id="L547">        }</span>
+
+        private long tradeCount() {
+<span class="fc" id="L550">            return tradeCount;</span>
+        }
+
+        private long totalQuantity() {
+<span class="fc" id="L554">            return totalQuantity;</span>
+        }
+
+        private BigDecimal totalNotional() {
+<span class="fc" id="L558">            return totalNotional;</span>
+        }
+
+        private Set&lt;String&gt; uniqueClients() {
+<span class="fc" id="L562">            return uniqueClients;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

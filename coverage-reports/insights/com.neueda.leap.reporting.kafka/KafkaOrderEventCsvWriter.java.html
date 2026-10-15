@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KafkaOrderEventCsvWriter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.reporting.kafka</a> &gt; <span class="el_source">KafkaOrderEventCsvWriter.java</span></div><h1>KafkaOrderEventCsvWriter.java</h1><pre class="source lang-java linenums">package com.neueda.leap.reporting.kafka;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Objects;
+
+/** Writes terminal order events into CSV files under a configurable output directory. */
+@Service
+public class KafkaOrderEventCsvWriter {
+
+<span class="fc" id="L20">    private static final List&lt;String&gt; COMPLETED_HEADERS = List.of(</span>
+            &quot;status&quot;, &quot;order_id&quot;, &quot;symbol&quot;, &quot;side&quot;, &quot;quantity&quot;, &quot;filled_quantity&quot;, &quot;execution_price&quot;,
+            &quot;submitted_at&quot;, &quot;completed_at&quot;, &quot;reason_code&quot;);
+
+<span class="fc" id="L24">    private static final List&lt;String&gt; FAILED_HEADERS = List.of(</span>
+            &quot;status&quot;, &quot;order_id&quot;, &quot;symbol&quot;, &quot;side&quot;, &quot;quantity&quot;, &quot;submitted_at&quot;, &quot;completed_at&quot;, &quot;reason_code&quot;);
+
+<span class="fc" id="L27">    private static final List&lt;String&gt; AUDIT_HEADERS = List.of(</span>
+            &quot;status&quot;, &quot;order_id&quot;, &quot;account_id&quot;, &quot;instrument_id&quot;, &quot;symbol&quot;, &quot;side&quot;, &quot;quantity&quot;, &quot;order_type&quot;,
+            &quot;submitted_at&quot;, &quot;completed_at&quot;, &quot;filled_at&quot;, &quot;filled_quantity&quot;, &quot;execution_price&quot;, &quot;reason_code&quot;);
+
+    private final Path outputDir;
+    private final Path completedFile;
+    private final Path failedFile;
+    private final Path auditFile;
+
+    /**
+     * Creates the writer.
+     *
+     * @param outputDir directory where the CSV files are written
+     */
+<span class="fc" id="L41">    public KafkaOrderEventCsvWriter(@Value(&quot;${insights.kafka.output-dir:${java.io.tmpdir}/insights-kafka}&quot;) String outputDir) {</span>
+<span class="fc" id="L42">        this.outputDir = Paths.get(outputDir);</span>
+<span class="fc" id="L43">        this.completedFile = this.outputDir.resolve(&quot;completed-trades.csv&quot;);</span>
+<span class="fc" id="L44">        this.failedFile = this.outputDir.resolve(&quot;failed-trades.csv&quot;);</span>
+<span class="fc" id="L45">        this.auditFile = this.outputDir.resolve(&quot;trade-audit.csv&quot;);</span>
+<span class="fc" id="L46">    }</span>
+
+    /** Ensures the output directory exists before the Kafka listeners start writing to it. */
+    @PostConstruct
+    void ensureOutputDirectory() throws IOException {
+<span class="fc" id="L51">        Files.createDirectories(outputDir);</span>
+<span class="fc" id="L52">    }</span>
+
+    /** Writes a completed trade row when the event reached FILLED. */
+    public synchronized void writeCompleted(OrderLifecycleEvent event) {
+<span class="fc" id="L56">        appendCsv(completedFile, COMPLETED_HEADERS, completedRow(event));</span>
+<span class="fc" id="L57">    }</span>
+
+    /** Writes a failed trade row when the event reached REJECTED. */
+    public synchronized void writeFailed(OrderLifecycleEvent event) {
+<span class="fc" id="L61">        appendCsv(failedFile, FAILED_HEADERS, failedRow(event));</span>
+<span class="fc" id="L62">    }</span>
+
+    /** Writes every terminal order event to the audit file. */
+    public synchronized void writeAudit(OrderLifecycleEvent event) {
+<span class="fc" id="L66">        appendCsv(auditFile, AUDIT_HEADERS, auditRow(event));</span>
+<span class="fc" id="L67">    }</span>
+
+    private void appendCsv(Path file, List&lt;String&gt; headers, List&lt;String&gt; row) {
+        try {
+<span class="fc" id="L71">            ensureOutputDirectory();</span>
+<span class="pc bpc" id="L72" title="1 of 4 branches missed.">            if (Files.notExists(file) || Files.size(file) == 0L) {</span>
+<span class="fc" id="L73">                Files.writeString(file, csvLine(headers) + System.lineSeparator(), StandardCharsets.UTF_8);</span>
+            }
+<span class="fc" id="L75">            Files.writeString(file, csvLine(row) + System.lineSeparator(), StandardCharsets.UTF_8,</span>
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+<span class="nc" id="L77">        } catch (IOException ex) {</span>
+<span class="nc" id="L78">            throw new IllegalStateException(&quot;Unable to write Kafka CSV output to &quot; + file, ex);</span>
+<span class="fc" id="L79">        }</span>
+<span class="fc" id="L80">    }</span>
+
+    private List&lt;String&gt; completedRow(OrderLifecycleEvent event) {
+<span class="fc" id="L83">        return List.of(</span>
+<span class="fc" id="L84">                event.status(),</span>
+<span class="fc" id="L85">                stringValue(event.orderId()),</span>
+<span class="fc" id="L86">                event.symbol(),</span>
+<span class="fc" id="L87">                event.side(),</span>
+<span class="fc" id="L88">                longValue(event.quantity()),</span>
+<span class="fc" id="L89">                stringValue(event.filledQuantity()),</span>
+<span class="fc" id="L90">                moneyValue(event.executionPrice()),</span>
+<span class="fc" id="L91">                instantValue(event.submittedAt()),</span>
+<span class="fc" id="L92">                instantValue(event.completedAt()),</span>
+<span class="fc" id="L93">                stringValue(event.reasonCode())</span>
+        );
+    }
+
+    private List&lt;String&gt; failedRow(OrderLifecycleEvent event) {
+<span class="fc" id="L98">        return List.of(</span>
+<span class="fc" id="L99">                event.status(),</span>
+<span class="fc" id="L100">                stringValue(event.orderId()),</span>
+<span class="fc" id="L101">                event.symbol(),</span>
+<span class="fc" id="L102">                event.side(),</span>
+<span class="fc" id="L103">                longValue(event.quantity()),</span>
+<span class="fc" id="L104">                instantValue(event.submittedAt()),</span>
+<span class="fc" id="L105">                instantValue(event.completedAt()),</span>
+<span class="fc" id="L106">                stringValue(event.reasonCode())</span>
+        );
+    }
+
+    private List&lt;String&gt; auditRow(OrderLifecycleEvent event) {
+<span class="fc" id="L111">        return List.of(</span>
+<span class="fc" id="L112">                event.status(),</span>
+<span class="fc" id="L113">                stringValue(event.orderId()),</span>
+<span class="fc" id="L114">                stringValue(event.accountId()),</span>
+<span class="fc" id="L115">                stringValue(event.instrumentId()),</span>
+<span class="fc" id="L116">                event.symbol(),</span>
+<span class="fc" id="L117">                event.side(),</span>
+<span class="fc" id="L118">                longValue(event.quantity()),</span>
+<span class="fc" id="L119">                event.orderType(),</span>
+<span class="fc" id="L120">                instantValue(event.submittedAt()),</span>
+<span class="fc" id="L121">                instantValue(event.completedAt()),</span>
+<span class="fc" id="L122">                instantValue(event.filledAt()),</span>
+<span class="fc" id="L123">                stringValue(event.filledQuantity()),</span>
+<span class="fc" id="L124">                moneyValue(event.executionPrice()),</span>
+<span class="fc" id="L125">                stringValue(event.reasonCode())</span>
+        );
+    }
+
+    private String csvLine(List&lt;String&gt; values) {
+<span class="fc" id="L130">        return values.stream().map(this::escapeCsvValue).reduce((left, right) -&gt; left + &quot;,&quot; + right).orElse(&quot;&quot;);</span>
+    }
+
+    private String escapeCsvValue(String value) {
+<span class="fc" id="L134">        String safeValue = Objects.toString(value, &quot;&quot;);</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        return requiresCsvQuoting(safeValue) ? '&quot;' + safeValue.replace(&quot;\&quot;&quot;, &quot;\&quot;\&quot;&quot;) + '&quot;' : safeValue;</span>
+    }
+
+    private boolean requiresCsvQuoting(String value) {
+<span class="pc bpc" id="L139" title="3 of 8 branches missed.">        return value.contains(&quot;,&quot;) || value.contains(&quot;\&quot;&quot;) || value.contains(&quot;\n&quot;) || value.contains(&quot;\r&quot;);</span>
+    }
+
+    private String instantValue(java.time.Instant value) {
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        return value == null ? &quot;&quot; : value.toString();</span>
+    }
+
+    private String moneyValue(BigDecimal value) {
+<span class="fc bfc" id="L147" title="All 2 branches covered.">        return value == null ? &quot;&quot; : value.toPlainString();</span>
+    }
+
+    private String longValue(long value) {
+<span class="fc" id="L151">        return Long.toString(value);</span>
+    }
+
+    private String stringValue(Object value) {
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        return value == null ? &quot;&quot; : value.toString();</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

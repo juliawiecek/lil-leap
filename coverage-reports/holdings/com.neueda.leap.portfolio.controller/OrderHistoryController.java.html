@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderHistoryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.controller</a> &gt; <span class="el_source">OrderHistoryController.java</span></div><h1>OrderHistoryController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.controller;
+
+import com.neueda.leap.portfolio.dto.OrderHistoryResponse;
+import com.neueda.leap.portfolio.service.ClientNotFoundException;
+import com.neueda.leap.portfolio.service.OrderHistoryService;
+import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Exposes a client's order history at {@code GET /clients/{id}/orders} with optional,
+ * combinable {@code ?from=}, {@code ?to=} (ISO dates) and {@code ?status=} filters.
+ */
+@RestController
+@PreAuthorize(&quot;hasRole('TRADER')&quot;)
+@Tag(name = &quot;Order History&quot;, description = &quot;Order history reads, with date and status filters&quot;)
+public class OrderHistoryController {
+
+    private final OrderHistoryService historyService;
+
+    /**
+     * Creates the order history controller.
+     *
+     * @param historyService service that reads order history
+     */
+<span class="fc" id="L40">    public OrderHistoryController(OrderHistoryService historyService) {</span>
+<span class="fc" id="L41">        this.historyService = historyService;</span>
+<span class="fc" id="L42">    }</span>
+
+    /**
+     * Returns the caller's own orders, newest first.
+     * A path id other than the caller's own returns 404, identically to an unknown id (BR-02).
+     *
+     * @param id client (user) identifier; must be the caller's own
+     * @param from first day to include, e.g. 2026-09-01
+     * @param to last day to include
+     * @param status one order status, e.g. FILLED
+     * @param accountId optional owned account to narrow to
+     * @param principal authenticated identity from the bearer token
+     * @return HTTP 200 with the matching orders
+     */
+    @GetMapping(&quot;/clients/{id}/orders&quot;)
+    @Operation(summary = &quot;Get a client's order history&quot;,
+            description = &quot;Newest first. All three filters are optional and combinable. &quot;
+                    + &quot;id must be the caller's own - a mismatch returns 404, identically to an unknown id.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Matching orders, or an empty list if none&quot;)
+    @ApiResponse(responseCode = &quot;404&quot;, description = &quot;id does not match the authenticated caller&quot;)
+    public ResponseEntity&lt;List&lt;OrderHistoryResponse&gt;&gt; getOrders(
+            @Parameter(description = &quot;Client (user) id; must be the caller's own&quot;) @PathVariable UUID id,
+            @Parameter(description = &quot;First day to include (ISO date), e.g. 2026-09-01&quot;)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = &quot;Last day to include (ISO date)&quot;)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @Parameter(description = &quot;One order status, e.g. FILLED&quot;) @RequestParam(required = false) String status,
+            @Parameter(description = &quot;Only this account; omit for all of the caller's accounts&quot;)
+            @RequestParam(required = false) UUID accountId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (!id.equals(principal.userId())) {</span>
+<span class="fc" id="L73">            throw new ClientNotFoundException(&quot;Client not found&quot;);</span>
+        }
+<span class="fc" id="L75">        return ResponseEntity.ok(historyService.getHistory(principal.userId(), accountId, from, to, status));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
