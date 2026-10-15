@@ -118,6 +118,18 @@
                     ><span>Today</span>
                   </div>
                 </div>
+                <div class="period-picker chart-type-picker" role="group" aria-label="Chart type">
+                  @for (type of chartTypes; track type) {
+                    <button
+                      type="button"
+                      [class.selected]="chartType() === type"
+                      [attr.aria-pressed]="chartType() === type"
+                      (click)="chartType.set(type)"
+                    >
+                      {{ type }}
+                    </button>
+                  }
+                </div>
                 <div class="period-picker" aria-label="Chart time range">
                   @for (item of periods; track item) {
                     <button

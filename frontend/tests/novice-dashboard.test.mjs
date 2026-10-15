@@ -294,6 +294,17 @@ test('the portfolio chart values cash plus shares at each bar of the selected pe
   assert.deepEqual(desk.chartSpec(), { kind: 'area', key: '1D', data: [{ time: minute(0), value: 2000 }, { time: minute(1), value: 2100 }] });
 });
 
+test('the portfolio chart switches between an area and a line over the same values', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [{ ...holding('AAPL', 10, 100), instrumentId: 'aapl-id' }] }] });
+  await desk.refreshPortfolio();
+  chartDesk(desk, { candles: new Map([['aapl-id', bars(100, 110)]]) });
+  await desk.refreshChart();
+  assert.equal(desk.chartType(), 'Area');
+  assert.equal(desk.chartSpec().kind, 'area');
+  desk.chartType.set('Line');
+  assert.deepEqual(desk.chartSpec(), { kind: 'line', key: '1D', data: [{ time: minute(0), value: 2000 }, { time: minute(1), value: 2100 }] });
+});
+
 test('a client holding only cash gets a flat line on the first stock\'s time axis', async t => {
   const { desk } = await tradingDesk(t, { portfolios: [{ cash: 5000, holdings: [] }] });
   await desk.refreshPortfolio();

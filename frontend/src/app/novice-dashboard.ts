@@ -204,7 +204,17 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   });
   readonly portfolioSeries = signal<Point[]>([]);
   readonly chartStatus = signal('Loading chart...');
-  readonly chartSpec = computed<ChartSpec>(() => ({ kind: 'area', data: this.portfolioSeries(), key: this.period() }));
+  /**
+   * How the portfolio value is drawn. There are no candles here: a portfolio's value per bar is one
+   * number, and its true high and low cannot be rebuilt from each stock's own highs and lows.
+   */
+  readonly chartTypes = ['Area', 'Line'] as const;
+  readonly chartType = signal<(typeof this.chartTypes)[number]>('Area');
+  readonly chartSpec = computed<ChartSpec>(() => ({
+    kind: this.chartType() === 'Line' ? 'line' : 'area',
+    data: this.portfolioSeries(),
+    key: this.period(),
+  }));
   /** Decorative sparkline for list rows (not price data). */
   makePath(width: number, height: number, seed = 0, down = false): string {
     const knots = [
