@@ -9,7 +9,7 @@
     >
     <div class="workspace-label">Insights <span>· Internal</span></div>
     <nav aria-label="Main navigation">
-      @for (item of nav; track item.label) {
+      @for (item of visibleNav(); track item.label) {
         @if (item.label === 'Overview') {
           <p class="nav-group">Analytics</p>
         }
@@ -63,13 +63,9 @@
           <app-dashboard-icon name="bell" />
         </button>
         <div class="avatar">{{ role() === 'Analyst' ? 'PS' : 'DC' }}</div>
-        <label class="identity"
-          ><strong>{{ auth?.email || 'Insights workspace' }}</strong
-          ><select aria-label="Preview workspace" [ngModel]="role()" (ngModelChange)="useRole($event)">
-            <option value="Analyst">Analyst</option>
-            <option value="Operations">Operations</option>
-          </select></label
-        >
+        <div class="identity">
+          <strong>{{ auth?.email || 'Insights workspace' }}</strong><span>{{ role() }}</span>
+        </div>
       </div>
     </header>
     <main id="workspace" tabindex="-1" class="content">
@@ -722,8 +718,7 @@
           <section class="panel empty">
             <app-dashboard-icon name="shield" />
             <h2>Operations workspace</h2>
-            <p>Switch to the Operations workspace to investigate trade details.</p>
-            <button class="primary" (click)="useRole('Operations')">Open operations</button>
+            <p>Trade investigation is available to operations staff.</p>
           </section>
         } @else {
           <div class="filter-bar">
@@ -900,11 +895,10 @@
       @if (page() === 'Settings') {
         <section class="panel settings">
           <h2>Workspace preferences</h2>
-          <label
-            >Workspace<select [ngModel]="role()" (ngModelChange)="useRole($event)">
-              <option value="Analyst">Priya · Analyst</option>
-              <option value="Operations">David · Operations</option>
-            </select></label
+          <div class="workspace-role">
+            <span>Workspace</span><strong>{{ role() }}</strong>
+            <small>Set by your account; ask an administrator to change it.</small>
+          </div
           ><label
             >Compact tables<input
               type="checkbox"

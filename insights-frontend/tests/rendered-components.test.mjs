@@ -4,6 +4,7 @@ import { render, button, browser } from './dom-helper.mjs';
 const { DashboardIcon } = await import('../src/app/dashboard-icon.ts');
 const { InsightsChart } = await import('../src/app/insights-chart.ts');
 const { App } = await import('../src/app/app.ts');
+const { AuthService } = await import('../src/app/auth.service.ts');
 
 test('insights icons bind known names and fall back for unknown names', async t => {
   const fixture = await render(t, DashboardIcon, { name: 'users' });
@@ -31,13 +32,27 @@ test('chart renders empty state, binds points, and exposes values on keyboard fo
   assert.equal(fixture.componentInstance.active(), null);
 });
 
+const signedInAs = (role) => [{ provide: AuthService, useValue: { userRole: role, email: `${role.toLowerCase()}@nexttrade.local` } }];
+const navLabels = (fixture) => [...fixture.nativeElement.querySelectorAll('nav button span')].map(span => span.textContent.trim());
+
 test('dashboard navigation renders pages and their corresponding controls', async t => {
-  const fixture = await render(t, App);
-  for (const page of ['Trading Activity', 'Client Activity', 'Clients', 'Reports', 'Compliance', 'Settings', 'Overview']) {
+  const fixture = await render(t, App, {}, signedInAs('ANALYST'));
+  for (const page of ['Trading Activity', 'Client Activity', 'Clients', 'Reports', 'Settings', 'Overview']) {
     button(fixture, page);
     assert.equal(fixture.componentInstance.page(), page);
     assert.ok(fixture.nativeElement.textContent.includes(fixture.componentInstance.subtitle()));
   }
+  assert.ok(!navLabels(fixture).includes('Trade Investigation'));
+});
+
+test('operations staff get the operations pages, and the header shows the role with no switch', async t => {
+  const fixture = await render(t, App, {}, signedInAs('OPERATIONS'));
+  assert.deepEqual(navLabels(fixture), ['Trade Investigation', 'Compliance', 'Settings']);
+  assert.equal(fixture.componentInstance.page(), 'Trade Investigation');
+  assert.match(fixture.nativeElement.querySelector('.identity').textContent, /Operations/);
+  assert.equal(fixture.nativeElement.querySelector('header select'), null);
+  button(fixture, 'Compliance');
+  assert.equal(fixture.componentInstance.page(), 'Compliance');
 });
 
 test('report download creates a CSV blob, clicks its filename, and revokes the URL', async t => {
