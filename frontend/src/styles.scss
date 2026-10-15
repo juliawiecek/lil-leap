@@ -33,6 +33,17 @@
 }
 body { font-family: var(--font-ui); }
 
+/*
+ * A dropdown's open list is drawn by the browser from the options' own colours, not the select's
+ * gradient or transparent background, so on Windows it would open white. Every list uses the
+ * app's dark surface instead.
+ */
+select option,
+select optgroup {
+  background-color: #0f1518;
+  color: #e9edf1;
+}
+
 /* Order ticket notices shared by both dashboards (TS-14.7, PS-02, PS-15). */
 .price-delayed,
 .closed-warning {

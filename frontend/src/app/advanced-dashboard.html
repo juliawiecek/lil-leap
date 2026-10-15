@@ -524,6 +524,7 @@
                 {{ collapsed() ? 'Expand' : 'Collapse' }}
               </button>
             </div>
+            <app-price-protection-settings [symbols]="listedSymbols()" />
             <button type="button" class="secondary-button" (click)="signOut.emit()">
               Sign out ↗
             </button>

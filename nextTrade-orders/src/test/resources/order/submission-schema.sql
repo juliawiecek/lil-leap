@@ -21,7 +21,7 @@ CREATE TABLE orders (
     instrument_id UUID NOT NULL REFERENCES instruments, client_reference UUID NOT NULL,
     side VARCHAR(10) NOT NULL, quantity BIGINT NOT NULL, order_type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL, submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    buffer_percent NUMERIC(5,2), UNIQUE(account_id, client_reference)
+    buffer_percent NUMERIC(5,2), reference_price NUMERIC(18,4), UNIQUE(account_id, client_reference)
 );
 CREATE TABLE fills (fill_id UUID PRIMARY KEY, order_id UUID REFERENCES orders);
 CREATE TABLE order_status_history (

@@ -11,6 +11,8 @@ import com.neueda.leap.instrument.dto.InstrumentResponse;
 import com.neueda.leap.instrument.service.InstrumentService;
 import com.neueda.leap.order.service.OrderSufficiencyService;
 import com.neueda.leap.order.service.OrderSufficiencyException;
+import com.neueda.leap.order.execution.quote.IndicativePriceService;
+import com.neueda.leap.order.execution.quote.IndicativePriceService.IndicativePrice;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,6 +41,7 @@ class OrderSubmissionServiceTest {
     private OrderSubmissionRepository repository;
     private OrderSubmissionService service;
     private final InstrumentService instruments = mock(InstrumentService.class);
+    private final IndicativePriceService prices = mock(IndicativePriceService.class);
     private OrderSufficiencyService sufficiency;
     private UUID userId;
     private UUID accountId;
@@ -49,7 +52,7 @@ class OrderSubmissionServiceTest {
     void setUp() {
         repository = mock(OrderSubmissionRepository.class);
         sufficiency = mock(OrderSufficiencyService.class);
-        service = new OrderSubmissionService(repository, sufficiency, instruments);
+        service = new OrderSubmissionService(repository, sufficiency, instruments, prices);
         userId = UUID.randomUUID();
         accountId = UUID.randomUUID();
         instrumentId = UUID.randomUUID();
@@ -66,7 +69,7 @@ class OrderSubmissionServiceTest {
                 new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
         when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
-        when(repository.insert(request, instrumentId, "AAPL"))
+        when(repository.insert(request, instrumentId, "AAPL", null))
                 .thenReturn(Optional.of(saved));
 
         var result = service.submit(userId, request);
@@ -75,7 +78,25 @@ class OrderSubmissionServiceTest {
         assertEquals("SUBMITTED", result.order().status());
         var sequence = inOrder(sufficiency, repository);
         sequence.verify(sufficiency).validate(request, instrumentId);
-        sequence.verify(repository).insert(request, instrumentId, "AAPL");
+        sequence.verify(repository).insert(request, instrumentId, "AAPL", null);
+    }
+
+    @Test
+    void submissionRecordsTheLatestQuoteAsTheReferencePrice() {
+        SubmitOrderRequest request = request("aapl", "buy", 10);
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
+        when(repository.findByAccountAndClientReference(accountId, clientReference)).thenReturn(Optional.empty());
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
+        BigDecimal ask = new BigDecimal("227.40");
+        when(prices.estimate(instrumentId, "BUY", 10)).thenReturn(Optional.of(new IndicativePrice(
+                "AAPL", instrumentId, "BUY", 10, ask, new BigDecimal("2274.00"), null, false, true)));
+        when(repository.insert(request, instrumentId, "AAPL", ask)).thenReturn(Optional.of(response("AAPL")));
+
+        assertTrue(service.submit(userId, request).created());
+
+        verify(repository).insert(request, instrumentId, "AAPL", ask);
     }
 
     @Test
@@ -91,7 +112,7 @@ class OrderSubmissionServiceTest {
         assertFalse(result.created());
         assertEquals(existing.orderId(), result.order().orderId());
         verifyNoInteractions(sufficiency);
-        verify(repository, never()).insert(request, instrumentId, "AAPL");
+        verify(repository, never()).insert(request, instrumentId, "AAPL", null);
     }
 
     @Test
@@ -143,7 +164,7 @@ class OrderSubmissionServiceTest {
         when(repository.findByAccountAndClientReference(accountId, clientReference))
                 .thenReturn(Optional.empty(), Optional.of(response("AAPL")));
         when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
-        when(repository.insert(request, instrumentId, "AAPL"))
+        when(repository.insert(request, instrumentId, "AAPL", null))
                 .thenReturn(Optional.empty());
 
         assertThrows(IdempotencyConflictException.class, () -> service.submit(userId, request));
@@ -183,7 +204,7 @@ class OrderSubmissionServiceTest {
 
         assertThrows(OrderSufficiencyException.class, () -> service.submit(userId, request));
 
-        verify(repository, never()).insert(any(), any(), any());
+        verify(repository, never()).insert(any(), any(), any(), any());
     }
 
     private SubmitOrderRequest request(String symbol, String side, long quantity) {
