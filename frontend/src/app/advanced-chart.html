@@ -3,11 +3,7 @@
     <span class="chart-company">{{ desk().selected().name }}</span
     ><strong class="quote-price">{{ desk().selected().price | currency }}</strong
     ><b [class.gain]="desk().selected().change > 0" [class.loss]="desk().selected().change < 0"
-      >{{
-        desk().selected().symbol === 'AAPL'
-          ? '+3.21'
-          : ((desk().selected().price * desk().selected().change) / 100 | number: '1.2-2')
-      }}
+      >{{ (desk().selected().price * desk().selected().change) / 100 | number: '1.2-2' }}
       ({{ desk().selected().change > 0 ? '+' : ''
       }}{{ desk().selected().change | number: '1.2-2' }}%)</b
     >
@@ -23,9 +19,8 @@
       </p>
     }
     <div class="indicators">
-      <span><i class="blue"></i>EMA (50) <b class="blue-text">173.24</b></span
-      ><span><i class="purple"></i>EMA (200) <b class="purple-text">169.11</b></span
-      ><span><i class="yellow"></i>VWAP <b class="yellow-text">175.02</b></span>
+      <span><i class="blue"></i>EMA (50) <b class="blue-text">{{ desk().indicators().ema50 === null ? '—' : (desk().indicators().ema50 | number: '1.2-2') }}</b></span
+      ><span><i class="purple"></i>EMA (200) <b class="purple-text">{{ desk().indicators().ema200 === null ? '—' : (desk().indicators().ema200 | number: '1.2-2') }}</b></span>
     </div>
     <div class="chart-periods">
       @for (p of desk().periods; track p) {
@@ -33,7 +28,7 @@
           type="button"
           [class.active]="desk().period() === p"
           [attr.aria-pressed]="desk().period() === p"
-          (click)="desk().period.set(p)"
+          (click)="desk().selectPeriod(p)"
         >
           {{ p }}
         </button>
@@ -42,116 +37,17 @@
   </div>
   <div class="technical-chart">
     <div class="price-pane">
-      <svg
-        viewBox="0 0 824 160"
-        preserveAspectRatio="none"
-        role="img"
-        [attr.aria-label]="desk().selected().symbol + ' ' + desk().period() + ' candlestick chart'"
-      >
-        <defs>
-          <pattern id="pro-grid" width="112" height="30" patternUnits="userSpaceOnUse">
-            <path d="M112 0H0V30" fill="none" stroke="#233039" stroke-width=".65" />
-          </pattern>
-        </defs>
-        <rect width="824" height="160" fill="url(#pro-grid)" />
-        <path
-          d="M0 51C20 30 43 70 90 83S180 110 300 107 435 124 515 107 650 93 820 67"
-          stroke="#3878ec"
-          fill="none"
-          stroke-width="1"
-        />
-        <path
-          d="M0 146C160 117 270 133 400 123S630 110 820 97"
-          stroke="#a650df"
-          fill="none"
-          stroke-width="1"
-        />
-        <path
-          d="M0 50C35 21 70 63 200 71S410 108 560 100 730 82 820 79"
-          stroke="#e8bc0b"
-          fill="none"
-          stroke-width="1"
-        />
-        @for (c of desk().candles(); track $index) {
-          <line
-            [attr.x1]="c.x"
-            [attr.x2]="c.x"
-            [attr.y1]="c.high"
-            [attr.y2]="c.low"
-            [attr.stroke]="c.up ? '#25b675' : '#ee535d'"
-            stroke-width=".8"
-          />
-          <rect
-            [attr.x]="c.x - 2.1"
-            [attr.y]="c.open < c.close ? c.open : c.close"
-            width="4.2"
-            [attr.height]="(c.open - c.close > 0 ? c.open - c.close : c.close - c.open) || 1"
-            [attr.fill]="c.up ? '#27b779' : '#ef5660'"
-          />
-        }
-        @if (desk().averageCostY() !== null) {
-          <g class="average-cost">
-            <line x1="0" x2="824" [attr.y1]="desk().averageCostY()" [attr.y2]="desk().averageCostY()" stroke-dasharray="5 4" />
-            <text x="820" [attr.y]="desk().averageCostY()! - 4" text-anchor="end">
-              Avg cost {{ desk().averageCost() | currency }}
-            </text>
-          </g>
-        }
-        @for (mark of desk().plottedTrades(); track mark.at) {
-          <g class="trade-mark" [class.buy]="mark.side === 'BUY'" [class.sell]="mark.side === 'SELL'">
-            <title>{{ mark.label }}</title>
-            <path
-              [attr.d]="mark.side === 'BUY'
-                ? 'M' + mark.x + ' ' + (mark.y + 1) + 'l-6 10h12z'
-                : 'M' + mark.x + ' ' + (mark.y - 1) + 'l-6 -10h12z'"
-            />
-          </g>
-        }
-      </svg>
-      <div class="price-axis">
-        @for (price of desk().priceAxis(); track $index) {
-          <span>{{ price | number: '1.2-2' }}</span>
-        }
-      </div>
-    </div>
-    <div class="volume-pane">
-      <span class="pane-label">Volume &nbsp; 2.4M</span
-      ><svg viewBox="0 0 824 54" preserveAspectRatio="none" role="img" aria-label="Trading volume">
-        <path d="M0 14H824M0 34H824" stroke="#243138" stroke-dasharray="2 2" />
-        @for (c of desk().candles(); track $index) {
-          <rect
-            [attr.x]="c.x - 2.5"
-            [attr.y]="54 - c.volume"
-            width="5"
-            [attr.height]="c.volume"
-            [attr.fill]="c.up ? '#287850' : '#954045'"
-          />
-        }
-      </svg>
-      <div class="volume-axis"><span>6M</span><span>3M</span></div>
+      <app-live-chart
+        [spec]="desk().priceChart()"
+        [label]="desk().selected().symbol + ' ' + desk().period() + ' candlestick chart'"
+      />
+      @if (desk().chartStatus(); as status) {
+        <p class="chart-status" role="status">{{ status }}</p>
+      }
     </div>
     <div class="rsi-pane">
-      <span class="pane-label">RSI (14) &nbsp; 62.3</span
-      ><svg
-        viewBox="0 0 824 46"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="Relative strength index"
-      >
-        <path
-          d="M0 8H824M0 25H824M0 40H824"
-          stroke="#78828c"
-          stroke-width=".55"
-          stroke-dasharray="3 2"
-        />
-        <path [attr.d]="desk().rsiPath()" fill="none" stroke="#c7cdd6" stroke-width="1" />
-      </svg>
-      <div class="rsi-axis"><span>70</span><span>50</span><span>30</span></div>
-    </div>
-    <div class="time-axis">
-      @for (time of desk().chartTimes(); track $index) {
-        <span>{{ time }}</span>
-      }
+      <span class="pane-label">RSI (14) &nbsp; {{ desk().indicators().rsi === null ? '—' : (desk().indicators().rsi | number: '1.1-1') }}</span>
+      <app-live-chart [spec]="desk().rsiChart()" label="Relative strength index" />
     </div>
   </div>
 </section>

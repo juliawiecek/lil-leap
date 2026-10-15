@@ -24,7 +24,10 @@ import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
 import { ToastService, Toasts } from './toasts';
-import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
+import { tradeMarks } from './trade-marks';
+import { type Candle, type Point, closes, ema, fillMarkers, rsi, timeframeFor, toFills } from './chart-data';
+import type { ChartSpec } from './lightweight-chart';
+import { MarketDataClient } from './market-data-api';
 
 const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
   CONSERVATIVE: 7,
@@ -41,9 +44,16 @@ interface Quote {
   sector: string;
   quotedAt: string;
 }
-/** Size of the price chart's drawing area, in SVG units. */
-const CHART_WIDTH = 824;
-const CHART_HEIGHT = 160;
+/** Colours of the chart's indicator lines, matching the legend. */
+export const EMA_50_COLOR = '#3878ec';
+export const EMA_200_COLOR = '#a650df';
+export const AVERAGE_COST_COLOR = '#e8bc0b';
+const RSI_COLOR = '#c7cdd6';
+
+/** Latest value of an indicator line, or null until there are enough bars to compute it. */
+function latest(points: readonly Point[]): number | null {
+  return points.at(-1)?.value ?? null;
+}
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -86,6 +96,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly orderSubmissionClient: OrderSubmissionClient;
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
+  readonly marketData: MarketDataClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
@@ -256,40 +267,22 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   );
   readonly fees = computed(() => Math.floor(Math.max(0, this.cost()) * 0.01) / 100);
   readonly total = computed(() => this.cost() + this.fees());
-  readonly candles = computed(() => {
-    const anchors = [
-      179.8, 172, 167.5, 171, 167.2, 169.9, 166.5, 170.5, 165.9, 171, 172.9, 169.6, 170.8, 170.1,
-      172.5, 172.9, 173.1, 175.4, 173.5, 174.6, 177.4, 174.5, 177, 175.2, 176.56,
-    ];
-    const seed = this.periods.indexOf(this.period()) + this.quotes().findIndex((q) => q.symbol === this.selected().symbol) * 2;
-    return Array.from({ length: 108 }, (_, i) => {
-      const step = (i / 107) * (anchors.length - 1),
-        j = Math.floor(step);
-      const close =
-        anchors[j] +
-        (anchors[Math.min(j + 1, anchors.length - 1)] - anchors[j]) * (step - j) +
-        Math.sin(i * 1.71 + seed) * 0.35;
-      const open = close + Math.sin(i * 2.3 + seed) * 0.95;
-      const y = (price: number) => 12 + (181.5 - price) * 8.55;
-      return {
-        x: 5 + i * 7.55,
-        open: y(open),
-        close: y(close),
-        high: y(Math.max(open, close) + 0.35 + Math.abs(Math.sin(i)) * 0.5),
-        low: y(Math.min(open, close) - 0.45),
-        up: close >= open,
-        volume: 9 + Math.abs(Math.sin(i * 1.4)) * 12 + (i < 12 ? 30 * Math.abs(Math.cos(i)) : 0),
-      };
-    });
-  });
-  readonly rsiPath = computed(() =>
-    this.candles()
-      .map(
-        (c, i) =>
-          `${i ? 'L' : 'M'}${c.x},${(24 + Math.sin(i * 0.17) * 6 + Math.sin(i * 1.8) * 3 + (i < 20 ? 5 : -i * 0.07)).toFixed(1)}`,
-      )
-      .join(' '),
-  );
+  /** The charted stock's price bars for the selected period, from holdings' stored quotes. */
+  readonly priceCandles = signal<Candle[]>([]);
+  readonly chartStatus = signal('Loading prices...');
+  readonly ema50 = computed(() => ema(closes(this.priceCandles()), 50));
+  readonly ema200 = computed(() => ema(closes(this.priceCandles()), 200));
+  readonly rsiLine = computed(() => rsi(closes(this.priceCandles())));
+  /** Latest indicator values for the legend. */
+  readonly indicators = computed(() => ({
+    ema50: latest(this.ema50()),
+    ema200: latest(this.ema200()),
+    rsi: latest(this.rsiLine()),
+  }));
+  /** Identifies the charted stock and period; the chart refits when it changes. */
+  readonly chartKey = computed(() => `${this.selected().symbol}-${this.period()}`);
+  #loadedChartKey = '';
+
   /** Order history rows, kept for the chart's trade markers (PS-13). */
   readonly historyRows = signal<OrderHistoryRow[]>([]);
   /** The client's fills of the charted stock, oldest first. */
@@ -299,27 +292,27 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const held = this.positions().find((p) => p.symbol === this.selected().symbol && p.quantity > 0);
     return held ? held.cost : null;
   });
-  readonly chartWindow = computed(() => periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks()));
-  /** Price range covering the live price, every fill and the average cost. */
-  readonly chartRange = computed(() =>
-    priceRange([this.selected().price, ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0]),
-  );
-  readonly plottedTrades = computed(() => {
-    const range = this.chartRange();
-    return range ? plotMarks(this.tradeMarks(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : [];
-  });
-  /** Fills earlier than the chosen period, which are not drawn. */
-  readonly tradesOutsidePeriod = computed(() => this.tradeMarks().length - this.plottedTrades().length);
-  readonly averageCostY = computed(() => {
-    const range = this.chartRange();
+  /** Candles with the 50/200 EMAs, the client's fills as arrows and their average cost as a line. */
+  readonly priceChart = computed<ChartSpec>(() => {
+    const candles = this.priceCandles();
     const cost = this.averageCost();
-    return range && cost ? priceY(cost, range, CHART_HEIGHT) : null;
+    return {
+      kind: 'candles',
+      data: candles,
+      key: this.chartKey(),
+      overlays: [{ data: this.ema50(), color: EMA_50_COLOR }, { data: this.ema200(), color: EMA_200_COLOR }],
+      markers: fillMarkers(toFills(this.historyRows()), this.selected().symbol, candles, timeframeFor(this.period()).interval),
+      priceLines: cost ? [{ price: cost, color: AVERAGE_COST_COLOR, title: 'Avg cost' }] : [],
+    };
   });
-  readonly priceAxis = computed(() => {
-    const range = this.chartRange();
-    return range ? priceLabels(range) : [];
+  readonly rsiChart = computed<ChartSpec>(() => ({
+    kind: 'line', data: this.rsiLine(), color: RSI_COLOR, range: { min: 0, max: 100 }, key: this.chartKey(),
+  }));
+  /** Fills earlier than the first bar shown, so not marked on this period. */
+  readonly tradesOutsidePeriod = computed(() => {
+    const first = this.priceCandles()[0]?.time;
+    return first === undefined ? 0 : this.tradeMarks().filter((m) => m.at / 1000 < first).length;
   });
-  readonly chartTimes = computed(() => timeLabels(this.period(), this.chartWindow()));
 
   quote(symbol: string): Quote {
     return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
@@ -332,8 +325,40 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.page.set('Overview');
     this.routing?.go('Overview');
   }
+  /** Switches the chart period and redraws straight away instead of waiting for the next price. */
+  selectPeriod(period: string): void {
+    this.period.set(period);
+    void this.refreshChart();
+  }
+  /**
+   * Loads the charted stock's bars for the selected period. A new stock or period starts from an
+   * empty chart; an answer for a selection the user has already left is dropped.
+   */
+  async refreshChart(): Promise<void> {
+    const key = this.chartKey();
+    const { instrumentId } = this.selected();
+    if (!instrumentId) {
+      return;
+    }
+    if (key !== this.#loadedChartKey) {
+      this.priceCandles.set([]);
+      this.chartStatus.set('Loading prices...');
+    }
+    try {
+      const candles = await this.marketData.candles(instrumentId, timeframeFor(this.period()));
+      if (this.#destroyed || key !== this.chartKey()) {
+        return;
+      }
+      this.#loadedChartKey = key;
+      this.priceCandles.set(candles);
+      this.chartStatus.set(candles.length ? '' : 'No price history for this period yet.');
+    } catch {
+      this.chartStatus.set('Could not load the chart. Retrying...');
+    }
+  }
   private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
+    void this.refreshChart();
     this.limitPrice.set(quote.price.toFixed(2));
     this.profitPrice.set((quote.price * 1.05).toFixed(2));
     this.stopPrice.set((quote.price * 0.95).toFixed(2));
@@ -354,6 +379,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     if (current.price) {
       this.selected.set(live);
+      void this.refreshChart();
     } else {
       this.setTicketQuote(live);
     }
@@ -654,6 +680,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.marketData = new MarketDataClient(this.auth);
     this.orderStatusClient = new OrderStatusClient(this.auth);
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());

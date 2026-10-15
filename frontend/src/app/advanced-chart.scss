@@ -97,16 +97,6 @@ select:focus-visible {
 .purple-text {
   color: #b376e7;
 }
-.yellow {
-  background: #f3d21a;
-}
-.yellow-text {
-  color: #f3d21a;
-}
-.indicators .yellow {
-  height: 2px;
-  border-radius: 0;
-}
 .chart-periods {
   display: flex;
   align-items: center;
@@ -129,45 +119,27 @@ select:focus-visible {
   padding: 0 13px;
 }
 .price-pane {
-  display: flex;
-  height: 157px;
+  position: relative;
+  height: 219px;
 }
-.price-pane svg {
-  display: block;
-  width: calc(100% - 34px);
-  flex: 1;
-  min-width: 0;
+.price-pane app-live-chart {
+  height: 100%;
 }
-.price-axis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: start;
-  width: 34px;
-  padding-left: 5px;
-  font-size: 9px;
-  border-left: 1px solid #43515b;
+.chart-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
 }
-.price-axis b {
-  margin-left: -5px;
-  background: #7add98;
-  color: #133521;
-  padding: 1px 5px;
-  border-radius: 2px;
-  font-weight: 600;
-}
-.volume-pane,
 .rsi-pane {
   position: relative;
+  height: 62px;
   padding-top: 17px;
-  padding-right: 34px;
   border-top: 1px solid #2b3941;
-}
-.volume-pane {
-  height: 62px;
-}
-.rsi-pane {
-  height: 62px;
 }
 .pane-label {
   position: absolute;
@@ -175,38 +147,8 @@ select:focus-visible {
   left: 4px;
   font-size: 9px;
 }
-.volume-pane svg {
-  width: 100%;
+.rsi-pane app-live-chart {
   height: 44px;
-  display: block;
-}
-.rsi-pane svg {
-  width: 100%;
-  height: 44px;
-  display: block;
-}
-.volume-axis,
-.rsi-axis {
-  position: absolute;
-  right: 0;
-  top: 17px;
-  bottom: 0;
-  width: 34px;
-  border-left: 1px solid #43515b;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  padding-left: 5px;
-  font-size: 9px;
-}
-.time-axis {
-  display: flex;
-  justify-content: space-around;
-  border-top: 1px solid #43515b;
-  margin-right: 34px;
-  padding-top: 6px;
-  font-size: 9px;
-  color: #b9c8da;
 }
 
 @media (max-width: 1500px) {
@@ -224,7 +166,7 @@ select:focus-visible {
     order: 3;
   }
   .price-pane {
-    height: 139px;
+    height: 201px;
   }
 }
 
@@ -289,13 +231,10 @@ select:focus-visible {
     flex: 1;
   }
   .price-pane {
-    height: 127px;
+    height: 189px;
   }
   .technical-chart {
     padding-inline: 8px;
-  }
-  .time-axis {
-    font-size: 7px;
   }
 }
 .trade-summary {
@@ -305,22 +244,4 @@ select:focus-visible {
 }
 .trade-summary b {
   color: #eef1f5;
-}
-.average-cost line {
-  stroke: #e8bc0b;
-  stroke-width: 1;
-}
-.average-cost text {
-  fill: #e8bc0b;
-  font-size: 9px;
-}
-.trade-mark path {
-  stroke: #0b1215;
-  stroke-width: 0.8;
-}
-.trade-mark.buy path {
-  fill: #27b779;
-}
-.trade-mark.sell path {
-  fill: #ef5660;
 }

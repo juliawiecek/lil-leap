@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
-const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
-const { tradeMarks, periodWindow, priceRange, priceY, plotMarks, timeLabels, priceLabels } = await import('../src/app/trade-marks.ts');
+const { AdvancedDashboard, AVERAGE_COST_COLOR } = await import('../src/app/advanced-dashboard.ts');
+const { tradeMarks } = await import('../src/app/trade-marks.ts');
 
 const NOW = Date.parse('2026-10-14T16:00:00Z');
 const row = (side, quantity, fillPrice, filledAt, extra = {}) => ({
@@ -26,51 +26,74 @@ test('fills become markers with a plain tooltip; other stocks and unfilled order
   assert.match(marks[0].label, /^Bought 10 @ \$220\.00 · /);
 });
 
-test('a client who bought twice and sold once sees three markers and an average-cost line matching the holding', t => {
+// One-minute bars on 14 Oct, in UTC seconds like the candles endpoint.
+const minute = (hour, min) => Date.UTC(2026, 9, 14, hour, min) / 1000;
+const bars = (from, count) => Array.from({ length: count }, (_, i) =>
+  ({ time: from + i * 60, open: 225, high: 236, low: 219, close: 225 + (i % 7) - 3 }));
+const flush = () => new Promise(resolve => setImmediate(resolve));
+
+/** An advanced desk charting AAPL, whose candle requests return the given bars. */
+function chartDesk(t, candles) {
   const desk = component(t, AdvancedDashboard, [feedProvider(fakeFeed([{ symbol: 'AAPL', name: 'Apple Inc.', price: 235 }]))]);
-  desk.currentTime.set(new Date(NOW));
+  const requests = [];
+  desk.marketData = { candles: async (instrumentId, timeframe) => { requests.push({ instrumentId, timeframe }); return candles; } };
+  return { desk, requests };
+}
+
+test('a client who bought twice and sold once sees three arrows and an average-cost line matching the holding', async t => {
+  const { desk, requests } = chartDesk(t, bars(minute(13, 30), 150));
   desk.historyRows.set(HISTORY);
   // The holding after those fills: 15 shares at an average cost of 225.
   desk.applyPortfolio({ cash: 1000, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple', quantity: 15, averageCost: 225 }] });
-  assert.equal(desk.selected().symbol, 'AAPL');
-  assert.deepEqual(desk.plottedTrades().map((m) => m.side), ['BUY', 'BUY', 'SELL']);
-  assert.equal(desk.averageCost(), 225);
-  const range = desk.chartRange();
-  assert.equal(desk.averageCostY(), priceY(225, range, 160));
-  assert.ok(desk.plottedTrades().every((m) => m.x >= 0 && m.x <= 824 && m.y >= 0 && m.y <= 160));
+  await desk.refreshChart();
+  assert.deepEqual(requests.at(-1), { instrumentId: 'aapl-uuid', timeframe: { interval: '1m', limit: 390 } });
+  const chart = desk.priceChart();
+  assert.equal(chart.kind, 'candles');
+  assert.equal(chart.key, 'AAPL-1D');
+  assert.equal(chart.data.length, 150);
+  assert.deepEqual(chart.markers.map((m) => [m.shape, m.time]),
+    [['arrowUp', minute(13, 40)], ['arrowUp', minute(14, 10)], ['arrowDown', minute(15, 2)]]);
+  assert.deepEqual(chart.priceLines, [{ price: 225, color: AVERAGE_COST_COLOR, title: 'Avg cost' }]);
   assert.equal(desk.tradesOutsidePeriod(), 0);
-  assert.equal(desk.priceAxis().length, 5);
-  assert.ok(desk.priceAxis()[0] > 235 && desk.priceAxis()[4] < 220, 'the axis covers the price and every fill');
-  desk.currentTime.set(new Date(NOW + 3 * 24 * 60 * 60 * 1000));
-  assert.equal(desk.plottedTrades().length, 0, 'a day later the 1D chart shows none of them');
-  assert.equal(desk.tradesOutsidePeriod(), 3);
-  desk.period.set('1W');
-  assert.equal(desk.plottedTrades().length, 3);
+  assert.equal(desk.chartStatus(), '');
 });
 
-test('without a holding there is no average-cost line', t => {
-  const desk = component(t, AdvancedDashboard, [feedProvider(fakeFeed([{ symbol: 'AAPL', price: 235 }]))]);
-  desk.historyRows.set([]);
+test('fills before the first bar are counted, not drawn, and without a holding there is no average-cost line', async t => {
+  const { desk } = chartDesk(t, bars(minute(14, 0), 120));
+  desk.historyRows.set(HISTORY);
+  await desk.refreshChart();
+  assert.equal(desk.priceChart().markers.length, 2);
+  assert.equal(desk.tradesOutsidePeriod(), 1);
   assert.equal(desk.averageCost(), null);
-  assert.equal(desk.averageCostY(), null);
-  assert.deepEqual(desk.plottedTrades(), []);
+  assert.deepEqual(desk.priceChart().priceLines, []);
 });
 
-test('periods, scales and labels map trades onto the chart', () => {
-  const marks = tradeMarks(HISTORY, 'AAPL');
-  assert.deepEqual(periodWindow('1D', NOW), { start: NOW - 86400000, end: NOW });
-  assert.deepEqual(periodWindow('ALL', NOW, marks), { start: NOW - 86400000, end: NOW }, 'at least a day is shown');
-  assert.equal(periodWindow('ALL', NOW, [{ ...marks[0], at: NOW - 40 * 86400000 }]).start, NOW - 40 * 86400000);
-  assert.equal(periodWindow('ALL', NOW).start, NOW - 30 * 86400000);
-  assert.deepEqual(priceRange([200, 0, Number.NaN, 250]), { low: 196, high: 255 });
-  assert.equal(priceRange([0]), null);
-  const range = { low: 100, high: 200 };
-  assert.equal(priceY(200, range, 160), 0);
-  assert.equal(priceY(100, range, 160), 160);
-  const plotted = plotMarks([{ ...marks[0], at: NOW - 43200000, price: 150 }], periodWindow('1D', NOW), range, 824, 160);
-  assert.deepEqual(plotted.map((m) => [m.x, m.y]), [[412, 80]]);
-  assert.deepEqual(priceLabels(range), [200, 175, 150, 125, 100]);
-  assert.equal(timeLabels('1D', periodWindow('1D', NOW), 'en-GB').length, 7);
-  assert.match(timeLabels('1W', periodWindow('1W', NOW), 'en-GB')[0], /^[A-Z][a-z]{2}$/);
-  assert.match(timeLabels('1M', periodWindow('1M', NOW), 'en-GB')[6], /^14 Oct$/);
+test('the EMA legend and RSI pane come from the bars, and stay empty until there are enough of them', async t => {
+  const { desk } = chartDesk(t, bars(minute(9, 0), 30));
+  await desk.refreshChart();
+  assert.deepEqual(desk.indicators().ema50, null);
+  assert.equal(desk.priceChart().overlays[0].data.length, 0);
+  desk.marketData = { candles: async () => bars(minute(9, 0), 250) };
+  await desk.refreshChart();
+  const { ema50, ema200, rsi } = desk.indicators();
+  assert.ok(ema50 > 219 && ema50 < 236 && ema200 > 219 && ema200 < 236);
+  assert.ok(rsi >= 0 && rsi <= 100);
+  assert.deepEqual(desk.rsiChart().range, { min: 0, max: 100 });
+  assert.equal(desk.priceChart().overlays[1].data.length, 51);
+});
+
+test('switching period reloads that timeframe; a stale answer is dropped and a failure says it will retry', async t => {
+  const { desk, requests } = chartDesk(t, bars(minute(13, 30), 10));
+  desk.selectPeriod('1W');
+  await flush();
+  assert.deepEqual(requests.at(-1).timeframe, { interval: '15m', limit: 130 });
+  assert.equal(desk.priceCandles().length, 10);
+
+  desk.marketData = { candles: async () => { desk.period.set('1M'); return bars(minute(13, 30), 3); } };
+  await desk.refreshChart();
+  assert.equal(desk.priceCandles().length, 10, 'bars for a period the user left are not shown');
+
+  desk.marketData = { candles: async () => { throw new Error('down'); } };
+  await desk.refreshChart();
+  assert.match(desk.chartStatus(), /Could not load the chart/);
 });
