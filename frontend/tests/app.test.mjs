@@ -159,6 +159,8 @@ test('opening candles finish morphing before the login form is revealed', async 
   assert.equal(app.chartMorph, 1);
   assert.equal(app.pageReady(), true);
   assert.equal(document.body.classList.contains('brand-phase'), false);
+});
+
 function shown(fixture, selector) {
   return !fixture.nativeElement.querySelector(selector).closest('.field-group').hidden;
 }
