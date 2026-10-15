@@ -2,7 +2,6 @@ import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
-import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
 import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
 import { AccountSwitcher } from './account-switcher';
@@ -57,7 +56,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -111,8 +110,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { label: 'Watchlist', icon: 'star' },
     { label: 'Portfolio', icon: 'chart' },
     { label: 'Orders', icon: 'orders' },
-    { label: 'History', icon: 'orders' },
-    { label: 'Learn', icon: 'learn' },
     { label: 'Settings', icon: 'settings' },
   ];
   readonly query = signal('');
