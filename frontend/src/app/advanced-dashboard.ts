@@ -27,6 +27,7 @@ import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReaso
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
 import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
+import { tradingClients } from './trading-clients';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -80,9 +81,10 @@ interface NewsItem {
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  readonly orderSubmissionClient: OrderSubmissionClient;
-  readonly orderHistoryClient: OrderHistoryClient;
-  readonly portfolioClient: PortfolioClient;
+  // The four API clients are assigned from tradingClients() in the constructor.
+  declare readonly orderSubmissionClient: OrderSubmissionClient;
+  declare readonly orderHistoryClient: OrderHistoryClient;
+  declare readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
@@ -160,7 +162,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
   /** Corner messages when an order fills or is rejected (PS-15). */
   readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
-  readonly orderStatusClient: OrderStatusClient;
+  declare readonly orderStatusClient: OrderStatusClient;
   readonly #stopFeed: () => void;
   readonly #stopFeedUpdates: () => void;
   readonly selected = signal<Quote>(NO_QUOTE);
@@ -659,11 +661,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
-    const http = inject(ApiHttpClient);
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, http);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth, http);
-    this.portfolioClient = new PortfolioClient(this.auth, http);
-    this.orderStatusClient = new OrderStatusClient(this.auth, http);
+    Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();
