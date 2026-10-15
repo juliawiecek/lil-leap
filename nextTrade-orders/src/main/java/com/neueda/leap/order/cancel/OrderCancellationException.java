@@ -15,16 +15,22 @@ public class OrderCancellationException extends RuntimeException {
             this.message = message;
         }
 
-        /** @return the fixed client-facing message for this reason */
+        /**
+         * Returns the client-facing message.
+         *
+         * @return the fixed client-facing message for this reason
+         */
         public String message() {
             return message;
         }
     }
 
+    /** Why the cancellation was refused, kept for the error response. */
     private final Reason reason;
 
     /**
      * Creates the exception.
+     *
      * @param reason why the order cannot be cancelled
      */
     public OrderCancellationException(Reason reason) {
@@ -32,7 +38,11 @@ public class OrderCancellationException extends RuntimeException {
         this.reason = reason;
     }
 
-    /** @return why the order cannot be cancelled */
+    /**
+     * Returns why the cancellation was refused.
+     *
+     * @return why the order cannot be cancelled
+     */
     public Reason reason() {
         return reason;
     }
