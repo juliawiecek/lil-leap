@@ -5,7 +5,10 @@ import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
 import { OrderHistory } from './order-history';
-import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
+import { AccountSwitcher } from './account-switcher';
+import { AccountsService } from './accounts.service';
+import { canTrade } from './accounts-api';
 import {
   FINAL_ORDER_STATUSES,
   ORDER_TRACK_INTERVAL_MS,
@@ -15,6 +18,13 @@ import {
 } from './order-history-api';
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
+import { MarketFeed } from './market-feed.service';
+import { isDelayed } from './market-feed-api';
+import { MarketTicker } from './market-ticker';
+import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
+import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
+import { ToastService, Toasts } from './toasts';
+import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
   CONSERVATIVE: 7,
@@ -23,13 +33,19 @@ const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
 };
 
 interface Quote {
-  instrumentId: string;  // ← NOW PRESERVED
+  instrumentId: string;
   symbol: string;
   name: string;
   price: number;
   change: number;
-  volume: string;
+  sector: string;
+  quotedAt: string;
 }
+/** Size of the price chart's drawing area, in SVG units. */
+const CHART_WIDTH = 824;
+const CHART_HEIGHT = 160;
+/** Shown until the first stock list arrives. */
+const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
   symbol: string;
   /** Latest bid, or average cost when no quote is available. */
@@ -62,7 +78,7 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -87,9 +103,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   readonly submittedOrderId = signal<string | null>(null);
   readonly clientReference = signal<string>('');
-  readonly accounts = signal<Account[]>([]);
+  /** The client's accounts; the header picker chooses which one this desk shows and trades from (PS-05). */
+  readonly accountState = inject(AccountsService, { optional: true }) ?? new AccountsService();
+  readonly accounts = computed(() => this.accountState.accounts());
   readonly instruments = signal<Instrument[]>([]);
-  readonly selectedAccount = signal<Account | null>(null);
+  readonly selectedAccount = computed(() => this.accountState.selected());
+  readonly #stopAccountWatch: () => void;
+  #started = false;
   readonly loadingAccounts = signal(false);
   readonly loadingInstruments = signal(false);
   readonly dataReady = computed(() => this.accounts().length > 0 && this.instruments().length > 0);
@@ -129,21 +149,45 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }),
     };
   });
-  readonly quotes: Quote[] = [
-    { instrumentId: 'aapl-uuid', symbol: 'AAPL', name: 'Apple Inc.', price: 176.56, change: 1.85, volume: '48.2M' },
-    { instrumentId: 'nvda-uuid', symbol: 'NVDA', name: 'NVIDIA Corporation', price: 893.12, change: 2.36, volume: '32.8M' },
-    { instrumentId: 'msft-uuid', symbol: 'MSFT', name: 'Microsoft Corporation', price: 424.31, change: 0.72, volume: '18.4M' },
-    { instrumentId: 'amzn-uuid', symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 180.34, change: 1.21, volume: '28.7M' },
-    { instrumentId: 'googl-uuid', symbol: 'GOOGL', name: 'Alphabet Inc.', price: 155.91, change: 0.62, volume: '20.1M' },
-  ];
-  readonly selected = signal(this.quotes[0]);
+  /** Live prices and market status shared by every view (TS-14.7, PS-02). */
+  readonly feed = inject(MarketFeed, { optional: true }) ?? new MarketFeed();
+  /** Every tradable stock from the backend, at its live price (TS-14.7 AC1). */
+  readonly quotes = signal<Quote[]>([]);
+  /** The five biggest movers today, either direction. */
+  readonly topMovers = computed(() =>
+    [...this.quotes()].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 5),
+  );
+  readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
+  readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Shown on the ticket before submitting while the market is closed (PS-02). */
+  readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
+  /** Corner messages when an order fills or is rejected (PS-15). */
+  readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
+  readonly orderStatusClient: OrderStatusClient;
+  readonly #stopFeed: () => void;
+  readonly #stopFeedUpdates: () => void;
+  readonly selected = signal<Quote>(NO_QUOTE);
+  /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
+  readonly priceDelayed = computed(() => !!this.selected().price && isDelayed(this.selected().quotedAt, this.feed.now()));
+  /** One-line review before confirming (PS-15), e.g. "Buy 10 AAPL · about $2,274.00 · fills at up to …". */
+  readonly reviewSummary = computed(() => {
+    const status = this.feed.status();
+    return orderReviewSummary({
+      side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+      quantity: Number(this.quantity()) || 0,
+      symbol: this.selected().symbol,
+      price: this.selected().price,
+      thresholdDollars: this.executionThresholdDollars(),
+      opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.currentTime()) : '',
+    });
+  });
   readonly results = computed(() =>
-    this.quotes.filter((q) =>
+    this.quotes().filter((q) =>
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
   readonly screened = computed(() =>
-    this.quotes.filter((q) => {
+    this.quotes().filter((q) => {
       const filter = this.filter();
       if (filter === 'Gainers') {
         return q.change > 0;
@@ -217,7 +261,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       179.8, 172, 167.5, 171, 167.2, 169.9, 166.5, 170.5, 165.9, 171, 172.9, 169.6, 170.8, 170.1,
       172.5, 172.9, 173.1, 175.4, 173.5, 174.6, 177.4, 174.5, 177, 175.2, 176.56,
     ];
-    const seed = this.periods.indexOf(this.period()) + this.quotes.indexOf(this.selected()) * 2;
+    const seed = this.periods.indexOf(this.period()) + this.quotes().findIndex((q) => q.symbol === this.selected().symbol) * 2;
     return Array.from({ length: 108 }, (_, i) => {
       const step = (i / 107) * (anchors.length - 1),
         j = Math.floor(step);
@@ -246,19 +290,39 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       )
       .join(' '),
   );
-  readonly chartTimes = computed(() => this.chartLabelsFor(this.period()));
+  /** Order history rows, kept for the chart's trade markers (PS-13). */
+  readonly historyRows = signal<OrderHistoryRow[]>([]);
+  /** The client's fills of the charted stock, oldest first. */
+  readonly tradeMarks = computed(() => tradeMarks(this.historyRows(), this.selected().symbol));
+  /** Average cost of the charted stock while it is held; null otherwise. */
+  readonly averageCost = computed(() => {
+    const held = this.positions().find((p) => p.symbol === this.selected().symbol && p.quantity > 0);
+    return held ? held.cost : null;
+  });
+  readonly chartWindow = computed(() => periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks()));
+  /** Price range covering the live price, every fill and the average cost. */
+  readonly chartRange = computed(() =>
+    priceRange([this.selected().price, ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0]),
+  );
+  readonly plottedTrades = computed(() => {
+    const range = this.chartRange();
+    return range ? plotMarks(this.tradeMarks(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : [];
+  });
+  /** Fills earlier than the chosen period, which are not drawn. */
+  readonly tradesOutsidePeriod = computed(() => this.tradeMarks().length - this.plottedTrades().length);
+  readonly averageCostY = computed(() => {
+    const range = this.chartRange();
+    const cost = this.averageCost();
+    return range && cost ? priceY(cost, range, CHART_HEIGHT) : null;
+  });
+  readonly priceAxis = computed(() => {
+    const range = this.chartRange();
+    return range ? priceLabels(range) : [];
+  });
+  readonly chartTimes = computed(() => timeLabels(this.period(), this.chartWindow()));
 
-  private chartLabelsFor(period: string): string[] {
-    if (period === '1D') {
-      return ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
-    }
-    if (period === '1W') {
-      return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    }
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-  }
   quote(symbol: string): Quote {
-    return this.quotes.find((q) => q.symbol === symbol) || this.quotes[0];
+    return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
   }
   choose(quote: Quote): void {
     this.symbol.set(quote.symbol);
@@ -274,6 +338,43 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.profitPrice.set((quote.price * 1.05).toFixed(2));
     this.stopPrice.set((quote.price * 0.95).toFixed(2));
     this.alertPrice.set((quote.price * 1.02).toFixed(2));
+  }
+  /** Shows the feed's latest prices; the ticket keeps its stock, and gets its first price once listed. */
+  #applyFeed(): void {
+    this.quotes.set(
+      this.feed.quotes().map((q) => ({
+        instrumentId: q.instrumentId, symbol: q.symbol, name: q.name, price: q.price,
+        change: q.change, sector: q.sector, quotedAt: q.quotedAt,
+      })),
+    );
+    const current = this.selected();
+    const live = this.quotes().find((q) => q.symbol === (current.symbol || this.symbol()));
+    if (!live) {
+      return;
+    }
+    if (current.price) {
+      this.selected.set(live);
+    } else {
+      this.setTicketQuote(live);
+    }
+  }
+  /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
+  async #announce(order: Order): Promise<void> {
+    if (order.status === 'Filled') {
+      this.toasts.show('filled', `Order filled: ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)}`);
+      return;
+    }
+    let reason = rejectionReason(null);
+    try {
+      reason = rejectionReason((await this.orderStatusClient.status(order.id)).reasonCode);
+    } catch {
+      // The generic reason still tells the client where to look.
+    }
+    this.toasts.show('rejected', `Order rejected: ${order.quantity} ${order.symbol}`, reason);
+  }
+  /** Opens the orders list from a toast. */
+  viewOrders(): void {
+    this.navigate('Orders');
   }
   navigate(page: string): void {
     this.page.set(page);
@@ -372,7 +473,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     try {
       const count = Number(this.quantity());
       const account = this.selectedAccount();
-      if (!account) {
+      if (!account || !canTrade(account)) {
         this.message.set('No active account selected.');
         return;
       }
@@ -421,8 +522,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
     try {
-      const rows = await this.orderHistoryClient.list();
+      const rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
       this.orders.set(rows.map(toOrder));
+      this.historyRows.set(rows);
       return true;
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
@@ -432,7 +534,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
   async refreshPortfolio(): Promise<void> {
     try {
-      const portfolio = await this.portfolioClient.load();
+      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
       if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch (error) {
@@ -509,6 +611,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         await this.refreshPortfolio();
       }
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
+      await this.#announce(order);
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
@@ -551,10 +654,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
+    this.orderStatusClient = new OrderStatusClient(this.auth);
+    this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
+    this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
+    this.#stopFeed = this.feed.start();
+    this.#applyFeed();
   }
 
   ngOnDestroy(): void {
     this.#destroyed = true;
+    this.#stopAccountWatch();
+    this.#stopFeedUpdates();
+    this.#stopFeed();
     this.destroyed = true;
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
@@ -566,18 +677,29 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
-    void this.loadTradingData();
-    void this.refreshPortfolio();
+    void this.#start();
+  }
+
+  /** Accounts first, so the first balances and orders shown are already the selected account's. */
+  async #start(): Promise<void> {
+    await this.loadTradingData();
+    this.#started = true;
     void this.pollOrdersUntilDestroyed();
+    await this.refreshPortfolio();
+  }
+
+  /** Another account was picked, or cash moved between accounts: show its balances, positions and orders. */
+  #accountChanged(): void {
+    if (!this.#started || this.#destroyed) { return; }
+    this.message.set('');
+    void this.refreshPortfolio();
+    void this.refreshOrders();
   }
 
   async loadTradingData(): Promise<void> {
     try {
       this.loadingAccounts.set(true);
-      const accountsData = await this.orderSubmissionClient.getAccounts();
-      const activeAccount = accountsData.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled);
-      this.accounts.set(accountsData);
-      this.selectedAccount.set(activeAccount || null);
+      this.accountState.use(await this.orderSubmissionClient.getAccounts());
     } catch (error) {
       console.error('Failed to load accounts:', error);
       this.message.set('Failed to load accounts.');
@@ -589,13 +711,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.loadingInstruments.set(true);
       const instrumentsData = await this.orderSubmissionClient.getInstruments();
       this.instruments.set(instrumentsData);
-      // Update quotes with real instrumentIds from backend
-      for (const quote of this.quotes) {
-        const instrument = instrumentsData.find((i) => i.symbol === quote.symbol);
-        if (instrument) {
-          quote.instrumentId = instrument.instrumentId;
-        }
-      }
     } catch (error) {
       console.error('Failed to load instruments:', error);
       this.message.set('Failed to load instruments.');

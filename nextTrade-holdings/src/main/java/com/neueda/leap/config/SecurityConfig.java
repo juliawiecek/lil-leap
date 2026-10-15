@@ -5,7 +5,6 @@ import com.neueda.leap.security.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,6 +27,10 @@ public class SecurityConfig {
 
     private static final String[] TRADER_ORDER_ROUTES = {
             "/clients/*/orders", API_PREFIX + "/clients/*/orders"
+    };
+
+    private static final String[] ACCOUNT_WRITE_ROUTES = {
+            "/accounts", "/accounts/transfers", API_PREFIX + "/accounts", API_PREFIX + "/accounts/transfers"
     };
 
     private static final String[] PORTFOLIO_READ_ROUTES = {
@@ -56,8 +59,9 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
-        // Supported API routes are read-only GETs; keep CSRF protection enabled for unsafe methods.
-        return http.csrf(Customizer.withDefaults())
+        // The account writes authenticate only by bearer header -- no cookies or session -- so a
+        // cross-site form cannot forge them; every other unsafe method keeps CSRF protection.
+        return http.csrf(c -> c.ignoringRequestMatchers(ACCOUNT_WRITE_ROUTES))
                 .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -68,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, DOC_ROUTES).permitAll()
                         .requestMatchers(HttpMethod.GET, TRADER_ORDER_ROUTES).hasRole("TRADER")
                         .requestMatchers(HttpMethod.GET, PORTFOLIO_READ_ROUTES).hasAnyRole("TRADER", "ANALYST")
+                        .requestMatchers(HttpMethod.POST, ACCOUNT_WRITE_ROUTES).hasRole("TRADER")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, failure) -> {

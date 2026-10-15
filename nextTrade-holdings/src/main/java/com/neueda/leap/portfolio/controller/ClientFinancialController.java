@@ -7,6 +7,7 @@ import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
 import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
 import com.neueda.leap.security.JwtPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -17,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +45,7 @@ public class ClientFinancialController {
 
     /**
      * Lists holdings owned by the authenticated caller.
+     * @param accountId optional owned account to narrow to
      * @param principal identity supplied by Spring Security
      * @return HTTP 200 with owned holdings, including an empty list when absent
      */
@@ -57,8 +60,10 @@ public class ClientFinancialController {
     })
     @GetMapping("/holdings")
     public ResponseEntity<List<HoldingResponse>> holdings(
+            @Parameter(description = "Only this account; omit for all of the caller's accounts")
+            @RequestParam(required = false) UUID accountId,
             @AuthenticationPrincipal JwtPrincipal principal) {
-        return ResponseEntity.ok(queryService.getHoldings(principal.userId()));
+        return ResponseEntity.ok(queryService.getHoldings(principal.userId(), accountId));
     }
 
     /**
@@ -90,6 +95,7 @@ public class ClientFinancialController {
 
     /**
      * Lists cash balances owned by the authenticated caller.
+     * @param accountId optional owned account to narrow to
      * @param principal identity supplied by Spring Security
      * @return HTTP 200 with owned balances, including an empty list when absent
      */
@@ -104,8 +110,10 @@ public class ClientFinancialController {
     })
     @GetMapping("/cash")
     public ResponseEntity<List<CashBalanceResponse>> cash(
+            @Parameter(description = "Only this account; omit for all of the caller's accounts")
+            @RequestParam(required = false) UUID accountId,
             @AuthenticationPrincipal JwtPrincipal principal) {
-        return ResponseEntity.ok(queryService.getCashBalances(principal.userId()));
+        return ResponseEntity.ok(queryService.getCashBalances(principal.userId(), accountId));
     }
 
     /**

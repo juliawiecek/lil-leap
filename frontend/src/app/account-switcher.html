@@ -1,0 +1,200 @@
+<div class="switcher">
+  <button
+    type="button"
+    class="switcher-trigger"
+    aria-haspopup="true"
+    [attr.aria-expanded]="menuOpen()"
+    aria-controls="account-menu"
+    (click)="toggleMenu()"
+  >
+    @if (selected(); as account) {
+      <span class="trigger-text">
+        <strong>{{ label(account) }}</strong>
+        <small>{{ available(account) | currency }} available</small>
+      </span>
+    } @else {
+      <span class="trigger-text"><strong>Accounts</strong><small>Loading…</small></span>
+    }
+    <app-dashboard-icon name="down" />
+  </button>
+
+  @if (menuOpen()) {
+    <div class="account-menu" id="account-menu">
+      <p class="menu-title">Your accounts</p>
+      <ul>
+        @for (account of accounts.accounts(); track account.account_id) {
+          <li>
+            <button
+              type="button"
+              class="account-row"
+              [class.current]="account.account_id === selected()?.account_id"
+              [attr.aria-current]="account.account_id === selected()?.account_id ? 'true' : null"
+              (click)="choose(account)"
+            >
+              <span class="row-name">
+                <strong>{{ label(account) }}</strong>
+                <small>
+                  Individual cash · USD
+                  @if (statusLabel(account); as status) {
+                    <em class="status">{{ status }}</em>
+                  }
+                </small>
+              </span>
+              <span class="row-cash">{{ available(account) | currency }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="menu-empty">No accounts yet.</li>
+        }
+      </ul>
+      <div class="menu-actions">
+        <button type="button" class="menu-action" [disabled]="atLimit()" (click)="openAdd()">
+          <span aria-hidden="true">+</span> Add account
+        </button>
+        <button
+          type="button"
+          class="menu-action"
+          [disabled]="!canTransfer()"
+          [attr.title]="canTransfer() ? null : 'Open a second account to move cash between accounts'"
+          (click)="openTransfer()"
+        >
+          <span aria-hidden="true">⇄</span> Transfer funds
+        </button>
+      </div>
+    </div>
+  }
+  <p class="sr-only" aria-live="polite">{{ notice() }}</p>
+</div>
+
+<dialog
+  #accountDialog
+  class="account-dialog"
+  aria-labelledby="account-dialog-title"
+  (click)="backdrop($event)"
+  (close)="dialog.set(null)"
+>
+  @if (dialog() === 'add') {
+    <form (submit)="submitAdd($event)" novalidate>
+      <div class="dialog-heading">
+        <h2 id="account-dialog-title">Add account</h2>
+        <button type="button" class="close-button" aria-label="Close" (click)="closeDialog()">
+          <app-dashboard-icon name="close" />
+        </button>
+      </div>
+      <label for="account-nickname">Account nickname</label>
+      <input
+        id="account-nickname"
+        autocomplete="off"
+        maxlength="50"
+        placeholder="e.g. Long-term investing"
+        [value]="nickname()"
+        (input)="nickname.set($any($event.target).value)"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        aria-describedby="account-form-error"
+      />
+      <div class="fixed-fields">
+        <div>
+          <span>Account type</span>
+          <strong>Individual cash</strong>
+        </div>
+        <div>
+          <span>Currency</span>
+          <strong>USD · US dollar</strong>
+        </div>
+      </div>
+      <p class="hint">Opens straight away with $0.00 cash, no holdings and no orders. Use Transfer funds to move cash in.</p>
+      <p class="form-error" id="account-form-error" role="alert">{{ error() }}</p>
+      <div class="dialog-buttons">
+        <button type="button" class="ghost-button" (click)="closeDialog()">Cancel</button>
+        <button type="submit" class="primary-action" [disabled]="busy()">
+          {{ busy() ? 'Opening…' : 'Open account' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (dialog() === 'transfer') {
+    <div class="dialog-heading">
+      <h2 id="account-dialog-title">
+        {{ transferTitle() }}
+      </h2>
+      <button type="button" class="close-button" aria-label="Close" (click)="closeDialog()">
+        <app-dashboard-icon name="close" />
+      </button>
+    </div>
+
+    @switch (step()) {
+      @case ('form') {
+        <form (submit)="reviewTransfer($event)" novalidate>
+          <label for="transfer-from">From</label>
+          <select id="transfer-from" [value]="fromId()" (change)="setFrom($any($event.target).value)">
+            @for (account of accounts.accounts(); track account.account_id) {
+              <option [value]="account.account_id" [selected]="account.account_id === fromId()">
+                {{ label(account) }} — {{ available(account) | currency }}
+              </option>
+            }
+          </select>
+          <label for="transfer-to">To</label>
+          <select id="transfer-to" [value]="toId()" (change)="toId.set($any($event.target).value)">
+            @for (account of destinations(); track account.account_id) {
+              <option [value]="account.account_id" [selected]="account.account_id === toId()">
+                {{ label(account) }} — {{ available(account) | currency }}
+              </option>
+            }
+          </select>
+          <label for="transfer-amount">Amount (USD)</label>
+          <div class="amount-field">
+            <span aria-hidden="true">$</span>
+            <input
+              id="transfer-amount"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+              [value]="amount()"
+              (input)="amount.set($any($event.target).value)"
+              [attr.aria-invalid]="error() ? 'true' : null"
+              aria-describedby="transfer-available transfer-error"
+            />
+            <button type="button" class="link-button" (click)="amount.set(available(from()).toFixed(2))">Max</button>
+          </div>
+          <p class="hint" id="transfer-available">{{ available(from()) | currency }} available to transfer from this account.</p>
+          <p class="form-error" id="transfer-error" role="alert">{{ error() }}</p>
+          <div class="dialog-buttons">
+            <button type="button" class="ghost-button" (click)="closeDialog()">Cancel</button>
+            <button type="submit" class="primary-action">Review transfer</button>
+          </div>
+        </form>
+      }
+      @case ('review') {
+        <dl class="review-lines">
+          <div><dt>From</dt><dd>{{ from() ? label(from()!) : '' }}</dd></div>
+          <div><dt>To</dt><dd>{{ to() ? label(to()!) : '' }}</dd></div>
+          <div><dt>Amount</dt><dd class="amount">{{ +amount() | currency }}</dd></div>
+          <div><dt>Type</dt><dd>Internal transfer · settles immediately · no fee</dd></div>
+        </dl>
+        <p class="form-error" role="alert">{{ error() }}</p>
+        <div class="dialog-buttons">
+          <button type="button" class="ghost-button" [disabled]="busy()" (click)="step.set('form')">Back</button>
+          <button type="button" class="primary-action" [disabled]="busy()" (click)="confirmTransfer()">
+            {{ busy() ? 'Transferring…' : 'Confirm transfer' }}
+          </button>
+        </div>
+      }
+      @case ('done') {
+        @if (result(); as done) {
+          <p class="success" role="status">
+            Moved {{ done.amount | currency }} from {{ from() ? label(from()!) : 'your account' }} to
+            {{ to() ? label(to()!) : 'your account' }}.
+          </p>
+          <dl class="review-lines">
+            <div><dt>{{ from() ? label(from()!) : 'From' }}</dt><dd>{{ done.fromBalance | currency }}</dd></div>
+            <div><dt>{{ to() ? label(to()!) : 'To' }}</dt><dd>{{ done.toBalance | currency }}</dd></div>
+          </dl>
+        }
+        <div class="dialog-buttons">
+          <button type="button" class="primary-action" (click)="closeDialog()">Done</button>
+        </div>
+      }
+    }
+  }
+</dialog>

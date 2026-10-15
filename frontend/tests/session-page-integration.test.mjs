@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { of } from 'rxjs';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { PageState } = await import('../src/app/page-state.ts');
-const { QuoteService } = await import('../src/app/quote.service.ts');
+import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { OrderSubmissionClient } = await import('../src/app/order-submission-api.ts');
 const { OrderHistoryClient } = await import('../src/app/order-history-api.ts');
 const { PortfolioClient } = await import('../src/app/portfolio-api.ts');
@@ -15,7 +14,7 @@ function workspace(t, Type) {
   let select, fields;
   const desk = component(t, Type, [
     { provide: AuthService, useValue: { accessToken: null } },
-    { provide: QuoteService, useValue: { getLatestByMarketSymbol: () => of({ midpoint: 100 }) } },
+    feedProvider(fakeFeed(['AAPL', 'NVDA', 'MSFT'].map((symbol) => ({ symbol, price: 100 })))),
     {
       provide: PageState,
       useValue: {

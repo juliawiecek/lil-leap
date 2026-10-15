@@ -54,6 +54,23 @@ public class OrderHistoryService {
      * @throws InvalidFilterException if the status is unknown or {@code from} is after {@code to}
      */
     public List<OrderHistoryResponse> getHistory(UUID userId, LocalDate from, LocalDate to, String status) {
+        return getHistory(userId, null, from, to, status);
+    }
+
+    /**
+     * Returns the user's orders in one account (or all accounts), newest first, narrowed by any filters.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     *
+     * @param userId authenticated user's identifier
+     * @param accountId account to read, or null for every owned account
+     * @param from first day to include (UTC), or null for no lower bound
+     * @param to last day to include (UTC), or null for no upper bound
+     * @param status status to include, case-insensitive, or null for all statuses
+     * @return matching orders with fill details where filled
+     * @throws InvalidFilterException if the status is unknown or {@code from} is after {@code to}
+     */
+    public List<OrderHistoryResponse> getHistory(UUID userId, UUID accountId, LocalDate from, LocalDate to,
+            String status) {
         if (from != null && to != null && from.isAfter(to)) {
             throw new InvalidFilterException("from must not be after to");
         }
@@ -68,6 +85,6 @@ public class OrderHistoryService {
         Instant lower = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : EARLIEST;
         // "to" is a whole day, so the bound is the start of the following day (exclusive).
         Instant upper = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : LATEST;
-        return orderRepository.findHistory(userId, statuses, lower, upper);
+        return orderRepository.findHistory(userId, accountId, statuses, lower, upper);
     }
 }

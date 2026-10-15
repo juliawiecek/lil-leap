@@ -32,4 +32,27 @@ describe('AccessTokenGuard', () => {
   ])('rejects %s with 401', (_label, headers) => {
     expect(() => guard.canActivate(contextFor({ headers }))).toThrow(InvalidAccessTokenException);
   });
+
+  it('rejects with 401 when verification fails unexpectedly, and records no caller', () => {
+    jest.spyOn(jwtService, 'verifyToken').mockImplementation(() => {
+      throw new TypeError('verifier bug');
+    });
+    const request: Record<string, any> = { headers: { authorization: 'Bearer anything' } };
+
+    expect(() => guard.canActivate(contextFor(request))).toThrow(InvalidAccessTokenException);
+    expect(request.userId).toBeUndefined();
+  });
+
+  it('rejects an expired token with 401', () => {
+    jest.useFakeTimers();
+    try {
+      const token = jwtService.issueToken(userId, 'trader@example.com');
+      jest.advanceTimersByTime(24 * 60 * 60 * 1000);
+      expect(() => guard.canActivate(contextFor({ headers: { authorization: `Bearer ${token}` } }))).toThrow(
+        InvalidAccessTokenException,
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

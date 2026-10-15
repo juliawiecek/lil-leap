@@ -46,7 +46,7 @@ class ApiSecurityTest {
     @Test
     void unexpectedErrorsDoNotLogUnlabelledSecrets(CapturedOutput output) throws Exception {
         UUID user = UUID.randomUUID();
-        when(queryService.getHoldings(any())).thenThrow(new IllegalStateException("unlabelled-password-canary"));
+        when(queryService.getHoldings(any(), any())).thenThrow(new IllegalStateException("unlabelled-password-canary"));
         mvc.perform(get("/holdings").header("Authorization", "Bearer " + jwtService.issueToken(user, "client@example.com")))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("INTERNAL_ERROR"))

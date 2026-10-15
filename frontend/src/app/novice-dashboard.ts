@@ -4,7 +4,10 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { NoviceLearn } from './novice-learn';
 import { OrderHistory } from './order-history';
-import { OrderSubmissionClient, OrderSubmissionError, Account, Instrument } from './order-submission-api';
+import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
+import { AccountSwitcher } from './account-switcher';
+import { AccountsService } from './accounts.service';
+import { canTrade } from './accounts-api';
 import {
   FINAL_ORDER_STATUSES,
   ORDER_TRACK_INTERVAL_MS,
@@ -13,13 +16,17 @@ import {
 } from './order-history-api';
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
-import { QuoteService } from './quote.service';
-import { firstValueFrom, interval, Subject, startWith, switchMap, takeUntil } from 'rxjs';
+import { interval, Subject, startWith, takeUntil } from 'rxjs';
+import { closedMarketWarning, localOpeningTime, marketStatusText } from './market-status-api';
+import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
+import { ToastService, Toasts } from './toasts';
+import { MarketFeed } from './market-feed.service';
+import { isDelayed } from './market-feed-api';
+import { MarketTicker } from './market-ticker';
 import { type Point, portfolioHistory, timeframeFor, toFills } from './chart-data';
 import type { ChartSpec } from './lightweight-chart';
 import { LiveChart } from './live-chart';
 import { MarketDataClient } from './market-data-api';
-import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient, marketStatusText } from './market-status-api';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
@@ -47,11 +54,14 @@ interface Quote {
   name: string;
   price: number;
   change: number;
+  quotedAt: string;
 }
+/** Shown in the ticket until the first stock list arrives. */
+const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '' };
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, LiveChart],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher, MarketTicker, Toasts, LiveChart],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -62,17 +72,38 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketData: MarketDataClient;
   /** Separate from order tracking, so chart refreshes never interleave with a tracked order's reads. */
   readonly chartHistoryClient: OrderHistoryClient;
-  readonly marketStatusClient: MarketStatusClient;
+  /** Live prices for every listed stock and the market's open/closed status, shared by all views (TS-14.7). */
+  readonly feed = inject(MarketFeed, { optional: true }) ?? new MarketFeed();
   /** NYSE open/closed from the orders service (NEXT-212), counted down against the local clock. */
-  readonly marketStatus = signal<MarketStatus | null>(null);
+  readonly marketStatus = computed(() => this.feed.status());
   readonly marketClock = signal(new Date());
   readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
+  /** Shown on the ticket before submitting while the market is closed (PS-02). */
+  readonly closedWarning = computed(() => closedMarketWarning(this.marketStatus(), this.marketClock()));
+  /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
+  readonly tradePriceDelayed = computed(() => !!this.tradeQuote().price && isDelayed(this.tradeQuote().quotedAt, this.feed.now()));
+  readonly #stopFeed: () => void;
+  /** Corner messages when an order fills or is rejected (PS-15). */
+  readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
+  readonly orderStatusClient: OrderStatusClient;
+  /** One-line review shown before confirming (PS-15), e.g. "Buy 10 AAPL · about $2,274.00 · fills at up to …". */
+  readonly reviewSummary = computed(() => {
+    const status = this.marketStatus();
+    return orderReviewSummary({
+      side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+      quantity: Number(this.quantity()) || 0,
+      symbol: this.tradeQuote().symbol,
+      price: this.tradeQuote().price,
+      thresholdDollars: this.executionThresholdDollars(),
+      opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.marketClock()) : '',
+    });
+  });
+  readonly #stopFeedUpdates: () => void;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
-  private readonly quoteService = inject(QuoteService);
   private readonly destroy$ = new Subject<void>();
   private routing?: PageBinding;
   private destroyed = false;
@@ -97,19 +128,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly showBalance = signal(true);
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
-  private readonly supportedQuotes: Quote[] = [
-    { symbol: 'AAPL', name: 'Apple Inc.', price: 0, change: 0 },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', price: 0, change: 0 },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 0, change: 0 },
-    { symbol: 'AMZN', name: 'Amazon.com, Inc.', price: 0, change: 0 },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 0, change: 0 },
-  ];
   /** Balances and holdings, loaded from the backend and reloaded after each fill. */
   readonly portfolioValue = signal(0);
   readonly buyingPower = signal(0);
   readonly invested = signal(0);
   readonly holdings = signal<Holding[]>([]);
-  readonly quotes = signal<Quote[]>(this.supportedQuotes);
+  /** Every tradable stock from the backend, at its live price (TS-14.7 AC1). */
+  readonly quotes = signal<Quote[]>([]);
   readonly watched = signal(['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL']);
   readonly watchlist = computed(() => this.quotes().filter((q) => this.watched().includes(q.symbol)));
   readonly results = computed(() =>
@@ -123,7 +148,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
   ];
   readonly modal = signal('trade');
-  readonly tradeQuote = signal(this.quotes()[0]);
+  readonly tradeQuote = signal<Quote>(NO_QUOTE);
   readonly side = signal('Buy');
   readonly quantity = signal('');
   readonly reviewing = signal(false);
@@ -131,7 +156,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   /** Idempotency key for the order being reviewed; a retried confirm reuses it. */
   readonly clientReference = signal('');
-  readonly selectedAccount = signal<Account | null>(null);
+  /** The client's accounts; the header picker chooses which one this dashboard shows and trades from (PS-05). */
+  readonly accountState = inject(AccountsService, { optional: true }) ?? new AccountsService();
+  readonly selectedAccount = computed(() => this.accountState.selected());
+  readonly #stopAccountWatch: () => void;
+  #started = false;
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
   readonly executionThresholdDollars = signal(5);
@@ -225,7 +254,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   openTrade(side = 'Buy', symbol?: string): void {
     const start = this.resolveTradeStartSymbol(side, symbol);
-    this.tradeQuote.set(this.quotes().find((q) => q.symbol === start) || this.quotes()[0]);
+    this.tradeQuote.set(this.quotes().find((q) => q.symbol === start) ?? this.quotes()[0] ?? NO_QUOTE);
     this.symbol.set(this.tradeQuote().symbol);
     this.side.set(side);
     this.quantity.set('');
@@ -300,6 +329,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.tradeMessage.set('We could not find an active trading account for you.');
       return;
     }
+    if (!canTrade(account)) {
+      this.tradeMessage.set('This account is not open for trading yet. Switch accounts at the top of the page.');
+      return;
+    }
     if (!instrument) {
       this.tradeMessage.set(`${quote.symbol} is not available to trade yet.`);
       return;
@@ -353,12 +386,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       if (row.status === 'FILLED') {
         await this.refreshPortfolio();
       }
-      const action = row.side === 'SELL' ? 'Sold' : 'Bought';
-      this.tradeMessage.set(
-        row.status === 'FILLED'
-          ? `${action} ${row.filledQuantity ?? row.quantity} ${row.symbol} at $${row.fillPrice?.toFixed(2)}. You can see it under Orders.`
-          : 'Your order was not filled. You can see why under Orders.',
-      );
+      if (row.status === 'FILLED') {
+        const action = row.side === 'SELL' ? 'Sold' : 'Bought';
+        const shares = row.filledQuantity ?? row.quantity;
+        this.tradeMessage.set(`${action} ${shares} ${row.symbol} at $${row.fillPrice?.toFixed(2)}. You can see it under Orders.`);
+        this.toasts.show('filled', `Order filled: ${shares} ${row.symbol} at $${row.fillPrice?.toFixed(2)}`);
+        return;
+      }
+      const reason = await this.#rejectionReason(orderId);
+      this.tradeMessage.set(`Your order was not filled. ${reason}`);
+      this.toasts.show('rejected', `Order rejected: ${row.quantity} ${row.symbol}`, reason);
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
@@ -378,12 +415,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     ], () => {
       const quote = this.quotes().find(q => q.symbol === this.symbol());
       if (quote) { this.tradeQuote.set(quote); }
-      else { this.tradeMessage.set('That symbol is unavailable.'); }
+      else if (this.quotes().length) { this.tradeMessage.set('That symbol is unavailable.'); }
     });
     this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
     this.orderHistoryClient = new OrderHistoryClient(this.auth);
     this.portfolioClient = new PortfolioClient(this.auth);
-    this.marketStatusClient = new MarketStatusClient(this.auth);
+    this.orderStatusClient = new OrderStatusClient(this.auth);
+    this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
+    this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
+    this.#stopFeed = this.feed.start();
+    this.#applyFeed();
     this.marketData = new MarketDataClient(this.auth);
     this.chartHistoryClient = new OrderHistoryClient(this.auth);
   }
@@ -394,6 +435,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.#stopAccountWatch();
+    this.#stopFeedUpdates();
+    this.#stopFeed();
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#priceTimer);
@@ -406,7 +450,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   async refreshPortfolio(): Promise<void> {
     try {
-      const portfolio = await this.portfolioClient.load();
+      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
       if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
     } catch {
@@ -472,25 +516,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
     this.executionThresholdDollars.set(this.defaultThresholdDollars());
+    // Keeps the market countdown current; prices and status come from the shared feed.
     interval(5000)
-      .pipe(
-        startWith(0),
-        switchMap(async () => {
-          this.now.set(new Date());
-          this.marketClock.set(new Date());
-          await this.refreshQuotes();
-          await this.refreshChart();
-          return true;
-        }),
-        takeUntil(this.destroy$),
-      )
-      .subscribe();
-    interval(MARKET_STATUS_REFRESH_MS)
-      .pipe(startWith(0), switchMap(() => this.refreshMarketStatus()), takeUntil(this.destroy$))
-      .subscribe();
+      .pipe(startWith(0), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.now.set(new Date());
+        this.marketClock.set(new Date());
+        void this.refreshChart();
+      });
 
-    void this.refreshPortfolio();
-    void this.loadTradingData();
+    void this.#start();
   }
 
   /**
@@ -502,7 +537,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const period = this.period();
     const timeframe = timeframeFor(period);
     try {
-      const fills = toFills(await this.chartHistoryClient.list());
+      const fills = toFills(await this.chartHistoryClient.list({ accountId: this.selectedAccount()?.account_id }));
       const idBySymbol = new Map(this.instruments().map((i) => [i.symbol, i.instrumentId]));
       for (const holding of this.#portfolio.holdings.filter((h) => h.instrumentId)) {
         idBySymbol.set(holding.symbol, holding.instrumentId);
@@ -530,46 +565,48 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
   }
 
-  /** Re-reads whether the market is open; a failure keeps the last status shown. */
-  async refreshMarketStatus(): Promise<void> {
+  /** Accounts first, so the first portfolio load is already the selected account's. */
+  async #start(): Promise<void> {
+    await this.loadTradingData();
+    this.#started = true;
+    await this.refreshPortfolio();
+  }
+
+  /** Another account was picked, or cash moved between accounts: show its balances and holdings. */
+  #accountChanged(): void {
+    if (!this.#started || this.destroyed) { return; }
+    this.reviewing.set(false);
+    this.tradeMessage.set('');
+    void this.refreshPortfolio();
+  }
+
+  /** The plain-English reason an order was rejected; a generic one if it cannot be read. */
+  async #rejectionReason(orderId: string): Promise<string> {
     try {
-      this.marketStatus.set(await this.marketStatusClient.status());
+      return rejectionReason((await this.orderStatusClient.status(orderId)).reasonCode);
     } catch {
-      // The next refresh retries.
+      return rejectionReason(null);
     }
   }
 
-  private async refreshQuotes(): Promise<void> {
-    const next = [...this.quotes()];
-    await Promise.all(
-      next.map(async (current, i) => {
-        try {
-          const apiQuote = await firstValueFrom(
-            this.quoteService.getLatestByMarketSymbol('NASDAQ', current.symbol),
-          );
-          const midpoint = Number(apiQuote.midpoint ?? 0);
-          const previousPrice = current.price || midpoint;
-          const change = previousPrice > 0 ? ((midpoint - previousPrice) / previousPrice) * 100 : 0;
-          next[i] = {
-            ...current,
-            price: midpoint,
-            change,
-          };
-        } catch {
-          // Keep last visible price when quote fetch fails.
-        }
-      }),
+  /** Opens the orders list from a toast. */
+  viewOrders(): void {
+    this.navigate('History');
+  }
+
+  /** Shows the feed's latest prices and keeps the open ticket on its stock's live price. */
+  #applyFeed(): void {
+    this.quotes.set(
+      this.feed.quotes().map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, change: q.change, quotedAt: q.quotedAt })),
     );
-    this.quotes.set(next);
-    const selected = this.tradeQuote();
-    const refreshed = next.find((q) => q.symbol === selected.symbol);
-    if (refreshed) { this.tradeQuote.set(refreshed); }
+    const symbol = this.tradeQuote().symbol || this.symbol();
+    const live = this.quotes().find((q) => q.symbol === symbol);
+    if (live) { this.tradeQuote.set(live); }
   }
 
   private async loadTradingData(): Promise<void> {
     try {
-      const accounts = await this.orderSubmissionClient.getAccounts();
-      this.selectedAccount.set(accounts.find((a) => a.account_status === 'ACTIVE' && a.trading_enabled) ?? null);
+      this.accountState.use(await this.orderSubmissionClient.getAccounts());
       this.instruments.set(await this.orderSubmissionClient.getInstruments());
     } catch {
       // confirmTrade reports the missing account or instrument in plain words.

@@ -597,7 +597,7 @@ CREATE TABLE cash_transactions (
     transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL,
     fill_id UUID,  -- NULL for deposits/withdrawals/dividends/fees
-    transaction_type VARCHAR(20) NOT NULL,  -- 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION'
+    transaction_type VARCHAR(20) NOT NULL,  -- 'BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION', 'TRANSFER'
     amount NUMERIC(18,2) NOT NULL,  -- signed: negative for outflow, positive for inflow
     currency CHAR(3) NOT NULL DEFAULT 'USD',
     settlement_status VARCHAR(20) NOT NULL DEFAULT 'SETTLED',  -- 'PENDING', 'SETTLED'
@@ -609,7 +609,7 @@ CREATE TABLE cash_transactions (
     CONSTRAINT fk_transaction_fill
         FOREIGN KEY (fill_id) REFERENCES fills(fill_id) ON DELETE SET NULL,
     CONSTRAINT chk_transaction_type CHECK (
-        transaction_type IN ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION')
+        transaction_type IN ('BUY', 'SELL', 'DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'FEE', 'CORRECTION', 'TRANSFER')
     ),
     CONSTRAINT chk_transaction_currency CHECK (currency = 'USD'),
     CONSTRAINT chk_settlement_status CHECK (settlement_status IN ('PENDING', 'SETTLED')),
