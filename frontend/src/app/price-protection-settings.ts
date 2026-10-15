@@ -108,7 +108,7 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
       .add-override { display: flex; align-items: center; gap: 6px; }
       select, .percent-field {
         height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
-        background: rgba(255, 255, 255, 0.03); color: inherit; font-size: 11px;
+        background-color: #0f1518; color: inherit; font-size: 11px; color-scheme: dark;
       }
       .percent-field { display: inline-flex; align-items: center; gap: 2px; }
       .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: right; }
