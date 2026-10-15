@@ -256,9 +256,7 @@ pipeline {
                 --cov=src \
                 --cov-report=term-missing \
                 --cov-report=html:htmlcov \
-                --cov-report=xml:coverage.xml
-                /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py
-                /tmp/python-venv/bin/python ../scripts/validate_sonar_config.py --require-reports'
+                --cov-report=xml:coverage.xml'
             '''
           }
         }
@@ -298,6 +296,22 @@ pipeline {
                 -DincludeScope=test -DoutputDirectory=target/sonar-libraries
             )
           done
+        '''
+      }
+    }
+
+    stage('Prepare Sonar Coverage') {
+      // Reads every service's coverage report and the dependency JARs, so it waits for all tests.
+      when { expression { onMain() } }
+      steps {
+        sh '''
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$WORKSPACE:$WORKSPACE" \
+            -w "$WORKSPACE" \
+            python:3.12-slim \
+            sh -ec 'python scripts/prepare_sonar_coverage.py
+            python scripts/validate_sonar_config.py --require-reports'
         '''
       }
     }
