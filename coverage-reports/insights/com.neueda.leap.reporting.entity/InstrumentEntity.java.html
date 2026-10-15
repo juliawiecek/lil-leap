@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InstrumentEntity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.reporting.entity</a> &gt; <span class="el_source">InstrumentEntity.java</span></div><h1>InstrumentEntity.java</h1><pre class="source lang-java linenums">package com.neueda.leap.reporting.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.Immutable;
+
+import java.util.UUID;
+
+/**
+ * Read-only instrument mapping for dashboard reporting.
+ */
+@Entity
+@Immutable
+@Table(name = &quot;instruments&quot;)
+public class InstrumentEntity {
+
+    @Id
+    @Column(name = &quot;instrument_id&quot;, nullable = false)
+    private UUID instrumentId;
+
+    @Column(name = &quot;symbol&quot;, nullable = false, length = 20)
+    private String symbol;
+
+    /** Required by JPA; not for application use. */
+<span class="nc" id="L27">    protected InstrumentEntity() {</span>
+<span class="nc" id="L28">    }</span>
+
+    /**
+     * Returns the persistent instrument identifier.
+     *
+     * @return persistent instrument identifier
+     */
+    public UUID getInstrumentId() {
+<span class="nc" id="L36">        return instrumentId;</span>
+    }
+
+    /**
+     * Returns the instrument trading symbol.
+     *
+     * @return instrument trading symbol
+     */
+    public String getSymbol() {
+<span class="nc" id="L45">        return symbol;</span>
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

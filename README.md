@@ -58,12 +58,22 @@ These accounts are for development and demos only and must never be loaded into 
 
 ## 📊 Code Coverage Status
 
-| Service | Coverage | Tests | Goal |
-|---|---|---|---|
-| Python Data Pipeline | **79.67%** | 72 ✓ | 85% |
-| Java Insights | **77.79%** | 320 ✓ | 85% |
+Snapshot of `main` on 15 October 2026 (all 1,136 tests passing). Click a report to see
+covered and missed lines; open it from a local clone, since GitHub shows HTML as source.
 
-👉 **[View detailed coverage reports →](docs/coverage/README.md)**
+| Service | Tests | Lines | Branches | Report |
+|---|---|---|---|---|
+| Orders (Spring Boot) | 311 | 86.4% | 89.0% | [JaCoCo](coverage-reports/orders/index.html) |
+| Holdings (Spring Boot) | 170 | 89.9% | 83.6% | [JaCoCo](coverage-reports/holdings/index.html) |
+| Insights (Spring Boot) | 87 | 89.3% | 89.4% | [JaCoCo](coverage-reports/insights/index.html) |
+| Auth (NestJS) | 153 | 91.6% | 81.9% | [Istanbul](coverage-reports/auth/index.html) |
+| NextTrade UI (Angular) | 212 | 96.4% | 91.6% | [c8](coverage-reports/nexttrade-ui/index.html) |
+| Insights UI (Angular) | 48 | 100% | 96.9% | [c8](coverage-reports/insights-ui/index.html) |
+| Session package (shared) | 70 | 98.6% | 94.3% | [c8](coverage-reports/session-core/index.html) |
+| Data pipeline (Python) | 85 | 92.3% | 82.3% | [pytest-cov](coverage-reports/data-pipeline/index.html) |
+| **All code** | **1,136** | **94.7%** | **90.4%** | [summary](coverage-reports/README.md) |
+
+Target: 70% per component. 👉 **[How to regenerate, and what SonarQube counts →](docs/coverage/README.md)**
 
 ## Project Structure
 
@@ -513,13 +523,13 @@ How to generate the report for every service, and the latest figures:
 | `data-pipeline`      | pytest-cov | see [docs/coverage](docs/coverage/README.md#quote-service-pytest-cov) | `data-pipeline/htmlcov/index.html` |
 | `frontend`           | c8         | `cd frontend && npm run test:coverage`      | `frontend/coverage/index.html`                     |
 | `insights-frontend`  | c8         | `cd insights-frontend && npm run test:coverage` | `insights-frontend/coverage/index.html`        |
+| `shared/session-core` | c8        | `cd shared/session-core && npm run test:coverage` | `shared/session-core/coverage/lcov-report/index.html` |
 
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does
 not produce a coverage report; use `mvn clean verify` when you need one.
-Jenkins archives the `nextTrade-orders` and `nextTrade-holdings` JaCoCo
-reports and the `data-pipeline` coverage output as build artifacts (see
-[Jenkins Pipeline (CI)](#jenkins-pipeline-ci)).
+Jenkins archives every service's coverage report (JaCoCo, Jest, c8 and pytest-cov) as
+build artifacts on each run (see [Jenkins Pipeline (CI)](#jenkins-pipeline-ci)).
 
 ## Javadocs
 

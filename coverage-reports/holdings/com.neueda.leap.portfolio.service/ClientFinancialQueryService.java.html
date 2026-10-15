@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientFinancialQueryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.service</a> &gt; <span class="el_source">ClientFinancialQueryService.java</span></div><h1>ClientFinancialQueryService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.service;
+
+import com.neueda.leap.portfolio.dto.CashBalanceDetailResponse;
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.dto.HoldingResponse;
+import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
+import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.UUID;
+import java.time.Instant;
+
+/**
+ * Reads holdings, cash, and orders for the authenticated client only.
+ *
+ * &lt;p&gt;Every query derives ownership by joining through accounts.user_id. The
+ * caller never supplies a client id, so an object identifier cannot override
+ * the identity established by the validated JWT.&lt;/p&gt;
+ */
+@Service
+@Transactional(readOnly = true)
+public class ClientFinancialQueryService {
+
+    private static final String ACCOUNT_NOT_FOUND = &quot;Account not found&quot;;
+    private static final String COL_ACCOUNT_ID = &quot;account_id&quot;;
+    private static final String COL_INSTRUMENT_ID = &quot;instrument_id&quot;;
+    private static final String COL_SYMBOL = &quot;symbol&quot;;
+    private static final String COL_INSTRUMENT_NAME = &quot;instrument_name&quot;;
+    private static final String COL_CURRENCY = &quot;currency&quot;;
+    private static final String COL_SETTLED_BALANCE = &quot;settled_balance&quot;;
+    private static final String COL_PENDING_BALANCE = &quot;pending_balance&quot;;
+    private static final String COL_AVAILABLE_BALANCE = &quot;available_balance&quot;;
+    private static final String COL_TOTAL_BALANCE = &quot;total_balance&quot;;
+    private static final String COL_AVG_COST = &quot;avg_cost&quot;;
+    private static final String COL_MIDPOINT = &quot;midpoint&quot;;
+    private static final String COL_QUANTITY = &quot;quantity&quot;;
+    private static final String COL_UPDATED_AT = &quot;updated_at&quot;;
+
+    private static final String HOLDINGS_SQL = &quot;&quot;&quot;
+            SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                   h.quantity, h.avg_cost, h.updated_at
+            FROM holdings h
+            JOIN accounts a ON a.account_id = h.account_id
+            JOIN instruments i ON i.instrument_id = h.instrument_id
+            WHERE a.user_id = ?
+            ORDER BY i.symbol, h.account_id
+            &quot;&quot;&quot;;
+
+    private static final String ACCOUNT_HOLDINGS_SQL = &quot;&quot;&quot;
+            SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                   h.quantity, h.avg_cost, h.updated_at
+            FROM holdings h
+            JOIN accounts a ON a.account_id = h.account_id
+            JOIN instruments i ON i.instrument_id = h.instrument_id
+            WHERE a.user_id = ? AND a.account_id = ?
+            ORDER BY i.symbol
+            &quot;&quot;&quot;;
+
+    private static final String CASH_SQL = &quot;&quot;&quot;
+            SELECT cb.account_id, cb.currency, cb.balance, cb.updated_at
+            FROM cash_balances cb
+            JOIN accounts a ON a.account_id = cb.account_id
+            WHERE a.user_id = ?
+            ORDER BY cb.account_id
+            &quot;&quot;&quot;;
+
+    private static final String ACCOUNT_CASH_SQL = &quot;&quot;&quot;
+            SELECT cb.account_id, cb.currency, cb.balance, cb.updated_at
+            FROM cash_balances cb
+            JOIN accounts a ON a.account_id = cb.account_id
+            WHERE a.user_id = ? AND a.account_id = ?
+            &quot;&quot;&quot;;
+
+    private static final String CASH_DETAIL_SQL = &quot;&quot;&quot;
+            SELECT a.account_id, 'USD' AS currency,
+                   COALESCE(SUM(CASE WHEN ct.settlement_status = 'SETTLED' THEN ct.amount ELSE 0 END), 0) AS settled_balance,
+                   COALESCE(SUM(CASE WHEN ct.settlement_status = 'PENDING' THEN ct.amount ELSE 0 END), 0) AS pending_balance,
+                   COALESCE(SUM(CASE WHEN ct.settlement_status = 'SETTLED' THEN ct.amount ELSE 0 END), 0)
+                     - COALESCE((SELECT SUM(held_amount) FROM cash_holds
+                                 WHERE account_id = a.account_id AND released_at IS NULL), 0) AS available_balance,
+                   COALESCE(SUM(ct.amount), 0) AS total_balance, CURRENT_TIMESTAMP AS updated_at
+            FROM accounts a LEFT JOIN cash_transactions ct ON ct.account_id = a.account_id
+            WHERE a.user_id = ?
+            GROUP BY a.account_id ORDER BY a.account_id
+            &quot;&quot;&quot;;
+
+    private static final String ORDERS_SQL = &quot;&quot;&quot;
+            SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,
+                   o.client_reference, o.side, o.quantity, o.order_type, o.status,
+                   o.submitted_at, o.accepted_at, o.updated_at, o.buffer_percent
+            FROM orders o
+            JOIN accounts a ON a.account_id = o.account_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            WHERE a.user_id = ?
+            ORDER BY o.submitted_at DESC, o.order_id
+            &quot;&quot;&quot;;
+
+    private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * Creates the client-scoped query service.
+     * @param jdbcTemplate database access for account ownership joins
+     */
+<span class="fc" id="L112">    public ClientFinancialQueryService(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L113">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L114">    }</span>
+
+    /**
+     * Reads holdings across the user's accounts, sorted by symbol and account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned holdings, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;HoldingResponse&gt; getHoldings(UUID authenticatedUserId) {
+<span class="fc" id="L123">        return getHoldings(authenticatedUserId, null);</span>
+    }
+
+    /**
+     * Reads holdings in one of the user's accounts, or across all of them when no account is given.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @param accountId account to read, or null for every owned account
+     * @return owned holdings, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;HoldingResponse&gt; getHoldings(UUID authenticatedUserId, UUID accountId) {
+<span class="fc" id="L135">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L136">        RowMapper&lt;HoldingResponse&gt; mapper = (rs, rowNum) -&gt; new HoldingResponse(</span>
+<span class="fc" id="L137">                rs.getObject(COL_ACCOUNT_ID, UUID.class),</span>
+<span class="fc" id="L138">                rs.getObject(COL_INSTRUMENT_ID, UUID.class),</span>
+<span class="fc" id="L139">                rs.getString(COL_SYMBOL),</span>
+<span class="fc" id="L140">                rs.getString(COL_INSTRUMENT_NAME),</span>
+<span class="fc" id="L141">                rs.getLong(COL_QUANTITY),</span>
+<span class="fc" id="L142">                rs.getBigDecimal(COL_AVG_COST),</span>
+<span class="fc" id="L143">                rs.getTimestamp(COL_UPDATED_AT).toInstant());</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        return accountId == null</span>
+<span class="fc" id="L145">                ? jdbcTemplate.query(HOLDINGS_SQL, mapper, authenticatedUserId)</span>
+<span class="nc" id="L146">                : jdbcTemplate.query(ACCOUNT_HOLDINGS_SQL, mapper, authenticatedUserId, accountId);</span>
+    }
+
+    /**
+     * Reads cash balances across the user's accounts, sorted by account.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;CashBalanceResponse&gt; getCashBalances(UUID authenticatedUserId) {
+<span class="fc" id="L156">        return getCashBalances(authenticatedUserId, null);</span>
+    }
+
+    /**
+     * Reads the cash balance of one of the user's accounts, or of all of them when no account is given.
+     * An account the user does not own yields an empty list (PS-05, BR-02).
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @param accountId account to read, or null for every owned account
+     * @return owned cash balances, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;CashBalanceResponse&gt; getCashBalances(UUID authenticatedUserId, UUID accountId) {
+<span class="fc" id="L168">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L169">        RowMapper&lt;CashBalanceResponse&gt; mapper = (rs, rowNum) -&gt; new CashBalanceResponse(</span>
+<span class="fc" id="L170">                rs.getObject(COL_ACCOUNT_ID, UUID.class),</span>
+<span class="fc" id="L171">                rs.getString(COL_CURRENCY),</span>
+<span class="fc" id="L172">                rs.getBigDecimal(&quot;balance&quot;),</span>
+<span class="fc" id="L173">                rs.getTimestamp(COL_UPDATED_AT).toInstant());</span>
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">        return accountId == null</span>
+<span class="fc" id="L175">                ? jdbcTemplate.query(CASH_SQL, mapper, authenticatedUserId)</span>
+<span class="nc" id="L176">                : jdbcTemplate.query(ACCOUNT_CASH_SQL, mapper, authenticatedUserId, accountId);</span>
+    }
+
+    /**
+     * Reads detailed cash balances with settlement distinction.
+     * TS-11.3 AC2: Provides settled, pending, and available balance breakdown.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned cash balances with detail, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;CashBalanceDetailResponse&gt; getCashBalancesDetailed(UUID authenticatedUserId) {
+<span class="fc" id="L187">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L188">        return jdbcTemplate.query(CASH_DETAIL_SQL, (rs, rowNum) -&gt; new CashBalanceDetailResponse(</span>
+<span class="fc" id="L189">                rs.getObject(COL_ACCOUNT_ID, UUID.class),</span>
+<span class="fc" id="L190">                rs.getString(COL_CURRENCY),</span>
+<span class="fc" id="L191">                rs.getBigDecimal(COL_SETTLED_BALANCE),</span>
+<span class="fc" id="L192">                rs.getBigDecimal(COL_PENDING_BALANCE),</span>
+<span class="fc" id="L193">                rs.getBigDecimal(COL_AVAILABLE_BALANCE),</span>
+<span class="fc" id="L194">                rs.getBigDecimal(COL_TOTAL_BALANCE),</span>
+<span class="fc" id="L195">                rs.getTimestamp(COL_UPDATED_AT).toInstant()</span>
+        ), authenticatedUserId);
+    }
+
+    /**
+     * Selects a stable default account, including accounts with no ledger or positions.
+     * @param authenticatedUserId caller identity from the validated JWT
+     * @return first account by identifier
+     * @throws org.springframework.web.server.ResponseStatusException when no owned account exists
+     */
+    public UUID getDefaultAccountId(UUID authenticatedUserId) {
+<span class="fc" id="L206">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L207">        return jdbcTemplate.query(&quot;SELECT account_id FROM accounts WHERE user_id = ? ORDER BY account_id LIMIT 1&quot;,</span>
+<span class="fc" id="L208">                (rs, row) -&gt; rs.getObject(1, UUID.class), authenticatedUserId).stream().findFirst()</span>
+<span class="fc" id="L209">                .orElseThrow(this::accountNotFound);</span>
+    }
+
+    /**
+     * Reads the portfolio summary for a specific account.
+     * TS-11.3 AC1: Combines holdings, cash, and calculates total portfolio value.
+     *
+     * @param authenticatedUserId identity from the validated JWT
+     * @param accountId account to retrieve portfolio for (must belong to authenticated user)
+     * @return portfolio summary with holdings, cash detail, and total value
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public PortfolioSummaryResponse getPortfolioSummary(UUID authenticatedUserId, UUID accountId) {
+<span class="fc" id="L222">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (accountId == null) {</span>
+<span class="fc" id="L224">            throw new IllegalArgumentException(&quot;Account id is required&quot;);</span>
+        }
+
+        // Get holdings for this account
+<span class="fc" id="L228">        String holdingsSql = &quot;&quot;&quot;</span>
+                SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                       h.quantity, h.avg_cost, h.updated_at
+                FROM holdings h
+                JOIN accounts a ON a.account_id = h.account_id
+                JOIN instruments i ON i.instrument_id = h.instrument_id
+                WHERE a.user_id = ? AND h.account_id = ?
+                ORDER BY i.symbol
+                &quot;&quot;&quot;;
+
+<span class="fc" id="L238">        List&lt;HoldingResponse&gt; holdings = jdbcTemplate.query(holdingsSql, (rs, rowNum) -&gt;</span>
+<span class="fc" id="L239">            new HoldingResponse(</span>
+<span class="fc" id="L240">                rs.getObject(COL_ACCOUNT_ID, UUID.class),</span>
+<span class="fc" id="L241">                rs.getObject(COL_INSTRUMENT_ID, UUID.class),</span>
+<span class="fc" id="L242">                rs.getString(COL_SYMBOL),</span>
+<span class="fc" id="L243">                rs.getString(COL_INSTRUMENT_NAME),</span>
+<span class="fc" id="L244">                rs.getLong(COL_QUANTITY),</span>
+<span class="fc" id="L245">                rs.getBigDecimal(COL_AVG_COST),</span>
+<span class="fc" id="L246">                rs.getTimestamp(COL_UPDATED_AT).toInstant()</span>
+            ), authenticatedUserId, accountId);
+
+<span class="fc" id="L249">        CashBalanceDetailResponse cash = getCashBalancesDetailed(authenticatedUserId).stream()</span>
+<span class="fc" id="L250">                .filter(balance -&gt; balance.accountId().equals(accountId)).findFirst()</span>
+<span class="fc" id="L251">                .orElseThrow(this::accountNotFound);</span>
+
+        // Get latest quotes for valuation
+<span class="fc" id="L254">        String quotesSql = &quot;&quot;&quot;</span>
+                SELECT
+                    instrument_id,
+                    ROUND((bid + ask) / 2::NUMERIC, 8) as midpoint
+                FROM (
+                    SELECT DISTINCT ON (instrument_id)
+                        instrument_id, bid, ask
+                    FROM quotes
+                    ORDER BY instrument_id, quoted_at DESC, created_at DESC, quote_id DESC
+                ) latest
+                &quot;&quot;&quot;;
+
+<span class="fc" id="L266">        java.util.Map&lt;UUID, BigDecimal&gt; priceMap = new java.util.HashMap&lt;&gt;();</span>
+<span class="fc" id="L267">        jdbcTemplate.query(quotesSql, (rs, rowNum) -&gt; {</span>
+<span class="fc" id="L268">            priceMap.put(rs.getObject(COL_INSTRUMENT_ID, UUID.class), rs.getBigDecimal(COL_MIDPOINT));</span>
+<span class="fc" id="L269">            return null;</span>
+        });
+
+        // Calculate total portfolio value: sum of (holdings value) + total cash
+<span class="fc" id="L273">        BigDecimal holdingsValue = holdings.stream()</span>
+<span class="fc" id="L274">            .map(holding -&gt; {</span>
+<span class="fc bfc" id="L275" title="All 2 branches covered.">                if (holding.quantity() == 0) return BigDecimal.ZERO;</span>
+<span class="fc" id="L276">                BigDecimal price = priceMap.get(holding.instrumentId());</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">                if (price == null) throw new org.springframework.web.server.ResponseStatusException(</span>
+                        org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, &quot;Portfolio quote unavailable&quot;);
+<span class="fc" id="L279">                return price.multiply(BigDecimal.valueOf(holding.quantity()));</span>
+            })
+<span class="fc" id="L281">            .reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+
+<span class="fc" id="L283">        BigDecimal totalPortfolioValue = holdingsValue.add(cash.totalBalance());</span>
+
+<span class="fc" id="L285">        return new PortfolioSummaryResponse(</span>
+            accountId,
+            holdings,
+            cash,
+            totalPortfolioValue,
+<span class="fc" id="L290">            Instant.now()</span>
+        );
+    }
+
+    /**
+     * Reads the user's orders, newest submissions first with order ID as a tie-breaker.
+     * @param authenticatedUserId identity from the validated JWT, never a request selector
+     * @return owned orders, or an empty list when none exist
+     * @throws IllegalArgumentException if the authenticated identity is null
+     */
+    public List&lt;OrderSummaryResponse&gt; getOrders(UUID authenticatedUserId) {
+<span class="fc" id="L301">        requireAuthenticatedUser(authenticatedUserId);</span>
+<span class="fc" id="L302">        return jdbcTemplate.query(ORDERS_SQL, (rs, rowNum) -&gt; new OrderSummaryResponse(</span>
+<span class="fc" id="L303">                rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L304">                rs.getObject(COL_ACCOUNT_ID, UUID.class),</span>
+<span class="fc" id="L305">                rs.getObject(COL_INSTRUMENT_ID, UUID.class),</span>
+<span class="fc" id="L306">                rs.getString(COL_SYMBOL),</span>
+<span class="fc" id="L307">                rs.getObject(&quot;client_reference&quot;, UUID.class),</span>
+<span class="fc" id="L308">                rs.getString(&quot;side&quot;),</span>
+<span class="fc" id="L309">                rs.getLong(COL_QUANTITY),</span>
+<span class="fc" id="L310">                rs.getString(&quot;order_type&quot;),</span>
+<span class="fc" id="L311">                rs.getString(&quot;status&quot;),</span>
+<span class="fc" id="L312">                rs.getTimestamp(&quot;submitted_at&quot;).toInstant(),</span>
+<span class="fc" id="L313">                nullableInstant(rs.getTimestamp(&quot;accepted_at&quot;)),</span>
+<span class="fc" id="L314">                rs.getTimestamp(COL_UPDATED_AT).toInstant(),</span>
+<span class="fc" id="L315">                rs.getBigDecimal(&quot;buffer_percent&quot;)</span>
+        ), authenticatedUserId);
+    }
+
+    private static Instant nullableInstant(Timestamp value) {
+<span class="fc bfc" id="L320" title="All 2 branches covered.">        return value == null ? null : value.toInstant();</span>
+    }
+
+    private ResponseStatusException accountNotFound() {
+<span class="fc" id="L324">        return new ResponseStatusException(HttpStatus.NOT_FOUND, ACCOUNT_NOT_FOUND);</span>
+    }
+
+    private static void requireAuthenticatedUser(UUID userId) {
+<span class="fc bfc" id="L328" title="All 2 branches covered.">        if (userId == null) {</span>
+<span class="fc" id="L329">            throw new IllegalArgumentException(&quot;Authenticated user id is required&quot;);</span>
+        }
+<span class="fc" id="L331">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

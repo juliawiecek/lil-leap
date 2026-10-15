@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.common.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.neueda.leap.common.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+
+/**
+ * Global exception handler for REST controllers.
+ *
+ * &lt;p&gt;This class centralizes exception handling logic and converts
+ * application-specific exceptions into appropriate HTTP responses.&lt;/p&gt;
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /** Creates the exception handler; Spring registers it as controller advice. */
+<span class="fc" id="L26">    public GlobalExceptionHandler() {</span>
+        // No state to initialize.
+<span class="fc" id="L28">    }</span>
+
+    private static final String ERROR_KEY = &quot;error&quot;;
+    private static final String MESSAGE_KEY = &quot;message&quot;;
+    private static final String REQUEST_FAILED = &quot;REQUEST_FAILED&quot;;
+    private static final String INTERNAL_ERROR = &quot;INTERNAL_ERROR&quot;;
+    private static final String INVALID_REQUEST = &quot;INVALID_REQUEST&quot;;
+    private static final String INVALID_FILTER = &quot;INVALID_FILTER&quot;;
+    private static final String CLIENT_NOT_FOUND = &quot;CLIENT_NOT_FOUND&quot;;
+    private static final String REQUEST_FAILED_MESSAGE = &quot;The request could not be completed.&quot;;
+    private static final String INVALID_FIELDS_MESSAGE = &quot;The request contains invalid or missing fields.&quot;;
+
+    /**
+     * Rejects invalid history filters without echoing request values.
+     * @param exception invalid status or date range
+     * @return a fixed bad-request response
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.InvalidFilterException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; invalidFilter(Exception exception) {
+<span class="fc" id="L47">        return ResponseEntity.badRequest().body(Map.of(ERROR_KEY, INVALID_FILTER, MESSAGE_KEY, &quot;Invalid order history filter&quot;));</span>
+    }
+
+    /**
+     * Hides whether a requested client exists or belongs to another caller.
+     * @param exception missing or unowned client
+     * @return a fixed not-found response
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.ClientNotFoundException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; clientNotFound(Exception exception) {
+<span class="fc" id="L57">        return ResponseEntity.status(404).body(Map.of(ERROR_KEY, CLIENT_NOT_FOUND, MESSAGE_KEY, &quot;Client not found&quot;));</span>
+    }
+
+    /**
+     * Reports a rejected account action with its fixed code and message.
+     * @param exception the rejection
+     * @return the reason's status, code and message
+     */
+    @ExceptionHandler(com.neueda.leap.portfolio.service.AccountActionException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; accountAction(com.neueda.leap.portfolio.service.AccountActionException exception) {
+<span class="fc" id="L67">        var reason = exception.reason();</span>
+<span class="fc" id="L68">        return ResponseEntity.status(reason.status()).body(Map.of(ERROR_KEY, reason.name(), MESSAGE_KEY, reason.message()));</span>
+    }
+
+<span class="fc" id="L71">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    /**
+     * Preserves an explicit HTTP failure status while hiding exception details.
+     * @param exception status-bearing failure from the application
+     * @return the original status with a fixed REQUEST_FAILED response
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleStatusException(ResponseStatusException exception) {
+<span class="fc" id="L80">        return ResponseEntity.status(exception.getStatusCode()).body(Map.of(</span>
+                ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+    }
+
+    /**
+     * Converts unhandled failures into safe responses without exposing exception messages.
+     * Framework HTTP statuses and headers are retained; other failures log only
+     * the exception type and return HTTP 500.
+     * @param exception unhandled framework or application failure
+     * @return a fixed error body with the framework status or HTTP 500
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleUnexpectedException(Exception exception) {
+        // Preserve framework statuses such as 404/405/415 without their request-derived messages.
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        if (exception instanceof ErrorResponse error) {</span>
+<span class="fc" id="L95">            return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(</span>
+                    ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+        }
+        // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
+<span class="fc" id="L99">        log.error(&quot;Request failed exceptionType={}&quot;, exception.getClass().getSimpleName());</span>
+<span class="fc" id="L100">        return ResponseEntity.internalServerError().body(Map.of(</span>
+                ERROR_KEY, INTERNAL_ERROR, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+    }
+
+    /**
+     * Rejects invalid payloads without rendering or logging rejected values.
+     * @param exception validation or parsing failure that may contain credentials
+     * @return HTTP 400 with a fixed INVALID_REQUEST response
+     */
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class, org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleInvalidRequest(Exception exception) {
+<span class="fc" id="L111">        return ResponseEntity.badRequest().body(Map.of(</span>
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_FIELDS_MESSAGE));
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

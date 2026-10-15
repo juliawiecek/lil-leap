@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SubmitOrderRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.submission.dto</a> &gt; <span class="el_source">SubmitOrderRequest.java</span></div><h1>SubmitOrderRequest.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.submission.dto;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+import java.util.Locale;
+
+/**
+ * Input for a market-order submission; Bean Validation runs at the API boundary.
+ * @param accountId account that must belong to the authenticated user
+ * @param symbol instrument symbol, 1 to 20 letters, digits, dots, or hyphens
+ * @param clientReference caller-generated retry key, unique within the account
+ * @param side BUY or SELL, case-insensitive
+ * @param quantity positive whole-unit quantity
+ * @param orderType MARKET, case-insensitive, or null to use MARKET
+ * @param bufferPercent optional price protection between 0.1% and 10%, two decimals at most;
+ *        overrides the account default for execution and buying-power checks without
+ *        reserving funds at submission
+ * @param instrumentId alternative to symbol for catalog-ID submissions
+ */
+<span class="fc" id="L29">public record SubmitOrderRequest(</span>
+        @NotNull UUID accountId,
+        @Pattern(regexp = &quot;^[A-Za-z0-9.-]{1,20}$&quot;) String symbol,
+        @NotNull UUID clientReference,
+        @NotBlank @Pattern(regexp = &quot;(?i)BUY|SELL&quot;) String side,
+        @Positive long quantity,
+        @Pattern(regexp = &quot;(?i)MARKET&quot;) String orderType,
+        @DecimalMin(&quot;0.1&quot;) @DecimalMax(&quot;10.0&quot;) @Digits(integer = 2, fraction = 2) BigDecimal bufferPercent,
+        UUID instrumentId
+) {
+    /**
+     * Retains the symbol-based submission constructor.
+     * @param accountId caller-owned account
+     * @param symbol instrument symbol
+     * @param clientReference idempotency key
+     * @param side BUY or SELL
+     * @param quantity whole-share quantity
+     * @param orderType MARKET
+     * @param bufferPercent optional execution tolerance
+     */
+    public SubmitOrderRequest(UUID accountId, String symbol, UUID clientReference, String side,
+            long quantity, String orderType, BigDecimal bufferPercent) {
+<span class="fc" id="L51">        this(accountId, symbol, clientReference, side, quantity, orderType, bufferPercent, null);</span>
+<span class="fc" id="L52">    }</span>
+
+    /**
+     * Rejects absent or ambiguous instrument selectors.
+     * @return true when exactly one selector is supplied
+     */
+    @AssertTrue(message = &quot;Supply exactly one of symbol or instrumentId&quot;)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isInstrumentSelectorValid() {
+<span class="fc bfc" id="L61" title="All 8 branches covered.">        return (symbol != null &amp;&amp; !symbol.isBlank()) != (instrumentId != null);</span>
+    }
+
+    /**
+     * Returns the canonical symbol after request validation.
+     * @return the trimmed, locale-independent uppercase symbol
+     */
+    public String normalizedSymbol() {
+<span class="fc" id="L69">        return symbol.trim().toUpperCase(Locale.ROOT);</span>
+    }
+
+    /**
+     * Returns the canonical side after request validation.
+     * @return BUY or SELL for a validated request
+     */
+    public String normalizedSide() {
+<span class="fc" id="L77">        return side.trim().toUpperCase(Locale.ROOT);</span>
+    }
+
+    /**
+     * Normalizes the order type, defaulting null or blank input to MARKET.
+     * Blank input is rejected by Bean Validation at the API boundary.
+     * @return the trimmed uppercase type, or MARKET when absent or blank
+     */
+    public String normalizedOrderType() {
+<span class="pc bpc" id="L86" title="1 of 4 branches missed.">        return orderType == null || orderType.isBlank() ? &quot;MARKET&quot; : orderType.trim().toUpperCase(Locale.ROOT);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

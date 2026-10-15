@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientSegment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.reporting.enums</a> &gt; <span class="el_source">ClientSegment.java</span></div><h1>ClientSegment.java</h1><pre class="source lang-java linenums">package com.neueda.leap.reporting.enums;
+
+import com.fasterxml.jackson.annotation.JsonValue;
+
+/**
+ * Client segments used to group trading activity in reports.
+ *
+ * &lt;p&gt;Serialized using its display label (for example {@code &quot;Retail&quot;}) so
+ * dashboards can render the value directly.&lt;/p&gt;
+ */
+<span class="nc" id="L11">public enum ClientSegment {</span>
+    /** Individual retail clients. */
+<span class="nc" id="L13">    RETAIL(&quot;Retail&quot;),</span>
+    /** Experienced individual clients trading at the advanced tier. */
+<span class="nc" id="L15">    PROFESSIONAL(&quot;Professional&quot;),</span>
+    /** Institutional clients such as funds and corporates. */
+<span class="nc" id="L17">    INSTITUTIONAL(&quot;Institutional&quot;);</span>
+
+    /** Human-readable label exposed in API responses. */
+    private final String label;
+
+<span class="nc" id="L22">    ClientSegment(String label) {</span>
+<span class="nc" id="L23">        this.label = label;</span>
+<span class="nc" id="L24">    }</span>
+
+    /**
+     * Returns the human-readable label exposed in API responses.
+     *
+     * @return display label for this segment
+     */
+    @JsonValue
+    public String label() {
+<span class="nc" id="L33">        return label;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

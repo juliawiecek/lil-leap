@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderSubmissionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.submission.service</a> &gt; <span class="el_source">OrderSubmissionService.java</span></div><h1>OrderSubmissionService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.submission.service;
+
+import com.neueda.leap.order.execution.quote.IndicativePriceService;
+import com.neueda.leap.order.rules.LocationPolicy;
+import com.neueda.leap.order.rules.OrderRuleException;
+import com.neueda.leap.instrument.dto.InstrumentResponse;
+import com.neueda.leap.instrument.service.InstrumentService;
+import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.repository.AccountTradingProfile;
+import com.neueda.leap.order.submission.repository.OrderSubmissionRepository;
+import com.neueda.leap.order.service.OrderSufficiencyService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.math.BigDecimal;
+import java.util.UUID;
+import static com.neueda.leap.order.rules.OrderRuleException.Reason.*;
+
+/**
+ * Authorizes account ownership and validates trading rules before persisting an idempotent submission.
+ * Resource checks do not reserve cash or shares.
+ */
+@Service
+public class OrderSubmissionService {
+    private final OrderSubmissionRepository repository;
+    private final OrderSufficiencyService sufficiency;
+    private final InstrumentService instruments;
+    private final IndicativePriceService prices;
+    /**
+     * Creates a {@code OrderSubmissionService} with the supplied dependencies.
+     *
+     * @param repository persistence operations used by this service
+     * @param sufficiency cash and holdings validation service
+     * @param instruments current metadata shared with the instrument catalog API
+     * @param prices latest stored quote, recorded as the order's reference price for price protection
+     */
+    public OrderSubmissionService(OrderSubmissionRepository repository, OrderSufficiencyService sufficiency,
+<span class="fc" id="L40">                                  InstrumentService instruments, IndicativePriceService prices) {</span>
+<span class="fc" id="L41">        this.repository = repository;</span>
+<span class="fc" id="L42">        this.sufficiency = sufficiency;</span>
+<span class="fc" id="L43">        this.instruments = instruments;</span>
+<span class="fc" id="L44">        this.prices = prices;</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Submits an order after authentication, ownership, eligibility and resource checks.
+     * An identical retry of an existing account/client-reference pair returns its original
+     * order before business rules are rechecked; a retry that changes the order is a conflict.
+     * Concurrent duplicate inserts resolve the same way.
+     * Cash and shares are checked but are not reserved by this operation.
+     *
+     * @param authenticatedUserId user identifier from the authenticated principal
+     * @param request non-null request that has passed Bean Validation at the API boundary
+     * @return submission result indicating whether a new row was created
+     * @throws ResponseStatusException with HTTP 401 for missing identity or 404 for an absent or unowned account
+     * @throws IdempotencyConflictException if the client reference already created a different order
+     * @throws OrderRuleException if account or instrument trading rules reject the submission
+     * @throws com.neueda.leap.order.service.OrderSufficiencyException if resources or a usable buy quote are missing
+     * @throws IllegalStateException if a conflicting submission cannot be read
+     */
+    @Transactional
+    public OrderSubmissionResult submit(UUID authenticatedUserId, SubmitOrderRequest request) {
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        if (authenticatedUserId == null) {</span>
+<span class="nc" id="L66">            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, &quot;Authentication required&quot;);</span>
+        }
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (!repository.accountBelongsToUser(request.accountId(), authenticatedUserId)) {</span>
+<span class="fc" id="L69">            throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Account not found&quot;);</span>
+        }
+<span class="fc" id="L71">        var existing = repository.findByAccountAndClientReference(request.accountId(), request.clientReference());</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (existing.isPresent()) {</span>
+<span class="fc" id="L73">            return replay(existing.get(), request);</span>
+        }
+
+<span class="fc" id="L76">        validateAccount(repository.findAccountTradingProfile(request.accountId())</span>
+<span class="pc" id="L77">                .orElseThrow(() -&gt; new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;Account not found&quot;)));</span>
+
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">        InstrumentResponse instrument = (request.instrumentId() == null</span>
+<span class="fc" id="L80">                ? instruments.findInstrumentBySymbol(request.normalizedSymbol())</span>
+<span class="pc" id="L81">                : instruments.findInstrumentById(request.instrumentId()))</span>
+<span class="fc" id="L82">                .orElseThrow(() -&gt; new OrderRuleException(INSTRUMENT_UNSUPPORTED));</span>
+<span class="fc" id="L83">        String symbol = instrument.symbol();</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (!instrument.enabled()) throw new OrderRuleException(INSTRUMENT_DISABLED);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (!instrument.tradable()) throw new OrderRuleException(INSTRUMENT_NOT_TRADABLE);</span>
+<span class="fc" id="L86">        String country = repository.findClientCountry(request.accountId()).orElse(null);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (!LocationPolicy.permits(country, instrument.marketCode())) throw new OrderRuleException(LOCATION_RESTRICTED);</span>
+
+<span class="fc" id="L89">        sufficiency.validate(request, instrument.instrumentId());</span>
+        // Price protection (PS-12) measures moves from the price orders itself saw; never one sent by the client.
+<span class="fc" id="L91">        BigDecimal referencePrice = prices.estimate(instrument.instrumentId(), request.normalizedSide(), request.quantity())</span>
+<span class="fc" id="L92">                .map(IndicativePriceService.IndicativePrice::indicativePrice).orElse(null);</span>
+<span class="fc" id="L93">        var saved = repository.insert(request, instrument.instrumentId(), symbol, referencePrice);</span>
+<span class="fc" id="L94">        return saved.map(order -&gt; new OrderSubmissionResult(order, true))</span>
+<span class="fc" id="L95">                .orElseGet(() -&gt; repository.findByAccountAndClientReference(</span>
+<span class="fc" id="L96">                                request.accountId(), request.clientReference())</span>
+<span class="nc" id="L97">                        .map(order -&gt; replay(order, request))</span>
+<span class="pc" id="L98">                        .orElseThrow(() -&gt; new IllegalStateException(&quot;Conflicting order is unavailable&quot;)));</span>
+    }
+
+    /** Returns the stored order for an identical retry; a changed payload must not be silently dropped. */
+    private static OrderSubmissionResult replay(OrderSubmissionResponse existing, SubmitOrderRequest request) {
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (!sameOrder(existing, request)) {</span>
+<span class="fc" id="L104">            throw new IdempotencyConflictException();</span>
+        }
+<span class="fc" id="L106">        return new OrderSubmissionResult(existing, false);</span>
+    }
+
+    private static boolean sameOrder(OrderSubmissionResponse existing, SubmitOrderRequest request) {
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        boolean sameInstrument = request.instrumentId() != null</span>
+<span class="fc" id="L111">                ? request.instrumentId().equals(existing.instrumentId())</span>
+<span class="fc" id="L112">                : request.normalizedSymbol().equalsIgnoreCase(existing.symbol());</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        boolean sameTerms = request.normalizedSide().equals(existing.side())</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">                &amp;&amp; request.quantity() == existing.quantity()</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">                &amp;&amp; request.normalizedOrderType().equals(existing.orderType());</span>
+<span class="fc bfc" id="L116" title="All 6 branches covered.">        return sameInstrument &amp;&amp; sameTerms &amp;&amp; sameBuffer(request.bufferPercent(), existing.bufferPercent());</span>
+    }
+
+    /** Compares buffers by value, so 5 and 5.00 match; two absent buffers also match. */
+    private static boolean sameBuffer(BigDecimal requested, BigDecimal stored) {
+<span class="fc bfc" id="L121" title="All 4 branches covered.">        if (requested == null || stored == null) {</span>
+<span class="fc bfc" id="L122" title="All 4 branches covered.">            return requested == null &amp;&amp; stored == null;</span>
+        }
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        return requested.compareTo(stored) == 0;</span>
+    }
+
+    private static void validateAccount(AccountTradingProfile account) {
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (!&quot;ACTIVE&quot;.equals(account.accountStatus())) throw new OrderRuleException(ACCOUNT_NOT_ACTIVE);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (!account.tradingEnabled()) throw new OrderRuleException(TRADING_NOT_ENABLED);</span>
+<span class="fc" id="L130">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

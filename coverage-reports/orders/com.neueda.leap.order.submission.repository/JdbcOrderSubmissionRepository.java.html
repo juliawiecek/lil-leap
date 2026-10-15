@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcOrderSubmissionRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.submission.repository</a> &gt; <span class="el_source">JdbcOrderSubmissionRepository.java</span></div><h1>JdbcOrderSubmissionRepository.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.submission.repository;
+
+import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * PostgreSQL implementation of account ownership checks and idempotent order submission.
+ */
+@Repository
+public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository {
+    private final JdbcTemplate jdbcTemplate;
+    /**
+     * Creates a {@code JdbcOrderSubmissionRepository} with the supplied dependencies.
+     *
+     * @param jdbcTemplate JDBC operations participating in Spring transactions
+     */
+<span class="fc" id="L24">    public JdbcOrderSubmissionRepository(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }</span>
+
+    @Override
+    public boolean accountBelongsToUser(UUID accountId, UUID userId) {
+<span class="fc" id="L28">        Integer count = jdbcTemplate.queryForObject(</span>
+                &quot;SELECT COUNT(*) FROM accounts WHERE account_id = ? AND user_id = ?&quot;,
+                Integer.class, accountId, userId);
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">        return count != null &amp;&amp; count == 1;</span>
+    }
+
+    @Override
+    public Optional&lt;AccountTradingProfile&gt; findAccountTradingProfile(UUID accountId) {
+<span class="fc" id="L36">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT a.account_status, a.trading_enabled, a.trader_level,
+                       a.min_balance_requirement, COALESCE(cb.balance, 0) AS current_balance
+                FROM accounts a
+                LEFT JOIN cash_balances cb ON cb.account_id = a.account_id AND cb.currency = 'USD'
+                WHERE a.account_id = ?
+<span class="fc" id="L42">                &quot;&quot;&quot;, (rs, row) -&gt; new AccountTradingProfile(</span>
+<span class="fc" id="L43">                rs.getString(&quot;account_status&quot;), rs.getBoolean(&quot;trading_enabled&quot;),</span>
+<span class="fc" id="L44">                rs.getString(&quot;trader_level&quot;), rs.getBigDecimal(&quot;min_balance_requirement&quot;),</span>
+<span class="fc" id="L45">                rs.getBigDecimal(&quot;current_balance&quot;)), accountId).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;String&gt; findClientCountry(UUID accountId) {
+<span class="fc" id="L50">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT cp.country FROM accounts a
+                JOIN customer_profiles cp ON cp.user_id = a.user_id
+                WHERE a.account_id = ? AND cp.country IS NOT NULL
+<span class="fc" id="L54">                &quot;&quot;&quot;, (rs, row) -&gt; rs.getString(&quot;country&quot;), accountId).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;OrderSubmissionResponse&gt; findByAccountAndClientReference(UUID accountId, UUID clientReference) {
+<span class="fc" id="L59">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,
+                       o.client_reference, o.side, o.quantity, o.order_type,
+                       o.status, o.submitted_at, o.buffer_percent
+                FROM orders o JOIN instruments i ON i.instrument_id = o.instrument_id
+                WHERE o.account_id = ? AND o.client_reference = ?
+<span class="fc" id="L65">                &quot;&quot;&quot;, this::mapOrder, accountId, clientReference).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;OrderSubmissionResponse&gt; insert(SubmitOrderRequest request, UUID instrumentId, String symbol,
+            BigDecimal referencePrice) {
+<span class="nc" id="L71">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                WITH inserted AS (
+                INSERT INTO orders(account_id, instrument_id, client_reference, side,
+                                   quantity, order_type, status, buffer_percent, reference_price)
+                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?)
+                ON CONFLICT (account_id, client_reference) DO NOTHING
+                RETURNING order_id, account_id, instrument_id, client_reference, side,
+                          quantity, order_type, status, submitted_at, buffer_percent
+                ), recorded AS (
+                    INSERT INTO order_status_history(order_id, status, reason_code)
+                    SELECT order_id, 'SUBMITTED', 'SUBMISSION_VALIDATED' FROM inserted
+                )
+                SELECT * FROM inserted
+<span class="nc" id="L84">                &quot;&quot;&quot;, (rs, row) -&gt; new OrderSubmissionResponse(</span>
+<span class="nc" id="L85">                rs.getObject(&quot;order_id&quot;, UUID.class), rs.getObject(&quot;account_id&quot;, UUID.class),</span>
+<span class="nc" id="L86">                rs.getObject(&quot;instrument_id&quot;, UUID.class), symbol,</span>
+<span class="nc" id="L87">                rs.getObject(&quot;client_reference&quot;, UUID.class), rs.getString(&quot;side&quot;),</span>
+<span class="nc" id="L88">                rs.getLong(&quot;quantity&quot;), rs.getString(&quot;order_type&quot;), rs.getString(&quot;status&quot;),</span>
+<span class="nc" id="L89">                rs.getTimestamp(&quot;submitted_at&quot;).toInstant(), rs.getBigDecimal(&quot;buffer_percent&quot;)),</span>
+<span class="nc" id="L90">                request.accountId(), instrumentId, request.clientReference(), request.normalizedSide(),</span>
+<span class="nc" id="L91">                request.quantity(), request.normalizedOrderType(), request.bufferPercent(), referencePrice)</span>
+<span class="nc" id="L92">                .stream().findFirst();</span>
+    }
+
+    private OrderSubmissionResponse mapOrder(ResultSet rs, int rowNum) throws SQLException {
+<span class="fc" id="L96">        return new OrderSubmissionResponse(rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L97">                rs.getObject(&quot;account_id&quot;, UUID.class), rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="fc" id="L98">                rs.getString(&quot;symbol&quot;), rs.getObject(&quot;client_reference&quot;, UUID.class),</span>
+<span class="fc" id="L99">                rs.getString(&quot;side&quot;), rs.getLong(&quot;quantity&quot;), rs.getString(&quot;order_type&quot;),</span>
+<span class="fc" id="L100">                rs.getString(&quot;status&quot;), rs.getTimestamp(&quot;submitted_at&quot;).toInstant(),</span>
+<span class="fc" id="L101">                rs.getBigDecimal(&quot;buffer_percent&quot;));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

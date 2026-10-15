@@ -5,19 +5,44 @@ from the latest run. Each command runs the service's full test suite and writes 
 report; open its `index.html` in a browser and click through to a file to see covered lines
 in green and missed lines in red.
 
-## Historical figures before service consolidation
+## Latest figures (15 October 2026)
 
-These incoming measurements describe the earlier service layout on 2026-10-01. They are not current NEXT-193 coverage claims. Regenerate reports with the commands below; opt-in PostgreSQL tests need their database settings to avoid skips.
+Generated from `main` with the commands below; every test passed. The HTML for each run is
+checked in under [coverage-reports/](../../coverage-reports/README.md).
 
-| Service | Tool | Tests | Lines | Branches |
-|---|---|---|---|---|
-| Orders (Spring Boot) | JaCoCo 0.8.13 | 74 | 70.1% | 56.9% |
-| Holdings (Spring Boot) | JaCoCo 0.8.13 | 10 | 68.4% | 24.3% |
-| Insights (Spring Boot) | JaCoCo 0.8.13 | 166 | 73.0% | 44.7% |
-| Auth (NestJS) | Jest + Istanbul | 88 | 90.2% | 80.0% |
-| Quote service (Python data pipeline) | pytest-cov | 72 | 80.0% (statements) | – |
-| NextTrade UI (Angular) | c8 | 97 | 98.4% | 92.3% |
-| Insights UI (Angular) | c8 | 24 | 100% | 97.1% |
+| Service | Tool | Tests | Lines | Branches | Report |
+|---|---|---|---|---|---|
+| Orders (Spring Boot) | JaCoCo 0.8.13 | 311 | 86.4% | 89.0% | [open](../../coverage-reports/orders/index.html) |
+| Holdings (Spring Boot) | JaCoCo 0.8.13 | 170 | 89.9% | 83.6% | [open](../../coverage-reports/holdings/index.html) |
+| Insights (Spring Boot) | JaCoCo 0.8.13 | 87 | 89.3% | 89.4% | [open](../../coverage-reports/insights/index.html) |
+| Auth (NestJS) | Jest + Istanbul | 153 | 91.6% | 81.9% | [open](../../coverage-reports/auth/index.html) |
+| NextTrade UI (Angular) | c8 | 212 | 96.4% | 91.6% | [open](../../coverage-reports/nexttrade-ui/index.html) |
+| Insights UI (Angular) | c8 | 48 | 100% | 96.9% | [open](../../coverage-reports/insights-ui/index.html) |
+| Session package (shared) | c8 | 70 | 98.6% | 94.3% | [open](../../coverage-reports/session-core/index.html) |
+| Quote service (Python data pipeline) | pytest-cov | 85 | 92.3% | 82.3% | [open](../../coverage-reports/data-pipeline/index.html) |
+| **All code** | | **1,136** | **94.7%** | **90.4%** | |
+
+The Spring Boot figures come from `mvn clean verify`, which skips the opt-in PostgreSQL tests
+(27 each in orders and holdings). Jenkins runs those in its own stage; they are not part of
+these figures or of what SonarQube reads.
+
+## What SonarQube counts as coverage
+
+SonarQube does not run tests. It reads the coverage files each tool writes and combines them
+for every file listed under `sonar.sources` in [sonar-project.properties](../../sonar-project.properties):
+
+| Language | Report SonarQube reads |
+|---|---|
+| Java | `*/target/site/jacoco/sonar-jacoco.xml` (JaCoCo XML, path-fixed by `scripts/prepare_sonar_coverage.py`) |
+| TypeScript / JavaScript | `auth`, `frontend`, `insights-frontend` and `shared/session-core` `coverage/lcov.info` |
+| Python | `data-pipeline/coverage.xml` |
+
+Its **Coverage** metric mixes lines and branches: (covered lines + covered branch outcomes) ÷
+(coverable lines + branch outcomes). By that measure the whole codebase is at about 93.8%.
+A Quality Gate usually checks **coverage on new code** (the "Sonar way" default is at least
+80% of lines changed since the reference point), so a new class with no tests can fail the
+gate even when overall coverage is high. Files with no report at all count as 0% covered.
+Jenkins runs pytest without `--cov-branch`, so SonarQube sees Python line coverage only.
 
 ## Generating a report
 
@@ -37,8 +62,7 @@ Run each command from the repository root.
 
 Requires JDK 17 or newer and Maven 3.9+ (CI uses JDK 21). JaCoCo's report runs in Maven's `verify` phase, so
 `mvn test` alone does not produce it. The Spring Boot reports also show instruction and
-method coverage per package and class. Jenkins archives the orders and holdings reports on
-every build.
+method coverage per package and class. Jenkins archives all three reports on every build.
 
 ### Auth service (Jest)
 
