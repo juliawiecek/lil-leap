@@ -107,6 +107,28 @@ def test_start_prices_continue_a_symbol_from_its_last_price() -> None:
     assert first["MSFT"] == 510.0
 
 
+def test_step_seconds_scales_moves_to_real_market_speed() -> None:
+    """A 5-second step moves about sqrt(5/60) as much as a one-minute step."""
+    def log_return_spread(step_seconds: float) -> float:
+        path = generate_price_path(
+            start_price=100.0, drift=0.0, volatility=0.25, periods=20001,
+            rng=np.random.default_rng(seed=3), step_seconds=step_seconds,
+        )
+        return float(np.std(np.diff(np.log(path))))
+
+    ratio = log_return_spread(5) / log_return_spread(60)
+
+    assert ratio == pytest.approx(np.sqrt(5 / 60), rel=0.01)
+
+
+def test_non_positive_step_is_rejected() -> None:
+    with pytest.raises(ValueError, match="step_seconds must be positive"):
+        generate_price_path(
+            start_price=100.0, drift=0.08, volatility=0.25, periods=3,
+            rng=np.random.default_rng(seed=1), step_seconds=0,
+        )
+
+
 def test_invalid_start_price_is_rejected() -> None:
     """Validation should reject a quote if it has a below zero start price."""
     rng = np.random.default_rng(seed=42)

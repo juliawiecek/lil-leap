@@ -15,6 +15,7 @@ def generate_price_path(
     volatility: float,
     periods: int,
     rng: np.random.Generator,
+    step_seconds: float = 60.0,
 ) -> np.ndarray:
     """Generate a positive price path using Geometric Brownian Motion.
     
@@ -48,10 +49,13 @@ def generate_price_path(
         raise ValueError("periods must be positive.")
     if volatility < 0:
         raise ValueError("volatility must be non-negative.")
+    if step_seconds <= 0:
+        raise ValueError("step_seconds must be positive.")
 
-
-    minutes_per_year = 252 * 6.5 * 60  # Trading minutes in a year
-    time_step = 1 / minutes_per_year
+    # Each step covers step_seconds of trading time, so a feed that quotes every few seconds
+    # moves at real-market speed instead of a full minute's movement per quote.
+    seconds_per_year = 252 * 6.5 * 60 * 60  # Trading seconds in a year
+    time_step = step_seconds / seconds_per_year
     
     shocks = rng.normal(0.0, 1.0, periods - 1)
     increments = (
@@ -72,6 +76,7 @@ def generate_quotes(
     seed: int = 42,
     start_timestamp: str = "2026-09-08T13:30:00Z",
     start_prices: Mapping[str, float] | None = None,
+    step_seconds: float = 60.0,
 ) -> pd.DataFrame:
     """
     Generate validated-format synthetic quotes for supported symbols.
@@ -81,6 +86,7 @@ def generate_quotes(
         seed: Seed used to make output reproducible.
         start_timestamp: UTC timestamp for the first generated quote.
         start_prices: Optional price to continue from per symbol; others use the catalog start price.
+        step_seconds: Trading time each step covers; the live feed passes its quote interval.
 
     Returns:
         A DataFrame containing synthetic quote observations.
@@ -106,6 +112,7 @@ def generate_quotes(
             volatility=config["volatility"],
             periods=periods,
             rng=rng,
+            step_seconds=step_seconds,
         )
         
         prices = np.round(prices, 4)

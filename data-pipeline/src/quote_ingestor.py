@@ -43,11 +43,15 @@ def ingest_frame(frame: pd.DataFrame, connection) -> tuple[int,int]:
         connection.rollback()
         raise
 
-def generate_current(periods: int, seed: int, start_prices: dict[str, float] | None = None) -> pd.DataFrame:
+def generate_current(
+    periods: int, seed: int, start_prices: dict[str, float] | None = None, step_seconds: float = 60.0,
+) -> pd.DataFrame:
     # Keep the most recent generated quote at "now" so execution freshness checks pass.
     latest = datetime.now(timezone.utc).replace(microsecond=0)
     start = (latest - timedelta(minutes=max(periods - 1, 0))).isoformat()
-    return generate_quotes(periods=periods, seed=seed, start_timestamp=start, start_prices=start_prices)
+    return generate_quotes(
+        periods=periods, seed=seed, start_timestamp=start, start_prices=start_prices, step_seconds=step_seconds,
+    )
 
 def load_last_prices(connection) -> dict[str, float]:
     """Latest stored midpoint per symbol, so a restarted pipeline continues where it stopped."""
@@ -82,8 +86,9 @@ def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> N
                 if last_prices is None:
                     last_prices=load_last_prices(conn)
                 # One GBM step from each symbol's previous price, so the series is a continuous
-                # random walk rather than fresh noise around the catalog start price.
-                frame=generate_current(2, seed + batch, last_prices)
+                # random walk rather than fresh noise around the catalog start price. The step
+                # covers one interval of trading time, so prices move at real-market speed.
+                frame=generate_current(2, seed + batch, last_prices, step_seconds=interval)
                 frame=frame.groupby('symbol', as_index=False).tail(1)
                 inserted, skipped=ingest_frame(frame, conn)
             last_prices=dict(zip(frame["symbol"], frame["price"].astype(float)))

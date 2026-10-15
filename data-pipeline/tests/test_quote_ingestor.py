@@ -87,6 +87,8 @@ def test_continuous_retries_then_advances_seed_and_respects_interval(monkeypatch
     assert sleeps == [1, 3, 0]
     # The first tick continues from the stored price; later ticks continue from the last generated one.
     assert [c.args for c in generate.call_args_list] == [(2, 42, {"AAPL": 210.5}), (2, 43, {"AAPL": 100.0})]
+    # Each tick is one 5-second step of trading time, not a whole minute.
+    assert all(c.kwargs == {"step_seconds": 5} for c in generate.call_args_list)
     load.assert_called_once()
 
 
