@@ -22,15 +22,12 @@ import { ToastService, Toasts } from './toasts';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
+import { TraderSettings } from './trader-settings';
+import { PortfolioValueChart } from './portfolio-value-chart';
+import { PRICE_PROTECTION_MAX_PERCENT, PRICE_PROTECTION_MIN_PERCENT, TradingPreferencesService } from './trading-preferences.service';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
-
-const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
-  CONSERVATIVE: 7,
-  MODERATE: 5,
-  AGGRESSIVE: 3,
-};
 
 interface Holding {
   symbol: string;
@@ -56,7 +53,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, OrderHistory, AccountSwitcher, MarketTicker, Toasts, TraderSettings, PortfolioValueChart],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -120,6 +117,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly notifications = signal(false);
   /** Balances and holdings, loaded from the backend and reloaded after each fill. */
   readonly portfolioValue = signal(0);
+  readonly portfolioValueHistory = signal<number[]>([]);
   readonly buyingPower = signal(0);
   readonly invested = signal(0);
   readonly holdings = signal<Holding[]>([]);
@@ -153,7 +151,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #started = false;
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
-  readonly executionThresholdDollars = signal(5);
+  readonly preferences = inject(TradingPreferencesService);
+  readonly priceProtectionPercent = this.preferences.priceProtectionPercent;
+  readonly priceProtectionMin = PRICE_PROTECTION_MIN_PERCENT;
+  readonly priceProtectionMax = PRICE_PROTECTION_MAX_PERCENT;
+  readonly executionThresholdDollars = computed(() => this.tradeQuote().price * this.priceProtectionPercent() / 100);
   readonly todayReturn = computed(() => this.holdings().reduce((sum, h) => sum + h.today, 0));
   readonly todayReturnPercent = computed(() => {
     const invested = this.invested();
@@ -179,7 +181,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       cashPercent: Math.round((cashValue / total) * 100),
     };
   });
-  readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
     () =>
       ({
@@ -332,7 +333,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         quantity: Number(this.quantity()),
         orderType: 'MARKET',
         clientReference: this.clientReference(),
-        bufferPercent: this.bufferPercentForPrice(quote.price),
+        bufferPercent: this.priceProtectionPercent(),
       });
       this.reviewing.set(false);
       this.quantity.set('');
@@ -348,15 +349,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
 
   private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
-    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
-    return Math.round(percent * 100) / 100;
-  }
-
-  private defaultThresholdDollars(): number {
-    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) { return byRisk; }
-    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
+    return Number.isFinite(indicativePrice) && indicativePrice > 0 ? this.priceProtectionPercent() : 0;
   }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
@@ -490,10 +483,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.buyingPower.set(valuation.cash);
     this.invested.set(valuation.holdingsValue);
     this.portfolioValue.set(valuation.total);
+    this.portfolioValueHistory.update(history => [...history, valuation.total].slice(-60));
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
-    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     // Keeps the market countdown current; prices and status come from the shared feed.
     interval(5000)
       .pipe(startWith(0), takeUntil(this.destroy$))

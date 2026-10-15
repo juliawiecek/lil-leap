@@ -74,7 +74,8 @@ h2 {
   display: grid;
   grid-template-columns: 185px minmax(0, 1fr);
   min-height: 100dvh;
-  background: radial-gradient(ellipse at 60% 45%, #11171844, transparent 75%);
+  text-align: center;
+  white-space: nowrap;
 }
 .novice-sidebar {
   position: sticky;
@@ -92,9 +93,6 @@ h2 {
   margin: 0 11px;
   color: #f5f6f7;
   font-size: 21px;
-  font-weight: 650;
-  letter-spacing: -0.8px;
-  text-decoration: none;
   white-space: nowrap;
 }
 .wordmark > span {
@@ -454,7 +452,7 @@ h2 {
 .portfolio-chart {
   display: flex;
   margin-top: 17px;
-  height: 160px;
+  min-height: 190px;
   gap: 10px;
   padding-top: 5px;
 }
@@ -510,14 +508,17 @@ h2 {
 }
 .portfolio-stats {
   display: grid;
-  grid-template-columns: 0.95fr 1.05fr 1.18fr 1.02fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: center;
   border-top: 1px solid #283034;
-  margin-top: 6px;
-  padding-top: 19px;
+  margin-top: 0;
+  padding-top: 13px;
 }
 .portfolio-stats > div {
-  padding: 0 21px;
+  width: 100%;
+  padding: 0 16px;
   border-left: 1px solid #283034;
+  text-align: center;
   white-space: nowrap;
 }
 .portfolio-stats > div:first-child {
@@ -537,21 +538,24 @@ h2 {
   font-size: 15px;
   font-weight: 600;
 }
-.investments-panel {
-  padding: 13px 17px 0;
-}
 .investments-panel .panel-heading h2 {
   font-size: 16px;
 }
+.investments-panel {
+  padding: 16px 17px 12px;
+}
+.investments-panel .panel-heading {
+  margin-bottom: 2px;
+}
 .investment-tabs {
   display: flex;
-  gap: 5px;
+  gap: 2px;
   border-bottom: 1px solid var(--line);
-  margin: 7px -17px 0;
+  margin: 3px -17px 0;
   padding: 0 17px;
 }
 .investment-tabs button {
-  padding: 7px 11px 8px;
+  padding: 6px 11px 7px;
   color: var(--muted);
   font-size: 12px;
   border-bottom: 2px solid transparent;
@@ -579,23 +583,24 @@ th {
   table-layout: fixed;
 }
 .holdings-table th {
-  height: 36px;
-  padding: 0 7px;
+  height: 32px;
+  padding: 0 6px;
   white-space: nowrap;
 }
 .holdings-table th:first-child {
-  width: 98px;
+  width: 13%;
 }
 .holdings-table th:nth-child(2) {
-  width: 24%;
+  width: 22%;
 }
 .holdings-table th:last-child {
-  width: 35px;
+  width: 4%;
 }
 .holdings-table td {
-  height: 45px;
-  padding: 5px 7px;
+  height: 44px;
+  padding: 5px 6px;
   border-top: 1px solid var(--line);
+  vertical-align: middle;
   white-space: nowrap;
   font-size: 12px;
 }
@@ -609,6 +614,8 @@ th {
 .holdings-table td.company-name {
   color: var(--muted);
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .holding-symbol {
   display: flex;
@@ -832,31 +839,28 @@ th {
   width: 22px;
 }
 .trade-panel {
-  padding: 22px;
+  padding: 18px 20px 20px;
 }
 .trade-panel h2 {
-  font-size: 20px;
-  margin-bottom: 8px;
+  font-size: 17px;
+  margin-bottom: 5px;
 }
 .trade-panel p {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.45;
 }
 .trade-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 10px;
+  margin-top: 15px;
 }
 .trade-actions button {
-  min-height: 48px;
-  padding: 12px 16px;
-  font-size: 14px;
+  min-height: 40px;
+  padding: 9px 14px;
+  font-size: 12px;
   font-weight: 600;
-}
-.trade-actions > :last-child {
-  grid-column: 1 / -1;
 }
 .green-button,
 .secondary-button,
@@ -1339,6 +1343,7 @@ th {
   }
   .portfolio-stats {
     grid-template-columns: 1fr 1fr;
+    justify-items: stretch;
     row-gap: 18px;
     padding-top: 15px;
   }

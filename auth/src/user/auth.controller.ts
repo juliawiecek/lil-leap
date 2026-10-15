@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -22,6 +22,11 @@ import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { AccessTokenGuard, AuthenticatedRequest } from '../security/access-token.guard';
+import { ProfileService } from './profile.service';
+import { UpdateProfileRequestDto } from './dto/update-profile-request.dto';
+import { ChangeEmailRequestDto } from './dto/change-email-request.dto';
+import { ChangePasswordRequestDto } from './dto/change-password-request.dto';
 
 /** Auth REST surface: register, login, refresh, logout. One endpoint per operation for both roles. */
 @ApiTags('auth')
@@ -33,6 +38,7 @@ export class AuthController {
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly tierService: TierService,
+    private readonly profileService: ProfileService,
   ) {}
 
   /** Creates the account; does not issue tokens -- signing in is a separate step. */
@@ -115,5 +121,32 @@ export class AuthController {
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'INVALID_REQUEST: refreshToken missing.' })
   async logout(@Body() request: RefreshRequestDto): Promise<void> {
     await this.refreshTokenService.revoke(request.refreshToken);
+  }
+
+  @Get('me/profile')
+  @UseGuards(AccessTokenGuard)
+  async profile(@Req() request: AuthenticatedRequest): Promise<Record<string, string | null>> {
+    const profile = await this.profileService.getProfile(request.userId);
+    return { firstName: profile.firstName, lastName: profile.lastName, phone: profile.phone, address: profile.address, country: profile.country };
+  }
+
+  @Patch('me/profile')
+  @UseGuards(AccessTokenGuard)
+  async updateProfile(@Req() request: AuthenticatedRequest, @Body() body: UpdateProfileRequestDto): Promise<Record<string, string | null>> {
+    const profile = await this.profileService.updateProfile(request.userId, body);
+    return { firstName: profile.firstName, lastName: profile.lastName, phone: profile.phone, address: profile.address, country: profile.country };
+  }
+
+  @Post('me/email')
+  @UseGuards(AccessTokenGuard)
+  async changeEmail(@Req() request: AuthenticatedRequest, @Body() body: ChangeEmailRequestDto): Promise<UserResponseDto> {
+    return UserResponseDto.from(await this.profileService.changeEmail(request.userId, body));
+  }
+
+  @Post('me/password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AccessTokenGuard)
+  async changePassword(@Req() request: AuthenticatedRequest, @Body() body: ChangePasswordRequestDto): Promise<void> {
+    await this.profileService.changePassword(request.userId, body);
   }
 }

@@ -50,6 +50,14 @@ export interface AuthClientOptions {
   requestTimeoutMs?: number;
 }
 
+export interface AuthProfile {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  country: string | null;
+}
+
 function tabStorage(): Storage | null {
   try {
     return globalThis.sessionStorage ?? null;
@@ -303,6 +311,24 @@ export class AuthClient {
     await this.#post('/reset-password', { token, newPassword });
   }
 
+  async getProfile(): Promise<AuthProfile> {
+    return (await this.#request('/me/profile', undefined, 'GET', true)) as AuthProfile;
+  }
+
+  async updateProfile(profile: { phone?: string; address?: string }): Promise<AuthProfile> {
+    return (await this.#request('/me/profile', profile, 'PATCH', true)) as AuthProfile;
+  }
+
+  async changeEmail(email: string, currentPassword: string): Promise<void> {
+    await this.#request('/me/email', { email, currentPassword }, 'POST', true);
+    await this.logout();
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.#request('/me/password', { currentPassword, newPassword }, 'POST', true);
+    await this.logout();
+  }
+
   /** Always signs out locally; revoking the session server-side is best effort and never throws. */
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
@@ -364,6 +390,10 @@ export class AuthClient {
   }
 
   async #post(path: string, body: object): Promise<unknown> {
+    return this.#request(path, body, 'POST', false);
+  }
+
+  async #request(path: string, body: object | undefined, method: string, authenticated: boolean): Promise<unknown> {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const timeout = new Promise<never>((_, reject) => {
@@ -373,20 +403,23 @@ export class AuthClient {
       }, this.#timeoutMs);
     });
     try {
-      return await Promise.race([this.#request(path, body, controller.signal), timeout]);
+      return await Promise.race([this.#send(path, body, method, authenticated, controller.signal), timeout]);
     } finally {
       clearTimeout(timer!);
     }
   }
 
-  async #request(path: string, body: object, signal: AbortSignal): Promise<unknown> {
+  async #send(path: string, body: object | undefined, method: string, authenticated: boolean, signal: AbortSignal): Promise<unknown> {
     let response: Response;
     try {
       response = await this.#fetch(this.#baseUrl + path, {
-        method: 'POST',
+        method,
         signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: {
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...(authenticated && this.#accessToken ? { Authorization: `Bearer ${this.#accessToken}` } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
     } catch {
       throw new AuthApiError(NETWORK_MESSAGE);

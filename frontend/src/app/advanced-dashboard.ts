@@ -24,13 +24,10 @@ import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
 import { ToastService, Toasts } from './toasts';
+import { TraderSettings } from './trader-settings';
+import { PortfolioValueChart } from './portfolio-value-chart';
+import { PRICE_PROTECTION_MAX_PERCENT, PRICE_PROTECTION_MIN_PERCENT, TradingPreferencesService } from './trading-preferences.service';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
-
-const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
-  CONSERVATIVE: 7,
-  MODERATE: 5,
-  AGGRESSIVE: 3,
-};
 
 interface Quote {
   instrumentId: string;
@@ -78,7 +75,7 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts, TraderSettings, PortfolioValueChart],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -86,6 +83,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly orderSubmissionClient: OrderSubmissionClient;
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
+  readonly portfolioValueHistory = signal<number[]>([]);
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
@@ -202,6 +200,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly positions = signal<Position[]>([]);
   readonly buyingPower = signal(0);
   readonly portfolio = signal(0);
+  readonly exposureAllocation = computed(() => {
+    const equities = this.positions().reduce((sum, position) => sum + position.value, 0);
+    const cash = this.buyingPower();
+    const total = equities + cash;
+    const equitiesPercent = total > 0 ? Math.round((equities / total) * 1000) / 10 : 0;
+    return { equities, cash, total, equitiesPercent, cashPercent: Math.round((100 - equitiesPercent) * 10) / 10 };
+  });
   /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
   readonly totalReturn = signal(0);
   readonly totalReturnPercent = signal(0);
@@ -248,7 +253,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly modal = signal('review');
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
-  readonly executionThresholdDollars = signal(5);
+  readonly preferences = inject(TradingPreferencesService);
+  readonly priceProtectionPercent = this.preferences.priceProtectionPercent;
+  readonly priceProtectionMin = PRICE_PROTECTION_MIN_PERCENT;
+  readonly priceProtectionMax = PRICE_PROTECTION_MAX_PERCENT;
+  readonly executionThresholdDollars = computed(() => this.selected().price * this.priceProtectionPercent() / 100);
   readonly cost = computed(
     () =>
       Number(this.quantity()) *
@@ -489,7 +498,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: count,
         orderType: 'MARKET',
         clientReference: this.clientReference(),
-        bufferPercent: this.bufferPercentForPrice(quote.price),
+        bufferPercent: this.priceProtectionPercent(),
       });
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
@@ -509,15 +518,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
-    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
-    return Math.round(percent * 100) / 100;
-  }
-
-  private defaultThresholdDollars(): number {
-    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) { return byRisk; }
-    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
+    return Number.isFinite(indicativePrice) && indicativePrice > 0 ? this.priceProtectionPercent() : 0;
   }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
@@ -580,6 +581,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const valuation = valuePortfolio(this.#portfolio, this.#bids);
     this.buyingPower.set(valuation.cash);
     this.portfolio.set(valuation.total);
+    this.portfolioValueHistory.update(history => [...history, valuation.total].slice(-60));
     this.totalReturn.set(valuation.gain);
     this.totalReturnPercent.set(valuation.gainPercent);
     this.positions.set(
@@ -675,7 +677,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.#start();
   }
