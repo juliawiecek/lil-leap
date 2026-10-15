@@ -56,6 +56,7 @@
         }
       </div>
       <div class="header-actions">
+        <app-account-switcher />
         <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Advanced · Pro</span>
         <div class="notification-wrap">
           <button
@@ -93,8 +94,9 @@
     </header>
     <main class="pro-content">
       <div class="session-line">
-        <span><i></i>Markets Open</span><span>{{ formattedTime().time }} ET</span><span>{{ formattedTime().date }}</span>
+        <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketBadge() }}</span><span>{{ formattedTime().time }}</span><span>{{ formattedTime().date }}</span>
       </div>
+      <app-market-ticker (pick)="choose(quote($event))" />
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel">
           <h1>
@@ -324,13 +326,13 @@
                     <th>Symbol</th>
                     <th>Last</th>
                     <th>Change</th>
-                    <th>Volume</th>
+                    <th>Sector</th>
                     <th>1D</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (
-                    q of page() === 'Screeners' ? screened() : quotes;
+                    q of page() === 'Screeners' ? screened() : quotes();
                     track q.symbol;
                     let i = $index
                   ) {
@@ -344,7 +346,7 @@
                       <td [class.gain]="q.change > 0" [class.loss]="q.change < 0">
                         {{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%
                       </td>
-                      <td class="muted">{{ q.volume }}</td>
+                      <td class="muted">{{ q.sector }}</td>
                       <td>
                         <button
                           type="button"
@@ -399,7 +401,7 @@
                 }
               </div>
             } @else if (marketTab() === 'Top Movers') {
-              @for (q of [quotes[3], quotes[1], quotes[0], quotes[6], quotes[4]]; track q.symbol) {
+              @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   ><span>{{ q.price | currency }}</span
@@ -553,6 +555,10 @@
     </button>
   </div>
   @if (modal() === 'review') {
+    <p class="review-summary" role="status">{{ reviewSummary() }}</p>
+    @if (closedWarning()) {
+      <p class="closed-warning" role="note">{{ closedWarning() }}</p>
+    }
     <div class="review-details">
       <div>
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
@@ -586,10 +592,10 @@
         <span>Estimated Total</span><strong>{{ total() | currency }}</strong>
       </div>
     </div>
-    <p>Review the symbol, quantity, and price before confirming.</p>
-    <button class="primary-button" type="button" (click)="confirmOrder()">
-      Confirm {{ side() }}
-    </button>
+    <div class="review-actions">
+      <button class="secondary-button" type="button" (click)="closeModal()">Edit</button>
+      <button class="primary-button" type="button" (click)="confirmOrder()">Confirm {{ side() }}</button>
+    </div>
   } @else if (modal() === 'news') {
     <p class="muted">{{ news[article()].time }} · {{ news[article()].symbol }}</p>
     <h3>{{ news[article()].title }}</h3>
@@ -628,3 +634,4 @@
     <p>Use the Orders tab to follow your orders as they fill. Chat support is not connected yet.</p>
   }
 </dialog>
+<app-toasts (view)="viewOrders()" />

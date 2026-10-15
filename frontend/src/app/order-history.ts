@@ -3,10 +3,11 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
+import { AccountsService } from './accounts.service';
 
 /**
  * The signed-in user's real order history with date and status filters (NEXT-118, BR-11).
- * Changing a filter reloads the list in place; the page never reloads.
+ * Changing a filter, or the account picked in the header, reloads the list in place; the page never reloads.
  */
 @Component({
   selector: 'app-order-history',
@@ -16,6 +17,9 @@ import { OrderHistoryService } from './order-history.service';
 })
 export class OrderHistory implements OnInit, OnDestroy {
   readonly #orders = inject(OrderHistoryService);
+  /** Absent outside the trading workspace; the list then covers every account. */
+  readonly #accounts = inject(AccountsService, { optional: true });
+  readonly #stopAccountWatch = this.#accounts?.onChange(() => void this.load());
   /** Increments per request so a slow earlier response can't overwrite a newer one. */
   #request = 0;
   #refreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -51,6 +55,7 @@ export class OrderHistory implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     ++this.#request; this.routing?.destroy();
+    this.#stopAccountWatch?.();
     this.#destroyed = true;
     clearTimeout(this.#refreshTimer);
   }
@@ -97,7 +102,10 @@ export class OrderHistory implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set('');
     try {
-      const rows = await this.#orders.list({ from: this.from(), to: this.to(), status: this.status() });
+      const accountId = this.#accounts?.selected()?.account_id;
+      const rows = await this.#orders.list({
+        from: this.from(), to: this.to(), status: this.status(), ...(accountId ? { accountId } : {}),
+      });
       if (request === this.#request) {
         this.rows.set(rows);
       }

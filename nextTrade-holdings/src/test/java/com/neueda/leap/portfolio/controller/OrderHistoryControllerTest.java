@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,7 +53,7 @@ class OrderHistoryControllerTest {
     @Test
     void callerGetsTheirOwnOrders() throws Exception {
         UUID orderId = UUID.randomUUID();
-        when(orderRepository.findHistory(eq(userId), anyCollection(), any(), any())).thenReturn(List.of(
+        when(orderRepository.findHistory(eq(userId), isNull(), anyCollection(), any(), any())).thenReturn(List.of(
                 new OrderHistoryResponse(orderId, "AAPL", "BUY", 1L, "FILLED", Instant.parse("2026-09-30T18:00:00Z"),
                         new BigDecimal("225.05"), 1L, Instant.parse("2026-09-30T18:00:02Z"))));
 

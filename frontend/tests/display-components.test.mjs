@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, input, button } from './dom-helper.mjs';
 import { component } from './component-helper.mjs';
+import { fakeFeed, feedProvider } from './feed-helper.mjs';
+const LISTED = [['AAPL', 'Apple Inc.', 176.56, 1.85], ['NVDA', 'NVIDIA Corporation', 893.12, 2.36], ['MSFT', 'Microsoft Corporation', 424.31, 0.72]];
+const feedWith = () => fakeFeed(LISTED.map(([symbol, name, price, change]) => ({ symbol, name, price, change })));
 const { DashboardIcon } = await import('../src/app/dashboard-icon.ts');
 const { StockDashboard } = await import('../src/app/stock-dashboard.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
@@ -36,7 +39,7 @@ test('server tier selects the visible dashboard and child sign-out reaches the p
 });
 
 test('trade ticket binds order inputs and submits a review with validation', async t => {
-  const desk = component(t, AdvancedDashboard);
+  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
   desk.applyPortfolio({ cash: 48230.12, holdings: [] });
   const fixture = await render(t, AdvancedTicket, { desk });
   input(fixture, '#pro-symbol', 'NVDA', 'change');
@@ -56,7 +59,7 @@ test('trade ticket binds order inputs and submits a review with validation', asy
 });
 
 test('chart period buttons update accessible labels and plotted candles', async t => {
-  const desk = component(t, AdvancedDashboard);
+  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
   const fixture = await render(t, AdvancedChart, { desk });
   assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D candlestick chart"]'));
   const before = desk.candles();

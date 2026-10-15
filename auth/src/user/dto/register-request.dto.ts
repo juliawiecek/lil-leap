@@ -87,7 +87,7 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
 
     if (!this.hasTraderFinancials(r)) {
       return this.fail(
-        'employmentStatus, annualIncome, netWorthBracket, riskProfile, liquidityPosition, accreditedInvestor and isPoliticallyExposedPerson are required for TRADER registration',
+        'employmentStatus, annualIncome, netWorthBracket, riskProfile, liquidityPosition, initialDeposit, accreditedInvestor and isPoliticallyExposedPerson are required for TRADER registration',
       );
     }
 
@@ -111,7 +111,7 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
   }
 
   private hasTraderFinancials(r: RegisterRequestDto): boolean {
-    const text = [r.annualIncome, r.liquidityPosition];
+    const text = [r.annualIncome, r.liquidityPosition, r.initialDeposit];
     const values: unknown[] = [
       r.employmentStatus,
       r.netWorthBracket,
@@ -273,6 +273,18 @@ export class RegisterRequestDto {
   @IsOptional()
   @MaxLength(32)
   liquidityPosition?: string;
+
+  @ApiPropertyOptional({
+    name: 'initial_deposit',
+    maxLength: 32,
+    example: '10,000',
+    description:
+      'Required when user_role is TRADER. Dollars; commas allowed. At least the assigned tier minimum ($5,000 Novice, $100,000 Advanced) and no more than liquidity_position.',
+  })
+  @Expose({ name: 'initial_deposit' })
+  @IsOptional()
+  @MaxLength(32)
+  initialDeposit?: string;
 
   @ApiPropertyOptional({ name: 'accredited_investor', description: 'Required when user_role is TRADER.' })
   @Expose({ name: 'accredited_investor' })

@@ -53,11 +53,14 @@ export class JwtService {
     });
   }
 
-  /** Verifies signature, algorithm and expiry; returns the user id (sub). */
+  /**
+   * Verifies signature, algorithm and expiry; returns the user id (sub). Fails closed (TS-SEC-01):
+   * a token without an expiry or subject, or any error while verifying, is rejected.
+   */
   verifyToken(token: string): string {
     try {
       const payload = jwt.verify(token, this.secret, { algorithms: ['HS256'] });
-      if (typeof payload === 'string' || !payload.sub) {
+      if (typeof payload === 'string' || !payload.sub || typeof payload.exp !== 'number') {
         throw new InvalidAccessTokenException();
       }
       return payload.sub;
