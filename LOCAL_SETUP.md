@@ -24,6 +24,34 @@ That script creates the `main` and `app_user` roles if they do not already exist
 - `frontend/LOCAL_DEV.md`
 - `insights-frontend/LOCAL_DEV.md`
 
+## Optional Kafka broker
+
+If you want the Orders service to publish terminal events and Insights to consume them without Docker, install Apache Kafka locally and start it from the Kafka distribution directory.
+Use your downloaded Kafka install directory (for example `C:\kafka\kafka_3.7.1`), not this repository's `kafka/` folder.
+
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\zookeeper-server-start.bat config\zookeeper.properties
+```
+
+In a second terminal:
+
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-server-start.bat config\server.properties
+```
+
+Then create the shared topic:
+
+```cmd
+cd C:\kafka\kafka_3.7.1
+bin\windows\kafka-topics.bat --create --bootstrap-server localhost:9092 --topic order-events --partitions 1 --replication-factor 1
+```
+
+The Spring Boot local profiles for `nextTrade-orders` and `insights` default Kafka bootstrap servers to `localhost:9092`. If you want to use the Docker-based broker instead, run the override described in `kafka/README.md`.
+
+When using the native Kafka broker, keep 3 terminals open for ZooKeeper, the Kafka broker, and topic creation before you start the services.
+
 ## Local ports
 
 | Service | Port | Notes |

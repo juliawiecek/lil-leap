@@ -61,7 +61,7 @@ public class ReportingController {
     }
 
     /**
-     * Returns the downloadable CSV report aggregated by instrument.
+     * Returns the downloadable CSV report aggregated by instrument. “Hourly trade activity trend: number of executed trades per hour.”
      *
      * @return CSV file response
      */
