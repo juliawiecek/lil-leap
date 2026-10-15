@@ -25,6 +25,37 @@ pipeline {
       }
     }
 
+    stage('Preflight') {
+      // Undo what an earlier failed or aborted build can leave behind, so it cannot fail this one.
+      steps {
+        sh '''
+          set -eu
+          # Stacks from an aborted e2e or smoke run (builds never overlap: disableConcurrentBuilds).
+          for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' | grep -E '^nexttrade-(e2e|smoke)-' | sort -u); do
+            echo "Removing leftover stack $project"
+            docker ps -aq --filter "label=com.docker.compose.project=$project" | xargs -r docker rm -f >/dev/null
+            docker network ls -q --filter "label=com.docker.compose.project=$project" | xargs -r docker network rm >/dev/null || true
+            docker volume ls -q --filter "label=com.docker.compose.project=$project" | xargs -r docker volume rm >/dev/null || true
+          done
+          # Reports written as root by an older e2e runner, which the Jenkins user cannot delete.
+          docker run --rm -v "$WORKSPACE/e2e:/e2e" node:24-alpine rm -rf /e2e/artifacts
+          # SonarQube on this host stops indexing analyses when the disk fills.
+          free_gb=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
+          if [ "$free_gb" -lt 15 ]; then
+            echo "Only ${free_gb}G free; pruning unused Docker images and build cache"
+            docker image prune -af >/dev/null || true
+            docker builder prune -af >/dev/null || true
+            free_gb=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
+          fi
+          echo "Disk free: ${free_gb}G"
+          if [ "$free_gb" -lt 5 ]; then
+            echo "ERROR: under 5G free on the Jenkins host even after pruning; free space before building."
+            exit 1
+          fi
+        '''
+      }
+    }
+
     stage('Detect Compose Command') {
       steps {
         script {
@@ -335,7 +366,8 @@ pipeline {
     stage('Playwright - Real Client Journey') {
       options { timeout(time: 30, unit: 'MINUTES') }
       steps {
-        // Publish only this build's evidence, never reports left by an older build.
+        // Publish only this build's evidence, never reports left by an older build
+        // (Preflight already removed any the Jenkins user could not delete).
         dir('e2e/artifacts') { deleteDir() }
         // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
         sh 'bash scripts/run_e2e_ci.sh'
@@ -350,7 +382,10 @@ pipeline {
 
     stage('Build Compose Services') {
       steps {
-        sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
+        // A second attempt covers a registry or Maven Central blip; finished layers are cached.
+        retry(2) {
+          sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
+        }
       }
     }
 
