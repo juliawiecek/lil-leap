@@ -45,12 +45,18 @@ public final class MarketHours {
         this.respectHours = respectHours;
     }
 
-    /** @return the exchange time zone */
+    /**
+     * Returns the exchange time zone.
+     *
+     * @return the exchange time zone
+     */
     public ZoneId zone() {
         return zone;
     }
 
     /**
+     * Tells whether the market is open.
+     *
      * @param now current instant
      * @return true during a regular session, or always when hours are not respected
      */
@@ -64,6 +70,8 @@ public final class MarketHours {
     }
 
     /**
+     * Finds when the market next opens.
+     *
      * @param now current instant
      * @return the start of the next session that begins after {@code now}
      */
@@ -72,6 +80,8 @@ public final class MarketHours {
     }
 
     /**
+     * Finds when the market next closes.
+     *
      * @param now current instant
      * @return the end of the current session, or of the next one when the market is closed
      */
@@ -80,6 +90,8 @@ public final class MarketHours {
     }
 
     /**
+     * Describes the market at a moment in time.
+     *
      * @param now current instant
      * @return whether the market is open and when it next opens and closes
      */

@@ -9,6 +9,8 @@ WORKDIR /app
 # as long as pom.xml hasn't changed, the next RUN (dependency download) is
 # served from cache even if source files changed. This avoids re-downloading
 # Maven dependencies on every code change â€” the main layer-caching win.
+# .mvn/maven.config retries Maven Central downloads that fail with a 502 or similar.
+COPY .mvn/ .mvn/
 COPY pom.xml .
 RUN mvn -B dependency:go-offline
 

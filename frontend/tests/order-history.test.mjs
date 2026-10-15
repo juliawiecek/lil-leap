@@ -1,3 +1,4 @@
+import { apiHttp } from './http-helper.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
@@ -28,35 +29,35 @@ const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
 test('client calls the caller’s own history with only the filters supplied and the bearer token', async () => {
   const { calls, fetchImpl } = fakeFetch(json(200, [row()]));
-  const client = new OrderHistoryClient({ accessToken: token }, fetchImpl);
+  const client = new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl));
 
   const rows = await client.list({ from: '2026-09-01', to: '', status: 'FILLED' });
 
   assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders?from=2026-09-01&status=FILLED`);
-  assert.equal(calls[0].init.headers.Authorization, `Bearer ${token}`);
+  assert.equal(calls[0].init.headers.Authorization, undefined);
   assert.equal(rows[0].fillPrice, 225.05);
 });
 
 test('client sends no query string when no filters are set', async () => {
   const { calls, fetchImpl } = fakeFetch(json(200, []));
-  await new OrderHistoryClient({ accessToken: token }, fetchImpl).list();
+  await new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl)).list();
   assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders`);
 });
 
 test('client refuses to call the server when signed out', async () => {
   const { calls, fetchImpl } = fakeFetch(json(200, []));
-  await assert.rejects(new OrderHistoryClient({ accessToken: null }, fetchImpl).list(), /Sign in/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }, apiHttp(fetchImpl)).list(), /Sign in/);
   assert.equal(calls.length, 0);
 });
 
 test('client surfaces the server’s error message, or a friendly fallback', async () => {
-  const withMessage = new OrderHistoryClient({ accessToken: token }, fakeFetch(json(400, { error: 'INVALID_FILTER', message: 'Unknown status: X' })).fetchImpl);
+  const withMessage = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(json(400, { error: 'INVALID_FILTER', message: 'Unknown status: X' })).fetchImpl));
   await assert.rejects(withMessage.list({ status: 'X' }), /Unknown status: X/);
 
-  const noBody = new OrderHistoryClient({ accessToken: token }, fakeFetch(new Response('oops', { status: 500 })).fetchImpl);
+  const noBody = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new Response('oops', { status: 500 })).fetchImpl));
   await assert.rejects(noBody.list(), /Could not load your orders/);
 
-  const offline = new OrderHistoryClient({ accessToken: token }, fakeFetch(new TypeError('network')).fetchImpl);
+  const offline = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new TypeError('network')).fetchImpl));
   await assert.rejects(offline.list(), /Could not reach the server/);
 });
 

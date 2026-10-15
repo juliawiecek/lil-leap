@@ -1,4 +1,6 @@
 spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   datasource:
     url: jdbc:postgresql://localhost:5432/nexttrade
     username: app_user

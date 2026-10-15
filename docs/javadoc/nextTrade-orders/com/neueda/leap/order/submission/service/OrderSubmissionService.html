@@ -106,9 +106,10 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService)" class="member-name-link">OrderSubmissionService</a><wbr>(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)" class="member-name-link">OrderSubmissionService</a><wbr>(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
  <a href="../../service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a>&nbsp;sufficiency,
- <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments)</code></div>
+ <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments,
+ <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 </div>
@@ -150,17 +151,19 @@ loadScripts(document, 'script');</script>
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService)">
+<section class="detail" id="&lt;init&gt;(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)">
 <h3>OrderSubmissionService</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderSubmissionService</span><wbr><span class="parameters">(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
  <a href="../../service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a>&nbsp;sufficiency,
- <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments)</span></div>
+ <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments,
+ <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices)</span></div>
 <div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>repository</code> - persistence operations used by this service</dd>
 <dd><code>sufficiency</code> - cash and holdings validation service</dd>
 <dd><code>instruments</code> - current metadata shared with the instrument catalog API</dd>
+<dd><code>prices</code> - latest stored quote, recorded as the order's reference price for price protection</dd>
 </dl>
 </section>
 </li>
@@ -179,8 +182,9 @@ loadScripts(document, 'script');</script>
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></span>&nbsp;<span class="element-name">submit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
  <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</span></div>
 <div class="block">Submits an order after authentication, ownership, eligibility and resource checks.
- An existing account/client-reference pair returns its original order before business
- rules are rechecked. Concurrent duplicate inserts also resolve to the existing order.
+ An identical retry of an existing account/client-reference pair returns its original
+ order before business rules are rechecked; a retry that changes the order is a conflict.
+ Concurrent duplicate inserts resolve the same way.
  Cash and shares are checked but are not reserved by this operation.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
@@ -190,6 +194,7 @@ loadScripts(document, 'script');</script>
 <dd>submission result indicating whether a new row was created</dd>
 <dt>Throws:</dt>
 <dd><code>org.springframework.web.server.ResponseStatusException</code> - with HTTP 401 for missing identity or 404 for an absent or unowned account</dd>
+<dd><code><a href="IdempotencyConflictException.html" title="class in com.neueda.leap.order.submission.service">IdempotencyConflictException</a></code> - if the client reference already created a different order</dd>
 <dd><code><a href="../../rules/OrderRuleException.html" title="class in com.neueda.leap.order.rules">OrderRuleException</a></code> - if account or instrument trading rules reject the submission</dd>
 <dd><code><a href="../../service/OrderSufficiencyException.html" title="class in com.neueda.leap.order.service">OrderSufficiencyException</a></code> - if resources or a usable buy quote are missing</dd>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalStateException.html" title="class or interface in java.lang" class="external-link">IllegalStateException</a></code> - if a conflicting submission cannot be read</dd>

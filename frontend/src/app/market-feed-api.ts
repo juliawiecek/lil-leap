@@ -2,6 +2,9 @@
  * Live prices for every tradable stock (TS-14.7): the instrument list, each stock's latest quote,
  * and its first quote of the day. All reads go to the Holdings service with the user's token.
  */
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
 
 /** A quote older than this is shown as "Price delayed", matching the orders service's freshness rule. */
@@ -67,16 +70,16 @@ export interface PriceTick {
 
 export class MarketFeedClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -114,19 +117,19 @@ export class MarketFeedClient {
     return today.length ? tick(today.at(-1)!).price : undefined;
   }
 
+  /** The shared transport adds the bearer token, and its interceptor ends the session on a 401. */
   async #get<T>(path: string): Promise<T> {
-    const token = this.#tokens.accessToken;
-    if (!token) {
+    if (!this.#tokens.accessToken) {
       throw new Error('Sign in to see live prices.');
     }
-    const response = await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (response.status === 401) {
-      this.#tokens.unauthorized?.(token);
+    try {
+      return await firstValueFrom(this.#http.get<T>(`${this.#baseUrl}${path}`));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse) {
+        throw new Error('Could not load prices.');
+      }
+      throw error;
     }
-    if (!response.ok) {
-      throw new Error('Could not load prices.');
-    }
-    return (await response.json()) as T;
   }
 }
 

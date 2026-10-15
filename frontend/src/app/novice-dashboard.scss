@@ -1433,3 +1433,65 @@ th {
     font-size: 8px;
   }
 }
+
+/* Price protection (PS-12) on the order ticket: a compact row like the ticket's other notes. */
+.protection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.protection-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.protection-copy span {
+  font-size: 11px;
+}
+.protection-copy b {
+  color: var(--green);
+  font-weight: 600;
+}
+.protection-copy small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.protection-row .text-link {
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.protection-row .text-link:hover {
+  color: var(--green);
+}
+.tolerance-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.tolerance-field input {
+  width: 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  appearance: textfield;
+}
+.tolerance-field input::-webkit-outer-spin-button,
+.tolerance-field input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}

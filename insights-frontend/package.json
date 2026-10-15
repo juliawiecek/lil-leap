@@ -8,7 +8,8 @@
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
     "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=html --reports-dir=coverage node --enable-source-maps --test --test-concurrency=2 tests/*.test.mjs",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "test:e2e:auth": "node ../e2e/run-stack.mjs --project=auth"
   },
   "private": true,
   "packageManager": "npm@11.9.0",

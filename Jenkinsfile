@@ -4,6 +4,8 @@ pipeline {
   options {
     timestamps()
     disableConcurrentBuilds()
+    // Archived Playwright traces and reports add up; keep recent builds only.
+    buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
   }
 
   tools {
@@ -20,6 +22,37 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
+      }
+    }
+
+    stage('Preflight') {
+      // Undo what an earlier failed or aborted build can leave behind, so it cannot fail this one.
+      steps {
+        sh '''
+          set -eu
+          # Stacks from an aborted e2e or smoke run (builds never overlap: disableConcurrentBuilds).
+          for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' | grep -E '^nexttrade-(e2e|smoke)-' | sort -u); do
+            echo "Removing leftover stack $project"
+            docker ps -aq --filter "label=com.docker.compose.project=$project" | xargs -r docker rm -f >/dev/null
+            docker network ls -q --filter "label=com.docker.compose.project=$project" | xargs -r docker network rm >/dev/null || true
+            docker volume ls -q --filter "label=com.docker.compose.project=$project" | xargs -r docker volume rm >/dev/null || true
+          done
+          # Reports written as root by an older e2e runner, which the Jenkins user cannot delete.
+          docker run --rm -v "$WORKSPACE/e2e:/e2e" node:24-alpine rm -rf /e2e/artifacts
+          # SonarQube on this host stops indexing analyses when the disk fills.
+          free_gb=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
+          if [ "$free_gb" -lt 15 ]; then
+            echo "Only ${free_gb}G free; pruning unused Docker images and build cache"
+            docker image prune -af >/dev/null || true
+            docker builder prune -af >/dev/null || true
+            free_gb=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
+          fi
+          echo "Disk free: ${free_gb}G"
+          if [ "$free_gb" -lt 5 ]; then
+            echo "ERROR: under 5G free on the Jenkins host even after pruning; free space before building."
+            exit 1
+          fi
+        '''
       }
     }
 
@@ -330,9 +363,29 @@ pipeline {
       }
     }
 
+    stage('Playwright - Real Client Journey') {
+      options { timeout(time: 30, unit: 'MINUTES') }
+      steps {
+        // Publish only this build's evidence, never reports left by an older build
+        // (Preflight already removed any the Jenkins user could not delete).
+        dir('e2e/artifacts') { deleteDir() }
+        // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
+        sh 'bash scripts/run_e2e_ci.sh'
+      }
+      post {
+        always {
+          junit testResults: 'e2e/artifacts/**/junit.xml', allowEmptyResults: true
+          archiveArtifacts artifacts: 'e2e/artifacts/**', allowEmptyArchive: true
+        }
+      }
+    }
+
     stage('Build Compose Services') {
       steps {
-        sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
+        // A second attempt covers a registry or Maven Central blip; finished layers are cached.
+        retry(2) {
+          sh "${COMPOSE_CMD} -f ${COMPOSE_FILE} build"
+        }
       }
     }
 
@@ -343,6 +396,22 @@ pipeline {
       steps {
         sh 'SMOKE_PROJECT="nexttrade-smoke-$BUILD_NUMBER" bash scripts/seeded-logins-smoke-test.sh'
       }
+    }
+  }
+
+  post {
+    // The e2e and smoke stacks build images under a new Compose project name on every run.
+    // Remove any left behind, plus untagged images and old build cache, so the agent's disk
+    // does not fill up (SonarQube on the same host stops indexing analyses when it does).
+    // Images used by a running container are kept.
+    cleanup {
+      sh '''
+        leftovers=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^nexttrade-(e2e|smoke)-' || true)
+        [ -z "$leftovers" ] || echo "$leftovers" | xargs docker rmi >/dev/null 2>&1 || true
+        docker image prune -f >/dev/null 2>&1 || true
+        docker builder prune -f --filter until=72h >/dev/null 2>&1 || true
+        df -h / || true
+      '''
     }
   }
 }

@@ -129,3 +129,18 @@ so the apps use their own Angular runtime. The shared package owns auth/session
 behavior and contract tests; each app provides its role, storage key and routes.
 
 Docker builds use the repository root as their context: `docker build -f frontend/Dockerfile .`. Compose and Jenkins prepare the shared package automatically.
+
+## Real Identity browser tests (NEXT-157)
+
+Run `npm run test:e2e:auth` from this directory for the 13 real registration/login
+cases covering both apps. Requires Node 24 and a running Docker daemon with
+Compose v2; dependencies and Chromium are installed inside the pinned container.
+
+From the repository root, run `npm --prefix e2e ci` and
+`npm --prefix e2e run test:stack` with Docker Compose v2 running. This suite builds
+both apps and the production NestJS Identity service with isolated PostgreSQL.
+It tests NextTrade registration and valid/invalid login in both apps. Insights
+analysts are created through the real Identity API. See the
+[root test guide](../README.md#real-stack-browser-tests-next-157-next-164-next-163).
+The separate NEXT-220 session suite uses mocked APIs and is not the real-service
+acceptance check. Build the shared session package before installing either app.

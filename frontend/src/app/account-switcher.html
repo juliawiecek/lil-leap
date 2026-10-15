@@ -74,7 +74,7 @@
   (close)="dialog.set(null)"
 >
   @if (dialog() === 'add') {
-    <form (submit)="submitAdd($event)" novalidate>
+    <form method="post" (submit)="submitAdd($event)" novalidate>
       <div class="dialog-heading">
         <h2 id="account-dialog-title">Add account</h2>
         <button type="button" class="close-button" aria-label="Close" (click)="closeDialog()">
@@ -125,7 +125,7 @@
 
     @switch (step()) {
       @case ('form') {
-        <form (submit)="reviewTransfer($event)" novalidate>
+        <form method="post" (submit)="reviewTransfer($event)" novalidate>
           <label for="transfer-from">From</label>
           <select id="transfer-from" [value]="fromId()" (change)="setFrom($any($event.target).value)">
             @for (account of accounts.accounts(); track account.account_id) {

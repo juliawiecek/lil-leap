@@ -1,6 +1,14 @@
 spring:
   application:
     name: insights
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
   # Datasource removed; reports are generated from local CSV data.
   # If database connectivity is re-added, configure datasource here.
 
@@ -32,6 +40,10 @@ nexttrade:
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
+insights:
+  kafka:
+    topic: ${INSIGHTS_KAFKA_TOPIC:order-events}
+    output-dir: ${INSIGHTS_KAFKA_OUTPUT_DIR:${java.io.tmpdir}/insights-kafka}
 server:
   port: ${PORT:8084}
   servlet:

@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
 import { AccountsClient, AccountSummary, OpenedAccount, TransferResult, pickAccount } from './accounts-api';
 
@@ -11,7 +12,7 @@ export const SELECTED_ACCOUNT_KEY = 'nexttrade-selected-account';
  */
 @Injectable({ providedIn: 'root' })
 export class AccountsService {
-  client = new AccountsClient(inject(AuthService, { optional: true }) ?? { accessToken: null });
+  client = new AccountsClient(inject(AuthService, { optional: true }) ?? { accessToken: null }, inject(ApiHttpClient));
   readonly accounts = signal<AccountSummary[]>([]);
   readonly #preferredId = signal<string | null>(readStoredId());
   readonly selected = computed(() => pickAccount(this.accounts(), this.#preferredId()));

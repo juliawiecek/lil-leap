@@ -102,7 +102,9 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">OrderSufficiencyException</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/RuntimeException.html" title="class or interface in java.lang" class="external-link">RuntimeException</a></span></div>
-<div class="block">A fixed, safe rejection reason for an order that cannot pass sufficiency checks.</div>
+<div class="block">A stable rejection reason for an order that cannot pass sufficiency checks. The message may
+ describe the caller's own order and account (amounts needed and available), which only the
+ account owner can see; it never names other accounts.</div>
 <dl class="notes">
 <dt>See Also:</dt>
 <dd>
@@ -126,7 +128,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color"><code>static enum&nbsp;</code></div>
 <div class="col-second even-row-color"><code><a href="OrderSufficiencyException.Reason.html" class="type-name-link" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a></code></div>
 <div class="col-last even-row-color">
-<div class="block">Supported rejections; messages never include account balances or identifiers.</div>
+<div class="block">Supported rejections.</div>
 </div>
 </div>
 </section>
@@ -142,6 +144,11 @@ loadScripts(document, 'script');</script>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.service.OrderSufficiencyException.Reason)" class="member-name-link">OrderSufficiencyException</a><wbr>(<a href="OrderSufficiencyException.Reason.html" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a>&nbsp;reason)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a rule rejection.</div>
+</div>
+<div class="col-constructor-name odd-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.service.OrderSufficiencyException.Reason,java.lang.String)" class="member-name-link">OrderSufficiencyException</a><wbr>(<a href="OrderSufficiencyException.Reason.html" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a>&nbsp;reason,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;message)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates a rule rejection that explains the shortfall to the account owner.</div>
 </div>
 </div>
 </section>
@@ -190,6 +197,19 @@ loadScripts(document, 'script');</script>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>reason</code> - safe reason code</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(com.neueda.leap.order.service.OrderSufficiencyException.Reason,java.lang.String)">
+<h3>OrderSufficiencyException</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderSufficiencyException</span><wbr><span class="parameters">(<a href="OrderSufficiencyException.Reason.html" title="enum class in com.neueda.leap.order.service">OrderSufficiencyException.Reason</a>&nbsp;reason,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;message)</span></div>
+<div class="block">Creates a rule rejection that explains the shortfall to the account owner.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>reason</code> - safe reason code</dd>
+<dd><code>message</code> - what the order needs and what the account has</dd>
 </dl>
 </section>
 </li>

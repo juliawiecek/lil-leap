@@ -6,13 +6,13 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 ## Team
 
-| Team Member     | Role                              |
+| Team Member     | Role                                |
 | ---------------- | ---------------------------------- |
-| Tanush Kaushik   | Technical Lead, Data Engineer      |
-| Julia Wiecek     | Developer, Spring Boot (Scrum Master) |
+| Tanush Kaushik   | Developer, Data Engineer           |
+| Julia Wiecek     | Developer, Spring Boot             |
 | Kevin Marin      | Developer, Spring Boot             |
-| Lalima Karri     | Developer, Angular                 |
-| Ilhan Gelle      | Developer, Security                |
+| Lalima Karri     | Developer, Angular (Scrum Master)  |
+| Ilhan Gelle      | Developer, Security (Tech Lead)    |
 
 ## Quick Start
 
@@ -126,11 +126,11 @@ restricted `app_user` role; the schema is owned by the admin role.
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
 | `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; password reset (reset emails are written as `.eml` files to the `password_reset_outbox` volume, because the VM has no network); assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
-| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances. |
+| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances; publishes terminal order events to Kafka. |
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
-| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the `orders-events`, `holdings-events` and `insights-events` topics are created on startup. See [kafka/README.md](kafka/README.md). |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Optional event broker; when the Kafka Compose override is enabled, the shared `order-events` topic serves the Orders producer and three Insights consumer groups. See [Kafka Order Events](#kafka-order-events). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 
 ### Authentication Flow
@@ -154,6 +154,34 @@ The access token carries `sub`, `email`, `client_id` and, for traders,
 `trader_level`, which the frontend uses to pick the Novice or Advanced
 dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 
+### Kafka Order Events
+
+Kafka is used for asynchronous reporting of terminal order lifecycle events. The
+Orders service publishes one JSON event to the shared `order-events` topic when
+an order reaches `FILLED` or `REJECTED`. The Insights service receives that
+event through three independent consumer groups:
+
+| Consumer group | Filter | Output |
+|---|---|---|
+| `insights-completed-trades` | `FILLED` events | `completed-trades.csv` |
+| `insights-failed-trades` | `REJECTED` events | `failed-trades.csv` |
+| `insights-order-audit` | Every terminal event | `trade-audit.csv` |
+
+The database transaction remains the source of truth for order settlement.
+Kafka publication is best-effort after the transaction completes, so a Kafka
+failure does not undo a completed order. The broker is development-only and is
+started through the optional Compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.kafka.yml up --build -d kafka kafka-topics orders insights
+```
+
+#### Kafka Files and Directories
+
+- [kafka/](kafka/) contains the broker image, topic setup, and Kafka-specific documentation.
+
+For broker commands and local setup details, see [kafka/README.md](kafka/README.md).
+
 ## Technology Stack
 
 | Layer          | Technology                              | Notes                                          |
@@ -164,7 +192,7 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
 | Frontend       | Angular 22 + TypeScript                 | Two standalone Angular apps                     |
 | Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
-| Messaging      | Apache Kafka + ZooKeeper                | Event streaming between services                |
+| Messaging      | Apache Kafka + ZooKeeper                | Shared order lifecycle events fan out to three Insights consumers |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
 ## Backend API
@@ -243,7 +271,9 @@ DML permissions. These are development-only credentials — see
 
 ## Docker Compose
 
-`docker-compose.yml` defines twelve services:
+`docker-compose.yml` defines the main application stack. The table also shows
+the optional Kafka services, which are added by
+[docker-compose.kafka.yml](docker-compose.kafka.yml) when that override is used:
 
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
@@ -257,7 +287,7 @@ DML permissions. These are development-only credentials — see
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
 | `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
-| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the topics once `kafka` is healthy |
+| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the `order-events` topic once `kafka` is healthy |
 
 Important runtime behavior:
 
@@ -412,7 +442,76 @@ scripts/auth-integration-test.sh --down      # also stop the stack afterwards
 
 Needs bash, curl and Docker (run it on Linux, macOS or WSL).
 
+### Real-stack browser tests (NEXT-157, NEXT-164, NEXT-163)
+
+Both Angular apps use the shared session package and guarded routes. NextTrade
+registration starts from the **Create account** tab at `/login`; Insights has an
+analyst login screen. Reload restores the tab's session and page (NEXT-220).
+Insights also displays a live reporting summary alongside its sample-data views.
+
+From the repository root, with **Node 24 and Docker Compose v2** available:
+
+```powershell
+npm --prefix e2e ci
+npm --prefix e2e run test:stack
+```
+
+To run only NEXT-157's 13 authentication cases against the same real stack:
+
+```powershell
+npm --prefix e2e run test:auth
+```
+
+Both apps also expose this command as `npm run test:e2e:auth` from their own
+directory. The shared runner builds and tests both apps for every invocation.
+
+The runner builds the production Dockerfiles and starts a uniquely named Compose
+project with isolated databases and no published host ports. Chromium runs in the
+pinned Playwright container. Identity is the final NestJS service from `auth/`,
+using the production schema and real PostgreSQL. No auth/API responses, tokens,
+orders, fills, or holdings are mocked. Analyst fixtures use the real registration
+API because Insights does not offer public registration.
+
+| NEXT-157 acceptance criterion | Browser coverage |
+|---|---|
+| AC1 | Root Playwright suite exercises NextTrade and Insights through the real gateway |
+| AC2 | Complete trader registration; missing fields, malformed email, weak/mismatched passwords, incomplete profile, and real duplicate-email rejection |
+| AC3 | Valid login, wrong password, and unknown account in both apps; authenticated workspace and real refresh after reload |
+| AC4 | Production NestJS Identity and PostgreSQL, with real gateway and application services |
+
+Registration supplies a $25,000 opening deposit and creates an ACTIVE trading
+account. Tests verify its balance through authenticated APIs; fixtures do not
+activate accounts or write cash, orders, fills, or holdings directly to SQL.
+The existing golden path buys AAPL and checks the real fill, holdings, and cash.
+Market hours are disabled only in the E2E stack to permit overnight execution.
+
+Three phases run in order: `auth` with normal ten-minute sessions, `journey`
+with one-minute server expiry, and `default-timeout` with ten-minute sessions.
+The latter checks the client inactivity boundary using the browser clock.
+Production session settings are unchanged.
+
+Jenkins runs the same command, fails on test/infrastructure errors, and publishes
+JUnit, failure screenshots/traces, HTML reports, and container logs under
+`e2e/artifacts/<compose-project>/`. Each invocation keeps separate reports and
+a `run.json` summary with completed phases and final status. Jenkins clears old
+artifacts before its run so previous results cannot be published as new evidence.
+Cleanup removes only that invocation's containers and volumes.
+Run `test:stack` twice to verify repeatability with fresh users and databases.
+`npm --prefix e2e test -- --list` lists cases without starting
+the stack; listing is not proof that real-service tests passed.
+
+See [NEXT-157 verification](docs/stories/NEXT-157.md) for the acceptance mapping
+and the current verification status.
+
+The separate `npm --prefix frontend run test:e2e` command covers NEXT-220 with
+mocked APIs. It remains useful regression coverage but does not satisfy NEXT-157.
+Both Angular Docker builds use the repository root as their build context.
+
 ### Frontend build validation
+
+Both apps use the shared Angular HTTP wrapper, JWT interceptor, and route guards
+for business APIs. See [NEXT-163 implementation and verification](docs/stories/NEXT-163.md)
+for request scope, invalid-session behavior, and quality-gate evidence.
 
 ```bat
 cd frontend
@@ -465,8 +564,8 @@ These sites document production Java APIs, including package overviews, paramete
 return values, exceptions, ownership checks and execution/retry contracts. The
 TypeScript and Python applications are outside Javadoc's scope.
 
-See the [documentation landing page](docs/javadoc/index.html) for snapshot provenance
-and any source issues that must be resolved before regeneration.
+The [documentation landing page](docs/javadoc/index.html) summarises what each site covers
+and how to browse the docs over HTTP.
 
 To regenerate all three snapshots from the repository root, use **JDK 21**, Maven
 and Python 3:

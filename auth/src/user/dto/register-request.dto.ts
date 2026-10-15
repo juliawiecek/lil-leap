@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   Matches,
   MaxLength,
@@ -19,7 +20,7 @@ import { CitizenshipStatus } from '../../onboarding/enums/citizenship-status.enu
 import { EmploymentStatus } from '../../onboarding/enums/employment-status.enum';
 import { NetWorthBracket } from '../../onboarding/enums/net-worth-bracket.enum';
 import { RiskProfile } from '../../onboarding/enums/risk-profile.enum';
-import { UserRole } from '../user-role.enum';
+import { REGISTRABLE_ROLES, UserRole } from '../user-role.enum';
 
 function notBlank(value?: string | null): boolean {
   return value != null && value.trim().length > 0;
@@ -142,9 +143,13 @@ class RegisterRequestBusinessRulesValidator implements ValidatorConstraintInterf
  * required. Wire format is snake_case, matching the existing frontend forms.
  */
 export class RegisterRequestDto {
-  @ApiProperty({ name: 'user_role', enum: UserRole, description: 'Decides which of the other fields are required.' })
+  @ApiProperty({
+    name: 'user_role',
+    enum: REGISTRABLE_ROLES,
+    description: 'Decides which of the other fields are required. Operations staff cannot self-register.',
+  })
   @Expose({ name: 'user_role' })
-  @IsEnum(UserRole)
+  @IsIn(REGISTRABLE_ROLES, { message: 'user_role must be TRADER or ANALYST' })
   userRole: UserRole;
 
   @ApiProperty({ name: 'email', example: 'ada@example.com', maxLength: 320 })

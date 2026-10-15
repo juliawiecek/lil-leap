@@ -7,13 +7,16 @@
 --   novice@nexttrade.local    TRADER, NOVICE    $10,000 cash, AAPL + MSFT, 3 fills, 1 rejected order
 --   advanced@nexttrade.local  TRADER, ADVANCED  $150,000 cash, 5 holdings, 6 fills, 1 rejected order
 --   analyst@nexttrade.local   ANALYST           insights (reporting) app
+--   ops@nexttrade.local       OPERATIONS        insights trade investigation (TS-03.5)
 --
 -- Runs automatically on an empty volume as /docker-entrypoint-initdb.d/05-test-users.sql.
--- Idempotent, so it can be re-run on an existing volume:
+-- Idempotent, so it can be re-run on an existing volume, which also resets the test logins:
 --   docker compose exec db psql -U main -d nexttrade -f /docker-entrypoint-initdb.d/05-test-users.sql
+--   native setup: psql -h localhost -U main -d nexttrade -f db/seeds/002_test_users.sql
 --
 -- Every row has a fixed id (derived ids use md5(...)::uuid) and every insert is
--- ON CONFLICT DO NOTHING, so a re-run changes nothing. Holdings are not inserted
+-- ON CONFLICT DO NOTHING, so a re-run changes nothing, except that the four users
+-- get the shared password back and any lockout cleared. Holdings are not inserted
 -- directly: the holding_movements trigger projects them. cash_balances is written
 -- from the cash_transactions ledger so the cache always matches it.
 -- ==========================================================
@@ -40,10 +43,12 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM users
-        WHERE LOWER(TRIM(email)) IN ('novice@nexttrade.local', 'advanced@nexttrade.local', 'analyst@nexttrade.local')
+        WHERE LOWER(TRIM(email)) IN ('novice@nexttrade.local', 'advanced@nexttrade.local', 'analyst@nexttrade.local',
+                                     'ops@nexttrade.local')
           AND user_id NOT IN ('a0000000-0000-4000-8000-000000000001',
                               'a0000000-0000-4000-8000-000000000002',
-                              'a0000000-0000-4000-8000-000000000003')
+                              'a0000000-0000-4000-8000-000000000003',
+                              'a0000000-0000-4000-8000-000000000004')
     ) THEN
         RAISE EXCEPTION 'A test user email is already registered with a different id; delete that user or use a fresh volume';
     END IF;
@@ -59,8 +64,14 @@ INSERT INTO users (user_id, email, password_hash, user_role) VALUES
     ('a0000000-0000-4000-8000-000000000002', 'advanced@nexttrade.local',
      '{bcrypt}$2a$10$YqpOCB4wU1lVu/6q5L2Wv.zTIOogHu2MfLdS4sKZHoehrduJUpRb6', 'TRADER'),
     ('a0000000-0000-4000-8000-000000000003', 'analyst@nexttrade.local',
-     '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'ANALYST')
-ON CONFLICT DO NOTHING;
+     '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'ANALYST'),
+    -- Same shared password as the others, so the analyst's hash is reused.
+    ('a0000000-0000-4000-8000-000000000004', 'ops@nexttrade.local',
+     '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'OPERATIONS')
+-- A re-run restores the shared password and clears any lockout, so a test login
+-- whose password was changed or that was locked out works again.
+ON CONFLICT (user_id) DO UPDATE
+    SET password_hash = EXCLUDED.password_hash, failed_login_attempts = 0, locked_until = NULL;
 
 -- ----------------------------------------------------------
 -- Trader identity and KYC (SSNs are synthetic, stored as digits like auth does)
@@ -85,7 +96,9 @@ INSERT INTO financial_profiles (financial_profile_id, user_id, kyc_status, accre
 ON CONFLICT DO NOTHING;
 
 INSERT INTO analyst_profiles (analyst_profile_id, user_id, employee_id, department) VALUES
-    ('a3000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003', 'EMP-DEV-0001', 'Insights')
+    ('a3000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003', 'EMP-DEV-0001', 'Insights'),
+    -- Staff identity for the operations user too: the table holds every internal employee's profile.
+    ('a3000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000004', 'EMP-DEV-0002', 'Trading Operations')
 ON CONFLICT DO NOTHING;
 
 -- ----------------------------------------------------------

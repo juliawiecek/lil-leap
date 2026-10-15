@@ -108,7 +108,7 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.neueda.leap.order.execution.OrderExecutor">Nested classes/interfaces inherited from interface&nbsp;com.neueda.leap.order.execution.<a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a></h2>
-<code><a href="OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></code></div>
+<code><a href="OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a>, <a href="OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -119,8 +119,9 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,com.neueda.leap.order.execution.quote.ExecutionQuoteService,long)" class="member-name-link">JdbcOrderExecutor</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,com.neueda.leap.order.execution.quote.ExecutionQuoteService,com.neueda.leap.order.execution.cash.CashMovementAdapter,long)" class="member-name-link">JdbcOrderExecutor</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
  <a href="quote/ExecutionQuoteService.html" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteService</a>&nbsp;quotes,
+ <a href="cash/CashMovementAdapter.html" title="interface in com.neueda.leap.order.execution.cash">CashMovementAdapter</a>&nbsp;cashMovements,
  long&nbsp;maxAttempts)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates the execution handler.</div>
@@ -139,7 +140,7 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#execute(java.util.UUID)" class="member-name-link">execute</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;orderId)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Executes the locked order within the caller's transaction.</div>
@@ -167,10 +168,11 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,com.neueda.leap.order.execution.quote.ExecutionQuoteService,long)">
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,com.neueda.leap.order.execution.quote.ExecutionQuoteService,com.neueda.leap.order.execution.cash.CashMovementAdapter,long)">
 <h3>JdbcOrderExecutor</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">JdbcOrderExecutor</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
  <a href="quote/ExecutionQuoteService.html" title="class in com.neueda.leap.order.execution.quote">ExecutionQuoteService</a>&nbsp;quotes,
+ <a href="cash/CashMovementAdapter.html" title="interface in com.neueda.leap.order.execution.cash">CashMovementAdapter</a>&nbsp;cashMovements,
  @Value("${orders.execution.max-price-attempts:10}")
  long&nbsp;maxAttempts)</span></div>
 <div class="block">Creates the execution handler.</div>
@@ -178,6 +180,7 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <dt>Parameters:</dt>
 <dd><code>jdbc</code> - transactional database access</dd>
 <dd><code>quotes</code> - latest quote and freshness contract</dd>
+<dd><code>cashMovements</code> - settlement-only cash movements, joined to this transaction</dd>
 <dd><code>maxAttempts</code> - maximum attempts for out-of-tolerance prices</dd>
 </dl>
 </section>
@@ -202,18 +205,18 @@ implements <a href="OrderExecutor.html" title="interface in com.neueda.leap.orde
 <section class="detail" id="execute(java.util.UUID)">
 <h3>execute</h3>
 <div class="member-signature"><span class="annotations">@Transactional(propagation=MANDATORY)
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></span>&nbsp;<span class="element-name">execute</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;orderId)</span></div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></span>&nbsp;<span class="element-name">execute</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;orderId)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="OrderExecutor.html#execute(java.util.UUID)">OrderExecutor</a></code></span></div>
 <div class="block">Executes the locked order within the caller's transaction. FILLED requires a persisted fill
  and settlement effects; REJECTED requires a terminal status and audit reason. PENDING causes
- the worker to roll back trade effects and defer the order.</div>
+ the worker to roll back trade effects and requeue the order with the result's reason.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="OrderExecutor.html#execute(java.util.UUID)">execute</a></code>&nbsp;in interface&nbsp;<code><a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a></code></dd>
 <dt>Parameters:</dt>
 <dd><code>orderId</code> - persistent order identifier</dd>
 <dt>Returns:</dt>
-<dd>execution outcome; never null</dd>
+<dd>execution result; never null</dd>
 </dl>
 </section>
 </li>

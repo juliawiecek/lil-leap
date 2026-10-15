@@ -105,7 +105,6 @@ test('a fresh tab has no recoverable session', async ({ page, context }, info) =
 });
 
 test('a protected API 401 clears the session without replaying submissions', async ({ page }, info) => {
-  test.skip(info.project.metadata.role !== 'TRADER', 'Insights uses sample data; its HTTP interceptor is covered by unit tests.');
   const { key } = await identity(page, info); const methods = [];
   await page.route('**/api/**', route => { methods.push(route.request().method()); return route.fulfill({ status: 401, json: { error: 'UNAUTHORIZED' } }); });
   await page.goto('/orders');

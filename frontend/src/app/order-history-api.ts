@@ -1,3 +1,6 @@
+import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import type { ApiHttpClient } from '@lilleap/session-core/angular';
 /**
  * Client for the signed-in user's order history (NEXT-117: GET /clients/{id}/orders).
  * The user id comes from the access token's subject, so callers never pass one.
@@ -36,21 +39,20 @@ export interface OrderHistoryFilters {
 /** Anything that can supply the current access token, such as AuthService. */
 export interface AccessTokenSource {
   readonly accessToken: string | null;
-  unauthorized?(token: string | null): void;
 }
 
 export class OrderHistoryClient {
   readonly #tokens: AccessTokenSource;
-  readonly #fetch: typeof fetch;
+  readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
 
   constructor(
     tokens: AccessTokenSource,
-    fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+    http: ApiHttpClient,
     baseUrl = '/api/v1',
   ) {
     this.#tokens = tokens;
-    this.#fetch = fetchImpl;
+    this.#http = http;
     this.#baseUrl = baseUrl;
   }
 
@@ -70,21 +72,16 @@ export class OrderHistoryClient {
       }
     }
     const query = params.size ? `?${params}` : '';
-    let response: Response;
+    let rows: OrderHistoryRow[];
     try {
-      response = await this.#fetch(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {
+      rows = await firstValueFrom(this.#http.get<OrderHistoryRow[]>(`${this.#baseUrl}/clients/${encodeURIComponent(userId)}/orders${query}`));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        const message = typeof error.error?.message === 'string' ? error.error.message : 'Could not load your orders. Please try again.';
+        throw new Error(message);
+      }
       throw new Error('Could not reach the server. Check your connection and try again.');
     }
-    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-      const message = typeof body?.message === 'string' ? body.message : null;
-      throw new Error(message ?? 'Could not load your orders. Please try again.');
-    }
-    const rows = (await response.json()) as OrderHistoryRow[];
     return rows.map((row) => ({
       ...row,
       quantity: Number(row.quantity),

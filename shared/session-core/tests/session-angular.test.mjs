@@ -28,7 +28,7 @@ test('public package entrypoints expose the shared contracts', () => {
   assert.equal(angularApi.PageState, PageState);
 });
 
-function coordinator(t, role = 'TRADER', restored = true) {
+function coordinator(t, role = 'TRADER', restored = true, allowed = 'TRADER') {
   let invalidate;
   const navigations = [];
   const router = {
@@ -61,7 +61,7 @@ function coordinator(t, role = 'TRADER', restored = true) {
       invalidate?.();
     },
   };
-  const session = new SessionCoordinator(auth, router, 'TRADER', returnUrl);
+  const session = new SessionCoordinator(auth, router, allowed, returnUrl);
   t.after(() => session.destroy());
   return { session, auth, router, navigations };
 }
@@ -85,6 +85,28 @@ test('startup shares restoration, preserves activity, and input/visibility event
 test('wrong-role and failed restores never open a protected workspace', async (t) => {
   assert.equal(await coordinator(t, 'ANALYST').session.initialize(), false);
   assert.equal(await coordinator(t, 'TRADER', false).session.initialize(), false);
+});
+
+test('authentication requires a current token, the app role, and finite future expiry', t => {
+  const { session, auth } = coordinator(t);
+  assert.equal(session.authenticated, true);
+  for (const expiry of [null, Number.NaN, Number.POSITIVE_INFINITY, Date.now() - 1, Date.now()]) {
+    auth.accessTokenExpiresAt = expiry;
+    assert.equal(session.authenticated, false);
+  }
+  auth.accessTokenExpiresAt = Date.now() + 60000;
+  auth.accessToken = null;
+  assert.equal(session.authenticated, false);
+  auth.accessToken = 'valid';
+  auth.userRole = 'ANALYST';
+  assert.equal(session.authenticated, false);
+});
+
+test('an app can admit several roles, such as Insights for analysts and operations staff', async (t) => {
+  const staff = ['ANALYST', 'OPERATIONS'];
+  assert.equal(await coordinator(t, 'OPERATIONS', true, staff).session.initialize(), true);
+  assert.equal(await coordinator(t, 'ANALYST', true, staff).session.initialize(), true);
+  assert.equal(await coordinator(t, 'TRADER', true, staff).session.initialize(), false);
 });
 
 test('logout and idle expiry clear the coordinator and preserve a safe destination', async (t) => {
@@ -127,6 +149,7 @@ test('guards await restoration, check idle expiry, and restrict return URLs', as
   });
   const guest = createGuestGuard(Session, returnUrl);
   assert.equal(await runInInjectionContext(injector, () => guest(null, { url: '/login' })), true);
+  session.keeper.check = async () => { /* The replacement session remains current. */ };
   session.authenticated = true;
   assert.equal(
     await runInInjectionContext(injector, () =>

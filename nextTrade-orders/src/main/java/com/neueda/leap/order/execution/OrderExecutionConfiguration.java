@@ -1,5 +1,6 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher;
 import com.neueda.leap.order.market.MarketHours;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +32,12 @@ public class OrderExecutionConfiguration {
     @Bean
     OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
             OrderExecutor executor,
+            OrderLifecycleEventPublisher eventPublisher,
             @Value("${orders.execution.retry-seconds:30}") int retrySeconds,
             @Value("${orders.execution.max-failure-attempts:10}") long maxAttempts,
             MarketHours marketHours, Clock clock) {
-        return new OrderExecutionWorker(jdbc, manager, executor, retrySeconds, maxAttempts, marketHours, clock);
+        return new OrderExecutionWorker(jdbc, manager, executor, eventPublisher, retrySeconds, maxAttempts,
+                marketHours, clock);
     }
 
     @Bean

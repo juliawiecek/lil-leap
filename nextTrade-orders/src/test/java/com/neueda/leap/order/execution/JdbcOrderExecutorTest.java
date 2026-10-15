@@ -31,7 +31,7 @@ class JdbcOrderExecutorTest {
     private boolean enabled = true, missingOrder, missingAccount, missingCash, missingPosition;
     private Boolean tradable = true, projection = true;
     private long attempts = 1, held = 10;
-    private BigDecimal buffer, cash = new BigDecimal("1000"), minimum = BigDecimal.ZERO;
+    private BigDecimal buffer, reference, cash = new BigDecimal("1000"), minimum = BigDecimal.ZERO;
     private final ExecutionQuoteService quotes = mock(ExecutionQuoteService.class);
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class, invocation -> {
         Object[] args = invocation.getArguments();
@@ -53,6 +53,7 @@ class JdbcOrderExecutorTest {
                 when(rs.getLong(4)).thenReturn(2L);
                 when(rs.getLong(5)).thenReturn(attempts);
                 when(rs.getBigDecimal(6)).thenReturn(buffer);
+                when(rs.getBigDecimal(7)).thenReturn(reference);
             } else if (sql.contains("FROM accounts")) {
                 if (missingAccount) return null;
                 when(rs.getObject(1)).thenReturn(accountId);
@@ -162,6 +163,55 @@ class JdbcOrderExecutorTest {
         assertThat(write("PRICE_DECISION")).contains(orderId);
         attempts = 3;
         rejected("PRICE_OUT_OF_TOLERANCE");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "BUY,101.4,101.5,'within the 2% limit'",
+            "BUY,94.9,95,'a favourable move'",
+            "SELL,98.5,98.6,'within the 2% limit'",
+            "SELL,105,105.1,'a favourable move'"})
+    void protectedOrderFillsWithinToleranceOrOnAFavourableMove(String direction, String bid, String ask, String why) {
+        side = direction;
+        reference = new BigDecimal("100");
+        buffer = new BigDecimal("2");
+        quote(bid, ask);
+        assertThat(executor.execute(orderId).outcome()).as(why).isEqualTo(FILLED);
+        BigDecimal limit = new BigDecimal(direction.equals("BUY") ? "102.0000" : "98.0000");
+        BigDecimal actual = new BigDecimal(direction.equals("BUY") ? ask : bid);
+        assertThat(write("PRICE_DECISION")).contains(reference, buffer, limit, actual, orderId);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "BUY,103,103.1,'The price rose 3.1% before your order filled, more than your 2% limit. Nothing was charged.'",
+            "SELL,97.9,98,'The price fell 2.1% before your order filled, more than your 2% limit. Nothing was charged.'"})
+    void protectedOrderMovedPastToleranceIsRejectedWithTheReason(String direction, String bid, String ask, String message) {
+        side = direction;
+        reference = new BigDecimal("100");
+        buffer = new BigDecimal("2.00");
+        quote(bid, ask);
+        rejected("PRICE_MOVED");
+        assertThat(write("INSERT INTO order_status_history").get(4)).isEqualTo(message);
+        assertThat(write("PRICE_DECISION")).contains(reference, buffer);
+    }
+
+    @Test
+    void protectedOrderUsesTheAccountToleranceWhenTheOrderHasNone() {
+        reference = new BigDecimal("100");
+        quote("101.4", "101.5");
+        rejected("PRICE_MOVED");
+        assertThat(write("INSERT INTO order_status_history").get(4).toString()).contains("rose 1.5%", "your 1% limit");
+    }
+
+    @Test
+    void protectionLimitAndMessageRoundSensibly() {
+        assertThat(JdbcOrderExecutor.protectionLimit(new BigDecimal("227.40"), new BigDecimal("2"), true))
+                .isEqualByComparingTo("231.948");
+        assertThat(JdbcOrderExecutor.protectionLimit(new BigDecimal("227.40"), new BigDecimal("2"), false))
+                .isEqualByComparingTo("222.852");
+        assertThat(JdbcOrderExecutor.priceMovedMessage(new BigDecimal("200"), new BigDecimal("190"), new BigDecimal("2.50")))
+                .isEqualTo("The price fell 5.0% before your order filled, more than your 2.5% limit. Nothing was charged.");
     }
 
     @ParameterizedTest

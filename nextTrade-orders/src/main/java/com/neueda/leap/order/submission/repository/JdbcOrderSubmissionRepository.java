@@ -4,6 +4,7 @@ import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -65,12 +66,13 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
     }
 
     @Override
-    public Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol) {
+    public Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol,
+            BigDecimal referencePrice) {
         return jdbcTemplate.query("""
                 WITH inserted AS (
                 INSERT INTO orders(account_id, instrument_id, client_reference, side,
-                                   quantity, order_type, status, buffer_percent)
-                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?)
+                                   quantity, order_type, status, buffer_percent, reference_price)
+                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?)
                 ON CONFLICT (account_id, client_reference) DO NOTHING
                 RETURNING order_id, account_id, instrument_id, client_reference, side,
                           quantity, order_type, status, submitted_at, buffer_percent
@@ -86,7 +88,7 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
                 rs.getLong("quantity"), rs.getString("order_type"), rs.getString("status"),
                 rs.getTimestamp("submitted_at").toInstant(), rs.getBigDecimal("buffer_percent")),
                 request.accountId(), instrumentId, request.clientReference(), request.normalizedSide(),
-                request.quantity(), request.normalizedOrderType(), request.bufferPercent())
+                request.quantity(), request.normalizedOrderType(), request.bufferPercent(), referencePrice)
                 .stream().findFirst();
     }
 

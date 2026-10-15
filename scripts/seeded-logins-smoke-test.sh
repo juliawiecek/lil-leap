@@ -2,7 +2,7 @@
 # TS-DB-04: the seeded test logins work on a fresh stack.
 #
 # Starts db, auth, holdings and quote-service on an empty volume, then checks that:
-#   - novice@, advanced@ and analyst@nexttrade.local log in with the shared test password (200 + token)
+#   - novice@, advanced@, analyst@ and ops@nexttrade.local log in with the shared test password (200 + token)
 #   - each token carries the expected role and trader tier
 #   - the novice and advanced portfolios return 200 with $10,000 and $150,000 cash
 #   - a wrong password is still rejected (401)
@@ -56,7 +56,8 @@ cleanup() {
   if [[ "${KEEP:-0}" == "1" ]]; then
     echo "Smoke stack left running: ${DC[*]} down -v"
   else
-    "${DC[@]}" down -v --remove-orphans >/dev/null 2>&1
+    # The images are built for this project only; remove them with it.
+    "${DC[@]}" down -v --remove-orphans --rmi local >/dev/null 2>&1
   fi
 }
 trap cleanup EXIT
@@ -112,7 +113,8 @@ if (( RESET_PASSWORDS )); then
 UPDATE users SET password_hash = '{bcrypt}' || crypt(:'pw', gen_salt('bf', 10))
 WHERE user_id IN ('a0000000-0000-4000-8000-000000000001',
                   'a0000000-0000-4000-8000-000000000002',
-                  'a0000000-0000-4000-8000-000000000003');
+                  'a0000000-0000-4000-8000-000000000003',
+                  'a0000000-0000-4000-8000-000000000004');
 SQL
 fi
 
@@ -120,7 +122,7 @@ novice_login_ok() { [[ "$(login novice@nexttrade.local)" == 200 ]]; }
 wait_until "auth" novice_login_ok || exit 1
 
 echo "Logins"
-for user in novice:TRADER:NOVICE advanced:TRADER:ADVANCED analyst:ANALYST:; do
+for user in novice:TRADER:NOVICE advanced:TRADER:ADVANCED analyst:ANALYST: ops:OPERATIONS:; do
   IFS=: read -r name role tier <<< "$user"
   check "$name@nexttrade.local logs in" "$(login "$name@nexttrade.local")" 200
   token="$(json_field accessToken)"

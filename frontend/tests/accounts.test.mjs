@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { of } from 'rxjs';
 import { ElementRef } from '@angular/core';
 import { component } from './component-helper.mjs';
+import { apiHttp } from './http-helper.mjs';
 const { AccountsClient, accountLabel, canTrade, pickAccount } = await import('../src/app/accounts-api.ts');
 const { AccountsService, SELECTED_ACCOUNT_KEY } = await import('../src/app/accounts.service.ts');
 const { AccountSwitcher } = await import('../src/app/account-switcher.ts');
@@ -51,37 +52,38 @@ function accountsWith(t, client) {
   return service;
 }
 
-test('the accounts client sends the bearer token and the PS-05 request shapes', async () => {
+test('the accounts client uses the shared transport and the PS-05 request shapes', async () => {
   const { requests, fetchImpl } = server(({ method, url }) => {
     if (method === 'GET') {
       return [200, [brokerage]];
     }
     return url.endsWith('/transfers') ? [200, { amount: 25 }] : [201, { accountId: 'new' }];
   });
-  const client = new AccountsClient({ accessToken: 'tok' }, fetchImpl);
+  const client = new AccountsClient({ accessToken: 'tok' }, apiHttp(fetchImpl));
   assert.deepEqual(await client.list(), [brokerage]);
   assert.deepEqual(await client.open('  Long-term investing '), { accountId: 'new' });
   assert.deepEqual(await client.transfer('a', 'b', 25), { amount: 25 });
   assert.deepEqual(requests, [
-    { url: '/api/v1/accounts', method: 'GET', auth: 'Bearer tok', body: undefined },
-    { url: '/api/v1/accounts', method: 'POST', auth: 'Bearer tok', body: { nickname: 'Long-term investing' } },
-    { url: '/api/v1/accounts/transfers', method: 'POST', auth: 'Bearer tok', body: { fromAccountId: 'a', toAccountId: 'b', amount: 25 } },
+    // The interceptor, not the client, attaches the bearer token (see http-auth.test.mjs).
+    { url: '/api/v1/accounts', method: 'GET', auth: undefined, body: undefined },
+    { url: '/api/v1/accounts', method: 'POST', auth: undefined, body: { nickname: 'Long-term investing' } },
+    { url: '/api/v1/accounts/transfers', method: 'POST', auth: undefined, body: { fromAccountId: 'a', toAccountId: 'b', amount: 25 } },
   ]);
 });
 
-test('server rejections become fixed, readable messages and a 401 reports the token', async () => {
+test('server rejections become fixed, readable messages and a 401 is left to the interceptor', async () => {
   const unauthorized = [];
   const tokens = { accessToken: 'tok', unauthorized: (token) => unauthorized.push(token) };
   const answers = [[409, { error: 'INSUFFICIENT_FUNDS', message: 'raw server text' }], [403, { error: 'ACCOUNT_ACCESS_DENIED' }],
     [500, { error: 'SOMETHING_NEW' }], [401, {}]];
-  const client = new AccountsClient(tokens, server(() => answers.shift()).fetchImpl);
+  const client = new AccountsClient(tokens, apiHttp(server(() => answers.shift()).fetchImpl));
   await assert.rejects(client.transfer('a', 'b', 5), { message: /more than the available cash/ });
   await assert.rejects(client.transfer('a', 'b', 5), { message: 'You can only move cash between your own accounts.' });
   await assert.rejects(client.list(), { message: 'Something went wrong. Please try again.' });
   await assert.rejects(client.list(), { message: 'Something went wrong. Please try again.' });
-  assert.deepEqual(unauthorized, ['tok']);
-  await assert.rejects(new AccountsClient({ accessToken: null }, async () => assert.fail('no request')).list(), /Sign in/);
-  await assert.rejects(new AccountsClient({ accessToken: 'tok' }, async () => { throw new TypeError('offline'); }).list(),
+  assert.deepEqual(unauthorized, []); // Only the interceptor invalidates sessions.
+  await assert.rejects(new AccountsClient({ accessToken: null }, apiHttp(async () => assert.fail('no request'))).list(), /Sign in/);
+  await assert.rejects(new AccountsClient({ accessToken: 'tok' }, apiHttp(async () => { throw new TypeError('offline'); })).list(),
     /Could not reach the server/);
 });
 
@@ -283,9 +285,9 @@ test('a single account cannot transfer, and the dialog closes from its dimmed ba
 test('portfolio and order history requests carry the selected account', async () => {
   const urls = [];
   const fetchImpl = async (url) => { urls.push(url); return new Response('[]', { status: 200 }); };
-  await new PortfolioClient({ accessToken: 'tok' }, fetchImpl).load('acct 1');
+  await new PortfolioClient({ accessToken: 'tok' }, apiHttp(fetchImpl)).load('acct 1');
   const token = `x.${Buffer.from(JSON.stringify({ sub: 'user-1' })).toString('base64url')}.y`;
-  await new OrderHistoryClient({ accessToken: token }, fetchImpl).list({ status: 'FILLED', accountId: 'acct-2' });
+  await new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl)).list({ status: 'FILLED', accountId: 'acct-2' });
   assert.deepEqual(urls.sort(), [
     '/api/v1/cash?accountId=acct%201',
     '/api/v1/clients/user-1/orders?status=FILLED&accountId=acct-2',
