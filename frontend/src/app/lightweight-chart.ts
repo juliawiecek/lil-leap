@@ -1,3 +1,7 @@
+/*
+ * TradingView Lightweight Charts™
+ * Copyright (c) 2025 TradingView, Inc. https://www.tradingview.com/
+ */
 import type { Candle, FillMarker, Point } from './chart-data';
 
 /** An extra line drawn over the main series, such as a moving average. */
@@ -72,7 +76,8 @@ const CHART_OPTIONS = (lib: ChartLibrary) => ({
     background: { type: lib.ColorType.Solid, color: 'transparent' },
     textColor: '#aebaca',
     fontSize: 11,
-    attributionLogo: true,
+    // The licence's link to tradingview.com is in the sign-in footer (app.html), so the logo is off.
+    attributionLogo: false,
   },
   grid: { vertLines: { color: 'rgba(120, 140, 155, 0.10)' }, horzLines: { color: 'rgba(120, 140, 155, 0.10)' } },
   crosshair: { mode: lib.CrosshairMode.Normal },
