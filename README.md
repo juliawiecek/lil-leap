@@ -6,13 +6,13 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 
 ## Team
 
-| Team Member     | Role                              |
+| Team Member     | Role                                |
 | ---------------- | ---------------------------------- |
-| Tanush Kaushik   | Technical Lead, Data Engineer      |
-| Julia Wiecek     | Developer, Spring Boot (Scrum Master) |
+| Tanush Kaushik   | Developer, Data Engineer           |
+| Julia Wiecek     | Developer, Spring Boot             |
 | Kevin Marin      | Developer, Spring Boot             |
-| Lalima Karri     | Developer, Angular                 |
-| Ilhan Gelle      | Developer, Security                |
+| Lalima Karri     | Developer, Angular (Scrum Master)  |
+| Ilhan Gelle      | Developer, Security (Tech Lead)    |
 
 ## Quick Start
 
