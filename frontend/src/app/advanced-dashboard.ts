@@ -22,15 +22,11 @@ import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
-import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
+import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
+import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
+import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
-
-const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
-  CONSERVATIVE: 7,
-  MODERATE: 5,
-  AGGRESSIVE: 3,
-};
 
 interface Quote {
   instrumentId: string;
@@ -78,7 +74,7 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -177,7 +173,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       quantity: Number(this.quantity()) || 0,
       symbol: this.selected().symbol,
       price: this.selected().price,
-      thresholdDollars: this.executionThresholdDollars(),
+      tolerancePercent: this.tolerance(),
       opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.currentTime()) : '',
     });
   });
@@ -248,7 +244,25 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly modal = signal('review');
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
-  readonly executionThresholdDollars = signal(5);
+  /** Price protection (PS-12): the saved default and per-stock overrides. */
+  readonly protection = inject(PriceProtectionStore, { optional: true }) ?? new PriceProtectionStore();
+  /** A one-off percentage for the order being placed; null uses the saved setting for the stock. */
+  readonly orderTolerance = signal<number | null>(null);
+  readonly editingTolerance = signal(false);
+  readonly tolerance = computed(() => this.orderTolerance() ?? this.protection.toleranceFor(this.selected().symbol));
+  /** "Fills at up to $231.95 (2% above $227.40)" for the ticket's stock. */
+  readonly protectionNote = computed(() => {
+    const { price } = this.selected();
+    return price > 0 ? protectionText(price, this.tolerance(), this.side() === 'Sell' ? 'Sell' : 'Buy') : '';
+  });
+  readonly listedSymbols = computed(() => this.quotes().map((q) => q.symbol));
+  /** Sets price protection for this order only; an out-of-range value leaves it unchanged. */
+  setOrderTolerance(value: unknown): void {
+    const percent = validProtection(value);
+    if (percent !== null) {
+      this.orderTolerance.set(percent);
+    }
+  }
   readonly cost = computed(
     () =>
       Number(this.quantity()) *
@@ -326,6 +340,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   choose(quote: Quote): void {
     this.symbol.set(quote.symbol);
+    this.orderTolerance.set(null);
+    this.editingTolerance.set(false);
     this.setTicketQuote(quote);
     this.query.set('');
     this.message.set('');
@@ -366,7 +382,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     let reason = rejectionReason(null);
     try {
-      reason = rejectionReason((await this.orderStatusClient.status(order.id)).reasonCode);
+      reason = rejectionMessage(await this.orderStatusClient.status(order.id));
     } catch {
       // The generic reason still tells the client where to look.
     }
@@ -489,8 +505,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: count,
         orderType: 'MARKET',
         clientReference: this.clientReference(),
-        bufferPercent: this.bufferPercentForPrice(quote.price),
+        bufferPercent: this.tolerance(),
       });
+      this.orderTolerance.set(null);
+      this.editingTolerance.set(false);
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
       this.message.set(
@@ -508,17 +526,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
 
-  private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
-    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
-    return Math.round(percent * 100) / 100;
-  }
-
-  private defaultThresholdDollars(): number {
-    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) { return byRisk; }
-    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
-  }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
     try {
@@ -675,7 +682,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.#start();
   }

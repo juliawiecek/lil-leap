@@ -18,7 +18,9 @@ import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './
 import { AuthService } from './auth.service';
 import { interval, Subject, startWith, takeUntil } from 'rxjs';
 import { closedMarketWarning, localOpeningTime, marketStatusText } from './market-status-api';
-import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
+import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
+import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
+import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
@@ -26,12 +28,6 @@ import { MarketTicker } from './market-ticker';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
-
-const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
-  CONSERVATIVE: 7,
-  MODERATE: 5,
-  AGGRESSIVE: 3,
-};
 
 interface Holding {
   symbol: string;
@@ -57,7 +53,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, NoviceLearn, OrderHistory, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -88,7 +84,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       quantity: Number(this.quantity()) || 0,
       symbol: this.tradeQuote().symbol,
       price: this.tradeQuote().price,
-      thresholdDollars: this.executionThresholdDollars(),
+      tolerancePercent: this.tolerance(),
       opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.marketClock()) : '',
     });
   });
@@ -156,7 +152,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #started = false;
   readonly instruments = signal<Instrument[]>([]);
   readonly tradeTotal = computed(() => Number(this.quantity()) * this.tradeQuote().price);
-  readonly executionThresholdDollars = signal(5);
+  /** Price protection (PS-12): the saved default and per-stock overrides. */
+  readonly protection = inject(PriceProtectionStore, { optional: true }) ?? new PriceProtectionStore();
+  /** A one-off percentage for the order being placed; null uses the saved setting for the stock. */
+  readonly orderTolerance = signal<number | null>(null);
+  readonly editingTolerance = signal(false);
+  readonly tolerance = computed(() => this.orderTolerance() ?? this.protection.toleranceFor(this.tradeQuote().symbol));
+  /** "Fills at up to $231.95 (2% above $227.40)" for the open ticket. */
+  readonly protectionNote = computed(() => {
+    const { price } = this.tradeQuote();
+    return price > 0 ? protectionText(price, this.tolerance(), this.side() === 'Sell' ? 'Sell' : 'Buy') : '';
+  });
+  readonly listedSymbols = computed(() => this.quotes().map((q) => q.symbol));
   readonly todayReturn = computed(() => this.holdings().reduce((sum, h) => sum + h.today, 0));
   readonly todayReturnPercent = computed(() => {
     const invested = this.invested();
@@ -250,7 +257,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.reviewing.set(false);
     this.tradeMessage.set('');
     this.query.set('');
+    this.orderTolerance.set(null);
+    this.editingTolerance.set(false);
     this.openModal('trade');
+  }
+
+  /** Sets price protection for this order only; an out-of-range value leaves it unchanged. */
+  setOrderTolerance(value: unknown): void {
+    const percent = validProtection(value);
+    if (percent !== null) {
+      this.orderTolerance.set(percent);
+      this.reviewing.set(false);
+    }
   }
 
   private resolveTradeStartSymbol(side: string, symbol?: string): string | undefined {
@@ -335,9 +353,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         quantity: Number(this.quantity()),
         orderType: 'MARKET',
         clientReference: this.clientReference(),
-        bufferPercent: this.bufferPercentForPrice(quote.price),
+        bufferPercent: this.tolerance(),
       });
       this.reviewing.set(false);
+      this.orderTolerance.set(null);
+      this.editingTolerance.set(false);
       this.quantity.set('');
       this.tradeMessage.set('Order sent. Waiting for it to fill…');
       void this.trackOrder(response.orderId);
@@ -350,17 +370,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
   }
 
-  private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
-    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
-    return Math.round(percent * 100) / 100;
-  }
-
-  private defaultThresholdDollars(): number {
-    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) { return byRisk; }
-    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
-  }
   /** Re-reads the order every few seconds and describes its progress until it fills or is rejected. */
   async trackOrder(orderId: string, startedAt = Date.now()): Promise<void> {
     clearTimeout(this.#trackTimer);
@@ -496,7 +505,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
-    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     // Keeps the market countdown current; prices and status come from the shared feed.
     interval(5000)
       .pipe(startWith(0), takeUntil(this.destroy$))
@@ -523,7 +531,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** The plain-English reason an order was rejected; a generic one if it cannot be read. */
   async #rejectionReason(orderId: string): Promise<string> {
     try {
-      return rejectionReason((await this.orderStatusClient.status(orderId)).reasonCode);
+      return rejectionMessage(await this.orderStatusClient.status(orderId));
     } catch {
       return rejectionReason(null);
     }

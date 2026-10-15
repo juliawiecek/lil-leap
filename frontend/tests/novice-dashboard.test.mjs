@@ -169,8 +169,8 @@ test('confirming a buy sends a market order and leaves balances to the backend',
   desk.openTrade('Buy', 'AAPL'); desk.quantity.set('2'); await desk.confirmTrade();
   assert.equal(submitted.length, 1);
   const { clientReference, ...order } = submitted[0];
-  // A novice's default $6 execution threshold on a $176.56 quote is a 3.4% price buffer.
-  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET', bufferPercent: 3.4 });
+  // With nothing saved, price protection is the 2% default.
+  assert.deepEqual(order, { accountId: 'acct-1', instrumentId: 'aapl-id', side: 'BUY', quantity: 2, orderType: 'MARKET', bufferPercent: 2 });
   assert.ok(clientReference);
   assert.deepEqual({ cash: desk.buyingPower(), invested: desk.invested(), holdings: desk.holdings() }, before);
   assert.equal(desk.quantity(), '');
@@ -230,9 +230,10 @@ test('the ticket follows live prices, flags a stale quote, and reviews in one li
   assert.equal(desk.tradePriceDelayed(), false);
   feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-15T20:00:00Z' });
   desk.marketClock.set(new Date('2026-10-15T09:00:00Z'));
-  desk.executionThresholdDollars.set(4.55);
+  desk.orderTolerance.set(2);
   assert.match(desk.closedWarning(), /^The market is closed\. Your order will fill when it opens at /);
-  assert.match(desk.reviewSummary(), /^Buy 10 AAPL · about \$2,274\.00 · fills at up to \$2,319\.50 · market closed, fills at the open/);
+  assert.match(desk.reviewSummary(), /^Buy 10 AAPL · about \$2,274\.00 · fills at up to \$2,319\.48 · market closed, fills at the open/);
+  assert.equal(desk.protectionNote(), 'Fills at up to $231.95 (2% above $227.40)');
   feed.push([{ symbol: 'AAPL', name: 'Apple Inc.', price: 227.4, quotedAt: new Date(Date.now() - 61000).toISOString() }]);
   assert.equal(desk.tradePriceDelayed(), true);
   desk.viewOrders();
