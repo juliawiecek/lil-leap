@@ -83,6 +83,8 @@ try {
       const diagnostics = await run([...compose, 'logs', '--no-color'], true);
       await writeFile(`${artifactDir}/containers.log`, diagnostics.output);
       await handBack(`${artifactDir}/containers.log`);
+      // Show why in the build log too, without downloading the archived artifacts.
+      if (failed) console.error(['Last container log lines:', ...diagnostics.output.split('\n').slice(-150)].join('\n'));
       if (diagnostics.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Could not collect container logs: ${error.message}`); }
     try {
