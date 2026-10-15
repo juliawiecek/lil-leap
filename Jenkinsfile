@@ -1,3 +1,9 @@
+// Pull requests and feature branches get the quick gate; main runs every check.
+def onMain() {
+  def mainRefs = ['main', 'origin/main', 'refs/heads/main']
+  return mainRefs.contains(env.BRANCH_NAME ?: '') || mainRefs.contains(env.GIT_BRANCH ?: '')
+}
+
 pipeline {
   agent any
 
@@ -39,6 +45,8 @@ pipeline {
           done
           # Reports written as root by an older e2e runner, which the Jenkins user cannot delete.
           docker run --rm -v "$WORKSPACE/e2e:/e2e" node:24-alpine rm -rf /e2e/artifacts
+          # npm downloads are kept between builds so each npm ci does not fetch everything again.
+          mkdir -p "$HOME/.cache/nexttrade-npm"
           # SonarQube on this host stops indexing analyses when the disk fills.
           free_gb=$(df --output=avail -BG / | tail -1 | tr -dc '0-9')
           if [ "$free_gb" -lt 15 ]; then
@@ -100,64 +108,186 @@ pipeline {
       }
     }
 
-    stage('Unit Tests - nextTrade-orders') {
-      steps {
-        dir('nextTrade-orders') {
-          sh 'mvn -B -ntp clean verify'
+    stage('Tests') {
+      // The four groups share nothing, so they run side by side. Maven builds stay in one
+      // group because they share ~/.m2, and both frontends need the built session package.
+      parallel {
+        stage('Java services') {
+          stages {
+            stage('Unit Tests - nextTrade-orders') {
+              steps {
+                dir('nextTrade-orders') {
+                  sh 'mvn -B -ntp clean verify'
+                }
+              }
+            }
+
+            stage('Unit Tests - nextTrade-holdings') {
+              steps {
+                dir('nextTrade-holdings') {
+                  sh 'mvn -B -ntp clean verify'
+                }
+              }
+            }
+
+            stage('PostgreSQL Settlement and Holdings') {
+              steps {
+                dir('nextTrade-orders') {
+                  sh '''
+                    set -eu
+                    test_container="nexttrade-orders-tests-${BUILD_NUMBER}"
+                    trap 'docker rm -f "$test_container" >/dev/null 2>&1 || true' EXIT
+                    docker run -d --name "$test_container" \
+                      -e POSTGRES_USER=orders_test -e POSTGRES_PASSWORD=ci-test-only \
+                      -e POSTGRES_DB=orders_test -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
+                    ready=false
+                    for attempt in $(seq 1 30); do
+                      if docker exec "$test_container" pg_isready -h 127.0.0.1 -U orders_test >/dev/null 2>&1; then
+                        ready=true
+                        break
+                      fi
+                      sleep 1
+                    done
+                    [ "$ready" = true ]
+                    test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
+                    export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
+                    export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
+                    mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest,OrderIdempotencyPostgresTest test
+                    mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
+                      -Dtest=HoldingsSettlementPostgresTest,AccountTransferPostgresTest,InstrumentSearchRepositoryTest \
+                      -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
+                      -Dtest.holdings.postgres.user=orders_test \
+                      -Dtest.holdings.postgres.password=ci-test-only test
+                  '''
+                }
+              }
+            }
+
+            stage('Unit Tests - insights-service') {
+              steps {
+                dir('insights') {
+                  sh 'mvn -B -ntp clean verify'
+                }
+              }
+            }
+          }
+        }
+
+        stage('Unit Tests - auth (NestJS)') {
+          // The numeric Jenkins UID has no container home; use a writable npm cache.
+          steps {
+            sh '''
+              docker run --rm \
+                --user "$(id -u):$(id -g)" \
+                -e npm_config_cache=/tmp/npm-cache \
+                -v "$HOME/.cache/nexttrade-npm:/tmp/npm-cache" \
+                -v "$WORKSPACE/auth:/app" \
+                -w /app \
+                node:24-alpine \
+                sh -ec 'npm ci --no-audit --no-fund --prefer-offline
+                npm run test:cov'
+            '''
+          }
+        }
+
+        stage('Frontends') {
+          stages {
+            stage('Build and Test Shared Session Package') {
+              steps {
+                sh '''
+                  docker run --rm --user "$(id -u):$(id -g)" \
+                    -e npm_config_cache=/tmp/npm-cache \
+                    -v "$HOME/.cache/nexttrade-npm:/tmp/npm-cache" \
+                    -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE/shared/session-core" \
+                    node:24-alpine sh -ec 'npm ci --no-audit --no-fund --prefer-offline
+                    npm run build
+                    npm run test:coverage'
+                '''
+              }
+            }
+
+            stage('Unit Tests - frontend (Angular)') {
+              steps {
+                sh '''
+                  docker run --rm \
+                    --user "$(id -u):$(id -g)" \
+                    -e npm_config_cache=/tmp/npm-cache \
+                    -v "$HOME/.cache/nexttrade-npm:/tmp/npm-cache" \
+                    -v "$WORKSPACE:$WORKSPACE" \
+                    -w "$WORKSPACE/frontend" \
+                    node:24-alpine \
+                    sh -ec 'npm ci --no-audit --no-fund --prefer-offline
+                    npm run test:coverage
+                    npm run build'
+                '''
+              }
+            }
+
+            stage('Unit Tests - insights-frontend (Angular)') {
+              steps {
+                sh '''
+                  docker run --rm \
+                    --user "$(id -u):$(id -g)" \
+                    -e npm_config_cache=/tmp/npm-cache \
+                    -v "$HOME/.cache/nexttrade-npm:/tmp/npm-cache" \
+                    -v "$WORKSPACE:$WORKSPACE" \
+                    -w "$WORKSPACE/insights-frontend" \
+                    node:24-alpine \
+                    sh -ec 'npm ci --no-audit --no-fund --prefer-offline
+                    npm run test:coverage
+                    npm run build'
+                '''
+              }
+            }
+          }
+        }
+
+        stage('Run Python Tests With Coverage') {
+          steps {
+            sh '''
+              docker run --rm \
+                --user "$(id -u):$(id -g)" \
+                -v "$WORKSPACE:$WORKSPACE" \
+                -w "$WORKSPACE/data-pipeline" \
+                python:3.12-slim \
+                sh -ec 'python -m venv /tmp/python-venv
+                /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
+                /tmp/python-venv/bin/python -m pytest -v \
+                --cov=src \
+                --cov-report=term-missing \
+                --cov-report=html:htmlcov \
+                --cov-report=xml:coverage.xml
+                /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py
+                /tmp/python-venv/bin/python ../scripts/validate_sonar_config.py --require-reports'
+            '''
+          }
         }
       }
     }
 
-    stage('Unit Tests - nextTrade-holdings') {
+    stage('Archive Coverage') {
       steps {
-        dir('nextTrade-holdings') {
-          sh 'mvn -B -ntp clean verify'
-        }
-      }
-    }
-
-    stage('PostgreSQL Settlement and Holdings') {
-      steps {
-        dir('nextTrade-orders') {
-          sh '''
-            set -eu
-            test_container="nexttrade-orders-tests-${BUILD_NUMBER}"
-            trap 'docker rm -f "$test_container" >/dev/null 2>&1 || true' EXIT
-            docker run -d --name "$test_container" \
-              -e POSTGRES_USER=orders_test -e POSTGRES_PASSWORD=ci-test-only \
-              -e POSTGRES_DB=orders_test -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
-            ready=false
-            for attempt in $(seq 1 30); do
-              if docker exec "$test_container" pg_isready -h 127.0.0.1 -U orders_test >/dev/null 2>&1; then
-                ready=true
-                break
-              fi
-              sleep 1
-            done
-            [ "$ready" = true ]
-            test_port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$test_container")
-            export TEST_POSTGRES_URL="jdbc:postgresql://127.0.0.1:${test_port}/orders_test"
-            export TEST_POSTGRES_USER=orders_test TEST_POSTGRES_PASSWORD=ci-test-only
-            mvn -B -ntp -Dtest=OrderLifecyclePostgresTest,InstrumentTradabilitySubmissionTest,OrderIdempotencyPostgresTest test
-            mvn -B -ntp -f ../nextTrade-holdings/pom.xml \
-              -Dtest=HoldingsSettlementPostgresTest,AccountTransferPostgresTest,InstrumentSearchRepositoryTest \
-              -Dtest.holdings.postgres.url="$TEST_POSTGRES_URL" \
-              -Dtest.holdings.postgres.user=orders_test \
-              -Dtest.holdings.postgres.password=ci-test-only test
-          '''
-        }
-      }
-    }
-
-    stage('Unit Tests - insights-service') {
-      steps {
-        dir('insights') {
-          sh 'mvn -B -ntp clean verify'
-        }
+        archiveArtifacts(
+          artifacts: [
+            'nextTrade-orders/target/site/jacoco/**',
+            'nextTrade-holdings/target/site/jacoco/**',
+            'insights/target/site/jacoco/**',
+            'data-pipeline/htmlcov/**',
+            'data-pipeline/coverage.xml',
+            'auth/coverage/**',
+            'frontend/coverage/**',
+            'insights-frontend/coverage/**',
+            'shared/session-core/coverage/**'
+          ].join(','),
+          fingerprint: true,
+          allowEmptyArchive: true
+        )
       }
     }
 
     stage('Prepare Java Analysis Dependencies') {
+      // Only the Sonar scan reads these.
+      when { expression { onMain() } }
       steps {
         sh '''
           set -eu
@@ -172,157 +302,8 @@ pipeline {
       }
     }
 
-    stage('Publish Coverage - insights') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'insights/target/site/jacoco/**',
-          fingerprint: true
-        )
-      }
-    }
-
-    stage('Unit Tests - auth (NestJS)') {
-      // The numeric Jenkins UID has no container home; use a writable npm cache.
-      steps {
-        sh '''
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE/auth:/app" \
-            -w /app \
-            node:24-alpine \
-            sh -ec 'npm ci --no-audit --no-fund
-            npm run test:cov'
-        '''
-      }
-    }
-
-    stage('Build and Test Shared Session Package') {
-      steps {
-        sh '''
-          docker run --rm --user "$(id -u):$(id -g)" \
-            -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE/shared/session-core" \
-            node:24-alpine sh -ec 'npm ci --no-audit --no-fund
-            npm run build
-            npm run test:coverage'
-        '''
-      }
-    }
-
-    stage('Unit Tests - frontend (Angular)') {
-      steps {
-        sh '''
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE:$WORKSPACE" \
-            -w "$WORKSPACE/frontend" \
-            node:24-alpine \
-            sh -ec 'npm ci --no-audit --no-fund
-            npm run test:coverage
-            npm run build'
-        '''
-      }
-    }
-
-    stage('Unit Tests - insights-frontend (Angular)') {
-      steps {
-        sh '''
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e npm_config_cache=/tmp/npm-cache \
-            -v "$WORKSPACE:$WORKSPACE" \
-            -w "$WORKSPACE/insights-frontend" \
-            node:24-alpine \
-            sh -ec 'npm ci --no-audit --no-fund
-            npm run test:coverage
-            npm run build'
-        '''
-      }
-    }
-
-    stage('Publish Coverage - nextTrade-orders') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'nextTrade-orders/target/site/jacoco/**',
-          fingerprint: true,
-          allowEmptyArchive: true
-        )
-      }
-    }
-
-    stage('Publish Coverage - nextTrade-holdings') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'nextTrade-holdings/target/site/jacoco/**',
-          fingerprint: true,
-          allowEmptyArchive: true
-        )
-      }
-    }
-
-    stage('Publish Coverage - insights-service') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'insights/target/site/jacoco/**',
-          fingerprint: true,
-          allowEmptyArchive: true
-        )
-      }
-    }
-
-
-    stage('Run Python Tests With Coverage') {
-      steps {
-        sh '''
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "$WORKSPACE:$WORKSPACE" \
-            -w "$WORKSPACE/data-pipeline" \
-            python:3.12-slim \
-            sh -ec 'python -m venv /tmp/python-venv
-            /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
-            /tmp/python-venv/bin/python -m pytest -v \
-            --cov=src \
-            --cov-report=term-missing \
-            --cov-report=html:htmlcov \
-            --cov-report=xml:coverage.xml
-            /tmp/python-venv/bin/python ../scripts/prepare_sonar_coverage.py
-            /tmp/python-venv/bin/python ../scripts/validate_sonar_config.py --require-reports'
-            '''
-          }
-        }
-
-    stage('Archive Python Coverage') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'data-pipeline/htmlcov/**,data-pipeline/coverage.xml',
-          fingerprint: true
-        )
-      }
-    }
-
-    stage('Archive Node Coverage') {
-      steps {
-        archiveArtifacts(
-          artifacts: 'auth/coverage/**,frontend/coverage/**,insights-frontend/coverage/**,shared/session-core/coverage/**',
-          fingerprint: true,
-          allowEmptyArchive: true
-        )
-      }
-    }
-
-
     stage('SonarQube Analysis') {
-      when {
-        expression {
-          return (env.BRANCH_NAME ?: '') == 'main' ||
-                 (env.GIT_BRANCH ?: '') == 'main' ||
-                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
-                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
-        }
-      }
+      when { expression { onMain() } }
       steps {
         echo "Running SonarQube analysis on main branch"
         script {
@@ -347,14 +328,7 @@ pipeline {
     }
 
     stage('SonarQube Quality Gate') {
-      when {
-        expression {
-          return (env.BRANCH_NAME ?: '') == 'main' ||
-                 (env.GIT_BRANCH ?: '') == 'main' ||
-                 (env.GIT_BRANCH ?: '') == 'origin/main' ||
-                 (env.GIT_BRANCH ?: '') == 'refs/heads/main'
-        }
-      }
+      when { expression { onMain() } }
       steps {
         echo "Waiting for SonarQube quality gate on main branch"
         timeout(time: 5, unit: 'MINUTES') {
@@ -370,7 +344,10 @@ pipeline {
         // (Preflight already removed any the Jenkins user could not delete).
         dir('e2e/artifacts') { deleteDir() }
         // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
-        sh 'bash scripts/run_e2e_ci.sh'
+        // Branches run the golden path only; main also runs the auth and session-expiry phases.
+        script {
+          sh(onMain() ? 'bash scripts/run_e2e_ci.sh' : 'bash scripts/run_e2e_ci.sh --project=golden')
+        }
       }
       post {
         always {
@@ -381,6 +358,8 @@ pipeline {
     }
 
     stage('Build Compose Services') {
+      // The e2e stage already built every image from this commit; main still checks the release compose file.
+      when { expression { onMain() } }
       steps {
         // A second attempt covers a registry or Maven Central blip; finished layers are cached.
         retry(2) {
@@ -393,6 +372,7 @@ pipeline {
       // TS-DB-04: on a fresh volume the dev test users log in and see their portfolios.
       // Runs in its own compose project with no published ports, and removes it afterwards.
       // No Jenkins credential needed: the script uses a random password for the throwaway stack.
+      when { expression { onMain() } }
       steps {
         sh 'SMOKE_PROJECT="nexttrade-smoke-$BUILD_NUMBER" bash scripts/seeded-logins-smoke-test.sh'
       }

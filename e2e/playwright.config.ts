@@ -26,5 +26,6 @@ export default defineConfig({
     { name: 'auth', testMatch: '**/auth.spec.ts' },
     { name: 'journey', testIgnore: ['**/session-default.spec.ts', '**/auth.spec.ts'] },
     { name: 'default-timeout', testMatch: '**/session-default.spec.ts' },
+    { name: 'golden', testMatch: '**/golden-path.spec.ts' },
   ],
 });

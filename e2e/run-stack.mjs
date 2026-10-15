@@ -8,11 +8,13 @@ const project = `nexttrade-e2e-${randomUUID().replaceAll('-', '').slice(0, 12)}`
 const artifactDir = fileURLToPath(new URL(`./artifacts/${project}/`, import.meta.url));
 const compose = ['compose', '-f', 'docker-compose.e2e.yml', '-p', project];
 const args = process.argv.slice(2);
-if (args.length > 1 || (args.length === 1 && args[0] !== '--project=auth')) {
-  console.error('Usage: node run-stack.mjs [--project=auth]');
+// Single-phase runs: auth checks only, or the golden path alone (the quick PR gate).
+const singlePhase = { '--project=auth': 'auth', '--project=golden': 'golden' };
+if (args.length > 1 || (args.length === 1 && !singlePhase[args[0]])) {
+  console.error('Usage: node run-stack.mjs [--project=auth|--project=golden]');
   process.exit(1);
 }
-const phases = args.length ? ['auth'] : ['auth', 'journey', 'default-timeout'];
+const phases = args.length ? [singlePhase[args[0]]] : ['auth', 'journey', 'default-timeout'];
 const completedPhases = [];
 const startedAt = new Date().toISOString();
 let sessionMinutes = '10';
@@ -64,7 +66,8 @@ try {
   const containerCommand = projectName =>
     `mkdir -p /tmp/e2e; cp /source/package*.json /source/playwright.config.ts /source/global-setup.ts /tmp/e2e/; cp -R /source/tests /tmp/e2e/; cd /tmp/e2e; npm ci --no-audit --no-fund; npx playwright test --project=${projectName}`;
   for (const phase of phases) {
-    if (phase !== 'auth') {
+    // Only the session phases change Identity's token lifetime; the others use the stack as started.
+    if (phase === 'journey' || phase === 'default-timeout') {
       sessionMinutes = phase === 'journey' ? '1' : '10';
       await must([...compose, 'up', '-d', '--no-deps', '--force-recreate', 'auth']);
       // Static nginx upstreams resolve at startup; refresh Identity's container IP.
