@@ -1,4 +1,4 @@
-# Optional development broker; application event integration is not implemented.
+# Optional development broker for shared order lifecycle events.
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -27,7 +27,24 @@ services:
     entrypoint: ["bash", "/scripts/create-topics.sh"]
     volumes:
       - ./kafka/topics/create-topics.sh:/scripts/create-topics.sh:ro
+  orders:
+    depends_on:
+      db: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDERS_KAFKA_TOPIC: order-events
+  insights:
+    depends_on:
+      kafka: {condition: service_healthy}
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INSIGHTS_KAFKA_TOPIC: order-events
+      INSIGHTS_KAFKA_OUTPUT_DIR: /var/lib/insights-kafka
+    volumes:
+      - insights_kafka_data:/var/lib/insights-kafka
 volumes:
   kafka_data:
   zookeeper_data:
   zookeeper_log:
+  insights_kafka_data:

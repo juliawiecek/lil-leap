@@ -126,11 +126,11 @@ restricted `app_user` role; the schema is owned by the admin role.
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
 | `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; password reset (reset emails are written as `.eml` files to the `password_reset_outbox` volume, because the VM has no network); assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
-| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances. |
+| `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances; publishes terminal order events to Kafka. |
 | `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
 | `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
-| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the `orders-events`, `holdings-events` and `insights-events` topics are created on startup. See [kafka/README.md](kafka/README.md). |
+| `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Event broker; the shared `order-events` topic is created on startup for the Orders producer and the three Insights consumer groups. See [kafka/README.md](kafka/README.md). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 
 ### Authentication Flow
@@ -164,7 +164,7 @@ dashboard. Sessions expire after 10 minutes of inactivity (BR-03).
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
 | Frontend       | Angular 22 + TypeScript                 | Two standalone Angular apps                     |
 | Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
-| Messaging      | Apache Kafka + ZooKeeper                | Event streaming between services                |
+| Messaging      | Apache Kafka + ZooKeeper                | Shared order lifecycle events fan out to three Insights consumers |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
 ## Backend API
@@ -257,7 +257,7 @@ DML permissions. These are development-only credentials — see
 | `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
 | `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
-| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the topics once `kafka` is healthy |
+| `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the `order-events` topic once `kafka` is healthy |
 
 Important runtime behavior:
 
