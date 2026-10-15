@@ -25,6 +25,7 @@ import { ToastService, Toasts } from './toasts';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
+import { tradingClients } from './trading-clients';
 
 /** Company logos the template knows how to draw. */
 const LOGOS: Record<string, string> = { AAPL: 'apple', MSFT: 'microsoft', NVDA: 'nvidia' };
@@ -58,9 +59,10 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   styleUrl: './novice-dashboard.scss',
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
-  readonly orderSubmissionClient: OrderSubmissionClient;
-  readonly orderHistoryClient: OrderHistoryClient;
-  readonly portfolioClient: PortfolioClient;
+  // The four API clients are assigned from tradingClients() in the constructor.
+  declare readonly orderSubmissionClient: OrderSubmissionClient;
+  declare readonly orderHistoryClient: OrderHistoryClient;
+  declare readonly portfolioClient: PortfolioClient;
   /** Live prices for every listed stock and the market's open/closed status, shared by all views (TS-14.7). */
   readonly feed = inject(MarketFeed, { optional: true }) ?? new MarketFeed();
   /** NYSE open/closed from the orders service (NEXT-212), counted down against the local clock. */
@@ -75,7 +77,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly #stopFeed: () => void;
   /** Corner messages when an order fills or is rejected (PS-15). */
   readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
-  readonly orderStatusClient: OrderStatusClient;
+  declare readonly orderStatusClient: OrderStatusClient;
   /** One-line review shown before confirming (PS-15), e.g. "Buy 10 AAPL · about $2,274.00 · fills at up to …". */
   readonly reviewSummary = computed(() => {
     const status = this.marketStatus();
@@ -416,11 +418,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         // Prices have not loaded yet; the feed opens the linked stock once it is listed.
       }
     });
-    const http = inject(ApiHttpClient);
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth, http);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth, http);
-    this.portfolioClient = new PortfolioClient(this.auth, http);
-    this.orderStatusClient = new OrderStatusClient(this.auth, http);
+    Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();

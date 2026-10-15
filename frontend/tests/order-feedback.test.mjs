@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 import { apiHttp } from './http-helper.mjs';
+import { throwError } from 'rxjs';
 const { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason, usd } = await import('../src/app/order-feedback.ts');
 const { ToastService, Toasts, TOAST_MS } = await import('../src/app/toasts.ts');
 
@@ -45,6 +46,12 @@ test('the order status client reads the reason code through the shared transport
   await assert.rejects(new OrderStatusClient({ accessToken: null }).status('x'), /Sign in/);
   const noReason = new OrderStatusClient({ accessToken: 'tok' }, apiHttp(async () => Response.json({ status: 'FILLED' })));
   assert.deepEqual(await noReason.status('x'), { status: 'FILLED', reasonCode: null, reasonText: null });
+});
+
+test('unexpected transport failures propagate from the order status client', async () => {
+  const failure = new TypeError('offline');
+  const client = new OrderStatusClient({ accessToken: 'tok' }, { get: () => throwError(() => failure) });
+  await assert.rejects(client.status('x'), (error) => error === failure);
 });
 
 test('fill toasts dismiss sooner than rejections, and only the newest three stay', t => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 import { apiHttp } from './http-helper.mjs';
+import { throwError } from 'rxjs';
 const { MarketFeed } = await import('../src/app/market-feed.service.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
 const { MarketFeedClient, isDelayed, changeFrom, QUOTE_STALE_MS } = await import('../src/app/market-feed-api.ts');
@@ -195,6 +196,12 @@ test('the client lists only tradable stocks and reads the first quote of the day
   assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');
   await assert.rejects(client.latest('missing'), /Could not load prices/);
   await assert.rejects(new MarketFeedClient({ accessToken: null }).instruments(), /Sign in/);
+});
+
+test('unexpected transport failures propagate from the market feed client', async () => {
+  const failure = new TypeError('offline');
+  const client = new MarketFeedClient({ accessToken: 'tok' }, { get: () => throwError(() => failure) });
+  await assert.rejects(client.latest('a'), (error) => error === failure);
 });
 
 test('the badge flips between open and closed in local time, and the ticket warns only while closed', () => {
