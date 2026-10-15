@@ -1,5 +1,6 @@
 package com.neueda.leap.common.exception;
 
+import com.neueda.leap.order.cancel.OrderCancellationException;
 import com.neueda.leap.order.query.OrderNotFoundException;
 import com.neueda.leap.order.service.OrderSufficiencyException;
 import com.neueda.leap.order.rules.OrderRuleException;
@@ -72,6 +73,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleOrderNotFound(OrderNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "error", "ORDER_NOT_FOUND", "message", "The order was not found."));
+    }
+
+    /**
+     * Refuses to cancel an order that is executing or already finished (PS-14).
+     * @param exception cancellation refusal
+     * @return HTTP 409 with the reason code and its fixed message
+     */
+    @ExceptionHandler(OrderCancellationException.class)
+    public ResponseEntity<Map<String, String>> handleOrderCancellation(OrderCancellationException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                ERROR_KEY, exception.reason().name(), MESSAGE_KEY, exception.reason().message()));
     }
 
     /**

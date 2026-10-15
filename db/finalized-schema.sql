@@ -405,7 +405,7 @@ CREATE TABLE orders (
     CONSTRAINT chk_order_quantity CHECK (quantity > 0),
     CONSTRAINT chk_order_type CHECK (order_type = 'MARKET'),
     CONSTRAINT chk_order_status CHECK (
-        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED')
+        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )
 );
 
@@ -457,7 +457,7 @@ CREATE TABLE order_status_history (
     CONSTRAINT fk_status_history_order
         FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE RESTRICT,
     CONSTRAINT chk_status_history_status CHECK (
-        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED')
+        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )
 );
 

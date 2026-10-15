@@ -1,5 +1,8 @@
 package com.neueda.leap.order.execution;
 
+import com.neueda.leap.order.cancel.OrderCancellationException;
+import com.neueda.leap.order.cancel.OrderCancellationService;
+import com.neueda.leap.order.query.OrderNotFoundException;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.OrderSubmissionService;
 import com.neueda.leap.order.service.OrderSufficiencyException;
@@ -36,6 +39,7 @@ class OrderLifecyclePostgresTest {
     @Autowired PlatformTransactionManager manager;
     @Autowired OrderExecutor executor;
     @Autowired OrderSubmissionService submissions;
+    @Autowired OrderCancellationService cancellations;
     @Autowired org.springframework.test.web.servlet.MockMvc mvc;
     @Autowired JwtServiceImpl tokens;
     private UUID user, account, instrument;
@@ -329,5 +333,61 @@ class OrderLifecyclePostgresTest {
         assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
                 .containsExactly("ORDER_ACCEPTED", "ORDER_REJECTED", "ORDER_REQUEUED");
         assertThat(count("fills")).isZero();
+    }
+
+    @Test
+    void cancelledOrderIsRecordedAndNeverExecutedWithNoMoneyMoved() {
+        UUID id = submit("BUY", 2);
+        var result = cancellations.cancel(id, user);
+        assertThat(result.status()).isEqualTo("CANCELLED");
+        assertThat(status(id)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT reason_code FROM order_status_history WHERE order_id=? AND status='CANCELLED'",
+                String.class, id)).isEqualTo("CANCELLED_BY_CLIENT");
+        assertThat(jdbc.queryForMap("SELECT actor_type, payload->>'previousStatus' AS previous FROM audit_log WHERE event_type='ORDER_CANCELLED'"))
+                .containsEntry("actor_type", "USER").containsEntry("previous", "SUBMITTED");
+        // The worker neither accepts nor executes it.
+        var claim = worker.claimNext();
+        if (claim != null) {
+            worker.execute(claim);
+        }
+        assertThat(status(id)).isEqualTo("CANCELLED");
+        assertThat(count("fills")).isZero();
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10000");
+    }
+
+    @Test
+    void onlyTheOwnerCanCancelAndOnlyWhileTheOrderIsWaiting() {
+        UUID id = submit("BUY", 1);
+        assertThatThrownBy(() -> cancellations.cancel(id, UUID.randomUUID())).isInstanceOf(OrderNotFoundException.class);
+        assertThatThrownBy(() -> cancellations.cancel(UUID.randomUUID(), user)).isInstanceOf(OrderNotFoundException.class);
+        worker.execute(worker.claimNext());
+        assertThat(status(id)).isEqualTo("FILLED");
+        assertThatThrownBy(() -> cancellations.cancel(id, user))
+                .isInstanceOfSatisfying(OrderCancellationException.class,
+                        e -> assertThat(e.reason()).isEqualTo(OrderCancellationException.Reason.ORDER_NOT_CANCELLABLE));
+    }
+
+    @Test
+    void cancelRacingTheWorkerLeavesExactlyOneOutcome() throws Exception {
+        UUID id = submit("BUY", 1);
+        var claim = worker.claimNext();
+        assertThat(status(id)).isEqualTo("PENDING");
+        // Another connection holds the order's row lock, as the worker does while it executes.
+        try (var executing = jdbc.getDataSource().getConnection()) {
+            executing.setAutoCommit(false);
+            try (var lock = executing.prepareStatement("SELECT order_id FROM orders WHERE order_id = ? FOR UPDATE")) {
+                lock.setObject(1, id);
+                lock.executeQuery().close();
+            }
+            assertThatThrownBy(() -> cancellations.cancel(id, user))
+                    .isInstanceOfSatisfying(OrderCancellationException.class,
+                            e -> assertThat(e.reason()).isEqualTo(OrderCancellationException.Reason.ORDER_EXECUTING));
+            executing.rollback();
+        }
+        assertThat(status(id)).isEqualTo("PENDING");
+        worker.execute(claim);
+        assertThat(status(id)).isEqualTo("FILLED");
+        assertThat(count("fills")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE event_type='ORDER_CANCELLED'", Integer.class)).isZero();
     }
 }
