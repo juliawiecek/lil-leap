@@ -30,3 +30,8 @@ CREATE TABLE order_status_history (
     status VARCHAR(20) NOT NULL,
     reason_code VARCHAR(50)
 );
+CREATE TABLE audit_log (
+    audit_id UUID DEFAULT gen_random_uuid() PRIMARY KEY, user_id UUID, account_id UUID, related_order_id UUID,
+    actor_type VARCHAR(20) NOT NULL, event_type VARCHAR(100) NOT NULL, payload VARCHAR(2000),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

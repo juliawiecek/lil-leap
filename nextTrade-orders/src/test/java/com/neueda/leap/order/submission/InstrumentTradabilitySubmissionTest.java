@@ -51,7 +51,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtServiceImpl.class, InstrumentService.class,
         JdbcInstrumentRepository.class, OrderSubmissionService.class, JdbcOrderSubmissionRepository.class,
         OrderSufficiencyService.class, JdbcOrderSufficiencyRepository.class, JdbcQuoteRepository.class,
-        IndicativePriceService.class, InstrumentTradabilitySubmissionTest.Database.class})
+        IndicativePriceService.class, com.neueda.leap.order.submission.audit.SubmissionAuditRepository.class,
+        com.neueda.leap.order.submission.audit.RequestIdFilter.class, InstrumentTradabilitySubmissionTest.Database.class})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InstrumentTradabilitySubmissionTest {
     @Autowired MockMvc mvc;
@@ -65,7 +66,7 @@ class InstrumentTradabilitySubmissionTest {
 
     @BeforeEach
     void seed() {
-        for (String table : new String[]{"order_status_history", "fills", "orders", "holdings", "cash_balances", "quotes", "accounts", "instruments", "customer_profiles"}) {
+        for (String table : new String[]{"audit_log", "order_status_history", "fills", "orders", "holdings", "cash_balances", "quotes", "accounts", "instruments", "customer_profiles"}) {
             jdbc.update("DELETE FROM " + table);
         }
         jdbc.update("INSERT INTO accounts VALUES (?, ?, 'ACTIVE', TRUE, 'NOVICE', 0, 2)", account, user);
@@ -172,6 +173,35 @@ class InstrumentTradabilitySubmissionTest {
         return new SubmitOrderRequest(account, "aapl", reference, side, 1, "MARKET", null);
     }
 
+    @Test
+    void aRefusedOrderIsRecordedUnderTheRequestIdReturnedToTheClient() throws Exception {
+        jdbc.update("UPDATE instruments SET tradable = FALSE WHERE instrument_id = ?", instrument);
+        String requestId = submit(request("BUY", UUID.randomUUID())).andExpect(status().isUnprocessableEntity())
+                .andReturn().getResponse().getHeader("X-Request-Id");
+
+        assertThat(requestId).isNotBlank();
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log WHERE payload LIKE ? ORDER BY event_type",
+                String.class, "%" + requestId + "%")).containsExactly(
+                "RULE_CHECKED", "RULE_CHECKED", "RULE_CHECKED", "RULE_CHECKED", "RULE_CHECKED", "SUBMISSION_REFUSED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE payload LIKE ? AND payload LIKE '%FAIL%'",
+                Integer.class, "%" + requestId + "%")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE related_order_id IS NOT NULL", Integer.class))
+                .isZero();
+        assertNoTradeEffects(0);
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "TEST_POSTGRES_URL", matches = ".+")
+    void anAcceptedOrderRecordsAPassForEveryRuleWithTheOrder() throws Exception {
+        var response = submit(request("BUY", UUID.randomUUID())).andExpect(status().isCreated()).andReturn().getResponse();
+        String requestId = response.getHeader("X-Request-Id");
+        String orderId = json.readTree(response.getContentAsString()).get("orderId").asText();
+
+        assertThat(jdbc.queryForList("SELECT CAST(related_order_id AS VARCHAR) FROM audit_log WHERE event_type = 'RULE_CHECKED' AND payload LIKE ?",
+                String.class, "%" + requestId + "%")).hasSize(7).allMatch(orderId::equalsIgnoreCase);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE payload LIKE '%FAIL%'", Integer.class)).isZero();
+    }
+
     private ResultActions submit(SubmitOrderRequest request) throws Exception {
         return mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", authorization)
                 .contentType("application/json").content(json.writeValueAsBytes(request)));
@@ -210,6 +240,10 @@ class InstrumentTradabilitySubmissionTest {
             new JdbcTemplate(source).execute("CREATE SCHEMA " + schema);
             source.setSchema(postgres ? schema : schema.toUpperCase(java.util.Locale.ROOT));
             new ResourceDatabasePopulator(new ClassPathResource("order/submission-schema.sql")).execute(source);
+            if (!postgres) {
+                new JdbcTemplate(source).execute("CREATE ALIAS JSONB_BUILD_OBJECT FOR '"
+                        + H2JsonFunctions.class.getName() + ".jsonbBuildObject'");
+            }
             return source;
         }
 

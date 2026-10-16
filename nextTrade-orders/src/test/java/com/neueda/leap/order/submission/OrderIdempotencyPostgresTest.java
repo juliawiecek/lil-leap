@@ -67,7 +67,7 @@ class OrderIdempotencyPostgresTest {
 
     @BeforeEach
     void fixtures() {
-        jdbc.execute("TRUNCATE users, instruments, quotes CASCADE");
+        com.neueda.leap.order.TradeRecordsForTests.unlocked(jdbc, "TRUNCATE users, instruments, quotes CASCADE");
         user = UUID.randomUUID();
         account = UUID.randomUUID();
         instrument = UUID.randomUUID();

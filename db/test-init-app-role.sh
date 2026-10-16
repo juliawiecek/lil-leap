@@ -49,7 +49,7 @@ echo ""
 echo "=========================================="
 echo "Test 3: SELECT, INSERT, UPDATE, DELETE on runtime tables"
 echo "=========================================="
-TABLES=(users customer_profiles financial_profiles analyst_profiles password_reset_tokens sessions instruments quotes accounts orders fills order_status_history holdings holding_movements cash_balances cash_transactions)
+TABLES=(users customer_profiles financial_profiles analyst_profiles password_reset_tokens sessions instruments quotes accounts orders fills holdings cash_balances)
 for TABLE in "${TABLES[@]}"; do
     for PRIV in SELECT INSERT UPDATE DELETE; do
         RESULT=$(psql_admin_query "SELECT has_table_privilege(:'app_user', '$TABLE', '$PRIV');")
@@ -90,6 +90,19 @@ TRUNCATE_OK=$(psql_admin_query "SELECT has_table_privilege(:'app_user', 'audit_l
 [ "$UPDATE_OK" = "f" ] && pass "UPDATE on audit_log correctly denied" || fail "UPDATE on audit_log should be denied"
 [ "$DELETE_OK" = "f" ] && pass "DELETE on audit_log correctly denied" || fail "DELETE on audit_log should be denied"
 [ "$TRUNCATE_OK" = "f" ] && pass "TRUNCATE on audit_log correctly denied" || fail "TRUNCATE on audit_log should be denied"
+
+echo ""
+echo "=========================================="
+echo "Test 5b: trade records are append-only too (BR-14)"
+echo "=========================================="
+for TABLE in order_status_history holding_movements cash_transactions; do
+    for PRIV in SELECT INSERT; do
+        [ "$(psql_admin_query "SELECT has_table_privilege(:'app_user', '$TABLE', '$PRIV');")" = "t" ]             && pass "$PRIV on $TABLE granted" || fail "$PRIV on $TABLE missing"
+    done
+    for PRIV in UPDATE DELETE TRUNCATE; do
+        [ "$(psql_admin_query "SELECT has_table_privilege(:'app_user', '$TABLE', '$PRIV');")" = "f" ]             && pass "$PRIV on $TABLE correctly denied" || fail "$PRIV on $TABLE should be denied"
+    done
+done
 
 echo ""
 echo "=========================================="
