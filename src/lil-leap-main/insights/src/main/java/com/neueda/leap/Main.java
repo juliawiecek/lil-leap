@@ -1,0 +1,30 @@
+package com.neueda.leap;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+
+/**
+ * Entry point for the insights application.
+ *
+ * <p>This class bootstraps the Spring Boot application context and starts
+ * the backend services.</p>
+ */
+@SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
+public class Main {
+
+    /** Creates the application class; Spring Boot starts it through {@link #main(String[])}. */
+    public Main() {
+        // No state to initialize.
+    }
+
+
+    /**
+     * Starts the Spring Boot application.
+     *
+     * @param args command-line arguments passed to the application
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(Main.class, args);
+    }
+}

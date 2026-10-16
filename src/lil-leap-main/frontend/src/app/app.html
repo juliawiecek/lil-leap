@@ -1,0 +1,180 @@
+<div class="login-screen" [class.auth-visible]="pageReady() && !profileOpen()" [attr.inert]="dashboardOpen() ? '' : null" [attr.aria-hidden]="dashboardOpen() ? 'true' : null" [style.visibility]="dashboardOpen() ? 'hidden' : null">
+<div class="market-grid" aria-hidden="true"></div>
+  <div class="ambient-light" aria-hidden="true"></div>
+  <div class="market-tape" aria-hidden="true">
+    <div class="tape-track">
+      @for (copy of [0, 1]; track copy) {
+      <div class="tape-group">
+      <span>NDX 19,574.64 <span class="up">+0.95%</span></span><span class="divider">/</span>
+      <span>DJI 41,563.08 <span class="up">+0.55%</span></span><span class="divider">/</span>
+      <span>VIX 15.00 <span>−2.28%</span></span><span class="divider">/</span>
+      <span>BTC 58,930.20 <span class="up">+1.14%</span></span><span class="divider">/</span>
+      <span>SPX 5,648.40 <span class="up">+0.62%</span></span><span class="divider">/</span>
+      <span>EUR/USD 1.1062</span><span class="divider">/</span>
+      </div>
+      }
+    </div>
+  </div>
+  <div class="volume-field" aria-hidden="true">
+    @for (bar of volumeBars(); track $index) {
+      <span
+        class="volume-bar"
+        [class.accent]="bar.accent"
+        [style.--bar-height]="bar.height"
+        [style.--bar-speed]="bar.speed"
+        [style.--bar-delay]="bar.delay"
+      ></span>
+    }
+  </div>
+  <div class="market-scan" aria-hidden="true"></div>
+  <main class="chart-stage" aria-label="Animated stock market chart">
+    <canvas #marketChart id="market-chart" inert></canvas>
+  </main>
+  <div class="edge-shade" aria-hidden="true"></div>
+
+  @if (pageReady() && !profileOpen()) {
+    <div class="signin-stock-background" aria-hidden="true">
+      <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
+        <defs>
+          <linearGradient id="signin-chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#78a85f" stop-opacity="0.06" />
+            <stop offset="100%" stop-color="#78a85f" stop-opacity="0" />
+          </linearGradient>
+          <pattern id="signin-chart-grid" width="52" height="26" patternUnits="userSpaceOnUse">
+            <path d="M52 0H0V26" fill="none" stroke="#ffffff" stroke-opacity="0.035" />
+          </pattern>
+        </defs>
+        <rect width="420" height="500" fill="url(#signin-chart-grid)" />
+        <g class="login-candles">
+          @for (candle of loginCandles; track $index) {
+            <g [attr.opacity]="candle.opacity" [class.falling]="candle.falling">
+              <path [attr.d]="'M' + candle.x + ' ' + candle.high + 'V' + candle.low" />
+              <rect [attr.x]="candle.x - 1.8" [attr.y]="candle.top" width="3.6" [attr.height]="candle.height" />
+            </g>
+          }
+        </g>
+      </svg>
+    </div>
+  }
+
+  <div class="transition-beam" aria-hidden="true"></div>
+
+  @if (pageReady()) {
+  <div class="brand-lockup" id="brand-lockup" role="img" aria-label="NextTrade">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
+        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
+      </svg>
+    </div>
+    <div class="brand-copy">
+      <div class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></div>
+    </div>
+  </div>
+  }
+  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+    <header class="auth-header">
+      <div class="secure-status">Secure connection</div>
+    </header>
+
+    <div class="auth-content">
+      <section class="auth-copy" aria-labelledby="landing-title">
+        <div class="auth-eyebrow">Built for your next move</div>
+        <h1 id="landing-title"><span class="headline-trade">Trade</span> what’s <em>next<span class="headline-period">.</span></em></h1>
+        <p>One focused platform for real-time markets, clear decisions, and every stage of your investing journey.</p>
+
+      </section>
+
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <h2 id="auth-title">{{ authTitle() }}</h2>
+        <p class="auth-subtitle" id="auth-subtitle">
+          {{ authSubtitle() }}
+        </p>
+
+        @if (showTabs()) {
+          <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
+            <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
+          </div>
+        }
+
+        <form #authForm method="post" novalidate (submit)="onSubmit($event, authForm)">
+
+<div class="auth-fields">
+          <div class="field-group" [hidden]="authMode() !== 'signup'">
+            <div class="field-row"><label for="full-name">Full name</label></div>
+            <input #fullName id="full-name" name="name" type="text" autocomplete="name" placeholder="Your full name" [required]="authMode() === 'signup'" />
+          </div>
+
+          <div class="field-group" [hidden]="authMode() === 'reset'">
+            <div class="field-row"><label for="email">Email address</label></div>
+            <input #email id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" [required]="authMode() !== 'reset'" />
+          </div>
+
+          <div class="field-group" [hidden]="authMode() === 'forgot'">
+            <div class="field-row">
+              <label for="password">{{ authMode() === 'reset' ? 'New password' : 'Password' }}</label>
+              <button type="button" class="text-link" [style.visibility]="authMode() === 'signin' ? 'visible' : 'hidden'" (click)="showPasswordRecovery($event)">Forgot password?</button>
+            </div>
+            <div class="input-wrap">
+              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="choosingPassword() ? 'new-password' : 'current-password'" [attr.minlength]="choosingPassword() ? 12 : null" [attr.aria-describedby]="choosingPassword() && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" [required]="authMode() !== 'forgot'" (input)="updatePassword($any($event.target).value)" />
+              <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
+            </div>
+          </div>
+
+          @if (choosingPassword()) {
+            <div class="field-group">
+              <div class="field-row"><label for="verify-password">Verify password</label></div>
+              <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" />
+            </div>
+          }
+
+          </div>
+          @if (choosingPassword() && passwordStarted()) {
+            <div class="password-checklist" id="password-requirements" aria-live="polite" aria-atomic="true">
+              <p>Your password needs:</p>
+              <ul>
+                @for (rule of passwordRules; track rule.label) {
+                  <li [class.met]="rule.test(passwordDraft())"><span aria-hidden="true">{{ rule.test(passwordDraft()) ? '✓' : '○' }}</span><span class="sr-only">{{ rule.test(passwordDraft()) ? 'Met: ' : 'Still needed: ' }}</span>{{ rule.label }}</li>
+                }
+                <li [class.met]="!!confirmationDraft() && confirmationDraft() === passwordDraft()"><span aria-hidden="true">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? '✓' : '○' }}</span><span class="sr-only">{{ !!confirmationDraft() && confirmationDraft() === passwordDraft() ? 'Met: ' : 'Still needed: ' }}</span>Passwords match</li>
+              </ul>
+            </div>
+          }
+          <button class="primary-action" type="submit" [disabled]="signingIn()">{{ submitLabel() }}</button>
+
+
+          <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
+          @if (!showTabs()) {
+            <button type="button" class="text-link" (click)="backToSignIn()">Back to sign in</button>
+          }
+        </form>
+        <div class="auth-alternative">
+          <div class="auth-divider"><span>or</span></div>
+          <button class="secondary-action" type="button" (click)="setAuthMode(authMode() === 'signin' ? 'signup' : 'signin')">{{ authMode() === 'signin' ? 'Create account' : 'Back to sign in' }}</button>
+        </div>
+      </section>
+    </div>
+
+    <footer class="auth-footer">
+      <span>© 2026 NextTrade. All rights reserved.</span>
+      <nav aria-label="Legal">
+        <span>Privacy</span>
+        <span>Security</span>
+        <span>Support</span>
+      </nav>
+    </footer>
+  </section>
+
+@if (profileOpen()) {
+  <app-investor-profile
+    [fullName]="applicantName()"
+    [email]="applicantEmail()"
+    (back)="returnToSignup()"
+    [submitting]="registering()"
+    [submitError]="registrationError()"
+    (completed)="completeRegistration($event)"
+  />
+}
+
+</div>

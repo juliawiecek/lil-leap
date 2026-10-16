@@ -1,0 +1,15 @@
+# Dev laptops only (PS-08): catch auth's emails in Mailpit instead of the .eml outbox.
+# Never used on the VM, which can't pull images. Start with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Inbox: http://localhost:8025
+services:
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    ports: ["127.0.0.1:8025:8025"]
+
+  auth:
+    environment:
+      MAIL_DELIVERY: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    depends_on: [mailpit]

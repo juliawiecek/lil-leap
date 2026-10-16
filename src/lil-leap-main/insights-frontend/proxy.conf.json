@@ -1,0 +1,5 @@
+{
+  "/auth/**": { "target": "http://localhost:8081", "secure": false },
+  "/rules/**": { "target": "http://localhost:8081", "secure": false },
+  "/api/**": { "target": "http://localhost:8084", "secure": false }
+}

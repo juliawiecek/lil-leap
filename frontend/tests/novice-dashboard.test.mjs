@@ -285,3 +285,36 @@ test('the header counts down to the market close from the shared market status',
   desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
   assert.equal(desk.marketText(), 'Market closes in 1h 0m');
 });
+
+test('the spoken briefing reads the portfolio as shown, live moves and this account\'s orders', async t => {
+  const fill = historyRow('FILLED', { fillPrice: 176.5, filledQuantity: 2, filledAt: new Date().toISOString() });
+  const { desk, feed } = await tradingDesk(t);
+  feed.push(listed().map((q) => ({ ...q, change: q.symbol === 'NVDA' ? 2.5 : 0.4 })));
+  let asked;
+  desk.orderHistoryClient = { list: async (filters) => { asked = filters; return [fill]; } };
+  const snapshot = await desk.briefingSource();
+  assert.equal(asked.accountId, 'acct-1');
+  assert.equal(snapshot.total, desk.portfolioValue());
+  assert.equal(snapshot.gain, desk.totalReturn());
+  assert.equal(snapshot.buyingPower, 6420.18);
+  const cost = samplePortfolio.holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
+  assert.ok(Math.abs(snapshot.gainPercent - (desk.totalReturn() / cost) * 100) < 0.01, 'percent of what the shares cost');
+  assert.deepEqual(snapshot.holdings.map((h) => [h.symbol, h.dayChangePercent]), [['AAPL', 0.4], ['MSFT', 0.4], ['NVDA', 2.5]]);
+  assert.deepEqual(snapshot.orders, [fill]);
+  assert.equal(snapshot.balanceHidden, false);
+  assert.equal(snapshot.pricesDelayed, false);
+
+  desk.showBalance.set(false);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+});
+
+test('the greeting follows the time of day', async t => {
+  const { desk } = await tradingDesk(t);
+  desk.marketClock.set(new Date(2026, 9, 16, 9));
+  assert.equal(desk.greeting(), 'Good morning');
+  desk.marketClock.set(new Date(2026, 9, 16, 20));
+  assert.equal(desk.greeting(), 'Good evening');
+});

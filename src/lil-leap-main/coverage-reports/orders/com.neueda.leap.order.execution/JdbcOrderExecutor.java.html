@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcOrderExecutor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution</a> &gt; <span class="el_source">JdbcOrderExecutor.java</span></div><h1>JdbcOrderExecutor.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution;
+
+import com.neueda.leap.order.execution.cash.CashMovementAdapter;
+import com.neueda.leap.order.execution.quote.ExecutionQuoteDecision;
+import com.neueda.leap.order.execution.quote.ExecutionQuoteService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.UUID;
+
+/** Fills or rejects a locked order; settlement participates in the worker transaction. */
+@Service
+public class JdbcOrderExecutor implements OrderExecutor {
+    private static final String PRICE_OUT_OF_TOLERANCE = &quot;PRICE_OUT_OF_TOLERANCE&quot;;
+    /** The price moved past the client's tolerance from the reference recorded at submission (PS-12). */
+    private static final String PRICE_MOVED = &quot;PRICE_MOVED&quot;;
+<span class="fc" id="L22">    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);</span>
+    private final JdbcTemplate jdbc;
+    private final ExecutionQuoteService quotes;
+    private final CashMovementAdapter cashMovements;
+    private final long maxAttempts;
+
+    /**
+     * Creates the execution handler.
+     * @param jdbc transactional database access
+     * @param quotes latest quote and freshness contract
+     * @param cashMovements settlement-only cash movements, joined to this transaction
+     * @param maxAttempts maximum attempts for out-of-tolerance prices
+     */
+    public JdbcOrderExecutor(JdbcTemplate jdbc, ExecutionQuoteService quotes, CashMovementAdapter cashMovements,
+<span class="fc" id="L36">            @Value(&quot;${orders.execution.max-price-attempts:10}&quot;) long maxAttempts) {</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        if (maxAttempts &lt; 1) throw new IllegalArgumentException(&quot;Attempt limit must be positive&quot;);</span>
+<span class="fc" id="L38">        this.jdbc = jdbc;</span>
+<span class="fc" id="L39">        this.quotes = quotes;</span>
+<span class="fc" id="L40">        this.cashMovements = cashMovements;</span>
+<span class="fc" id="L41">        this.maxAttempts = maxAttempts;</span>
+<span class="fc" id="L42">    }</span>
+
+    /** Refuses startup when the required transactional holdings projection is absent. */
+    @jakarta.annotation.PostConstruct
+    public void requireHoldingsProjection() {
+<span class="fc" id="L47">        Boolean ready = jdbc.queryForObject(&quot;&quot;&quot;</span>
+                SELECT EXISTS (SELECT 1 FROM pg_trigger
+                  WHERE tgrelid = to_regclass('holding_movements')
+                    AND tgname = 'tg_holding_movement_projection'
+                    AND tgenabled IN ('O', 'A'))
+                &quot;&quot;&quot;, Boolean.class);
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (!Boolean.TRUE.equals(ready)) {</span>
+<span class="fc" id="L54">            throw new IllegalStateException(&quot;Apply db/migrations/008_holdings_projection.sql before starting Orders&quot;);</span>
+        }
+<span class="fc" id="L56">    }</span>
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Result execute(UUID orderId) {
+<span class="fc" id="L61">        var order = jdbc.queryForObject(&quot;&quot;&quot;</span>
+                SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent, reference_price
+                FROM orders WHERE order_id = ?
+<span class="fc" id="L64">                &quot;&quot;&quot;, (rs, n) -&gt; new Trade(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),</span>
+<span class="fc" id="L65">                rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6), rs.getBigDecimal(7)), orderId);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (order == null) throw new IllegalArgumentException(&quot;Order not found&quot;);</span>
+
+<span class="fc" id="L68">        Account account = lockAccount(order.account());</span>
+<span class="fc" id="L69">        Result notExecutable = rejectIfNotExecutable(orderId, order, account);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        if (notExecutable != null) {</span>
+<span class="fc" id="L71">            return notExecutable;</span>
+        }
+
+<span class="fc" id="L74">        QuoteContext quoteContext = selectExecutableQuote(orderId, order, account);</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (quoteContext.result() != null) {</span>
+<span class="fc" id="L76">            return quoteContext.result();</span>
+        }
+<span class="fc" id="L78">        boolean buy = Boolean.TRUE.equals(quoteContext.buy());</span>
+
+<span class="fc" id="L80">        BigDecimal cash = cashMovements.lockBalance(order.account());</span>
+<span class="fc" id="L81">        var position = jdbc.query(&quot;&quot;&quot;</span>
+                SELECT quantity, avg_cost FROM holdings WHERE account_id = ? AND instrument_id = ? FOR UPDATE
+<span class="fc" id="L83">                &quot;&quot;&quot;, (rs, n) -&gt; new Position(rs.getLong(1), rs.getBigDecimal(2)), order.account(), order.instrument())</span>
+<span class="fc" id="L84">                .stream().findFirst().orElse(new Position(0, BigDecimal.ZERO));</span>
+<span class="fc" id="L85">        BigDecimal amount = quoteContext.price().multiply(BigDecimal.valueOf(order.quantity())).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L86">        Result fundsRejection = validateSettlementPreconditions(orderId, account, position, buy, cash, amount, order.quantity());</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (fundsRejection != null) {</span>
+<span class="fc" id="L88">            return fundsRejection;</span>
+        }
+
+<span class="fc" id="L91">        SettlementResult settlement = persistSettlement(orderId, order, buy, quoteContext.price(), quoteContext.quote().quotedAt(), amount);</span>
+<span class="fc" id="L92">        BigDecimal cashChange = settlement.cashChange();</span>
+<span class="fc" id="L93">        history(orderId, &quot;FILLED&quot;, &quot;EXECUTION_SUCCESS&quot;);</span>
+<span class="fc" id="L94">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT ?, ?, 'SYSTEM', event_type,
+                       jsonb_build_object('fillId', CAST(? AS uuid), 'quantity', CAST(? AS bigint),
+                                          'executionPrice', CAST(? AS numeric), 'cashDelta', CAST(? AS numeric))
+                FROM (VALUES ('ORDER_FILLED'), ('SETTLEMENT_COMPLETED')) events(event_type)
+<span class="fc" id="L100">                &quot;&quot;&quot;, order.account(), orderId, settlement.fillId(), order.quantity(), quoteContext.price(), cashChange);</span>
+<span class="fc" id="L101">        return Result.filled();</span>
+    }
+
+    private Result rejectIfNotExecutable(UUID orderId, Trade order, Account account) {
+<span class="fc bfc" id="L105" title="All 6 branches covered.">        if (account == null || !&quot;ACTIVE&quot;.equals(account.status()) || !account.enabled()) {</span>
+<span class="fc" id="L106">            return reject(orderId, &quot;ACCOUNT_NOT_ACTIVE&quot;);</span>
+        }
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        if (!isInstrumentTradable(order.instrument())) {</span>
+<span class="fc" id="L109">            return reject(orderId, &quot;INSTRUMENT_NOT_TRADABLE&quot;);</span>
+        }
+<span class="fc" id="L111">        return null;</span>
+    }
+
+    private QuoteContext selectExecutableQuote(UUID orderId, Trade order, Account account) {
+<span class="fc" id="L115">        var decision = quotes.selectForExecution(orderId);</span>
+<span class="fc" id="L116">        Result quoteResult = handleQuoteDecision(orderId, decision);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (quoteResult != null) {</span>
+<span class="fc" id="L118">            return new QuoteContext(null, null, null, quoteResult);</span>
+        }
+<span class="fc" id="L120">        var quote = decision.quote();</span>
+<span class="fc" id="L121">        boolean buy = &quot;BUY&quot;.equals(order.side());</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        BigDecimal price = buy ? quote.ask() : quote.bid();</span>
+<span class="fc" id="L123">        BigDecimal tolerance = resolveBuffer(order, account);</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (order.reference() != null) {</span>
+            // PS-12: a buy may fill up to reference + tolerance, a sell down to reference - tolerance.
+<span class="fc" id="L126">            BigDecimal limit = protectionLimit(order.reference(), tolerance, buy);</span>
+<span class="fc" id="L127">            auditQuoteDecision(orderId, quote, new Protection(order.reference(), tolerance, limit, price));</span>
+<span class="fc bfc" id="L128" title="All 6 branches covered.">            boolean moved = buy ? price.compareTo(limit) &gt; 0 : price.compareTo(limit) &lt; 0;</span>
+<span class="fc" id="L129">            return new QuoteContext(quote, buy, price,</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                    moved ? reject(orderId, PRICE_MOVED, priceMovedMessage(order.reference(), price, tolerance)) : null);</span>
+        }
+<span class="fc" id="L132">        auditQuoteDecision(orderId, quote, null);</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        if (!isWithinTolerance(order, account, quote, buy, price)) {</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">            Result result = order.attempts() &gt;= maxAttempts</span>
+<span class="fc" id="L135">                    ? reject(orderId, PRICE_OUT_OF_TOLERANCE) : Result.requeue(PRICE_OUT_OF_TOLERANCE);</span>
+<span class="fc" id="L136">            return new QuoteContext(quote, buy, price, result);</span>
+        }
+<span class="fc" id="L138">        return new QuoteContext(quote, buy, price, null);</span>
+    }
+
+    /** Records the quote used; for a protected order also the reference, tolerance, limit and actual price. */
+    private void auditQuoteDecision(UUID orderId, com.neueda.leap.marketdata.MarketQuote quote, Protection protection) {
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        Protection p = protection == null ? new Protection(null, null, null, null) : protection;</span>
+<span class="fc" id="L144">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'PRICE_DECISION',
+                       jsonb_build_object('quoteId', CAST(? AS uuid), 'quotedAt', CAST(? AS timestamptz),
+                                          'bid', CAST(? AS numeric), 'ask', CAST(? AS numeric),
+                                          'attemptNumber', execution_attempts,
+                                          'referencePrice', CAST(? AS numeric), 'tolerancePct', CAST(? AS numeric),
+                                          'limitPrice', CAST(? AS numeric), 'actualPrice', CAST(? AS numeric))
+                FROM orders WHERE order_id = ?
+<span class="fc" id="L153">                &quot;&quot;&quot;, quote.quoteId(), quote.quotedAt(), quote.bid(), quote.ask(),</span>
+<span class="fc" id="L154">                p.reference(), p.tolerance(), p.limit(), p.actual(), orderId);</span>
+<span class="fc" id="L155">    }</span>
+
+    /**
+     * What the client is told when price protection rejects a fill, e.g. &quot;The price rose 3.1% before
+     * your order filled, more than your 2% limit. Nothing was charged.&quot;
+     */
+    static String priceMovedMessage(BigDecimal reference, BigDecimal actual, BigDecimal tolerancePercent) {
+<span class="fc" id="L162">        BigDecimal move = actual.subtract(reference).multiply(HUNDRED).divide(reference, 1, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L163">        return &quot;The price %s %s%% before your order filled, more than your %s%% limit. Nothing was charged.&quot;.formatted(</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">                move.signum() &gt;= 0 ? &quot;rose&quot; : &quot;fell&quot;, move.abs().toPlainString(),</span>
+<span class="fc" id="L165">                tolerancePercent.stripTrailingZeros().toPlainString());</span>
+    }
+
+    /** The worst price a protected order accepts: reference x (1 +/- tolerance%), to four decimals. */
+    static BigDecimal protectionLimit(BigDecimal reference, BigDecimal tolerancePercent, boolean buy) {
+<span class="fc" id="L170">        BigDecimal factor = tolerancePercent.divide(HUNDRED);</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        return reference.multiply(buy ? BigDecimal.ONE.add(factor) : BigDecimal.ONE.subtract(factor))</span>
+<span class="fc" id="L172">                .setScale(4, RoundingMode.HALF_UP);</span>
+    }
+
+    private Result reject(UUID orderId, String reason) {
+<span class="fc" id="L176">        return reject(orderId, reason, null);</span>
+    }
+
+    private Result reject(UUID orderId, String reason, String explanation) {
+<span class="fc" id="L180">        jdbc.update(&quot;UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?&quot;,</span>
+                reason, orderId);
+<span class="fc bfc" id="L182" title="All 2 branches covered.">        if (explanation == null) {</span>
+<span class="fc" id="L183">            history(orderId, &quot;REJECTED&quot;, reason);</span>
+        } else {
+<span class="fc" id="L185">            jdbc.update(&quot;INSERT INTO order_status_history(order_id, status, reason_code, reason_text) VALUES (?, ?, ?, ?)&quot;,</span>
+                    orderId, &quot;REJECTED&quot;, reason, explanation);
+        }
+<span class="fc" id="L188">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'ORDER_REJECTED',
+                       jsonb_build_object('reasonCode', last_execution_error, 'attemptNumber', execution_attempts)
+                FROM orders WHERE order_id = ?
+                &quot;&quot;&quot;, orderId);
+<span class="fc" id="L194">        return Result.rejected(reason);</span>
+    }
+
+    private void history(UUID orderId, String status, String reason) {
+<span class="fc" id="L198">        jdbc.update(&quot;INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, ?, ?)&quot;, orderId, status, reason);</span>
+<span class="fc" id="L199">    }</span>
+
+    private Account lockAccount(UUID accountId) {
+        // Serialize all settlements for an account, including initially absent balance rows.
+<span class="fc" id="L203">        return jdbc.queryForObject(&quot;&quot;&quot;</span>
+                SELECT account_status, trading_enabled, execution_buffer_percent, min_balance_requirement
+                FROM accounts WHERE account_id = ? FOR UPDATE
+<span class="fc" id="L206">                &quot;&quot;&quot;, (rs, n) -&gt; new Account(rs.getString(1), rs.getBoolean(2), rs.getBigDecimal(3), rs.getBigDecimal(4)), accountId);</span>
+    }
+
+    private boolean isInstrumentTradable(UUID instrumentId) {
+<span class="fc" id="L210">        Boolean tradable = jdbc.queryForObject(</span>
+                &quot;SELECT enabled AND tradable FROM instruments WHERE instrument_id = ?&quot;,
+                Boolean.class,
+                instrumentId);
+<span class="fc" id="L214">        return Boolean.TRUE.equals(tradable);</span>
+    }
+
+    private Result handleQuoteDecision(UUID orderId, ExecutionQuoteDecision decision) {
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        if (decision.action() == ExecutionQuoteDecision.Action.REQUEUE) {</span>
+<span class="fc" id="L219">            return Result.requeue(decision.reason().name());</span>
+        }
+<span class="fc bfc" id="L221" title="All 2 branches covered.">        if (decision.action() == ExecutionQuoteDecision.Action.REJECT) {</span>
+<span class="fc" id="L222">            return reject(orderId, decision.reason().name());</span>
+        }
+<span class="fc" id="L224">        return null;</span>
+    }
+
+    private boolean isWithinTolerance(Trade order, Account account,
+                                      com.neueda.leap.marketdata.MarketQuote quote,
+                                      boolean buy, BigDecimal price) {
+<span class="fc" id="L230">        BigDecimal buffer = resolveBuffer(order, account).movePointLeft(2);</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">        BigDecimal limit = quote.midpoint().multiply(buy ? BigDecimal.ONE.add(buffer) : BigDecimal.ONE.subtract(buffer));</span>
+<span class="fc bfc" id="L232" title="All 6 branches covered.">        return buy ? price.compareTo(limit) &lt;= 0 : price.compareTo(limit) &gt;= 0;</span>
+    }
+
+    private BigDecimal resolveBuffer(Trade order, Account account) {
+<span class="fc bfc" id="L236" title="All 2 branches covered.">        return order.buffer() == null ? account.buffer() : order.buffer();</span>
+    }
+
+    private Result validateSettlementPreconditions(UUID orderId, Account account, Position position,
+                                                    boolean buy, BigDecimal cash, BigDecimal amount,
+                                                    long quantity) {
+<span class="fc bfc" id="L242" title="All 4 branches covered.">        if (buy &amp;&amp; cash.compareTo(amount) &lt; 0) {</span>
+<span class="fc" id="L243">            return reject(orderId, &quot;INSUFFICIENT_CASH&quot;);</span>
+        }
+<span class="fc bfc" id="L245" title="All 4 branches covered.">        if (!buy &amp;&amp; position.quantity() &lt; quantity) {</span>
+<span class="fc" id="L246">            return reject(orderId, &quot;INSUFFICIENT_HOLDINGS&quot;);</span>
+        }
+<span class="fc" id="L248">        return null;</span>
+    }
+
+    private SettlementResult persistSettlement(UUID orderId, Trade order, boolean buy, BigDecimal price,
+                                               java.time.OffsetDateTime quotedAt, BigDecimal amount) {
+<span class="fc" id="L253">        UUID fill = UUID.randomUUID();</span>
+<span class="fc" id="L254">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO fills(fill_id, order_id, filled_quantity, execution_price, quote_timestamp)
+                VALUES (?, ?, ?, ?, ?)
+<span class="fc" id="L257">                &quot;&quot;&quot;, fill, orderId, order.quantity(), price, quotedAt);</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        long change = buy ? order.quantity() : -order.quantity();</span>
+<span class="fc" id="L259">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
+                VALUES (?, ?, ?, ?, ?, ?)
+<span class="fc" id="L262">                &quot;&quot;&quot;, order.account(), order.instrument(), fill, change, price, order.side());</span>
+        // holding_movements invokes the transactional holdings projection trigger.
+<span class="fc bfc" id="L264" title="All 2 branches covered.">        BigDecimal cashChange = buy ? amount.negate() : amount;</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">        if (buy) {</span>
+<span class="fc" id="L266">            cashMovements.buy(order.account(), fill, amount);</span>
+        } else {
+<span class="fc" id="L268">            cashMovements.sell(order.account(), fill, amount);</span>
+        }
+<span class="fc" id="L270">        return new SettlementResult(fill, cashChange);</span>
+    }
+
+<span class="fc" id="L273">    private record Trade(UUID account, UUID instrument, String side, long quantity, long attempts, BigDecimal buffer,</span>
+                         BigDecimal reference) {}
+<span class="fc" id="L275">    private record Protection(BigDecimal reference, BigDecimal tolerance, BigDecimal limit, BigDecimal actual) {}</span>
+<span class="fc" id="L276">    private record Account(String status, boolean enabled, BigDecimal buffer, BigDecimal minimum) {}</span>
+<span class="fc" id="L277">    private record Position(long quantity, BigDecimal cost) {}</span>
+<span class="fc" id="L278">    private record SettlementResult(UUID fillId, BigDecimal cashChange) {}</span>
+<span class="fc" id="L279">    private record QuoteContext(com.neueda.leap.marketdata.MarketQuote quote, Boolean buy, BigDecimal price, Result result) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

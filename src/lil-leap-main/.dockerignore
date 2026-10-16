@@ -1,0 +1,17 @@
+**/node_modules
+**/.angular
+**/dist
+**/target
+**/coverage
+**/htmlcov
+**/.venv
+**/__pycache__
+**/test-results
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.idea
+.vscode
+.scannerwork
+e2e/artifacts

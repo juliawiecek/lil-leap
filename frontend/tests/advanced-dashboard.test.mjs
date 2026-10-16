@@ -417,3 +417,21 @@ test('missing active account or stale instrument mapping prevents submission', a
   assert.equal(desk.submitting(), false);
   assert.equal(calls, 0);
 });
+
+test('the spoken briefing reads the summary panel, live moves and orders', async t => {
+  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
+  desk.applyPortfolio({ cash: 1000, holdings: [{ instrumentId: 'nvda-uuid', symbol: 'NVDA', instrumentName: 'NVIDIA', quantity: 2, averageCost: 800 }] });
+  const rows = [{ orderId: 'o1', symbol: 'NVDA', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: new Date().toISOString(), fillPrice: 800, filledQuantity: 2, filledAt: new Date().toISOString() }];
+  desk.orderHistoryClient = { list: async () => rows };
+  const snapshot = await desk.briefingSource();
+  assert.equal(snapshot.total, desk.portfolio());
+  assert.equal(snapshot.gainPercent, desk.totalReturnPercent());
+  assert.equal(snapshot.buyingPower, 1000);
+  assert.deepEqual(snapshot.holdings, [{ symbol: 'NVDA', name: 'NVIDIA Corporation', dayChangePercent: 2.36 }]);
+  assert.deepEqual(snapshot.orders, rows);
+  desk.privateBalance.set(true);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, []);
+});

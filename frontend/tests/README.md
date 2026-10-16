@@ -26,6 +26,11 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
   icons, trade-ticket inputs, and chart period buttons.
 - `profile-form.test.mjs`: rendered form prefilling, formatting, validation,
   conditional controls, and step navigation.
+- `briefing.test.mjs`: spoken briefing wording (amounts, market times, movers,
+  orders since the last briefing, hidden balances), speech playback, Alt+B, and
+  repeat timing.
+- `switch-scan.test.mjs`: switch control groups, Back/Pause, keypads for number,
+  text and dropdown fields, dialogs, re-rendered pages, the switch key, and settings.
 - `services.test.mjs`: injected auth session and configured safe error handler.
 - `startup.test.mjs`: real entry-point bootstrap and startup failure handling.
 - Existing auth, security, and session tests remain in this folder.

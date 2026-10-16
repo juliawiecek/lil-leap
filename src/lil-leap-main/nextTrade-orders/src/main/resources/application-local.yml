@@ -1,0 +1,20 @@
+spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nexttrade
+    username: app_user
+    password: my_app_password
+    hikari:
+      maximum-pool-size: 10
+app:
+  jwt:
+    secret: nexttrade-shared-dev-secret-32bytes-min
+server:
+  port: 8082
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN
+

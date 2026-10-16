@@ -1,0 +1,79 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/space-grotesk.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-600.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+:root {
+  --font-ui: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --font-display: 'Playfair Display', 'Merriweather', serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+}
+body { font-family: var(--font-ui); }
+
+/*
+ * A dropdown's open list is drawn by the browser from the options' own colours, not the select's
+ * gradient or transparent background, so on Windows it would open white. Every list uses the
+ * app's dark surface instead.
+ */
+select option,
+select optgroup {
+  background-color: #0f1518;
+  color: #e9edf1;
+}
+
+/* Order ticket notices shared by both dashboards (TS-14.7, PS-02, PS-15). */
+.price-delayed,
+.closed-warning {
+  border-radius: 6px;
+  background: #241f12;
+  color: #f0c86a;
+}
+.price-delayed {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-style: normal;
+}
+.closed-warning {
+  padding: 9px 11px;
+  border: 1px solid #5a4a24;
+}
+.review-summary {
+  padding: 10px 12px;
+  border: 1px solid #2a4d3a;
+  border-radius: 6px;
+  background: #102019;
+  color: #e9f3ee;
+  font-weight: 600;
+}
+.review-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.review-actions > :last-child {
+  flex: 1;
+}

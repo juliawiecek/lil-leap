@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nexttrade
+    username: app_user
+    password: my_app_password
+    hikari:
+      maximum-pool-size: 10
+app:
+  jwt:
+    secret: nexttrade-shared-dev-secret-32bytes-min
+server:
+  port: 8080
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN

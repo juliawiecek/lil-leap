@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: nextTrade-holdings
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+    hikari:
+      read-only: false
+      maximum-pool-size: 10
+  mvc:
+    log-request-details: false
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN

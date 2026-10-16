@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderHistoryResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.dto</a> &gt; <span class="el_source">OrderHistoryResponse.java</span></div><h1>OrderHistoryResponse.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.dto;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * One row of a client's order history.
+ * BR-11: a chronological history of the client's own orders and fills.
+ *
+ * @param orderId identifier of the order
+ * @param symbol ticker of the instrument traded
+ * @param side BUY or SELL
+ * @param quantity number of units ordered
+ * @param status current lifecycle status
+ * @param submittedAt when the order was submitted
+ * @param fillPrice price per unit the order filled at; null until filled
+ * @param filledQuantity units filled; null until filled
+ * @param filledAt when the order filled; null until filled
+ */
+<span class="fc" id="L21">public record OrderHistoryResponse(UUID orderId, String symbol, String side, Long quantity, String status,</span>
+                                   Instant submittedAt, BigDecimal fillPrice, Long filledQuantity,
+                                   Instant filledAt) {
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

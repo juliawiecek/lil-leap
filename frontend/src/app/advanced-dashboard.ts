@@ -28,6 +28,9 @@ import { PriceProtectionStore, protectionText, validProtection } from './price-p
 import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
+import { BriefingButton, BriefingSource } from './briefing-button';
+import { SwitchScanService } from './switch-scan';
+import { SwitchScanSettings } from './switch-scan-settings';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -76,7 +79,10 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
+  imports: [
+    CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts,
+    PriceProtectionSettings, BriefingButton, SwitchScanSettings,
+  ],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -158,6 +164,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   );
   readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Open or closed for the briefing; null until the status first loads. */
+  readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
+  /** Switch control runs app-wide once turned on; injecting it here starts it after a reload. */
+  readonly switchScan = inject(SwitchScanService, { optional: true }) ?? new SwitchScanService();
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
   /** Corner messages when an order fills or is rejected (PS-15). */
@@ -391,6 +401,41 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     this.toasts.show('rejected', `Order rejected: ${order.quantity} ${order.symbol}`, reason);
   }
+  /**
+   * What the spoken briefing reads: the summary panel's figures, today's move of each position
+   * from the live feed, and this account's orders. A failed order load leaves orders out.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.positions();
+    return {
+      now,
+      market: this.feed.status(),
+      balanceHidden: this.privateBalance(),
+      total: this.portfolio(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((p) => ({
+        symbol: p.symbol,
+        name: live.get(p.symbol)?.name ?? p.symbol,
+        dayChangePercent: live.get(p.symbol)?.change ?? null,
+      })),
+      orders,
+      pricesDelayed: held.some((p) => {
+        const quote = live.get(p.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
+
   /** Opens the orders list from a toast. */
   viewOrders(): void {
     this.navigate('Orders');

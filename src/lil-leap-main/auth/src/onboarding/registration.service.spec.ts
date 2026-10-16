@@ -1,0 +1,223 @@
+import { BadRequestException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { RegistrationService } from './registration.service';
+import { UserService } from '../user/user.service';
+import { PasswordEncoderService } from '../security/password-encoder.service';
+import { SsnEncryptionService } from '../security/ssn-encryption.service';
+import { UserAlreadyExistsException } from '../user/exceptions/user-already-exists.exception';
+import { RegisterRequestDto } from '../user/dto/register-request.dto';
+import { UserRole } from '../user/user-role.enum';
+import { InsufficientInvestableAssetsException } from './exceptions/insufficient-investable-assets.exception';
+import { InitialDepositBelowMinimumException } from './exceptions/initial-deposit-below-minimum.exception';
+import { InitialDepositAboveLiquidityException } from './exceptions/initial-deposit-above-liquidity.exception';
+
+/** A date of birth `years` ago today. */
+const yearsAgo = (years: number) => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.toISOString().slice(0, 10);
+};
+
+const trader = (overrides: Partial<RegisterRequestDto> = {}): RegisterRequestDto =>
+  ({
+    userRole: UserRole.TRADER,
+    email: ' Ada@Example.com ',
+    password: 'correct-horse-9',
+    firstName: ' Ada ',
+    lastName: ' Lovelace ',
+    dateOfBirth: yearsAgo(30),
+    phone: ' 555-0100 ',
+    streetAddress: '1 Main St',
+    apartment: ' ',
+    city: 'Springfield',
+    stateProvince: 'IL',
+    postalCode: '62701',
+    country: ' US ',
+    citizenshipStatus: 'CITIZEN',
+    ssn: '123-45-6789',
+    employmentStatus: 'RETIRED',
+    annualIncome: '50,000',
+    netWorthBracket: '$25k-100k',
+    riskProfile: 'MODERATE',
+    liquidityPosition: '10,000',
+    initialDeposit: '10,000',
+    accreditedInvestor: false,
+    politicallyExposedPerson: false,
+    brokerAffiliation: true,
+    brokerFirmName: ' Firm ',
+    accountName: ' Main ',
+    accountType: 'INDIVIDUAL_CASH',
+    ...overrides,
+  }) as unknown as RegisterRequestDto;
+
+describe('RegistrationService', () => {
+  let saved: Array<Record<string, any>>;
+  let manager: { create: jest.Mock; save: jest.Mock; query: jest.Mock };
+  let userService: { findByEmail: jest.Mock };
+  let ssn: { encrypt: jest.Mock };
+  let service: RegistrationService;
+
+  /** The saved row created for the given entity class name. */
+  const savedAs = (entity: string) => saved.find((row) => row.__entity === entity)!;
+
+  beforeEach(() => {
+    saved = [];
+    manager = {
+      create: jest.fn((entity, fields) => ({ __entity: entity.name, ...fields })),
+      save: jest.fn(async (row) => {
+        const ids: Record<string, Record<string, string>> = { User: { userId: 'user-1' }, Account: { accountId: 'account-1' } };
+        Object.assign(row, ids[row.__entity] ?? {});
+        saved.push(row);
+        return row;
+      }),
+      query: jest.fn().mockResolvedValue([]),
+    };
+    userService = { findByEmail: jest.fn().mockResolvedValue(null) };
+    ssn = { encrypt: jest.fn().mockResolvedValue(Buffer.from('cipher')) };
+    const dataSource = { transaction: jest.fn((work) => work(manager)) };
+
+    service = new RegistrationService(
+      userService as unknown as UserService,
+      { encode: (raw: string) => `{bcrypt}hash-of-${raw}` } as PasswordEncoderService,
+      ssn as unknown as SsnEncryptionService,
+      dataSource as unknown as DataSource,
+    );
+  });
+
+  it('rejects an email that is already registered, inside the transaction', async () => {
+    userService.findByEmail.mockResolvedValue({ userId: 'existing' });
+
+    await expect(service.register(trader())).rejects.toThrow(UserAlreadyExistsException);
+    expect(userService.findByEmail).toHaveBeenCalledWith(' Ada@Example.com ', manager);
+    expect(saved).toHaveLength(0);
+  });
+
+  it('registers an ANALYST: user + analyst profile only', async () => {
+    const user = await service.register({
+      userRole: UserRole.ANALYST,
+      email: 'Analyst@Example.com',
+      password: 'pw-123456',
+      employeeId: ' E-1 ',
+      department: '  ',
+    } as RegisterRequestDto);
+
+    expect(user).toMatchObject({ email: 'analyst@example.com', passwordHash: '{bcrypt}hash-of-pw-123456', userRole: 'ANALYST' });
+    expect(saved.map((row) => row.__entity)).toEqual(['User', 'AnalystProfile']);
+    expect(savedAs('AnalystProfile')).toMatchObject({ employeeId: 'E-1', department: null });
+    expect(ssn.encrypt).not.toHaveBeenCalled();
+    expect(manager.query).not.toHaveBeenCalled();
+  });
+
+  it('registers a TRADER: user, customer profile, financial profile and account', async () => {
+    await service.register(trader());
+
+    expect(saved.map((row) => row.__entity)).toEqual(['User', 'CustomerProfile', 'FinancialProfile', 'Account']);
+    expect(ssn.encrypt).toHaveBeenCalledWith('123456789');
+    expect(savedAs('CustomerProfile')).toMatchObject({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      phone: '555-0100',
+      country: 'US',
+      address: '1 Main St, Springfield, IL, 62701',
+      ssnEncrypted: Buffer.from('cipher'),
+    });
+    expect(savedAs('FinancialProfile')).toMatchObject({
+      annualIncome: '50000',
+      liquidityPosition: '10000',
+      employerName: null,
+      fundsSourceVerified: false,
+      regulatoryDisclosures: { brokerAffiliation: true, brokerFirmName: 'Firm', controlPerson: false, controlCompanyName: '' },
+      beneficialOwnerInfo: { otherBeneficialOwner: false, beneficialOwnerName: '' },
+    });
+    // $25k-100k floor + 10% of 50,000 income = 30,000 capacity -> NOVICE
+    expect(savedAs('Account')).toMatchObject({ accountName: 'Main', traderLevel: 'NOVICE', minBalanceRequirement: '5000.00' });
+    expect(savedAs('Account').accountNumber).toMatch(/^NT[0-9A-F]{12}$/);
+  });
+
+  it('opens the account ACTIVE and funds it with the initial deposit in one transaction', async () => {
+    await service.register(trader());
+
+    expect(savedAs('Account')).toMatchObject({ accountStatus: 'ACTIVE', tradingEnabled: true });
+    const [deposit, balance, audit] = manager.query.mock.calls;
+    expect(deposit[0]).toContain("'DEPOSIT'");
+    expect(deposit[1]).toEqual(['account-1', '10000.00']);
+    expect(balance[0]).toContain('INSERT INTO cash_balances');
+    expect(balance[1]).toEqual(['account-1', '10000.00']);
+    expect(audit[0]).toContain("'ACCOUNT_FUNDED'");
+    expect(audit[1]).toEqual(['user-1', 'account-1', '10000.00']);
+  });
+
+  it('formats a deposit with cents for the numeric columns', async () => {
+    await service.register(trader({ initialDeposit: '7,500.5' }));
+
+    expect(manager.query.mock.calls[0][1]).toEqual(['account-1', '7500.50']);
+  });
+
+  it('rejects a deposit below the NOVICE minimum before creating any rows', async () => {
+    await expect(service.register(trader({ initialDeposit: '4,999.99' }))).rejects.toThrow(InitialDepositBelowMinimumException);
+    expect(saved).toHaveLength(0);
+    expect(manager.query).not.toHaveBeenCalled();
+  });
+
+  it('rejects an ADVANCED applicant depositing less than $100,000', async () => {
+    const advanced = trader({ netWorthBracket: '$100k-500k', liquidityPosition: '200,000', initialDeposit: '50,000' } as Partial<RegisterRequestDto>);
+
+    await expect(service.register(advanced)).rejects.toThrow('at least $100,000');
+    expect(saved).toHaveLength(0);
+  });
+
+  it('rejects a deposit above the declared liquidity position', async () => {
+    await expect(service.register(trader({ initialDeposit: '10,000.01' }))).rejects.toThrow(InitialDepositAboveLiquidityException);
+    expect(saved).toHaveLength(0);
+  });
+
+  it.each([
+    ['initialDeposit', 'ten thousand', 'initial_deposit'],
+    ['initialDeposit', '1.234', 'initial_deposit'],
+    ['liquidityPosition', 'plenty', 'liquidity_position'],
+  ])('rejects a malformed %s (%s)', async (field, value, message) => {
+    await expect(service.register(trader({ [field]: value } as Partial<RegisterRequestDto>))).rejects.toThrow(message);
+    expect(saved).toHaveLength(0);
+  });
+
+  it('includes the apartment in the address when given', async () => {
+    await service.register(trader({ apartment: ' 4B ' }));
+
+    expect(savedAs('CustomerProfile').address).toBe('1 Main St, 4B, Springfield, IL, 62701');
+  });
+
+  it('assigns ADVANCED and its minimum balance from declared finances', async () => {
+    const advanced = { netWorthBracket: '$100k-500k', annualIncome: undefined, liquidityPosition: '150,000', initialDeposit: '100,000' };
+    await service.register(trader(advanced as Partial<RegisterRequestDto>));
+
+    expect(savedAs('Account')).toMatchObject({ traderLevel: 'ADVANCED', minBalanceRequirement: '100000.00' });
+    expect(manager.query.mock.calls[0][1]).toEqual(['account-1', '100000.00']);
+  });
+
+  it('ignores a trader_level sent by the client', async () => {
+    await service.register(trader({ traderLevel: 'ADVANCED' } as unknown as Partial<RegisterRequestDto>));
+
+    expect(savedAs('Account').traderLevel).toBe('NOVICE');
+  });
+
+  it('rejects capacity below $5,000 before creating any rows', async () => {
+    const broke = trader({ netWorthBracket: '$0-5k', annualIncome: undefined } as Partial<RegisterRequestDto>);
+
+    await expect(service.register(broke)).rejects.toThrow(InsufficientInvestableAssetsException);
+    expect(saved).toHaveLength(0);
+    expect(ssn.encrypt).not.toHaveBeenCalled();
+  });
+
+  it('rejects a TRADER under 21', async () => {
+    await expect(service.register(trader({ dateOfBirth: yearsAgo(20) }))).rejects.toThrow(BadRequestException);
+    expect(ssn.encrypt).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid date of birth', async () => {
+    await expect(service.register(trader({ dateOfBirth: 'not-a-date' }))).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects a TRADER without an SSN', async () => {
+    await expect(service.register(trader({ ssn: '  ' }))).rejects.toThrow('SSN is required');
+  });
+});

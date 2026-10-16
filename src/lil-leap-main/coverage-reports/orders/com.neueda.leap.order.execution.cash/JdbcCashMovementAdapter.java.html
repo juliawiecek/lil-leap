@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcCashMovementAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.execution.cash</a> &gt; <span class="el_source">JdbcCashMovementAdapter.java</span></div><h1>JdbcCashMovementAdapter.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.execution.cash;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+/**
+ * PostgreSQL cash movements. {@link Propagation#MANDATORY} makes every method fail when no
+ * transaction is active, so a movement can only join an existing settlement and never open
+ * or commit one of its own.
+ */
+@Service
+@Transactional(propagation = Propagation.MANDATORY)
+public class JdbcCashMovementAdapter implements CashMovementAdapter {
+    private final JdbcTemplate jdbc;
+
+    /**
+     * Creates the adapter.
+     * @param jdbc JDBC operations participating in Spring transactions
+     */
+<span class="fc" id="L25">    public JdbcCashMovementAdapter(JdbcTemplate jdbc) {</span>
+<span class="fc" id="L26">        this.jdbc = jdbc;</span>
+<span class="fc" id="L27">    }</span>
+
+    @Override
+    public BigDecimal lockBalance(UUID accountId) {
+        // The account row lock also covers a balance row that does not exist yet.
+<span class="fc" id="L32">        if (jdbc.query(&quot;SELECT account_id FROM accounts WHERE account_id = ? FOR UPDATE&quot;,</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">                (rs, n) -&gt; rs.getObject(1), accountId).isEmpty()) {</span>
+<span class="fc" id="L34">            throw new IllegalArgumentException(&quot;Account not found&quot;);</span>
+        }
+<span class="fc" id="L36">        return jdbc.query(&quot;SELECT balance FROM cash_balances WHERE account_id = ? FOR UPDATE&quot;,</span>
+<span class="fc" id="L37">                (rs, n) -&gt; rs.getBigDecimal(1), accountId).stream().findFirst().orElse(BigDecimal.ZERO);</span>
+    }
+
+    @Override
+    public BigDecimal buy(UUID accountId, UUID fillId, BigDecimal amount) {
+<span class="fc" id="L42">        return move(accountId, fillId, &quot;BUY&quot;, requirePositive(amount).negate());</span>
+    }
+
+    @Override
+    public BigDecimal sell(UUID accountId, UUID fillId, BigDecimal amount) {
+<span class="fc" id="L47">        return move(accountId, fillId, &quot;SELL&quot;, requirePositive(amount));</span>
+    }
+
+    private BigDecimal move(UUID accountId, UUID fillId, String type, BigDecimal change) {
+<span class="fc" id="L51">        BigDecimal balance = lockBalance(accountId).add(change);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (balance.signum() &lt; 0) throw new IllegalStateException(&quot;Cash movement would overdraw the account&quot;);</span>
+<span class="fc" id="L53">        jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
+                VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
+                &quot;&quot;&quot;, accountId, fillId, type, change);
+        // The ledger is the source of truth; the balance row is its cache and moves with it.
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (jdbc.update(&quot;UPDATE cash_balances SET balance = ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ?&quot;,</span>
+                balance, accountId) == 0) {
+<span class="fc" id="L60">            jdbc.update(&quot;INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)&quot;, accountId, balance);</span>
+        }
+<span class="fc" id="L62">        return balance;</span>
+    }
+
+    private static BigDecimal requirePositive(BigDecimal amount) {
+<span class="pc bpc" id="L66" title="1 of 6 branches missed.">        if (amount == null || amount.signum() &lt;= 0 || amount.stripTrailingZeros().scale() &gt; 2) {</span>
+<span class="fc" id="L67">            throw new IllegalArgumentException(&quot;Cash amount must be positive with at most two decimal places&quot;);</span>
+        }
+<span class="fc" id="L69">        return amount;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

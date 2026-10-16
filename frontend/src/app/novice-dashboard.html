@@ -1,9 +1,9 @@
 <div class="novice-shell">
-  <aside class="novice-sidebar">
+  <aside class="novice-sidebar" data-scan-group="Menu">
     <a class="wordmark" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
-    <nav aria-label="Main navigation">
+    <nav aria-label="Main navigation" data-scan-group="Main navigation">
       @for (item of navigation; track item.label) {
         <button
           type="button"
@@ -15,7 +15,7 @@
         </button>
       }
     </nav>
-    <div class="sidebar-account">
+    <div class="sidebar-account" data-scan-group="Your account">
       <span>Your account</span>
       <button type="button" (click)="navigate('Settings')">Account settings</button>
       <button type="button" (click)="openModal('help')">Help &amp; support</button>
@@ -23,8 +23,8 @@
     </div>
   </aside>
   <div class="novice-main">
-    <header class="novice-topbar">
-      <div class="company-search">
+    <header class="novice-topbar" data-scan-group="Top bar">
+      <div class="company-search" data-scan-group="Search">
         <app-dashboard-icon name="search" />
         <input
           aria-label="Search for a company or symbol"
@@ -48,6 +48,7 @@
         }
       </div>
       <div class="topbar-actions">
+        <app-briefing [source]="briefingSource" [marketOpen]="marketKnownOpen()" />
         <app-account-switcher />
         <div class="workspace-choice">
           <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Novice · Guided</span>
@@ -80,11 +81,11 @@
         </button>
       </div>
     </header>
-    <app-market-ticker (pick)="openTrade('Buy', $event)" />
+    <app-market-ticker data-scan-group="Live prices" (pick)="openTrade('Buy', $event)" />
     <main class="novice-content">
       <div class="page-heading">
         <div>
-          <span class="greeting">GOOD EVENING</span>
+          <span class="greeting">{{ greeting() }}</span>
           <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
         </div>
         <div class="market-status">
@@ -94,7 +95,7 @@
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
         <div class="primary-column">
           @if (activeTab() === 'Overview') {
-            <section class="panel portfolio-panel" aria-label="Portfolio performance">
+            <section class="panel portfolio-panel" aria-label="Portfolio performance" data-scan-group="Portfolio">
               <div class="portfolio-top">
                 <div>
                   <div class="value-label">
@@ -118,7 +119,7 @@
                     ><span>Today</span>
                   </div>
                 </div>
-                <div class="period-picker" aria-label="Chart time range">
+                <div class="period-picker" aria-label="Chart time range" data-scan-group="Chart time range">
                   @for (item of periods; track item) {
                     <button
                       type="button"
@@ -204,7 +205,7 @@
             </section>
           }
           @if (activeTab() === 'Overview' || activeTab() === 'Portfolio') {
-            <section class="panel investments-panel">
+            <section class="panel investments-panel" data-scan-group="Your investments">
               <div class="panel-heading">
                 <h2>Your investments</h2>
                 <button type="button" class="text-link" (click)="navigate('Portfolio')">
@@ -315,7 +316,7 @@
             </section>
           }
           @if (activeTab() === 'Overview') {
-            <section class="panel market-panel">
+            <section class="panel market-panel" data-scan-group="Market snapshot">
               <div class="panel-heading">
                 <h2>Market snapshot</h2>
                 <button class="text-link" type="button" (click)="openModal('markets')">
@@ -344,7 +345,7 @@
             </section>
           }
           @if (activeTab() === 'Watchlist') {
-            <section class="panel expanded-list">
+            <section class="panel expanded-list" data-scan-group="Your watchlist">
               <div class="panel-heading">
                 <h2>Your watchlist</h2>
                 <span>Search above to add a company</span>
@@ -366,13 +367,13 @@
             </section>
           }
           @if (activeTab() === 'Orders' || activeTab() === 'History') {
-            <section class="panel expanded-list">
+            <section class="panel expanded-list" data-scan-group="Order history">
               <div class="panel-heading"><h2>Order history</h2></div>
               <app-order-history />
             </section>
           }
           @if (activeTab() === 'Settings') {
-            <section class="panel settings-panel">
+            <section class="panel settings-panel" data-scan-group="Account settings">
               <h2>Account settings</h2>
               <div>
                 <span>Account name</span><strong>{{ name() || 'Your account' }}</strong>
@@ -391,6 +392,7 @@
                 </button>
               </div>
               <app-price-protection-settings [symbols]="listedSymbols()" />
+              <app-switch-scan-settings />
               <button class="secondary-button" type="button" (click)="signOut.emit()">
                 Sign out ↗
               </button>
@@ -399,7 +401,7 @@
         </div>
         @if (activeTab() === 'Overview') {
           <div class="secondary-column">
-            <section class="panel allocation-panel">
+            <section class="panel allocation-panel" data-scan-group="Asset allocation">
               <div class="panel-heading">
                 <h2>Asset allocation</h2>
                 <button type="button" class="text-link" (click)="openModal('allocation')">
@@ -432,7 +434,7 @@
                 ><app-dashboard-icon name="chevron" />
               </button>
             </section>
-            <section class="panel trade-panel">
+            <section class="panel trade-panel" data-scan-group="Ready to trade">
               <h2>Ready to trade?</h2>
               <p>Buy or sell shares. You’ll review the details before confirming.</p>
               <div class="trade-actions">
@@ -444,7 +446,7 @@
                 </button>
               </div>
             </section>
-            <section class="panel watchlist-panel">
+            <section class="panel watchlist-panel" data-scan-group="Watchlist">
               <div class="panel-heading">
                 <h2>Watchlist</h2>
                 <button type="button" class="text-link" (click)="navigate('Watchlist')">
@@ -547,6 +549,7 @@
           <button
             type="button"
             [class.selected]="side() === action"
+            [attr.aria-pressed]="side() === action"
             (click)="side.set(action); reviewing.set(false); tradeMessage.set('')"
           >
             {{ action }}

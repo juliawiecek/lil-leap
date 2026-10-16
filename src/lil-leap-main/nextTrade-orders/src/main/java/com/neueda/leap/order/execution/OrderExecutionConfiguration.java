@@ -1,0 +1,79 @@
+package com.neueda.leap.order.execution;
+
+import com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher;
+import com.neueda.leap.order.market.MarketHours;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.time.Clock;
+
+/**
+ * Configures database-backed execution polling when {@code orders.execution.enabled} is true or absent.
+ * Execution requires a concrete transactional settlement handler.
+ */
+@Configuration
+@EnableScheduling
+@ConditionalOnProperty(name = "orders.execution.enabled", havingValue = "true", matchIfMissing = true)
+public class OrderExecutionConfiguration {
+
+    /** Creates the execution configuration; Spring instantiates it. */
+    public OrderExecutionConfiguration() {
+        // No state to initialize.
+    }
+
+    @Bean
+    OrderExecutionWorker orderExecutionWorker(JdbcTemplate jdbc, PlatformTransactionManager manager,
+            OrderExecutor executor,
+            OrderLifecycleEventPublisher eventPublisher,
+            @Value("${orders.execution.retry-seconds:30}") int retrySeconds,
+            @Value("${orders.execution.max-failure-attempts:10}") long maxAttempts,
+            MarketHours marketHours, Clock clock) {
+        return new OrderExecutionWorker(jdbc, manager, executor, eventPublisher, retrySeconds, maxAttempts,
+                marketHours, clock);
+    }
+
+    @Bean
+    Poller orderExecutionPoller(OrderExecutionWorker worker,
+            @Value("${orders.execution.batch-size:100}") int batchSize) {
+        return new Poller(worker, batchSize);
+    }
+
+    /** First poll on startup and subsequent polls always reload work from the database. */
+    static class Poller {
+        private static final Logger log = LoggerFactory.getLogger(Poller.class);
+        private final OrderExecutionWorker worker;
+        private final int batchSize;
+
+        Poller(OrderExecutionWorker worker, int batchSize) {
+            if (batchSize < 1) throw new IllegalArgumentException("Batch size must be positive");
+            this.worker = worker;
+            this.batchSize = batchSize;
+        }
+
+        /**
+         * Claims and executes up to the configured batch size, stopping when no due order remains.
+         */
+        @Scheduled(fixedDelayString = "${orders.execution.poll-ms:1000}")
+        public void poll() {
+            try {
+                for (int i = 0; i < batchSize; i++) {
+                    var claim = worker.claimNext();
+                    if (claim == null) return;
+                    worker.execute(claim);
+                }
+            } catch (RuntimeException failure) {
+                // Avoid logging exception text that could contain client order details.
+                log.warn("Order processing interrupted; persisted work will be retried ({})",
+                        failure.getClass().getSimpleName());
+            }
+        }
+    }
+}

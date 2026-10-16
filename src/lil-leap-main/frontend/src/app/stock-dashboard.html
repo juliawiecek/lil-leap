@@ -1,0 +1,5 @@
+@if (mode() === 'NOVICE') {
+  <app-novice-dashboard [name]="name()" [mode]="mode()" (signOut)="signOut.emit()" />
+} @else {
+  <app-advanced-dashboard [name]="name()" [mode]="mode()" (signOut)="signOut.emit()" />
+}

@@ -1,0 +1,148 @@
+package com.neueda.leap.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Service responsible for issuing and validating JWT session tokens.
+ *
+ * <p>Tokens are signed with HMAC-SHA using a shared secret. The subject claim
+ * carries the user's ID, with the user's email and a {@code client_id} claim
+ * included for downstream consumers.</p>
+ */
+@Service
+@SuppressWarnings("java:S2143") // JJWT temporal claim API requires java.util.Date interop.
+public class JwtServiceImpl implements JwtService {
+
+    /**
+     * Claim name identifying which client application requested the token.
+     */
+    private static final String CLIENT_ID_CLAIM = "client_id";
+
+    /**
+     * Claim name carrying the authenticated user's email address.
+     */
+    private static final String EMAIL_CLAIM = "email";
+
+    /**
+     * Claim name carrying the authenticated user's role.
+     */
+    private static final String ROLE_CLAIM = "user_role";
+
+    /**
+     * Key used to sign and verify tokens, derived from the configured secret.
+     */
+    private final SecretKey key;
+
+    /**
+     * How long an issued token remains valid.
+     */
+    private final Duration expiration;
+
+    /**
+     * Identifier for the client application embedded in issued tokens.
+     */
+    private final String clientId;
+
+    /**
+     * Creates a new JWT service from configuration.
+     *
+     * <p>{@code app.jwt.secret} must be set via the {@code APP_JWT_SECRET}
+     * environment variable.</p>
+     *
+     * @param secret the HMAC signing secret, at least 32 bytes long
+     * @param expirationMinutes how many minutes an issued token remains valid
+     * @param clientId identifier for the client application embedded in issued tokens
+     */
+    public JwtServiceImpl(
+            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.expiration-minutes:60}") long expirationMinutes,
+            @Value("${app.jwt.client-id:nexttrade-web}") String clientId
+    ) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expiration = Duration.ofMinutes(expirationMinutes);
+        this.clientId = clientId;
+    }
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @return a signed, compact JWT string
+     */
+    @Override
+    public String issueToken(UUID userId, String email) {
+        return issueToken(userId, email, "TRADER");
+    }
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @param role the authenticated user's role
+     * @return a signed, compact JWT string
+     */
+    public String issueToken(UUID userId, String email, String role) {
+        Instant now = Instant.now();
+
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim(EMAIL_CLAIM, email)
+                .claim(CLIENT_ID_CLAIM, clientId)
+                .claim(ROLE_CLAIM, role)
+                .issuedAt(toLegacyDate(now))
+                .expiration(toLegacyDate(now.plus(expiration)))
+                .signWith(key)
+                .compact();
+    }
+
+    private static java.util.Date toLegacyDate(Instant instant) {
+        return java.util.Date.from(instant);
+    }
+
+    /**
+     * Validates a bearer token and extracts the caller's identity.
+     *
+     * <p>Returns an empty {@link Optional} for any invalid token: a bad
+     * signature, malformed structure, or an expired token.</p>
+     *
+     * @param token the raw JWT string, without the {@code "Bearer "} prefix
+     * @return the extracted principal if the token is valid, otherwise empty
+     */
+    @Override
+    public Optional<JwtPrincipal> validate(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            // A token without an expiry would never expire, and one without a subject names nobody.
+            if (claims.getExpiration() == null || claims.getSubject() == null) {
+                return Optional.empty();
+            }
+
+            UUID userId = UUID.fromString(claims.getSubject());
+            String email = claims.get(EMAIL_CLAIM, String.class);
+            String role = claims.get(ROLE_CLAIM, String.class);
+
+            return Optional.of(new JwtPrincipal(userId, email, role == null || role.isBlank() ? "TRADER" : role));
+        } catch (RuntimeException e) {
+            // Fail closed (TS-SEC-01): any verification failure, expected or not, denies access.
+            return Optional.empty();
+        }
+    }
+}
+

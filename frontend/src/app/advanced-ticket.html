@@ -18,6 +18,7 @@
             <button
               type="button"
               [class.active]="desk().side() === action"
+              [attr.aria-pressed]="desk().side() === action"
               (click)="desk().side.set(action); desk().message.set('')"
             >
               {{ action }}

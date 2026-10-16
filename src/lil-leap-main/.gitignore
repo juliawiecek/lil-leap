@@ -1,0 +1,109 @@
+# Environment variables
+# .env is committed for demo/education purposes (contains demo credentials only)
+# Use .env.local or .env.production.local for sensitive overrides
+# .env
+.env.local
+.env.*.local
+.env
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+/build/
+/bin/
+*.log
+application.log*
+.gradle
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.classpath
+.project
+.settings
+.vscode
+node_modules/
+**/.angular/
+**/__pycache__/
+shared/session-core/coverage/
+e2e/artifacts/
+.scannerwork/
+auth/coverage/
+frontend/coverage/
+insights-frontend/coverage/
+frontend/test-results/
+dist/
+build/
+*.pid
+
+# Quote Service (auto-generated/temporary)
+QUOTE_SERVICE_REPORT.md
+insights/src/main/java/com/neueda/leap/marketdata/controller/package-info.java
+insights/src/main/java/com/neueda/leap/marketdata/dto/package-info.java
+
+! .env.example
+
+# Angular build cache (including root-level CLI invocations)
+.angular/
+
+# Shared session package reports and Python caches
+shared/session-core/coverage/
+__pycache__/
+# Password reset emails written locally by the auth service (contain live reset links)
+auth/outbox/

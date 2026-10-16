@@ -1,0 +1,18 @@
+NextTrade test coverage - snapshot of main, 15 October 2026
+=============================================================
+
+Component                     Tests                 Lines     Branches
+----------------------------  --------------------  --------  --------
+Orders (Spring Boot)          311 (+27 Postgres)    86.4%     89.0%
+Holdings (Spring Boot)        170 (+27 Postgres)    89.9%     83.6%
+Insights (Spring Boot)         87                   89.3%     89.4%
+Auth (NestJS)                 153                   91.6%     81.9%
+NextTrade UI (Angular)        212                   96.4%     91.6%
+Insights UI (Angular)          48                  100.0%     96.9%
+Session package (shared)       70                   98.6%     94.3%
+Data pipeline (Python)         85                   92.3%     82.3%
+----------------------------  --------------------  --------  --------
+All code                     1136                   94.7%     90.4%
+
+All tests passed. Target: 70%. Every component meets it.
+HTML reports: see README.md in this folder.
