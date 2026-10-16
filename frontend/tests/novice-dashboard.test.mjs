@@ -57,18 +57,56 @@ test('balances and holdings come from the backend, valued at average cost', asyn
     [['AAPL', 42, 6476.4, 'apple'], ['MSFT', 18, 4470.48, 'microsoft'], ['NVDA', 12, 2744.88, 'nvidia']]);
 });
 
-test('holdings are re-priced at the latest bid every 5 seconds, so portfolio value moves', async t => {
+test('holdings are re-priced from the shared feed on every tick, so portfolio value moves (PS-10)', async t => {
   const aapl = { instrumentId: 'aapl-id', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 10, averageCost: 200 };
-  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 500, holdings: [aapl] }] });
-  const bids = [205.5, 198];
-  desk.portfolioClient.latestBids = async ids => new Map(ids.map(id => [id, bids[0]]));
-  await desk.refreshPortfolio();
+  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 500, holdings: [aapl] }] });
+  feed.push([{ symbol: 'AAPL', instrumentId: 'aapl-id', price: 205.5, change: 2.75 }]);
   assert.deepEqual([desk.portfolioValue(), desk.invested()], [2555, 2055]);
-  assert.deepEqual(desk.holdings().map(h => [h.value, h.total, h.totalPercent]), [[2055, 55, 2.75]]);
-  bids.shift();
-  t.mock.timers.tick(5000); await flush();
+  assert.deepEqual(desk.holdings().map(h => [h.value, h.total, h.totalPercent, h.today, h.change]), [[2055, 55, 2.75, 55, 2.75]]);
+  assert.deepEqual([desk.todayReturn(), desk.todayReturnPercent()], [55, 2.75]);
+  feed.push([{ symbol: 'AAPL', instrumentId: 'aapl-id', price: 198, change: -1 }]);
   assert.deepEqual([desk.portfolioValue(), desk.invested()], [2480, 1980]);
   assert.deepEqual(desk.holdings().map(h => [h.total, h.totalPercent]), [[-20, -1]]);
+  assert.equal(desk.todayReturn(), -20, 'today is the day move, shown with its real sign');
+});
+
+test('an order queued for the open is watched, and its fill reloads balances without a page change (PS-10)', async t => {
+  const { desk, historyCalls } = await tradingDesk(t, {
+    history: [[historyRow('ACCEPTED')], [historyRow('FILLED', { fillPrice: 225, filledQuantity: 2 })]],
+    portfolios: [samplePortfolio, { cash: 5970.18, holdings: samplePortfolio.holdings }],
+  });
+  assert.equal(desk.buyingPower(), 6420.18);
+  t.mock.timers.tick(5000); await flush(); await flush();
+  assert.equal(desk.buyingPower(), 5970.18);
+  const calls = historyCalls();
+  t.mock.timers.tick(20000); await flush();
+  assert.equal(historyCalls(), calls, 'with no open orders left, polling stops');
+});
+
+test('the guided workspace has four pages, and an unreachable service shows a banner instead of a blank screen (PS-11)', async t => {
+  const { desk } = await tradingDesk(t);
+  assert.deepEqual(desk.navigation.map(n => n.label), ['Overview', 'Portfolio', 'Activity', 'Settings']);
+  assert.equal(desk.serviceDown(), false);
+  desk.portfolioClient.load = async () => { throw new Error('Could not reach the server.'); };
+  await desk.refreshPortfolio();
+  assert.equal(desk.serviceDown(), true);
+  assert.equal(desk.portfolioValue(), 20111.94, 'the last values stay on screen');
+});
+
+test('greeting, diversification and loading states come from the real data (PS-06)', async t => {
+  const fresh = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  assert.equal(fresh.portfolioLoaded(), false);
+  assert.equal(fresh.diversification().title, 'No investments yet');
+  for (const [hour, greeting] of [[9, 'Good morning'], [14, 'Good afternoon'], [20, 'Good evening']]) {
+    fresh.marketClock.set(new Date(2026, 9, 16, hour));
+    assert.equal(fresh.greeting(), greeting);
+  }
+  const { desk } = await tradingDesk(t);
+  assert.equal(desk.portfolioLoaded(), true);
+  assert.equal(desk.diversification().title, 'Spread across companies');
+  desk.applyPortfolio({ cash: 0, holdings: [holding('AAPL', 1, 100)] });
+  assert.equal(desk.diversification().title, 'All in one company');
+  assert.equal(desk.markets, undefined, 'no made-up index numbers');
 });
 
 test('the trade dialog offers only tradable stocks and switching stock resets the review', async t => {
@@ -195,18 +233,21 @@ test('confirmation revalidates buying power after review', async t => {
 });
 
 test('a sent order shows its progress until it fills, then tracking stops', async t => {
+  // The first read is the dashboard's own start-up check, before anything is sent.
   const { desk, historyCalls } = await tradingDesk(t, {
-    history: [[historyRow('SUBMITTED')], [historyRow('ACCEPTED')], [historyRow('FILLED', { fillPrice: 225.1, filledQuantity: 2 })]],
+    history: [[], [historyRow('SUBMITTED')], [historyRow('ACCEPTED')], [historyRow('FILLED', { fillPrice: 225.1, filledQuantity: 2 })]],
   });
   desk.openTrade('Buy', 'AAPL'); desk.quantity.set('2'); await desk.confirmTrade(); await flush();
   assert.match(desk.tradeMessage(), /Order sent/);
   t.mock.timers.tick(2000); await flush();
   assert.match(desk.tradeMessage(), /Order accepted/);
   t.mock.timers.tick(2000); await flush();
-  assert.equal(desk.tradeMessage(), 'Bought 2 AAPL at $225.10. You can see it under Orders.');
+  assert.equal(desk.tradeMessage(), 'Bought 2 AAPL at $225.10. You can see it under Activity.');
   assert.deepEqual(desk.toasts.toasts().map(toast => [toast.kind, toast.title]), [['filled', 'Order filled: 2 AAPL at $225.10']]);
-  t.mock.timers.tick(10000); await flush();
-  assert.equal(historyCalls(), 3);
+  t.mock.timers.tick(10000); await flush(); await flush();
+  const settled = historyCalls();
+  t.mock.timers.tick(30000); await flush();
+  assert.equal(historyCalls(), settled, 'nothing is re-read once every order has finished');
 });
 
 test('a rejected order is reported in plain words, with the reason in a toast', async t => {
@@ -219,7 +260,7 @@ test('a rejected order is reported in plain words, with the reason in a toast', 
     ['rejected', 'Order rejected: 2 AAPL', 'There was not enough cash in this account to pay for it.']);
   desk.orderStatusClient = { status: async () => { throw new Error('down'); } };
   await desk.trackOrder('o1');
-  assert.match(desk.tradeMessage(), /Check Orders for details/);
+  assert.match(desk.tradeMessage(), /Check Activity for details/);
 });
 
 test('the ticket follows live prices, flags a stale quote, and reviews in one line with a closed-market warning', async t => {
@@ -237,10 +278,10 @@ test('the ticket follows live prices, flags a stale quote, and reviews in one li
   feed.push([{ symbol: 'AAPL', name: 'Apple Inc.', price: 227.4, quotedAt: new Date(Date.now() - 61000).toISOString() }]);
   assert.equal(desk.tradePriceDelayed(), true);
   desk.viewOrders();
-  assert.equal(desk.activeTab(), 'History');
+  assert.equal(desk.activeTab(), 'Activity');
 });
 
-test('an order still running past the tracking limit points the user to Orders', async t => {
+test('an order still running past the tracking limit points the user to Activity', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('ACCEPTED')]] });
   await desk.trackOrder('o1', Date.now() - ORDER_TRACK_LIMIT_MS);
   assert.match(desk.tradeMessage(), /still being processed/);

@@ -1,0 +1,251 @@
+import { apiHttp } from './http-helper.mjs';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { component } from './component-helper.mjs';
+const { OrderHistoryClient, newlyFilled, hasOpenOrders } = await import('../src/app/order-history-api.ts');
+const { ActivityFeed } = await import('../src/app/activity-feed.ts');
+const { OrderHistoryService } = await import('../src/app/order-history.service.ts');
+const { CashActivityService } = await import('../src/app/cash-activity.service.ts');
+const { CashActivityClient, buildActivity, orderItem, cashItem, formatMoney, formatLocalTime } = await import('../src/app/activity-api.ts');
+
+const USER_ID = '7c2e33ef-b0ee-43b0-8040-90481f82236e';
+const encode = value => btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const token = `${encode({ alg: 'HS256' })}.${encode({ sub: USER_ID, exp: 2, iat: 1 })}.signature`;
+const row = (overrides = {}) => ({
+  orderId: 'o-1', symbol: 'AAPL', side: 'BUY', quantity: 1, status: 'FILLED',
+  submittedAt: '2026-09-30T18:00:00Z', fillPrice: '225.05', filledQuantity: 1, filledAt: '2026-09-30T18:00:02Z',
+  ...overrides,
+});
+
+function fakeFetch(response) {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    if (response instanceof Error) throw response;
+    return response;
+  };
+  return { calls, fetchImpl };
+}
+const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('client calls the callerâ€™s own history with only the filters supplied and the bearer token', async () => {
+  const { calls, fetchImpl } = fakeFetch(json(200, [row()]));
+  const client = new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl));
+
+  const rows = await client.list({ from: '2026-09-01', to: '', status: 'FILLED' });
+
+  assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders?from=2026-09-01&status=FILLED`);
+  assert.equal(calls[0].init.headers.Authorization, undefined);
+  assert.equal(rows[0].fillPrice, 225.05);
+});
+
+test('client sends no query string when no filters are set', async () => {
+  const { calls, fetchImpl } = fakeFetch(json(200, []));
+  await new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl)).list();
+  assert.equal(calls[0].url, `/api/v1/clients/${USER_ID}/orders`);
+});
+
+test('client refuses to call the server when signed out', async () => {
+  const { calls, fetchImpl } = fakeFetch(json(200, []));
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }, apiHttp(fetchImpl)).list(), /Sign in/);
+  assert.equal(calls.length, 0);
+});
+
+test('client surfaces the serverâ€™s error message, or a friendly fallback', async () => {
+  const withMessage = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(json(400, { error: 'INVALID_FILTER', message: 'Unknown status: X' })).fetchImpl));
+  await assert.rejects(withMessage.list({ status: 'X' }), /Unknown status: X/);
+
+  const noBody = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new Response('oops', { status: 500 })).fetchImpl));
+  await assert.rejects(noBody.list(), /Could not load your orders/);
+
+  const offline = new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new TypeError('network')).fetchImpl));
+  await assert.rejects(offline.list(), /Could not reach the server/);
+});
+
+
+test('the app-wide services use the signed-in user’s token, so they refuse while signed out', async t => {
+  const { AuthService } = await import('../src/app/auth.service.ts');
+  await assert.rejects(component(t, OrderHistoryService, [AuthService]).list(), /Sign in/);
+  await assert.rejects(component(t, CashActivityService, [AuthService]).list(), /Sign in/);
+});
+
+test('cash client reads the caller’s deposits and transfers with only the filters supplied', async () => {
+  const { calls, fetchImpl } = fakeFetch(json(200, [{ transactionId: 't1', accountId: 'a1', accountName: 'Brokerage', type: 'DEPOSIT', amount: '25000.00', settlementStatus: 'SETTLED', occurredAt: '2026-10-01T09:00:00Z' }]));
+  const rows = await new CashActivityClient({ accessToken: token }, apiHttp(fetchImpl)).list({ from: '2026-10-01', to: '', accountId: 'a1' });
+  assert.equal(calls[0].url, '/api/v1/accounts/cash-activity?from=2026-10-01&accountId=a1');
+  assert.equal(rows[0].amount, 25000);
+  await new CashActivityClient({ accessToken: token }, apiHttp(fakeFetch(json(200, [])).fetchImpl)).list();
+  await assert.rejects(new CashActivityClient({ accessToken: token }, apiHttp(fakeFetch(new Response('x', { status: 500 })).fetchImpl)).list(), /cash activity/);
+  await assert.rejects(new CashActivityClient({ accessToken: token }, apiHttp(fakeFetch(new TypeError('net')).fetchImpl)).list(), /Could not reach the server/);
+});
+
+const deposit = { transactionId: 't1', accountId: 'a1', accountName: 'Brokerage', type: 'DEPOSIT', amount: 25000, settlementStatus: 'SETTLED', occurredAt: '2026-09-29T09:00:00Z' };
+const transferOut = { ...deposit, transactionId: 't2', type: 'TRANSFER', amount: -100, settlementStatus: 'PENDING', occurredAt: '2026-10-01T09:00:00Z' };
+
+test('orders, fills, rejections and cash movements become one newest-first timeline (PS-11)', () => {
+  const filled = { ...row(), fillPrice: 225.05 };
+  const rejected = row({ orderId: 'o-2', side: 'SELL', quantity: 3, status: 'REJECTED', fillPrice: null, filledQuantity: null, filledAt: null, submittedAt: '2026-09-30T19:00:00Z' });
+  const items = buildActivity([filled, rejected], [deposit, transferOut]);
+  assert.deepEqual(items.map(i => [i.title, i.amount]), [
+    ['Transfer out', -100], ['Sell 3 AAPL', null], ['Bought 1 AAPL', -225.05], ['Deposit', 25000],
+  ]);
+  assert.equal(items[0].detail, 'Brokerage · settling');
+  assert.equal(items[1].detail, 'Rejected, nothing was charged');
+  assert.equal(items[2].detail, 'Filled at $225.05');
+  assert.equal(items[2].at, '2026-09-30T18:00:02Z', 'a fill is dated when it filled');
+  assert.deepEqual(buildActivity([filled], [deposit], 'Orders').map(i => i.kind), ['order']);
+  assert.deepEqual(buildActivity([filled], [deposit], 'Cash').map(i => i.kind), ['cash']);
+  assert.equal(orderItem(row({ status: 'ACCEPTED', fillPrice: null })).detail, 'Accepted');
+  assert.equal(cashItem({ ...deposit, type: 'TRANSFER', amount: 5 }).title, 'Transfer in');
+  assert.equal(cashItem({ ...deposit, type: 'DIVIDEND' }).title, 'Dividend');
+  assert.equal(cashItem({ ...deposit, type: 'ADJUSTMENT' }).title, 'Adjustment');
+});
+
+test('money and times are formatted the same way everywhere, with the time zone shown', () => {
+  assert.equal(formatMoney(1234.5), '$1,234.50');
+  assert.equal(formatMoney(25, true), '+$25.00');
+  assert.equal(formatMoney(-25, true), '−$25.00');
+  assert.equal(formatMoney(-25), '−$25.00');
+  assert.equal(formatMoney(0, true), '$0.00');
+  assert.match(formatLocalTime('2026-10-16T13:05:00Z', 'en-GB', 'Europe/Dublin'), /^16 Oct 2026, 14:05 (IST|GMT\+1)$/);
+  assert.equal(formatLocalTime('not a date'), '');
+});
+
+test('fills since the last read are found once, and open orders keep polling alive (PS-10)', () => {
+  const accepted = row({ status: 'ACCEPTED' });
+  const filled = row();
+  assert.deepEqual(newlyFilled(null, [filled]), [], 'the first read reports nothing');
+  assert.deepEqual(newlyFilled([accepted], [filled]).map(r => r.orderId), ['o-1']);
+  assert.deepEqual(newlyFilled([filled], [filled]), []);
+  assert.equal(hasOpenOrders([accepted]), true);
+  assert.equal(hasOpenOrders([filled, row({ status: 'REJECTED' })]), false);
+});
+
+function feedWith(orders, cash = () => []) {
+  const calls = { orders: [], cash: [] };
+  return {
+    calls,
+    providers: [
+      { provide: OrderHistoryService, useValue: { list: async filters => { calls.orders.push(filters); return orders(filters); } } },
+      { provide: CashActivityService, useValue: { list: async filters => { calls.cash.push(filters); return cash(filters); } } },
+    ],
+  };
+}
+
+test('the feed loads orders and cash together as soon as it is shown', async t => {
+  const { calls, providers } = feedWith(() => [row({ fillPrice: 225.05 })], () => [deposit]);
+  const feed = component(t, ActivityFeed, providers);
+  assert.equal(feed.loaded(), false);
+  feed.ngOnInit();
+  await flush();
+  assert.deepEqual(calls.orders[0], { from: '', to: '' });
+  assert.deepEqual(calls.cash[0], { from: '', to: '' });
+  assert.deepEqual(feed.items().map(i => i.kind), ['order', 'cash']);
+  assert.equal(feed.loading(), false);
+  feed.setKind('Cash');
+  assert.deepEqual(feed.items().map(i => i.title), ['Deposit']);
+  feed.ngOnDestroy();
+});
+
+test('the compact feed shows only the newest rows and asks the page to show the rest', async t => {
+  const { providers } = feedWith(() => [row(), row({ orderId: 'o-2' }), row({ orderId: 'o-3' })], () => [deposit]);
+  const feed = component(t, ActivityFeed, providers);
+  t.mock.method(feed, 'limit', () => 2);
+  feed.ngOnInit();
+  await flush();
+  assert.equal(feed.items().length, 2);
+  let asked = 0;
+  feed.viewAll.subscribe(() => asked++);
+  feed.viewAll.emit();
+  assert.equal(asked, 1);
+  feed.ngOnDestroy();
+});
+
+test('changing a date reloads in place with that filter, and clearing restores everything', async t => {
+  const { calls, providers } = feedWith(filters => (filters.from ? [] : [row()]));
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  await flush();
+  feed.setFrom('2026-09-01');
+  await flush();
+  assert.deepEqual(calls.orders.at(-1), { from: '2026-09-01', to: '' });
+  assert.equal(feed.items().length, 0);
+  assert.equal(feed.hasFilters(), true);
+  feed.setTo('2026-09-30');
+  await flush();
+  assert.deepEqual(calls.cash.at(-1), { from: '2026-09-01', to: '2026-09-30' });
+  feed.clearFilters();
+  await flush();
+  assert.deepEqual(calls.orders.at(-1), { from: '', to: '' });
+  assert.equal(feed.items().length, 1);
+  assert.equal(feed.statusLabel('SETTLED'), 'Settled');
+  feed.ngOnDestroy();
+});
+
+test('a start date after the end date shows an error without calling the server', async t => {
+  const { calls, providers } = feedWith(() => [row()]);
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  await flush();
+  const before = calls.orders.length;
+  feed.setTo('2026-09-01');
+  await flush();
+  feed.setFrom('2026-09-30');
+  await flush();
+  assert.equal(calls.orders.length, before + 1); // only the valid "to" change reached the server
+  assert.match(feed.error(), /start date/);
+  assert.deepEqual(feed.items(), []);
+  feed.ngOnDestroy();
+});
+
+test('one failing source still shows the other with a note; both failing shows the error', async t => {
+  let ordersDown = false, cashDown = true;
+  const { providers } = feedWith(
+    () => { if (ordersDown) throw new Error('Could not reach the server. Check your connection and try again.'); return [row()]; },
+    () => { if (cashDown) throw new Error('down'); return [deposit]; },
+  );
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  await flush();
+  assert.equal(feed.items().length, 1);
+  assert.match(feed.partial(), /Deposits and transfers could not be loaded/);
+  ordersDown = true; cashDown = false;
+  await feed.load();
+  assert.deepEqual(feed.items().map(i => i.kind), ['cash']);
+  assert.match(feed.partial(), /Orders could not be loaded/);
+  cashDown = true;
+  await feed.load();
+  assert.match(feed.error(), /Could not reach the server/);
+  assert.deepEqual(feed.items(), []);
+  ordersDown = false; cashDown = false;
+  await feed.load();
+  assert.equal(feed.error(), '');
+  assert.equal(feed.partial(), '');
+  feed.ngOnDestroy();
+});
+
+test('a slow earlier response never overwrites a newer one, and the feed refreshes itself', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let finish;
+  let calls = 0;
+  const { providers } = feedWith(() => { calls++; return calls === 1 ? new Promise(resolve => { finish = resolve; }) : []; });
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  assert.equal(feed.loading(), true);
+  feed.from.set('2026-09-30');
+  feed.setTo('2026-09-01');
+  assert.equal(feed.loading(), false);
+  finish([row()]);
+  await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual(feed.items(), []);
+  feed.clearFilters();
+  const before = calls;
+  t.mock.timers.tick(5000);
+  await Promise.resolve(); await Promise.resolve();
+  assert.ok(calls > before, 'the feed re-reads on its own every few seconds');
+  feed.ngOnDestroy();
+  const after = calls;
+  t.mock.timers.tick(20000);
+  assert.equal(calls, after, 'and stops when it goes away');
+});

@@ -28,8 +28,8 @@ test('every rejection code reads as plain English, and unknown codes still say w
   assert.match(rejectionReason('LOCATION_RESTRICTED'), /location/);
   assert.match(rejectionReason('MARKET_CLOSED'), /market was closed/);
   assert.match(rejectionReason('ACCOUNT_NOT_ACTIVE'), /not open for trading/);
-  assert.match(rejectionReason('SOMETHING_NEW'), /Check Orders/);
-  assert.match(rejectionReason(null), /Check Orders/);
+  assert.match(rejectionReason('SOMETHING_NEW'), /Check Activity/);
+  assert.match(rejectionReason(null), /Check Activity/);
 });
 
 test('the order status client reads the reason code through the shared transport', async () => {

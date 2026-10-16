@@ -5,7 +5,7 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
-import { OrderHistory } from './order-history';
+import { ActivityFeed } from './activity-feed';
 import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
 import { AccountSwitcher } from './account-switcher';
 import { AccountsService } from './accounts.service';
@@ -16,11 +16,12 @@ import {
   ORDER_TRACK_LIMIT_MS,
   OrderHistoryClient,
   OrderHistoryRow,
+  newlyFilled,
 } from './order-history-api';
-import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, dayGainOf, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { MarketFeed } from './market-feed.service';
-import { isDelayed } from './market-feed-api';
+import { PricePoint, isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
@@ -28,7 +29,7 @@ import { PriceProtectionStore, protectionText, validProtection } from './price-p
 import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
-import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
+import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
   instrumentId: string;
@@ -51,11 +52,19 @@ interface Position {
   quantity: number;
   cost: number;
   value: number;
+  /** Today's move in the position's value, from the stock's change since the day's first quote. */
   day: number;
   total: number;
   weight: number;
 }
-/** One row of the Orders/Executions tabs, built from the backend's order history. */
+/** One sector's average move today across the listed stocks in it. */
+interface SectorMove {
+  name: string;
+  change: number;
+  /** Bar length, as % of the biggest move shown. */
+  width: number;
+}
+/** One order from the backend's history, for tracking, toasts and the chart's trade markers. */
 interface Order {
   id: string;
   time: string;
@@ -67,16 +76,10 @@ interface Order {
   status: string;
   type: string;
 }
-interface NewsItem {
-  symbol: string;
-  time: string;
-  title: string;
-  source: string;
-}
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
@@ -86,12 +89,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   declare readonly orderHistoryClient: OrderHistoryClient;
   declare readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
-  #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
   #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
   #destroyed = false;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
-  #bids = new Map<string, number>();
+  /** Latest bid and today's % change per instrument, both from the shared feed (PS-10). */
+  readonly #bids = new Map<string, number>();
+  readonly #dayChanges = new Map<string, number>();
+  /** The previous order read, so a fill seen by polling reloads balances (PS-10). */
+  #lastOrderRows: OrderHistoryRow[] | null = null;
+  /** Which stock's price history is loaded or loading, so a switch drops a stale response. */
+  #historySymbol = '';
   readonly name = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
@@ -114,12 +122,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly dataReady = computed(() => this.accounts().length > 0 && this.instruments().length > 0);
   readonly nav = [
     { name: 'Overview', icon: 'home' },
-    { name: 'Watchlist', icon: 'star' },
     { name: 'Portfolio', icon: 'chart' },
-    { name: 'Orders', icon: 'orders' },
-    { name: 'History', icon: 'orders' },
-    { name: 'Markets', icon: 'chart' },
-    { name: 'Screeners', icon: 'search' },
+    { name: 'Activity', icon: 'orders' },
+    { name: 'Markets', icon: 'search' },
     { name: 'Settings', icon: 'settings' },
   ];
   readonly page = signal('Overview');
@@ -130,9 +135,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly period = signal('1D');
   readonly periods = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y'];
   readonly bottomTab = signal('Positions');
-  readonly bottomTabs = ['Positions', 'Orders', 'Executions', 'Balances', 'Performance'];
-  readonly orderStatus = signal('All');
-  readonly ticketTab = signal('Trade');
+  readonly bottomTabs = ['Positions', 'Balances', 'Performance'];
+  /** Balances could not be read: the service is down or unreachable (PS-11). */
+  readonly serviceDown = signal(false);
   readonly marketTab = signal('Sectors');
   readonly filter = signal('All stocks');
   readonly currentTime = signal(new Date());
@@ -201,52 +206,47 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly positions = signal<Position[]>([]);
   readonly buyingPower = signal(0);
   readonly portfolio = signal(0);
+  /** False until the first balances arrive, so placeholders never show as real zeroes (PS-06). */
+  readonly portfolioLoaded = signal(false);
   /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
   readonly totalReturn = signal(0);
   readonly totalReturnPercent = signal(0);
-  readonly markets = [
-    { name: 'S&P 500', value: '5,071.32', change: '+1.21%' },
-    { name: 'Nasdaq', value: '15,628.17', change: '+1.43%' },
-    { name: 'Dow Jones', value: '38,501.22', change: '+0.93%' },
-    { name: 'Russell 2000', value: '2,004.36', change: '+1.08%' },
-  ];
-  readonly sectors = [
-    { name: 'Technology', change: 1.82 },
-    { name: 'Communication Services', change: 1.26 },
-    { name: 'Consumer Discretionary', change: 1.14 },
-    { name: 'Financials', change: 0.93 },
-    { name: 'Industrials', change: 0.71 },
-    { name: 'Healthcare', change: 0.28 },
-    { name: 'Consumer Staples', change: 0.24 },
-    { name: 'Energy', change: -0.36 },
-    { name: 'Utilities', change: -0.42 },
-    { name: 'Real Estate', change: -0.58 },
-  ];
+  /** Today's move across positions, from each stock's change since the day's first quote. */
+  readonly dayGain = signal(0);
+  readonly dayGainPercent = signal(0);
+  /** Cash and stocks as shares of the total, for the summary and the exposure panel. */
+  readonly exposure = computed(() => {
+    const total = this.portfolio();
+    const equities = Math.max(0, Math.round((total - this.buyingPower()) * 100) / 100);
+    const equitiesPercent = total > 0 ? Math.round((equities / total) * 1000) / 10 : 0;
+    return { total, equities, cash: this.buyingPower(), equitiesPercent, cashPercent: total > 0 ? Math.round((100 - equitiesPercent) * 10) / 10 : 0 };
+  });
+  /** "$100K" / "$1.2M": the total short enough to fit inside the exposure ring. */
+  readonly exposureLabel = computed(() =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(this.exposure().total),
+  );
+  /** Average move today of the listed stocks in each sector, biggest gain first (PS-06). */
+  readonly sectors = computed<SectorMove[]>(() => {
+    const bySector = new Map<string, number[]>();
+    for (const q of this.quotes()) {
+      if (q.sector && q.price) {
+        bySector.set(q.sector, [...(bySector.get(q.sector) ?? []), q.change]);
+      }
+    }
+    const moves = [...bySector].map(([name, changes]) => ({
+      name, change: Math.round((changes.reduce((sum, c) => sum + c, 0) / changes.length) * 100) / 100,
+    }));
+    const biggest = Math.max(0.01, ...moves.map((m) => Math.abs(m.change)));
+    moves.sort((a, b) => b.change - a.change);
+    return moves.map((m) => ({ ...m, width: (Math.abs(m.change) / biggest) * 100 }));
+  });
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
-  readonly news: NewsItem[] = [];
-  readonly article = signal(0);
-  readonly executions = computed(() => this.orders().filter((order) => order.status === 'Filled'));
-  readonly filteredOrders = computed(() => {
-    const status = this.orderStatus();
-    if (status === 'All') {
-      return this.orders();
-    }
-    return this.orders().filter((order) => order.status === status);
-  });
-  readonly orderType = signal('Limit');
-  readonly quantity = signal('100');
-  readonly limitPrice = signal('176.50');
-  readonly tif = signal('Day');
-  readonly takeProfit = signal(false);
-  readonly stopLoss = signal(false);
-  readonly profitPrice = signal('185.00');
-  readonly stopPrice = signal('170.00');
+  /** The orders service fills MARKET orders only, so the ticket offers nothing else. */
+  readonly quantity = signal('1');
   readonly message = signal('');
   readonly modal = signal('review');
-  readonly alertPrice = signal('180.00');
-  readonly alerts = signal<{ symbol: string; price: number }[]>([]);
   /** Price protection (PS-12): the saved default and per-stock overrides. */
   readonly protection = inject(PriceProtectionStore, { optional: true }) ?? new PriceProtectionStore();
   /** A one-off percentage for the order being placed; null uses the saved setting for the stock. */
@@ -266,47 +266,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.orderTolerance.set(percent);
     }
   }
-  readonly cost = computed(
-    () =>
-      Number(this.quantity()) *
-      (this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price),
-  );
-  readonly fees = computed(() => Math.floor(Math.max(0, this.cost()) * 0.01) / 100);
-  readonly total = computed(() => this.cost() + this.fees());
-  readonly candles = computed(() => {
-    const anchors = [
-      179.8, 172, 167.5, 171, 167.2, 169.9, 166.5, 170.5, 165.9, 171, 172.9, 169.6, 170.8, 170.1,
-      172.5, 172.9, 173.1, 175.4, 173.5, 174.6, 177.4, 174.5, 177, 175.2, 176.56,
-    ];
-    const seed = this.periods.indexOf(this.period()) + this.quotes().findIndex((q) => q.symbol === this.selected().symbol) * 2;
-    return Array.from({ length: 108 }, (_, i) => {
-      const step = (i / 107) * (anchors.length - 1),
-        j = Math.floor(step);
-      const close =
-        anchors[j] +
-        (anchors[Math.min(j + 1, anchors.length - 1)] - anchors[j]) * (step - j) +
-        Math.sin(i * 1.71 + seed) * 0.35;
-      const open = close + Math.sin(i * 2.3 + seed) * 0.95;
-      const y = (price: number) => 12 + (181.5 - price) * 8.55;
-      return {
-        x: 5 + i * 7.55,
-        open: y(open),
-        close: y(close),
-        high: y(Math.max(open, close) + 0.35 + Math.abs(Math.sin(i)) * 0.5),
-        low: y(Math.min(open, close) - 0.45),
-        up: close >= open,
-        volume: 9 + Math.abs(Math.sin(i * 1.4)) * 12 + (i < 12 ? 30 * Math.abs(Math.cos(i)) : 0),
-      };
-    });
-  });
-  readonly rsiPath = computed(() =>
-    this.candles()
-      .map(
-        (c, i) =>
-          `${i ? 'L' : 'M'}${c.x},${(24 + Math.sin(i * 0.17) * 6 + Math.sin(i * 1.8) * 3 + (i < 20 ? 5 : -i * 0.07)).toFixed(1)}`,
-      )
-      .join(' '),
-  );
+  /** Estimated cost at the live price; the orders service charges no fees. */
+  readonly total = computed(() => Number(this.quantity()) * this.selected().price);
+  /** The charted stock's recorded prices, oldest first: its recent history plus each live tick (PS-06). */
+  readonly priceHistory = signal<PricePoint[]>([]);
+  /** Today's move of the charted stock in dollars, from its percent change since the day's first quote. */
+  readonly selectedDayMove = computed(() => dayGainOf(this.selected().price, this.selected().change));
   /** Order history rows, kept for the chart's trade markers (PS-13). */
   readonly historyRows = signal<OrderHistoryRow[]>([]);
   /** The client's fills of the charted stock, oldest first. */
@@ -316,11 +281,34 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const held = this.positions().find((p) => p.symbol === this.selected().symbol && p.quantity > 0);
     return held ? held.cost : null;
   });
-  readonly chartWindow = computed(() => periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks()));
-  /** Price range covering the live price, every fill and the average cost. */
+  /**
+   * The chosen period, starting no earlier than the first recorded price: the quote history keeps
+   * only recent prices, so a 1-day axis would otherwise squeeze them against the right edge.
+   */
+  readonly chartWindow = computed(() => {
+    const period = periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks());
+    const first = this.priceHistory()[0]?.at;
+    return first && first > period.start && first < period.end ? { start: first, end: period.end } : period;
+  });
+  /** The recorded prices inside the chosen period. */
+  readonly visibleHistory = computed(() => {
+    const { start, end } = this.chartWindow();
+    return this.priceHistory().filter((p) => p.at >= start && p.at <= end);
+  });
+  /** Price range covering the recorded prices, the live price, every fill and the average cost. */
   readonly chartRange = computed(() =>
-    priceRange([this.selected().price, ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0]),
+    priceRange([
+      this.selected().price, ...this.visibleHistory().map((p) => p.price),
+      ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0,
+    ]),
   );
+  /** The charted stock's price as one line across the period. */
+  readonly priceLine = computed(() => {
+    const range = this.chartRange();
+    return range ? pricePath(this.visibleHistory(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : '';
+  });
+  /** When the recorded prices start, so a short history is explained rather than looking like a flat market. */
+  readonly historyStart = computed(() => this.priceHistory()[0]?.at ?? null);
   readonly plottedTrades = computed(() => {
     const range = this.chartRange();
     return range ? plotMarks(this.tradeMarks(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : [];
@@ -353,29 +341,64 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
-    this.limitPrice.set(quote.price.toFixed(2));
-    this.profitPrice.set((quote.price * 1.05).toFixed(2));
-    this.stopPrice.set((quote.price * 0.95).toFixed(2));
-    this.alertPrice.set((quote.price * 1.02).toFixed(2));
+    void this.#loadHistory(quote);
   }
-  /** Shows the feed's latest prices; the ticket keeps its stock, and gets its first price once listed. */
+  /**
+   * Shows the feed's latest prices, re-values positions at the latest bids (PS-10: no separate
+   * per-holding requests), and adds the charted stock's new price to its line.
+   */
   #applyFeed(): void {
+    const live = this.feed.quotes();
     this.quotes.set(
-      this.feed.quotes().map((q) => ({
+      live.map((q) => ({
         instrumentId: q.instrumentId, symbol: q.symbol, name: q.name, price: q.price,
         change: q.change, sector: q.sector, quotedAt: q.quotedAt,
       })),
     );
+    for (const q of live) {
+      if (q.bid > 0) {
+        this.#bids.set(q.instrumentId, q.bid);
+      }
+      this.#dayChanges.set(q.instrumentId, q.change);
+    }
+    if (this.#portfolio.holdings.length) {
+      this.#render();
+    }
     const current = this.selected();
-    const live = this.quotes().find((q) => q.symbol === (current.symbol || this.symbol()));
-    if (!live) {
+    const quote = this.quotes().find((q) => q.symbol === (current.symbol || this.symbol()));
+    if (!quote) {
       return;
     }
     if (current.price) {
-      this.selected.set(live);
+      this.selected.set(quote);
+      this.#addTick(quote);
     } else {
-      this.setTicketQuote(live);
+      this.setTicketQuote(quote);
     }
+  }
+  /** Loads the charted stock's recent prices; a failure leaves the line to build from live ticks. */
+  async #loadHistory(quote: Quote): Promise<void> {
+    if (!quote.instrumentId || quote.symbol === this.#historySymbol) {
+      return;
+    }
+    this.#historySymbol = quote.symbol;
+    this.priceHistory.set([]);
+    try {
+      const points = await this.feed.client.history(quote.instrumentId);
+      if (this.#historySymbol === quote.symbol && !this.#destroyed) {
+        this.priceHistory.update((ticks) => [...points, ...ticks.filter((t) => t.at > (points.at(-1)?.at ?? 0))]);
+      }
+    } catch {
+      // The line still grows from live prices.
+    }
+  }
+  /** Appends the latest price when it is newer than the last recorded one. */
+  #addTick(quote: Quote): void {
+    const at = Date.parse(quote.quotedAt);
+    if (quote.symbol !== this.#historySymbol || !Number.isFinite(at) || !quote.price) {
+      return;
+    }
+    this.priceHistory.update((points) => (points.length && points[points.length - 1].at >= at ? points : [...points, { at, price: quote.price }]));
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
   async #announce(order: Order): Promise<void> {
@@ -393,7 +416,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   /** Opens the orders list from a toast. */
   viewOrders(): void {
-    this.navigate('Orders');
+    this.navigate('Activity');
   }
   navigate(page: string): void {
     this.page.set(page);
@@ -419,21 +442,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.closeModal();
     }
   }
-  spark(seed: number, down = false): string {
-    return Array.from(
-      { length: 40 },
-      (_, i) =>
-        `${i ? 'L' : 'M'}${i * 2},${(down ? 5 + i * 0.35 : 21 - i * 0.35) + Math.sin(i * 1.7 + seed) * 1.2 + Math.cos(i * 0.7 + seed) * 1.5}`,
-    ).join(' ');
-  }
   validate(): string {
     const count = Number(this.quantity()),
-      price = this.orderType() === 'Limit' ? Number(this.limitPrice()) : this.selected().price;
+      price = this.selected().price;
     if (!Number.isSafeInteger(count) || count <= 0) {
       return 'Enter a whole number of shares greater than zero.';
     }
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
-      return 'Enter a valid order price.';
+      return 'There is no live price for this stock yet. Try again in a moment.';
     }
     if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
@@ -443,20 +459,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       count > (this.positions().find((p) => p.symbol === this.selected().symbol)?.quantity || 0)
     ) {
       return 'You can only sell shares you hold.';
-    }
-    if (
-      this.takeProfit() &&
-      (!Number.isFinite(Number(this.profitPrice())) || Number(this.profitPrice()) <= price)
-    ) {
-      return 'Take profit must be above the order price.';
-    }
-    if (
-      this.stopLoss() &&
-      (!Number.isFinite(Number(this.stopPrice())) ||
-        Number(this.stopPrice()) <= 0 ||
-        Number(this.stopPrice()) >= price)
-    ) {
-      return 'Stop loss must be positive and below the order price.';
     }
     return '';
   }
@@ -529,69 +531,54 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
 
-  /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
+  /**
+   * Reloads the client's orders from the backend; false when the load failed. Any order
+   * that has filled since the last read also reloads balances, so cash and positions follow every
+   * fill, including orders queued for the open (PS-10).
+   */
   async refreshOrders(): Promise<boolean> {
+    let rows: OrderHistoryRow[];
     try {
-      const rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
-      this.orders.set(rows.map(toOrder));
-      this.historyRows.set(rows);
-      return true;
+      rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
     } catch (error) {
       this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
       return false;
     }
+    const fills = newlyFilled(this.#lastOrderRows, rows);
+    this.#lastOrderRows = rows;
+    this.orders.set(rows.map(toOrder));
+    this.historyRows.set(rows);
+    if (fills.length && this.#started && !this.#destroyed) {
+      await this.refreshPortfolio();
+    }
+    return true;
   }
-  /** Reloads cash and positions, prices them, and keeps re-pricing them while any are held. */
+  /** Reloads cash and positions; prices come from the shared feed as they arrive. */
   async refreshPortfolio(): Promise<void> {
     try {
       const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
       if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
+      this.serviceDown.set(false);
     } catch (error) {
+      this.serviceDown.set(true);
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
-      return;
     }
-    await this.refreshPrices();
-    this.#schedulePrices();
   }
   /** Shows a loaded portfolio, valued at the latest bids already known. */
   applyPortfolio(portfolio: Portfolio): void {
     this.#portfolio = portfolio;
+    this.portfolioLoaded.set(true);
     this.#render();
   }
-  /** Re-values the held positions at their latest bids; a failed quote keeps the last price. */
-  async refreshPrices(): Promise<void> {
-    const ids = this.#portfolio.holdings.map((h) => h.instrumentId);
-    if (!ids.length) {
-      return;
-    }
-    try {
-      const bids = await this.portfolioClient.latestBids(ids);
-      for (const [id, bid] of bids) {
-        this.#bids.set(id, bid);
-      }
-      this.#render();
-    } catch {
-      // Keep showing the last known values; the next tick retries.
-    }
-  }
-  #schedulePrices(): void {
-    if (this.destroyed) { return; }
-    clearTimeout(this.#priceTimer);
-    if (!this.#portfolio.holdings.length) {
-      return;
-    }
-    this.#priceTimer = setTimeout(async () => {
-      await this.refreshPrices();
-      this.#schedulePrices();
-    }, QUOTE_REFRESH_MS);
-  }
   #render(): void {
-    const valuation = valuePortfolio(this.#portfolio, this.#bids);
+    const valuation = valuePortfolio(this.#portfolio, this.#bids, this.#dayChanges);
     this.buyingPower.set(valuation.cash);
     this.portfolio.set(valuation.total);
     this.totalReturn.set(valuation.gain);
     this.totalReturnPercent.set(valuation.gainPercent);
+    this.dayGain.set(valuation.dayGain);
+    this.dayGainPercent.set(valuation.dayGainPercent);
     this.positions.set(
       valuation.holdings.map((h) => ({
         symbol: h.symbol,
@@ -599,7 +586,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: h.quantity,
         cost: h.averageCost,
         value: h.value,
-        day: 0,
+        day: h.dayGain,
         total: h.gain,
         weight: valuation.total ? Math.round((h.value / valuation.total) * 1000) / 10 : 0,
       })),
@@ -625,7 +612,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
-      this.message.set('Order is still processing. Status updates continue in Orders.');
+      this.message.set('Order is still processing. Status updates continue in Activity.');
       return;
     }
     if (this.destroyed) { return; }
@@ -641,22 +628,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     this.#ordersPollTimer = setTimeout(() => {
       void this.pollOrdersUntilDestroyed();
-    }, 5000);
-  }
-  createAlert(): void {
-    const price = Number(this.alertPrice());
-    if (!Number.isFinite(price) || price <= 0) {
-      this.message.set('Enter a positive alert price.');
-      return;
-    }
-    this.alerts.update((list) => [...list, { symbol: this.selected().symbol, price }]);
-    this.message.set('Price alert added.');
+    }, QUOTE_REFRESH_MS);
   }
   constructor(private readonly auth: AuthService) {
     this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
       { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
-      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'orderStatus', value: this.orderStatus, allowed: ['All','Submitted','Accepted','Pending','Delayed','Filled','Rejected'] }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers','52W High/Low'] }
+      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers'] }
     ], () => {
+      // Until prices load there is nothing to check the linked symbol against; the feed selects it.
+      if (!this.quotes().length) { return; }
       const quote = this.quote(this.symbol());
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
@@ -676,7 +656,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.destroyed = true;
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
-    clearTimeout(this.#priceTimer);
     clearTimeout(this.#ordersPollTimer);
     if (this.#clockTimer) { clearInterval(this.#clockTimer); }
   }
