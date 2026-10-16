@@ -49,15 +49,19 @@ function feedWith(t, { prices = { MSFT: [400, 401], AAPL: [200, 199] }, fail = (
     get signedIn() { return signedIn(); },
     instruments: async () => STOCKS,
     dayOpen: async () => open,
-    latest: async (id) => {
+    // One request per refresh carries every stock; a stock that "fails" is simply absent from it.
+    latestMany: async (ids) => {
       calls.latest += 1;
-      const symbol = STOCKS.find((s) => s.instrumentId === id).symbol;
-      const n = (calls.perSymbol[symbol] = (calls.perSymbol[symbol] ?? 0) + 1);
-      if (fail(symbol, n)) {
-        throw new Error('quote down');
+      const ticks = new Map();
+      for (const id of ids) {
+        const symbol = STOCKS.find((s) => s.instrumentId === id).symbol;
+        const n = (calls.perSymbol[symbol] = (calls.perSymbol[symbol] ?? 0) + 1);
+        if (!fail(symbol, n)) {
+          const series = prices[symbol];
+          ticks.set(id, { price: series[Math.min(n - 1, series.length - 1)], bid: 0, ask: 0, quotedAt: new Date().toISOString() });
+        }
       }
-      const series = prices[symbol];
-      return { price: series[Math.min(n - 1, series.length - 1)], bid: 0, ask: 0, quotedAt: new Date().toISOString() };
+      return ticks;
     },
   };
   feed.statusClient = { status: async () => { calls.status += 1; return openStatus; } };
@@ -77,6 +81,31 @@ test('a client with no holdings sees every listed price move within 10 seconds, 
   stop();
 });
 
+test('every refresh is one quote request for all listed stocks (PS-10)', async t => {
+  page(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { feed, calls } = feedWith(t);
+  const stop = feed.start();
+  await flush();
+  assert.equal(calls.latest, 1);
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(calls.latest, 2);
+  assert.deepEqual(calls.perSymbol, { MSFT: 2, AAPL: 2 });
+  stop();
+});
+
+test('a failed batch request keeps every last price', async t => {
+  page(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { feed } = feedWith(t);
+  const stop = feed.start();
+  await flush();
+  feed.client.latestMany = async () => { throw new Error('Could not load prices.'); };
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.deepEqual(feed.quotes().map((q) => [q.symbol, q.price]), [['MSFT', 400], ['AAPL', 200]]);
+  stop();
+});
+
 test('a hidden tab makes no quote requests and one immediate request when shown again', async t => {
   const doc = page(t);
   t.mock.timers.enable({ apis: ['setTimeout'] });
@@ -89,7 +118,7 @@ test('a hidden tab makes no quote requests and one immediate request when shown 
   assert.equal(calls.latest, afterFirst, 'nothing is requested while hidden');
   const statusBefore = calls.status;
   doc.setHidden(false); await flush();
-  assert.equal(calls.latest, afterFirst + STOCKS.length, 'one refresh of every stock, straight away');
+  assert.equal(calls.latest, afterFirst + 1, 'one refresh of every stock, straight away');
   assert.equal(calls.status, statusBefore + 1, 'and the market status is re-read too');
   stop();
   assert.equal(doc.listeners.size, 0, 'stopping removes the visibility listener');
@@ -178,6 +207,9 @@ test('the client lists only tradable stocks and reads the first quote of the day
       { instrumentId: 'd', symbol: 'META', instrumentName: 'Meta', sector: 'TECH', enabled: false, tradable: true },
     ],
     '/api/v1/quotes/latest/by-instrument/a': { bid: '199.9', ask: '200.1', midpoint: '200', quotedAt: '2026-10-14T15:00:00Z' },
+    '/api/v1/quotes/latest/by-instruments?ids=a,b': [
+      { instrumentId: 'a', bid: '199.9', ask: '200.1', midpoint: '200', quotedAt: '2026-10-14T15:00:00Z' },
+    ],
     '/api/v1/quotes/history/a?limit=1000': [
       { midpoint: '201', bid: 0, ask: 0, quotedAt: '2026-10-14T14:00:00' },
       { midpoint: '198', bid: 0, ask: 0, quotedAt: '2026-10-14T09:00:00' },
@@ -191,6 +223,11 @@ test('the client lists only tradable stocks and reads the first quote of the day
   assert.equal(client.signedIn, true);
   assert.deepEqual((await client.instruments()).map((i) => i.symbol), ['AAPL', 'MSFT']);
   assert.deepEqual(await client.latest('a'), { price: 200, bid: 199.9, ask: 200.1, quotedAt: '2026-10-14T15:00:00Z' });
+  const batch = await client.latestMany(['a', 'b']);
+  assert.deepEqual([...batch.keys()], ['a'], 'a stock with no quote yet is absent');
+  assert.equal(batch.get('a').price, 200);
+  assert.equal((await client.latestMany([])).size, 0);
+  assert.deepEqual((await client.history('a')).map((p) => p.price), [150, 198, 201], 'the chart gets prices oldest first');
   assert.equal(await client.dayOpen('a', new Date('2026-10-14T16:00:00')), 198);
   assert.equal(await client.dayOpen('a', new Date('2026-10-16T16:00:00')), undefined);
   assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');

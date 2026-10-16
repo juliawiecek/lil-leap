@@ -61,6 +61,12 @@ interface QuoteRow {
   quotedAt: string;
 }
 
+/** One price at a moment, in epoch milliseconds. */
+export interface PricePoint {
+  at: number;
+  price: number;
+}
+
 export interface PriceTick {
   price: number;
   bid: number;
@@ -102,6 +108,26 @@ export class MarketFeedClient {
   /** The stock's latest quote. */
   async latest(instrumentId: string): Promise<PriceTick> {
     return tick(await this.#get<QuoteRow>(`/quotes/latest/by-instrument/${encodeURIComponent(instrumentId)}`));
+  }
+
+  /** Latest quote of each listed stock in one request (PS-10); stocks with no quote yet are absent. */
+  async latestMany(instrumentIds: readonly string[]): Promise<Map<string, PriceTick>> {
+    if (!instrumentIds.length) {
+      return new Map();
+    }
+    const rows = await this.#get<(QuoteRow & { instrumentId: string })[]>(
+      `/quotes/latest/by-instruments?ids=${instrumentIds.map(encodeURIComponent).join(',')}`,
+    );
+    return new Map(rows.map((row) => [row.instrumentId, tick(row)]));
+  }
+
+  /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */
+  async history(instrumentId: string, limit = HISTORY_ROWS): Promise<PricePoint[]> {
+    const rows = await this.#get<QuoteRow[]>(`/quotes/history/${encodeURIComponent(instrumentId)}?limit=${limit}`);
+    return rows
+      .map((row) => ({ at: Date.parse(row.quotedAt), price: Number(row.midpoint) }))
+      .filter((point) => Number.isFinite(point.at) && point.price > 0)
+      .sort((a, b) => a.at - b.at);
   }
 
   /**

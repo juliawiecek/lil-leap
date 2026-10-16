@@ -97,5 +97,5 @@ def main():
     def handle(*_):
         nonlocal stopped; stopped=True
     signal.signal(signal.SIGTERM, handle); signal.signal(signal.SIGINT, handle)
-    run_continuous(float(os.getenv("QUOTE_INTERVAL_SECONDS", "5")), args.seed, lambda: stopped)
+    run_continuous(float(os.getenv("QUOTE_INTERVAL_SECONDS", "2")), args.seed, lambda: stopped)
 if __name__ == "__main__": main()

@@ -26,6 +26,23 @@ export const ORDER_TRACK_INTERVAL_MS = 2000;
 export const ORDER_TRACK_LIMIT_MS = 300000;
 
 /**
+ * Orders that are filled now but were not in the previous read, so balances can be reloaded after
+ * any fill (PS-10). The first read (no previous list) reports nothing.
+ */
+export function newlyFilled(previous: readonly OrderHistoryRow[] | null, next: readonly OrderHistoryRow[]): OrderHistoryRow[] {
+  if (!previous) {
+    return [];
+  }
+  const filledBefore = new Set(previous.filter((row) => row.status === 'FILLED').map((row) => row.orderId));
+  return next.filter((row) => row.status === 'FILLED' && !filledBefore.has(row.orderId));
+}
+
+/** Whether any order may still change, so it is worth re-reading on the polling interval. */
+export function hasOpenOrders(rows: readonly OrderHistoryRow[]): boolean {
+  return rows.some((row) => !FINAL_ORDER_STATUSES.has(row.status));
+}
+
+/**
  * Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status;
  * accountId narrows to one of the user's accounts (PS-05).
  */

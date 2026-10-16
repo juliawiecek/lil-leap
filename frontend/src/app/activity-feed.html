@@ -1,0 +1,62 @@
+<div class="activity-filters" role="group" aria-label="Filter activity">
+  <div class="kind-switch">
+    @for (option of kinds; track option) {
+      <button type="button" [class.active]="kind() === option" [attr.aria-pressed]="kind() === option" (click)="setKind(option)">
+        {{ option }}
+      </button>
+    }
+  </div>
+  @if (!compact()) {
+    <label>
+      From
+      <input type="date" [value]="from()" (change)="setFrom($any($event.target).value)" />
+    </label>
+    <label>
+      To
+      <input type="date" [value]="to()" (change)="setTo($any($event.target).value)" />
+    </label>
+    @if (hasFilters()) {
+      <button type="button" class="clear-filters" (click)="clearFilters()">Clear filters</button>
+    }
+  }
+</div>
+
+@if (error()) {
+  <p class="activity-message error" role="alert">{{ error() }}</p>
+} @else if (!loaded()) {
+  <p class="activity-message" aria-live="polite">Loading your activity…</p>
+} @else {
+  @if (partial()) {
+    <p class="activity-message warning" role="note">{{ partial() }}</p>
+  }
+  @if (!items().length) {
+    <p class="activity-message">
+      @if (hasFilters()) {
+        Nothing matches these filters.
+      } @else {
+        No activity yet. Your deposits, orders and transfers will appear here.
+      }
+    </p>
+  } @else {
+    <ol class="activity-list" [class.refreshing]="loading()" aria-live="polite" aria-label="Activity, newest first">
+      @for (item of items(); track item.id) {
+        <li class="activity-item" [class.cash]="item.kind === 'cash'">
+          <time [attr.datetime]="item.at">{{ when(item.at) }}</time>
+          <span class="what"><b>{{ item.title }}</b><small>{{ item.detail }}</small></span>
+          <span
+            class="status"
+            [class.filled]="item.status === 'FILLED'"
+            [class.rejected]="item.status === 'REJECTED'"
+            >{{ statusLabel(item.status) }}</span
+          >
+          <span class="amount" [class.gain]="(item.amount ?? 0) > 0" [class.loss]="(item.amount ?? 0) < 0">{{
+            item.amount === null ? '—' : money(item.amount, true)
+          }}</span>
+        </li>
+      }
+    </ol>
+  }
+}
+@if (compact()) {
+  <button type="button" class="view-all" (click)="viewAll.emit()">View all activity</button>
+}

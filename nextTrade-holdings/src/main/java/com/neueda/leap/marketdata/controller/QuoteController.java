@@ -31,6 +31,8 @@ import java.util.UUID;
 public class QuoteController {
     private final QuoteRepository repository;
     private static final int DEFAULT_HISTORY_LIMIT = 100;
+    /** Most instruments one batch read may ask for. */
+    static final int MAX_BATCH = 100;
 
     /**
      * Creates a {@code QuoteController} with the supplied dependencies.
@@ -54,6 +56,26 @@ public class QuoteController {
                 .findLatestByInstrumentId(instrumentId)
                 .orElseThrow(() -> new QuoteNotFoundException("No quote found for instrument " + instrumentId));
         return QuoteResponse.from(quote);
+    }
+
+    /**
+     * Retrieves the latest quote for several instruments in one request, so a dashboard makes one
+     * price request per refresh instead of one per stock (PS-10). Instruments with no quote yet are
+     * left out rather than failing the whole batch.
+     *
+     * @param ids instrument identifiers, comma-separated, at most {@value #MAX_BATCH}
+     * @return the latest quote of each instrument that has one, in the order requested
+     * @throws IllegalArgumentException if no ids or more than {@value #MAX_BATCH} are given
+     */
+    @GetMapping("/latest/by-instruments")
+    public List<QuoteResponse> getLatestByInstruments(@RequestParam("ids") List<UUID> ids) {
+        if (ids.isEmpty() || ids.size() > MAX_BATCH) {
+            throw new IllegalArgumentException("Between 1 and " + MAX_BATCH + " instrument ids are required");
+        }
+        return ids.stream().distinct()
+                .flatMap(id -> repository.findLatestByInstrumentId(id).stream())
+                .map(QuoteResponse::from)
+                .toList();
     }
 
     /**

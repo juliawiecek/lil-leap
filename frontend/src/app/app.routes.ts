@@ -4,6 +4,7 @@ import { authGuard, guestGuard } from './auth-routing';
 import { AppSessionService } from './app-session.service';
 import { AuthService } from './auth.service';
 import { PAGE_PATHS } from './page-state';
+import { NotFound } from './not-found';
 const tierGuard: CanActivateFn = async (route) => {
   const session = inject(AppSessionService);
   const auth = inject(AuthService);
@@ -14,7 +15,7 @@ const tierGuard: CanActivateFn = async (route) => {
   if (path === 'learn' && tier !== 'NOVICE') {
     return router.createUrlTree(['/dashboard']);
   }
-  if (['markets', 'screeners'].includes(path ?? '') && tier !== 'ADVANCED') {
+  if (path === 'markets' && tier !== 'ADVANCED') {
     return router.createUrlTree(['/dashboard']);
   }
   return true;
@@ -36,6 +37,11 @@ export const routes: Routes = [
     loadComponent: () => import('./trading-workspace').then((module) => module.TradingWorkspace),
     canActivate: [authGuard, tierGuard],
   })),
+  // PS-11 merged these pages; old links and bookmarks still land somewhere sensible.
+  { path: 'orders', redirectTo: 'activity' },
+  { path: 'history', redirectTo: 'activity' },
+  { path: 'watchlist', redirectTo: 'markets' },
+  { path: 'screeners', redirectTo: 'markets' },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', component: NotFound, title: 'Page not found · NextTrade' },
 ];

@@ -43,30 +43,32 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   desk.applyPortfolio({ cash: 48230.12, holdings: [] });
   const fixture = await render(t, AdvancedTicket, { desk });
   input(fixture, '#pro-symbol', 'NVDA', 'change');
-  input(fixture, '#pro-type', 'Market', 'change');
   input(fixture, '#pro-quantity', '2');
   assert.equal(desk.selected().symbol, 'NVDA');
-  assert.equal(desk.orderType(), 'Market'); assert.equal(desk.quantity(), '2');
-  assert.equal(fixture.nativeElement.querySelector('#pro-limit'), null);
+  assert.equal(desk.quantity(), '2');
+  for (const gone of ['#pro-type', '#pro-limit', '#pro-tif', '#profit-price', '#stop-price']) {
+    assert.equal(fixture.nativeElement.querySelector(gone), null, `${gone} has no backend`);
+  }
+  assert.match(fixture.nativeElement.textContent, /Market order/);
+  assert.doesNotMatch(fixture.nativeElement.textContent, /Fees|Order Book|Options/);
   const review = t.mock.method(desk, 'openModal', () => {});
   fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
   assert.equal(review.mock.callCount(), 1); assert.equal(desk.message(), '');
   input(fixture, '#pro-quantity', '0');
   fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
   assert.match(desk.message(), /whole number/); assert.equal(review.mock.callCount(), 1);
-  button(fixture, 'Alerts');
-  assert.match(fixture.nativeElement.textContent, /alert/i);
 });
 
-test('chart period buttons update accessible labels and plotted candles', async t => {
+test('chart period buttons update accessible labels; the chart shows recorded prices, not made-up indicators', async t => {
   const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
   const fixture = await render(t, AdvancedChart, { desk });
-  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D candlestick chart"]'));
-  const before = desk.candles();
+  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D price chart"]'));
+  assert.match(fixture.nativeElement.textContent, /Collecting prices for AAPL/);
+  assert.doesNotMatch(fixture.nativeElement.textContent, /EMA|VWAP|RSI|Volume/);
   const weekly = button(fixture, '1W');
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
-  assert.equal(desk.period(), '1W'); assert.notDeepEqual(desk.candles(), before);
-  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1W candlestick chart"]'));
+  assert.equal(desk.period(), '1W');
+  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1W price chart"]'));
   // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
   desk.quote('NVDA').change = -2.36;
   desk.choose(desk.quote('NVDA')); fixture.detectChanges();

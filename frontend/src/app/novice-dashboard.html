@@ -81,10 +81,17 @@
       </div>
     </header>
     <app-market-ticker (pick)="openTrade('Buy', $event)" />
+    @if (serviceDown()) {
+      <div class="service-banner" role="alert">
+        <strong>We can't reach NextTrade right now.</strong>
+        <span>Your balances may be out of date. Nothing you placed is lost.</span>
+        <button type="button" class="secondary-button" (click)="refreshPortfolio()">Try again</button>
+      </div>
+    }
     <main class="novice-content">
       <div class="page-heading">
         <div>
-          <span class="greeting">GOOD EVENING</span>
+          <span class="greeting">{{ greeting() }}</span>
           <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
         </div>
         <div class="market-status">
@@ -111,71 +118,15 @@
                     </button>
                   </div>
                   <div class="portfolio-value">
-                    {{ showBalance() ? (portfolioValue() | currency) : '••••••••' }}
+                    @if (!portfolioLoaded()) {
+                      <span aria-live="polite">Loading…</span>
+                    } @else {
+                      {{ showBalance() ? (portfolioValue() | currency) : '••••••••' }}
+                    }
                   </div>
                   <div class="portfolio-gain">
-                    <strong>{{ showBalance() ? ((todayReturn() >= 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••' }}</strong
+                    <strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">{{ showBalance() ? ((todayReturn() > 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••' }}</strong
                     ><span>Today</span>
-                  </div>
-                </div>
-                <div class="period-picker" aria-label="Chart time range">
-                  @for (item of periods; track item) {
-                    <button
-                      type="button"
-                      [class.selected]="period() === item"
-                      [attr.aria-pressed]="period() === item"
-                      (click)="period.set(item)"
-                    >
-                      {{ item }}
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="portfolio-chart">
-                <div class="chart-y-axis">
-                  <span>25.0K</span><span>24.5K</span><span>24.0K</span><span>23.5K</span>
-                </div>
-                <div class="chart-plot">
-                  @if (showBalance()) {
-                    <span class="chart-price">{{ portfolioValue() | currency }}</span>
-                  }
-                  <svg
-                    viewBox="0 0 780 155"
-                    preserveAspectRatio="none"
-                    [attr.aria-label]="period() + ' portfolio value chart'"
-                  >
-                    <defs>
-                      <linearGradient id="novice-chart-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#63ca74" stop-opacity=".22" />
-                        <stop offset="100%" stop-color="#63ca74" stop-opacity=".015" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M0 15H780M0 55H780M0 95H780M0 135H780"
-                      stroke="#293333"
-                      stroke-dasharray="2 3"
-                      fill="none"
-                    />
-                    <path [attr.d]="chartPath() + 'L780 150H0Z'" fill="url(#novice-chart-fill)" />
-                    <path
-                      [attr.d]="chartPath()"
-                      fill="none"
-                      stroke="#8bdd88"
-                      stroke-width="1.6"
-                      vector-effect="non-scaling-stroke"
-                    />
-                    <circle
-                      cx="780"
-                      [attr.cy]="period() === '1D' ? 18 : 20"
-                      r="3.8"
-                      fill="#87df88"
-                    />
-                    <path d="M0 150H780" stroke="#2a3337" />
-                  </svg>
-                  <div class="chart-x-axis">
-                    @for (label of chartTimes(); track $index) {
-                      <span>{{ label }}</span>
-                    }
                   </div>
                 </div>
               </div>
@@ -190,14 +141,14 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong [class.positive]="todayReturn() >= 0" [class.negative]="todayReturn() < 0">{{
-                    showBalance() ? ((todayReturn() >= 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••'
+                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">{{
+                    showBalance() ? ((todayReturn() > 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••'
                   }}</strong>
                 </div>
                 <div>
                   <span>Total return</span
-                  ><strong [class.positive]="totalReturn() >= 0" [class.negative]="totalReturn() < 0">{{
-                    showBalance() ? ((totalReturn() >= 0 ? '+' : '') + (totalReturn() | currency) + ' (' + (totalReturnPercent() | number: '1.2-2') + '%)') : '••••••'
+                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">{{
+                    showBalance() ? ((totalReturn() > 0 ? '+' : '') + (totalReturn() | currency) + ' (' + (totalReturnPercent() | number: '1.2-2') + '%)') : '••••••'
                   }}</strong>
                 </div>
               </div>
@@ -274,14 +225,14 @@
                           <td>{{ holding.value | currency }}</td>
                           <td>{{ holding.shares | number: '1.3-3' }}</td>
                           <td>{{ holding.average | currency }}</td>
-                          <td class="positive">
-                            +{{ holding.today | currency
-                            }}<span>+{{ holding.change | number: '1.2-2' }}%</span>
+                          <td [class.positive]="holding.today > 0" [class.negative]="holding.today < 0">
+                            {{ holding.today > 0 ? '+' : '' }}{{ holding.today | currency
+                            }}<span>{{ holding.change > 0 ? '+' : '' }}{{ holding.change | number: '1.2-2' }}%</span>
                           </td>
-                          <td [class.positive]="holding.total >= 0" [class.negative]="holding.total < 0">
-                            {{ holding.total >= 0 ? '+' : '' }}{{ holding.total | currency
+                          <td [class.positive]="holding.total > 0" [class.negative]="holding.total < 0">
+                            {{ holding.total > 0 ? '+' : '' }}{{ holding.total | currency
                             }}<span
-                              >{{ holding.totalPercent >= 0 ? '+' : ''
+                              >{{ holding.totalPercent > 0 ? '+' : ''
                               }}{{ holding.totalPercent | number: '1.2-2' }}%</span
                             >
                           </td>
@@ -294,6 +245,12 @@
                             >
                               <app-dashboard-icon name="more" />
                             </button>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="8" class="empty-row">
+                            {{ portfolioLoaded() ? 'No positions yet. Use Buy to make your first trade.' : 'Loading your holdings…' }}
                           </td>
                         </tr>
                       }
@@ -315,60 +272,15 @@
             </section>
           }
           @if (activeTab() === 'Overview') {
-            <section class="panel market-panel">
-              <div class="panel-heading">
-                <h2>Market snapshot</h2>
-                <button class="text-link" type="button" (click)="openModal('markets')">
-                  View markets <app-dashboard-icon name="chevron" />
-                </button>
-              </div>
-              <div class="market-cards">
-                @for (market of markets; track market.name; let i = $index) {
-                  <button class="market-card" type="button" (click)="openModal('markets')">
-                    <span
-                      >{{ market.name
-                      }}<span class="market-numbers"
-                        >{{ market.value }} <b class="positive">{{ market.change }}</b></span
-                      ></span
-                    ><svg viewBox="0 0 110 36" aria-hidden="true">
-                      <path
-                        [attr.d]="makePath(110, 30, i + 3)"
-                        fill="none"
-                        stroke="#80d98b"
-                        stroke-width="1.2"
-                      />
-                    </svg>
-                  </button>
-                }
-              </div>
+            <section class="panel expanded-list activity-panel">
+              <div class="panel-heading"><h2>Recent activity</h2></div>
+              <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
           }
-          @if (activeTab() === 'Watchlist') {
+          @if (activeTab() === 'Activity') {
             <section class="panel expanded-list">
-              <div class="panel-heading">
-                <h2>Your watchlist</h2>
-                <span>Search above to add a company</span>
-              </div>
-              @for (quote of watchlist(); track quote.symbol) {
-                <button
-                  class="watchlist-item"
-                  type="button"
-                  (click)="openTrade('Buy', quote.symbol)"
-                >
-                  <b>{{ quote.symbol }}</b
-                  ><span>{{ quote.name }}</span
-                  ><strong>{{ quote.price | currency }}</strong
-                  ><span [class.positive]="quote.change > 0" [class.negative]="quote.change < 0"
-                    >{{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%</span
-                  ><app-dashboard-icon name="chevron" />
-                </button>
-              }
-            </section>
-          }
-          @if (activeTab() === 'Orders' || activeTab() === 'History') {
-            <section class="panel expanded-list">
-              <div class="panel-heading"><h2>Order history</h2></div>
-              <app-order-history />
+              <div class="panel-heading"><h2>Orders, deposits and transfers</h2></div>
+              <app-activity-feed />
             </section>
           }
           @if (activeTab() === 'Settings') {
@@ -426,9 +338,7 @@
               <button type="button" class="diversification" (click)="openModal('allocation')">
                 <span class="shield-icon"><app-dashboard-icon name="shield" /></span
                 ><span
-                  >Moderate diversification<small
-                    >A healthy mix of assets for a balanced approach.</small
-                  ></span
+                  >{{ diversification().title }}<small>{{ diversification().detail }}</small></span
                 ><app-dashboard-icon name="chevron" />
               </button>
             </section>
@@ -447,9 +357,7 @@
             <section class="panel watchlist-panel">
               <div class="panel-heading">
                 <h2>Watchlist</h2>
-                <button type="button" class="text-link" (click)="navigate('Watchlist')">
-                  View watchlist <app-dashboard-icon name="chevron" />
-                </button>
+                <span class="muted-note">Open a stock to add or remove it</span>
               </div>
               <table class="watch-table">
                 <caption class="sr-only">Watchlist</caption>
@@ -457,12 +365,11 @@
                   <tr>
                     <th>Symbol</th>
                     <th>Price</th>
-                    <th>1D</th>
-                    <th>Sparkline</th>
+                    <th>Today</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (quote of watchlist(); track quote.symbol; let i = $index) {
+                  @for (quote of watchlist(); track quote.symbol) {
                     <tr>
                       <td>
                         <button type="button" (click)="openTrade('Buy', quote.symbol)">
@@ -473,22 +380,9 @@
                       <td [class.positive]="quote.change > 0" [class.negative]="quote.change < 0">
                         {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
                       </td>
-                      <td>
-                        <svg
-                          viewBox="0 0 100 28"
-                          [attr.aria-label]="
-                            quote.symbol + (quote.change > 0 ? ' rising' : ' falling')
-                          "
-                        >
-                          <path
-                            [attr.d]="makePath(100, 20, i + 8, quote.change < 0)"
-                            fill="none"
-                            [attr.stroke]="quote.change > 0 ? '#81dc8e' : '#f05459'"
-                            stroke-width="1.25"
-                          />
-                        </svg>
-                      </td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="3">Loading prices…</td></tr>
                   }
                 </tbody>
               </table>
@@ -513,11 +407,9 @@
           ? side() + ' ' + tradeQuote().symbol
           : modal() === 'allocation'
             ? 'Asset allocation'
-            : modal() === 'markets'
-              ? 'Market snapshot'
-              : modal() === 'help'
-                ? 'Help & support'
-                : 'Details'
+            : modal() === 'help'
+              ? 'Help & support'
+              : 'Details'
       }}
     </h2>
     <button type="button" class="icon-button" aria-label="Close dialog" (click)="closeModal()">
@@ -617,19 +509,9 @@
       Spreading investments across asset classes can help manage concentration. Review how your
       stock holdings are spread across companies and sectors.
     </p>
-  } @else if (modal() === 'markets') {
-    <div class="asset-class-list">
-      @for (market of markets; track market.name) {
-        <div>
-          <strong>{{ market.name }}</strong
-          ><span>{{ market.value }}</span
-          ><span class="positive">{{ market.change }}</span>
-        </div>
-      }
-    </div>
   } @else {
     <p>
-      Search for a company to open its trade ticket. Use Portfolio to view holdings and Orders to
+      Search for a company to open its trade ticket. Use Portfolio to view holdings and Activity to
       review completed trades.
     </p>
     <p>You can change your workspace under Account settings.</p>

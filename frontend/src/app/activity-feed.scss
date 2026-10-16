@@ -1,0 +1,170 @@
+// Colours follow the surrounding dashboard (light or dark) through currentColor.
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin: 0 0 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+
+  input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+}
+
+.kind-switch {
+  display: inline-flex;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+
+  button {
+    font: inherit;
+    font-size: 0.8rem;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    padding: 6px 12px;
+    cursor: pointer;
+    opacity: 0.75;
+
+    &.active {
+      background: color-mix(in srgb, currentColor 14%, transparent);
+      opacity: 1;
+      font-weight: 600;
+    }
+  }
+}
+
+.clear-filters,
+.view-all {
+  font: inherit;
+  font-size: 0.8rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.view-all {
+  margin-top: 10px;
+}
+
+.activity-message {
+  margin: 12px 0;
+  opacity: 0.8;
+
+  &.error {
+    color: #e5484d;
+    opacity: 1;
+  }
+
+  &.warning {
+    color: #d9a400;
+    opacity: 1;
+  }
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  transition: opacity 0.15s;
+  font-variant-numeric: tabular-nums;
+
+  &.refreshing {
+    opacity: 0.7;
+  }
+}
+
+.activity-item {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) minmax(0, 1fr) 80px 110px;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 4px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 0.85rem;
+
+  time {
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+
+  .what {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    small {
+      opacity: 0.7;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+// Green and red only for money gained or lost, and for how an order ended.
+.gain,
+.status.filled {
+  color: #25b675;
+}
+
+.loss,
+.status.rejected {
+  color: #e5484d;
+}
+
+// The dashboard panels are narrow: stack the time above each row and drop the status column.
+:host(.compact) .activity-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+
+  time {
+    grid-column: 1 / -1;
+    font-size: 0.75rem;
+  }
+
+  .status {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .activity-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    time {
+      grid-column: 1 / -1;
+    }
+
+    .status {
+      display: none;
+    }
+  }
+}
