@@ -78,6 +78,7 @@ def main():
             (18420, 'GET', '/', 'frontend:8080'),
             (18421, 'GET', '/', 'insights-frontend:8080'),
             (18421, 'GET', '/api/v1/reports/summary', 'insights:8084'),
+            (18421, 'GET', '/api/v1/trades/test/events', 'insights:8084'),
             (18421, 'POST', '/auth/login', 'auth:8081'),
             (18421, 'POST', '/api/v1/orders', None),
             (18421, 'GET', '/api/v1/quotes/history/test', None),
