@@ -55,7 +55,7 @@ class SettlementRecoveryPostgresTest {
 
     @BeforeEach
     void fixtures() {
-        jdbc.execute("TRUNCATE users, instruments CASCADE");
+        com.neueda.leap.order.TradeRecordsForTests.unlocked(jdbc, "TRUNCATE users, instruments CASCADE");
         UUID user = UUID.randomUUID();
         account = UUID.randomUUID();
         instrument = UUID.randomUUID();
