@@ -18,14 +18,26 @@ SELECT to_regclass('public.users') IS NULL AS needs_schema \gset
 \if :needs_schema
     BEGIN;
     \ir finalized-schema.sql
-    \ir seeds/001_us_equity_instruments.sql
     COMMIT;
 \else
-    \echo 'Existing schema retained. Apply any outstanding migrations separately.'
+    \echo 'Existing schema retained. Replaying safe local migrations before seeding test users.'
 \endif
 
--- Dev test logins (TS-DB-04). Idempotent, so it also runs on an existing database.
+-- Safe to reapply on fresh or retained schemas; these keep local databases aligned
+-- with the current seed data and app expectations.
+\ir migrations/007_durable_order_execution.sql
+\ir migrations/008_holdings_projection.sql
+\ir migrations/009_cash_settlement_detail.sql
+\ir migrations/010_cash_transfers.sql
+\ir migrations/011_order_reference_price.sql
+\ir migrations/012_operations_role.sql
+
+-- Idempotent seeds, so they also run on an existing database: the instrument
+-- universe, dev test logins (TS-DB-04), and demo trading activity (which adds
+-- today's trades again when the database was seeded on an earlier day).
+\ir seeds/001_us_equity_instruments.sql
 \ir seeds/002_test_users.sql
+\ir seeds/003_demo_trading_activity.sql
 
 -- Same application permissions as init-app-role.sh in the Docker setup.
 GRANT CONNECT ON DATABASE nexttrade TO app_user;

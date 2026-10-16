@@ -10,6 +10,7 @@ from src.quote_ingestor import (
     transform_batch, ingest_frame, generate_current, run_once,
     QuoteIngestionError, MARKET_CODE
 )
+from src.instrument_catalog import SYMBOL_CONFIG
 from src.instrument_repository import Instrument
 
 
@@ -167,8 +168,7 @@ class TestGenerateCurrentFunctionality:
         assert required_cols.issubset(set(frame.columns))
         
         # Verify expected number of rows (symbols * periods)
-        # There are 5 NASDAQ stocks by default
-        expected_rows = 5 * 5
+        expected_rows = len(SYMBOL_CONFIG) * 5
         assert len(frame) == expected_rows
     
     def test_generate_current_uses_utc_timezone(self):

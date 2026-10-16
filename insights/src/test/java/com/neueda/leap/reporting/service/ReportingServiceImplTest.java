@@ -116,17 +116,19 @@ class ReportingServiceImplTest {
 
         assertThat(instrumentCsv)
                 .startsWith("instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price")
-                .contains("AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56");
+                .contains("AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,7,372,82953.90,222.99")
+                .contains("JPM,JPMorgan Chase & Co.,COMMON_STOCK,NYSE,4,168,50701.61,301.80")
+                .hasLineCount(34);
 
         assertThat(segmentCsv)
                 .startsWith("client_segment,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("ADVANCED,6,2,100343,360265.50")
-                .contains("NOVICE,6,2,150560,270770.00");
+                .contains("ADVANCED,78,7,5672,1244086.96")
+                .contains("NOVICE,69,7,737,92219.81");
 
         assertThat(activityCsv)
                 .startsWith("trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("2026-10-02,09:00,2,2,150,41430.00")
-                .hasLineCount(11);
+                .contains("2026-10-16,14:00,8,8,286,68966.56")
+                .hasLineCount(68);
     }
 
     @Test

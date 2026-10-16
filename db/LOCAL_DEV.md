@@ -22,7 +22,14 @@ The script handles the native local bootstrap from end to end:
 - creates database `nexttrade` owned by `main` if it does not already exist
 - connects to `nexttrade`
 - loads `db/finalized-schema.sql` when the schema is missing
-- loads `db/seeds/001_us_equity_instruments.sql`
+- replays the safe migrations in `db/migrations`
+- loads the idempotent seeds on every run:
+  - `db/seeds/001_us_equity_instruments.sql`: 33 US stocks across NASDAQ and NYSE
+  - `db/seeds/002_test_users.sql`: the test logins
+  - `db/seeds/003_demo_trading_activity.sql`: 12 demo traders and about two weeks of trades, with 60 fills
+    today across every instrument. Re-running the script on a later day adds that day's trades again.
+    The insights reporting CSV holds the same fills; regenerate all three with
+    `python db/seeds/generate_demo_trades.py`, never edit them by hand.
 - grants the application permissions required by the backend services
 
 ## Notes
