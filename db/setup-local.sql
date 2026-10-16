@@ -21,8 +21,17 @@ SELECT to_regclass('public.users') IS NULL AS needs_schema \gset
     \ir seeds/001_us_equity_instruments.sql
     COMMIT;
 \else
-    \echo 'Existing schema retained. Apply any outstanding migrations separately.'
+    \echo 'Existing schema retained. Replaying safe local migrations before seeding test users.'
 \endif
+
+-- Safe to reapply on fresh or retained schemas; these keep local databases aligned
+-- with the current seed data and app expectations.
+\ir migrations/007_durable_order_execution.sql
+\ir migrations/008_holdings_projection.sql
+\ir migrations/009_cash_settlement_detail.sql
+\ir migrations/010_cash_transfers.sql
+\ir migrations/011_order_reference_price.sql
+\ir migrations/012_operations_role.sql
 
 -- Dev test logins (TS-DB-04). Idempotent, so it also runs on an existing database.
 \ir seeds/002_test_users.sql
