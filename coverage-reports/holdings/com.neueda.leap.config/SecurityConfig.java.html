@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.config</a> &gt; <span class="el_source">SecurityConfig.java</span></div><h1>SecurityConfig.java</h1><pre class="source lang-java linenums">package com.neueda.leap.config;
+
+import com.neueda.leap.security.JwtAuthenticationFilter;
+import com.neueda.leap.security.JwtService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+
+/** Verifies Identity-issued JWTs and exposes only this service's API. */
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+    private static final String API_PREFIX = &quot;/api/v1&quot;;
+
+<span class="fc" id="L22">    private static final String[] DOC_ROUTES = {</span>
+            &quot;/swagger-ui.html&quot;, &quot;/swagger-ui/**&quot;, &quot;/v3/api-docs&quot;, &quot;/v3/api-docs/**&quot;,
+            API_PREFIX + &quot;/swagger-ui.html&quot;, API_PREFIX + &quot;/swagger-ui/**&quot;, API_PREFIX + &quot;/v3/api-docs&quot;,
+            API_PREFIX + &quot;/v3/api-docs/**&quot;
+    };
+
+<span class="fc" id="L28">    private static final String[] TRADER_ORDER_ROUTES = {</span>
+            &quot;/clients/*/orders&quot;, API_PREFIX + &quot;/clients/*/orders&quot;
+    };
+
+<span class="fc" id="L32">    private static final String[] ACCOUNT_WRITE_ROUTES = {</span>
+            &quot;/accounts&quot;, &quot;/accounts/transfers&quot;, API_PREFIX + &quot;/accounts&quot;, API_PREFIX + &quot;/accounts/transfers&quot;
+    };
+
+<span class="fc" id="L36">    private static final String[] PORTFOLIO_READ_ROUTES = {</span>
+            &quot;/clients/*/portfolio-summary&quot;, &quot;/accounts&quot;, &quot;/holdings&quot;, &quot;/holdings/**&quot;, &quot;/cash&quot;, &quot;/orders&quot;,
+            &quot;/instruments&quot;, &quot;/instruments/*&quot;, &quot;/clients/*/holdings&quot;, &quot;/clients/*/cash&quot;, &quot;/cash/balance/*&quot;,
+            &quot;/quotes/latest/by-instrument/*&quot;, &quot;/quotes/latest/by-market-symbol&quot;, &quot;/quotes/history/*&quot;,
+            API_PREFIX + &quot;/clients/*/portfolio-summary&quot;, API_PREFIX + &quot;/accounts&quot;, API_PREFIX + &quot;/holdings&quot;,
+            API_PREFIX + &quot;/holdings/**&quot;, API_PREFIX + &quot;/cash&quot;, API_PREFIX + &quot;/orders&quot;, API_PREFIX + &quot;/instruments&quot;,
+            API_PREFIX + &quot;/instruments/*&quot;, API_PREFIX + &quot;/clients/*/holdings&quot;, API_PREFIX + &quot;/clients/*/cash&quot;,
+            API_PREFIX + &quot;/cash/balance/*&quot;, API_PREFIX + &quot;/quotes/latest/by-instrument/*&quot;,
+            API_PREFIX + &quot;/quotes/latest/by-market-symbol&quot;, API_PREFIX + &quot;/quotes/history/*&quot;
+    };
+
+    /** Creates the security configuration; Spring instantiates it. */
+<span class="fc" id="L48">    public SecurityConfig() {</span>
+        // No state to initialize.
+<span class="fc" id="L50">    }</span>
+
+    /**
+     * Restricts access to the service's explicit routes.
+     * @param http Spring Security builder
+     * @param tokens JWT verifier
+     * @return stateless API security chain
+     * @throws Exception when the chain cannot be built
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
+        // The account writes authenticate only by bearer header -- no cookies or session -- so a
+        // cross-site form cannot forge them; every other unsafe method keeps CSRF protection.
+<span class="fc" id="L63">        return http.csrf(c -&gt; c.ignoringRequestMatchers(ACCOUNT_WRITE_ROUTES))</span>
+<span class="fc" id="L64">                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L65">                .logout(AbstractHttpConfigurer::disable).requestCache(AbstractHttpConfigurer::disable)</span>
+<span class="fc" id="L66">                .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L67">                .headers(h -&gt; h.frameOptions(f -&gt; f.deny())</span>
+<span class="fc" id="L68">                        .contentSecurityPolicy(c -&gt; c.policyDirectives(&quot;default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'&quot;))</span>
+<span class="fc" id="L69">                        .referrerPolicy(r -&gt; r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))</span>
+<span class="fc" id="L70">                .authorizeHttpRequests(a -&gt; a</span>
+<span class="fc" id="L71">                        .requestMatchers(HttpMethod.GET, DOC_ROUTES).permitAll()</span>
+<span class="fc" id="L72">                        .requestMatchers(HttpMethod.GET, TRADER_ORDER_ROUTES).hasRole(&quot;TRADER&quot;)</span>
+<span class="fc" id="L73">                        .requestMatchers(HttpMethod.GET, PORTFOLIO_READ_ROUTES).hasAnyRole(&quot;TRADER&quot;, &quot;ANALYST&quot;)</span>
+<span class="fc" id="L74">                        .requestMatchers(HttpMethod.POST, ACCOUNT_WRITE_ROUTES).hasRole(&quot;TRADER&quot;)</span>
+<span class="fc" id="L75">                        .anyRequest().denyAll())</span>
+<span class="fc" id="L76">                .exceptionHandling(e -&gt; e</span>
+<span class="fc" id="L77">                        .authenticationEntryPoint((request, response, failure) -&gt; {</span>
+<span class="fc" id="L78">                            response.setStatus(401);</span>
+<span class="fc" id="L79">                            response.setContentType(&quot;application/json&quot;);</span>
+<span class="fc" id="L80">                            response.getWriter().write(&quot;{\&quot;error\&quot;:\&quot;UNAUTHENTICATED\&quot;,\&quot;message\&quot;:\&quot;Authentication is required.\&quot;}&quot;);</span>
+<span class="fc" id="L81">                        })</span>
+<span class="fc" id="L82">                        .accessDeniedHandler((request, response, failure) -&gt; {</span>
+<span class="fc" id="L83">                            response.setStatus(403);</span>
+<span class="fc" id="L84">                            response.setContentType(&quot;application/json&quot;);</span>
+<span class="fc" id="L85">                            response.getWriter().write(&quot;{\&quot;error\&quot;:\&quot;ACCESS_DENIED\&quot;,\&quot;message\&quot;:\&quot;Access is denied.\&quot;}&quot;);</span>
+<span class="fc" id="L86">                        }))</span>
+<span class="fc" id="L87">                .addFilterBefore(new JwtAuthenticationFilter(tokens), UsernamePasswordAuthenticationFilter.class)</span>
+<span class="fc" id="L88">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

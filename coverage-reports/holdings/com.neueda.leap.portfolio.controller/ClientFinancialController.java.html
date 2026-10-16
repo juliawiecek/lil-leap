@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientFinancialController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.controller</a> &gt; <span class="el_source">ClientFinancialController.java</span></div><h1>ClientFinancialController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.controller;
+
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.dto.HoldingResponse;
+import com.neueda.leap.portfolio.dto.OrderSummaryResponse;
+import com.neueda.leap.portfolio.dto.PortfolioSummaryResponse;
+import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
+import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+/** Client-scoped read endpoints for holdings, cash, and order history. */
+@RestController
+@RequestMapping
+@PreAuthorize(&quot;hasAnyRole('TRADER', 'ANALYST')&quot;)
+@SecurityRequirement(name = &quot;bearerAuth&quot;)
+public class ClientFinancialController {
+
+    private final ClientFinancialQueryService queryService;
+
+    /**
+     * Creates the portfolio endpoints.
+     * @param queryService queries restricted to the authenticated user's accounts
+     */
+<span class="fc" id="L42">    public ClientFinancialController(ClientFinancialQueryService queryService) {</span>
+<span class="fc" id="L43">        this.queryService = queryService;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Lists holdings owned by the authenticated caller.
+     * @param accountId optional owned account to narrow to
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned holdings, including an empty list when absent
+     */
+    @Tag(name = &quot;Holdings&quot;, description = &quot;Endpoints for retrieving security holdings&quot;)
+    @Operation(
+        summary = &quot;Get user's holdings&quot;,
+        description = &quot;Lists all securities held by the authenticated user across their accounts&quot;
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Holdings retrieved successfully&quot;),
+        @ApiResponse(responseCode = &quot;401&quot;, description = &quot;Unauthorized - missing or invalid token&quot;)
+    })
+    @GetMapping(&quot;/holdings&quot;)
+    public ResponseEntity&lt;List&lt;HoldingResponse&gt;&gt; holdings(
+            @Parameter(description = &quot;Only this account; omit for all of the caller's accounts&quot;)
+            @RequestParam(required = false) UUID accountId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L66">        return ResponseEntity.ok(queryService.getHoldings(principal.userId(), accountId));</span>
+    }
+
+    /**
+     * Lists the caller's holdings through the client-addressed route.
+     * @param id client user identity, checked against the validated JWT
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned holdings
+     * @throws ResponseStatusException when the requested client is not the caller
+     */
+    @Tag(name = &quot;Holdings&quot;, description = &quot;Endpoints for retrieving security holdings&quot;)
+    @Operation(
+        summary = &quot;Get client's holdings by ID&quot;,
+        description = &quot;Lists all securities held by a specific client (must be authenticated as that client)&quot;
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Holdings retrieved successfully&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;Forbidden - cannot access other user's holdings&quot;),
+        @ApiResponse(responseCode = &quot;401&quot;, description = &quot;Unauthorized - missing or invalid token&quot;)
+    })
+    @GetMapping(&quot;/clients/{id}/holdings&quot;)
+    public ResponseEntity&lt;List&lt;HoldingResponse&gt;&gt; clientHoldings(
+            @PathVariable(&quot;id&quot;) UUID id,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (!principal.userId().equals(id)) {</span>
+<span class="fc" id="L91">            throw new ResponseStatusException(HttpStatus.FORBIDDEN);</span>
+        }
+<span class="fc" id="L93">        return ResponseEntity.ok(queryService.getHoldings(principal.userId()));</span>
+    }
+
+    /**
+     * Lists cash balances owned by the authenticated caller.
+     * @param accountId optional owned account to narrow to
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned balances, including an empty list when absent
+     */
+    @Tag(name = &quot;Cash&quot;, description = &quot;Endpoints for retrieving account cash balances&quot;)
+    @Operation(
+        summary = &quot;Get user's cash balance&quot;,
+        description = &quot;Lists cash balance across all accounts for the authenticated user&quot;
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Cash balance retrieved successfully&quot;),
+        @ApiResponse(responseCode = &quot;401&quot;, description = &quot;Unauthorized - missing or invalid token&quot;)
+    })
+    @GetMapping(&quot;/cash&quot;)
+    public ResponseEntity&lt;List&lt;CashBalanceResponse&gt;&gt; cash(
+            @Parameter(description = &quot;Only this account; omit for all of the caller's accounts&quot;)
+            @RequestParam(required = false) UUID accountId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L116">        return ResponseEntity.ok(queryService.getCashBalances(principal.userId(), accountId));</span>
+    }
+
+    /**
+     * Lists order history owned by the authenticated caller.
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with owned orders, including an empty list when absent
+     */
+    @Tag(name = &quot;Orders&quot;, description = &quot;Endpoints for retrieving order history and status&quot;)
+    @Operation(
+        summary = &quot;Get user's orders&quot;,
+        description = &quot;Lists all orders submitted by the authenticated user, sorted by submission time (newest first)&quot;
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Orders retrieved successfully&quot;),
+        @ApiResponse(responseCode = &quot;401&quot;, description = &quot;Unauthorized - missing or invalid token&quot;)
+    })
+    @GetMapping(&quot;/orders&quot;)
+    public ResponseEntity&lt;List&lt;OrderSummaryResponse&gt;&gt; orders(
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L136">        return ResponseEntity.ok(queryService.getOrders(principal.userId()));</span>
+    }
+
+    /**
+     * TS-11.3 AC1: Returns combined portfolio summary for a client.
+     * Includes holdings, cash (with settlement distinction), and total portfolio value.
+     *
+     * @param clientId client user identity, checked against the validated JWT
+     * @param principal identity supplied by Spring Security
+     * @return HTTP 200 with portfolio summary
+     * @throws ResponseStatusException when the requested client is not the caller
+     */
+    @Tag(name = &quot;Portfolio&quot;, description = &quot;Combined portfolio endpoints returning aggregated financial data&quot;)
+    @Operation(
+        summary = &quot;Get portfolio summary&quot;,
+        description = &quot;Returns combined view of holdings, cash balance (settled/pending/available), and total portfolio value. TS-11.3 AC1: One endpoint combining portfolio and summary data.&quot;
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Portfolio summary retrieved successfully&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;Forbidden - cannot access other user's portfolio&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;, description = &quot;Not found - user has no accounts&quot;),
+        @ApiResponse(responseCode = &quot;401&quot;, description = &quot;Unauthorized - missing or invalid token&quot;)
+    })
+    @GetMapping(&quot;/clients/{clientId}/portfolio-summary&quot;)
+    public ResponseEntity&lt;PortfolioSummaryResponse&gt; getPortfolioSummary(
+            @PathVariable(&quot;clientId&quot;) UUID clientId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (!principal.userId().equals(clientId)) {</span>
+<span class="fc" id="L165">            throw new ResponseStatusException(HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="fc" id="L168">        UUID targetAccountId = queryService.getDefaultAccountId(principal.userId());</span>
+
+<span class="fc" id="L170">        return ResponseEntity.ok(queryService.getPortfolioSummary(principal.userId(), targetAccountId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

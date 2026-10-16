@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TradeFillEntity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.reporting.entity</a> &gt; <span class="el_source">TradeFillEntity.java</span></div><h1>TradeFillEntity.java</h1><pre class="source lang-java linenums">package com.neueda.leap.reporting.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.Immutable;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/** Read-only fill mapping for dashboard reporting. */
+@Entity
+@Immutable
+@Table(name = &quot;fills&quot;)
+public class TradeFillEntity {
+
+	@Id
+	@Column(name = &quot;fill_id&quot;, nullable = false)
+	private UUID fillId;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = &quot;order_id&quot;, nullable = false)
+	private TradeOrderEntity order;
+
+	@Column(name = &quot;filled_quantity&quot;, nullable = false)
+	private long filledQuantity;
+
+	@Column(name = &quot;execution_price&quot;, nullable = false, precision = 18, scale = 8)
+	private BigDecimal executionPrice;
+
+	@Column(name = &quot;filled_at&quot;, nullable = false)
+	private Instant filledAt;
+
+	/** Required by JPA; not for application use. */
+<span class="fc" id="L40">	protected TradeFillEntity() {</span>
+<span class="fc" id="L41">	}</span>
+
+	/**
+	 * Returns the persistent fill identifier.
+	 *
+	 * @return persistent fill identifier
+	 */
+	public UUID getFillId() {
+<span class="nc" id="L49">		return fillId;</span>
+	}
+
+	/**
+	 * Returns the order this fill executed.
+	 *
+	 * @return order this fill executed
+	 */
+	public TradeOrderEntity getOrder() {
+<span class="nc" id="L58">		return order;</span>
+	}
+
+	/**
+	 * Returns the executed quantity.
+	 *
+	 * @return executed quantity
+	 */
+	public long getFilledQuantity() {
+<span class="nc" id="L67">		return filledQuantity;</span>
+	}
+
+	/**
+	 * Returns the executed price per unit.
+	 *
+	 * @return executed price per unit
+	 */
+	public BigDecimal getExecutionPrice() {
+<span class="nc" id="L76">		return executionPrice;</span>
+	}
+
+	/**
+	 * Returns the execution time.
+	 *
+	 * @return execution time
+	 */
+	public Instant getFilledAt() {
+<span class="fc" id="L85">		return filledAt;</span>
+	}
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

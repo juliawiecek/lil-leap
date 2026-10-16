@@ -79,13 +79,21 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/CashBalanceResponse.html#com.neueda.leap.portfolio.controller">CashBalanceResponse</a></div>
+<div class="col-first even-row-color"><a href="class-use/AccountResponse.html#com.neueda.leap.portfolio.controller">AccountResponse</a></div>
 <div class="col-last even-row-color">
+<div class="block">A newly opened account.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/CashBalanceResponse.html#com.neueda.leap.portfolio.controller">CashBalanceResponse</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Client-owned cash balance returned by the portfolio API.</div>
 </div>
-<div class="col-first odd-row-color"><a href="class-use/HoldingResponse.html#com.neueda.leap.portfolio.controller">HoldingResponse</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="class-use/HoldingResponse.html#com.neueda.leap.portfolio.controller">HoldingResponse</a></div>
+<div class="col-last even-row-color">
 <div class="block">Single holding owned by a client, returned by the portfolio API.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/OpenAccountRequest.html#com.neueda.leap.portfolio.controller">OpenAccountRequest</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Request to open another account for the caller (PS-05).</div>
 </div>
 <div class="col-first even-row-color"><a href="class-use/OrderHistoryResponse.html#com.neueda.leap.portfolio.controller">OrderHistoryResponse</a></div>
 <div class="col-last even-row-color">
@@ -98,6 +106,14 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color"><a href="class-use/PortfolioSummaryResponse.html#com.neueda.leap.portfolio.controller">PortfolioSummaryResponse</a></div>
 <div class="col-last even-row-color">
 <div class="block">Combined portfolio summary for a client.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/TransferRequest.html#com.neueda.leap.portfolio.controller">TransferRequest</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Moves settled USD cash between two of the caller's own accounts (PS-05).</div>
+</div>
+<div class="col-first even-row-color"><a href="class-use/TransferResponse.html#com.neueda.leap.portfolio.controller">TransferResponse</a></div>
+<div class="col-last even-row-color">
+<div class="block">A completed internal book transfer.</div>
 </div>
 </div>
 </section>
@@ -138,29 +154,41 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="class-use/CashBalanceDetailResponse.html#com.neueda.leap.portfolio.service">CashBalanceDetailResponse</a></div>
+<div class="col-first even-row-color"><a href="class-use/AccountResponse.html#com.neueda.leap.portfolio.service">AccountResponse</a></div>
 <div class="col-last even-row-color">
+<div class="block">A newly opened account.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/CashBalanceDetailResponse.html#com.neueda.leap.portfolio.service">CashBalanceDetailResponse</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Client-owned cash balance with settlement distinction returned by the portfolio API.</div>
 </div>
-<div class="col-first odd-row-color"><a href="class-use/CashBalanceResponse.html#com.neueda.leap.portfolio.service">CashBalanceResponse</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="class-use/CashBalanceResponse.html#com.neueda.leap.portfolio.service">CashBalanceResponse</a></div>
+<div class="col-last even-row-color">
 <div class="block">Client-owned cash balance returned by the portfolio API.</div>
 </div>
-<div class="col-first even-row-color"><a href="class-use/HoldingResponse.html#com.neueda.leap.portfolio.service">HoldingResponse</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="class-use/HoldingResponse.html#com.neueda.leap.portfolio.service">HoldingResponse</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Single holding owned by a client, returned by the portfolio API.</div>
 </div>
-<div class="col-first odd-row-color"><a href="class-use/OrderHistoryResponse.html#com.neueda.leap.portfolio.service">OrderHistoryResponse</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="class-use/OrderHistoryResponse.html#com.neueda.leap.portfolio.service">OrderHistoryResponse</a></div>
+<div class="col-last even-row-color">
 <div class="block">One row of a client's order history.</div>
 </div>
-<div class="col-first even-row-color"><a href="class-use/OrderSummaryResponse.html#com.neueda.leap.portfolio.service">OrderSummaryResponse</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="class-use/OrderSummaryResponse.html#com.neueda.leap.portfolio.service">OrderSummaryResponse</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Client-owned order summary returned by the order-history API.</div>
 </div>
-<div class="col-first odd-row-color"><a href="class-use/PortfolioSummaryResponse.html#com.neueda.leap.portfolio.service">PortfolioSummaryResponse</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="class-use/PortfolioSummaryResponse.html#com.neueda.leap.portfolio.service">PortfolioSummaryResponse</a></div>
+<div class="col-last even-row-color">
 <div class="block">Combined portfolio summary for a client.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/TransferRequest.html#com.neueda.leap.portfolio.service">TransferRequest</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Moves settled USD cash between two of the caller's own accounts (PS-05).</div>
+</div>
+<div class="col-first even-row-color"><a href="class-use/TransferResponse.html#com.neueda.leap.portfolio.service">TransferResponse</a></div>
+<div class="col-last even-row-color">
+<div class="block">A completed internal book transfer.</div>
 </div>
 </div>
 </section>

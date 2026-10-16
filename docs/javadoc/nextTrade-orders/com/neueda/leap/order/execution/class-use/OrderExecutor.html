@@ -86,6 +86,47 @@ loadScripts(document, 'script');</script>
  <a href="../OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
  int&nbsp;retrySeconds)</code></div>
 <div class="col-last even-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the default attempt limit for unexpected failures.</div>
+</div>
+<div class="col-first odd-row-color"><code>&nbsp;</code></div>
+<div class="col-second odd-row-color"><code><a href="../OrderExecutionWorker.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="../OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied attempt limit.</div>
+</div>
+<div class="col-first even-row-color"><code>&nbsp;</code></div>
+<div class="col-second even-row-color"><code><a href="../OrderExecutionWorker.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="../OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> that only executes during market hours (NEXT-212).</div>
+</div>
+<div class="col-first odd-row-color"><code>&nbsp;</code></div>
+<div class="col-second odd-row-color"><code><a href="../OrderExecutionWorker.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="../OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="../event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with terminal-event publishing and the default attempt limit.</div>
+</div>
+<div class="col-first even-row-color"><code>&nbsp;</code></div>
+<div class="col-second even-row-color"><code><a href="../OrderExecutionWorker.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="../OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="../event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
+<div class="col-last even-row-color">
 <div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied dependencies.</div>
 </div>
 </div>

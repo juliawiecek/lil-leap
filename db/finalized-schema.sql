@@ -38,8 +38,9 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
 
-    -- User role for access control (TRADER: client self-service; ANALYST: internal staff)
-    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST')),
+    -- User role for access control (TRADER: client self-service; ANALYST: internal reporting staff;
+    -- OPERATIONS: trading operations staff who investigate trades, seeded rather than self-registered)
+    user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST', 'OPERATIONS')),
 
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
@@ -395,6 +396,10 @@ CREATE TABLE orders (
 
     -- Per-order price tolerance override (NULL = use account default)
     buffer_percent NUMERIC(5,2) CHECK (buffer_percent IS NULL OR buffer_percent >= 0),
+
+    -- Price protection (PS-12): the quote orders saw at submission (ask for BUY, bid for SELL)
+    reference_price NUMERIC(18,4) CONSTRAINT chk_orders_reference_price
+        CHECK (reference_price IS NULL OR reference_price > 0),
 
     CONSTRAINT fk_orders_account
         FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
@@ -788,4 +793,4 @@ CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
 -- 10. Test v_account_cash, v_account_holdings, v_latest_quotes views
 -- 11. Test v_trader_tier_eligibility for tier enforcement
 -- 12. Create user with user_role='ANALYST' → analyst_profiles (not customer/financial_profiles)
--- 13. Confirm user_role CHECK rejects any value other than 'TRADER' or 'ANALYST'
+-- 13. Confirm user_role CHECK rejects any value other than 'TRADER', 'ANALYST' or 'OPERATIONS'

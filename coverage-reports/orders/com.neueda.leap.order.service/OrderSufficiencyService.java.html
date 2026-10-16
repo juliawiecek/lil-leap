@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrderSufficiencyService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.service</a> &gt; <span class="el_source">OrderSufficiencyService.java</span></div><h1>OrderSufficiencyService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.service;
+
+import com.neueda.leap.marketdata.QuoteRepository;
+import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import com.neueda.leap.order.submission.repository.OrderSufficiencyRepository;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Locale;
+import java.util.UUID;
+
+import static com.neueda.leap.order.service.OrderSufficiencyException.Reason.*;
+
+/**
+ * Checks current resources before submission. This check neither reserves nor settles
+ * funds or shares; a later acceptance/execution step must recheck and reserve atomically.
+ */
+@Service
+public class OrderSufficiencyService {
+    private final OrderSufficiencyRepository balances;
+    private final QuoteRepository quotes;
+
+    /**
+     * Creates the sufficiency rule checker.
+     * @param balances account-scoped cash, holdings and buffer queries
+     * @param quotes server-side market quotes
+     */
+<span class="fc" id="L29">    public OrderSufficiencyService(OrderSufficiencyRepository balances, QuoteRepository quotes) {</span>
+<span class="fc" id="L30">        this.balances = balances;</span>
+<span class="fc" id="L31">        this.quotes = quotes;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Requires cash for a BUY or owned units for a SELL. Buying power is the latest
+     * ask times quantity times (1 + buffer / 100), rounded up to USD cents once.
+     * The order override takes precedence over the account's buffer, including zero.
+     *
+     * @param request validated request for an account already authorized by the caller
+     * @param instrumentId resolved tradable instrument
+     * @throws OrderSufficiencyException if resources or a usable buy quote are missing
+     * @throws IllegalArgumentException if the quantity, side or buffer is invalid
+     */
+    public void validate(SubmitOrderRequest request, UUID instrumentId) {
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (request.quantity() &lt;= 0) {</span>
+<span class="fc" id="L46">            throw new IllegalArgumentException(&quot;Quantity must be greater than zero&quot;);</span>
+        }
+<span class="fc bfc" id="L48" title="All 3 branches covered.">        switch (request.normalizedSide()) {</span>
+<span class="fc" id="L49">            case &quot;BUY&quot; -&gt; validateBuy(request, instrumentId);</span>
+            case &quot;SELL&quot; -&gt; {
+<span class="fc" id="L51">                long held = balances.holdingQuantity(request.accountId(), instrumentId);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                if (held &lt; request.quantity()) {</span>
+<span class="fc" id="L53">                    throw new OrderSufficiencyException(INSUFFICIENT_HOLDINGS, String.format(Locale.US,</span>
+                            &quot;Insufficient holdings: this order sells %,d shares but you hold %,d.&quot;,
+<span class="fc" id="L55">                            request.quantity(), held));</span>
+                }
+<span class="fc" id="L57">            }</span>
+<span class="fc" id="L58">            default -&gt; throw new IllegalArgumentException(&quot;Unsupported order side&quot;);</span>
+        }
+<span class="fc" id="L60">    }</span>
+
+    private void validateBuy(SubmitOrderRequest request, UUID instrumentId) {
+<span class="fc" id="L63">        BigDecimal ask = quotes.findLatestByInstrumentId(instrumentId)</span>
+<span class="fc bfc" id="L64" title="All 4 branches covered.">                .filter(quote -&gt; quote.ask() != null &amp;&amp; quote.ask().signum() &gt; 0)</span>
+<span class="fc" id="L65">                .orElseThrow(() -&gt; new OrderSufficiencyException(QUOTE_UNAVAILABLE)).ask();</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        BigDecimal buffer = request.bufferPercent() != null ? request.bufferPercent()</span>
+<span class="fc" id="L67">                : balances.executionBufferPercent(request.accountId());</span>
+<span class="pc bpc" id="L68" title="2 of 4 branches missed.">        if (buffer == null || buffer.signum() &lt; 0) {</span>
+<span class="nc" id="L69">            throw new IllegalArgumentException(&quot;A nonnegative execution buffer is required&quot;);</span>
+        }
+<span class="fc" id="L71">        BigDecimal requiredCash = ask.multiply(BigDecimal.valueOf(request.quantity()))</span>
+<span class="fc" id="L72">                .multiply(BigDecimal.ONE.add(buffer.movePointLeft(2)))</span>
+<span class="fc" id="L73">                .setScale(2, RoundingMode.CEILING);</span>
+<span class="fc" id="L74">        BigDecimal available = balances.cashBalance(request.accountId());</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (available.compareTo(requiredCash) &lt; 0) {</span>
+<span class="fc" id="L76">            throw new OrderSufficiencyException(INSUFFICIENT_CASH, String.format(Locale.US,</span>
+                    &quot;Insufficient cash: this order needs %s (%,d shares at the %s ask plus a %s%% price buffer), &quot;
+                            + &quot;but %s is available.&quot;,
+<span class="fc" id="L79">                    usd(requiredCash), request.quantity(), usd(ask),</span>
+<span class="fc" id="L80">                    buffer.stripTrailingZeros().toPlainString(), usd(available)));</span>
+        }
+<span class="fc" id="L82">    }</span>
+
+    /** Formats a USD amount for messages, e.g. $1,250.00. */
+    private static String usd(BigDecimal amount) {
+<span class="fc" id="L86">        return String.format(Locale.US, &quot;$%,.2f&quot;, amount);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

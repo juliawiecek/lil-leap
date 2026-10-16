@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientPortfolioQueryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.service</a> &gt; <span class="el_source">ClientPortfolioQueryService.java</span></div><h1>ClientPortfolioQueryService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.service;
+
+import com.neueda.leap.portfolio.dto.HoldingResponse;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Reads holdings for the authenticated client only.
+ *
+ * &lt;p&gt;Every query derives ownership by joining through accounts.user_id. The
+ * caller never supplies a user id parameter, so cross-client access is
+ * prevented at the database level: if the requested account does not belong
+ * to the authenticated user, no row is returned.&lt;/p&gt;
+ *
+ * &lt;p&gt;TS-11.1c: Single-holding lookup (GET /holdings/{accountId}/{instrumentId})
+ * reuses this service to filter holdings to one ID.&lt;/p&gt;
+ */
+@Service
+@Transactional(readOnly = true)
+public class ClientPortfolioQueryService {
+
+    private static final String SINGLE_HOLDING_SQL = &quot;&quot;&quot;
+            SELECT h.account_id, h.instrument_id, i.symbol, i.instrument_name,
+                   h.quantity, h.avg_cost, h.updated_at
+            FROM holdings h
+            JOIN accounts a ON a.account_id = h.account_id
+            JOIN instruments i ON i.instrument_id = h.instrument_id
+            WHERE a.user_id = ? AND h.account_id = ? AND h.instrument_id = ?
+            &quot;&quot;&quot;;
+
+    private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * Creates the client-scoped query service.
+     *
+     * @param jdbcTemplate database access for account ownership joins
+     */
+<span class="fc" id="L45">    public ClientPortfolioQueryService(JdbcTemplate jdbcTemplate) {</span>
+<span class="fc" id="L46">        this.jdbcTemplate = jdbcTemplate;</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Fetches a single holding by account and instrument, scoped to the authenticated caller.
+     *
+     * &lt;p&gt;TS-11.1c AC1: Returns detail for one holding, scoped to the authenticated caller.
+     * TS-11.1c AC2: Requesting another client's holding ID returns empty Optional.&lt;/p&gt;
+     *
+     * @param userId authenticated caller's user ID
+     * @param accountId account containing the holding
+     * @param instrumentId instrument being held
+     * @return the holding detail if it exists and belongs to the caller, otherwise empty
+     */
+    public Optional&lt;HoldingResponse&gt; getHoldingByIdScoped(UUID userId, UUID accountId, UUID instrumentId) {
+<span class="fc" id="L61">        return jdbcTemplate.query(</span>
+                SINGLE_HOLDING_SQL,
+                new HoldingRowMapper(),
+                userId,
+                accountId,
+                instrumentId
+<span class="fc" id="L67">        ).stream().findFirst();</span>
+    }
+
+    /**
+     * Maps a holdings row to a HoldingResponse.
+     */
+    private static final class HoldingRowMapper implements RowMapper&lt;HoldingResponse&gt; {
+        @Override
+        public HoldingResponse mapRow(ResultSet rs, int rowNum) throws SQLException {
+<span class="fc" id="L76">            return new HoldingResponse(</span>
+<span class="fc" id="L77">                    java.util.UUID.fromString(rs.getString(&quot;account_id&quot;)),</span>
+<span class="fc" id="L78">                    java.util.UUID.fromString(rs.getString(&quot;instrument_id&quot;)),</span>
+<span class="fc" id="L79">                    rs.getString(&quot;symbol&quot;),</span>
+<span class="fc" id="L80">                    rs.getString(&quot;instrument_name&quot;),</span>
+<span class="fc" id="L81">                    rs.getLong(&quot;quantity&quot;),</span>
+<span class="fc" id="L82">                    rs.getBigDecimal(&quot;avg_cost&quot;),</span>
+<span class="fc" id="L83">                    rs.getTimestamp(&quot;updated_at&quot;).toInstant()</span>
+            );
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

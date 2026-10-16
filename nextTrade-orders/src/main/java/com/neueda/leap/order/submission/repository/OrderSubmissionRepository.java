@@ -2,6 +2,7 @@ package com.neueda.leap.order.submission.repository;
 
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,7 +44,9 @@ public interface OrderSubmissionRepository {
      * @param request validated order submission, normalized before persistence
      * @param instrumentId resolved persistent instrument identifier
      * @param symbol resolved instrument trading symbol
+     * @param referencePrice indicative price orders saw at submission, for price protection; null when no quote
      * @return inserted order, or empty when the idempotency key conflicts
      */
-    Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol);
+    Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol,
+            BigDecimal referencePrice);
 }

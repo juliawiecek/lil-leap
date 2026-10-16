@@ -1,4 +1,5 @@
-import './component-helper.mjs';
+import { ApiHttpClient } from './component-helper.mjs';
+import { of } from 'rxjs';
 import { Window } from 'happy-dom';
 import { readFileSync } from 'node:fs';
 import { ɵresolveComponentResources } from '@angular/core';
@@ -39,7 +40,7 @@ export async function render(t, Type, inputs = {}, providers = []) {
     initialized = true;
   }
   await resolveTemplates();
-  TestBed.configureTestingModule({ imports: [Type], providers });
+  TestBed.configureTestingModule({ imports: [Type], providers: [{ provide: ApiHttpClient, useValue: { get: () => of([]), post: () => of({}) } }, ...providers] });
   const fixture = TestBed.createComponent(Type);
   for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
   t.after(() => { TestBed.resetTestingModule(); frames.clear(); });

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">insights</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.common.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.neueda.leap.common.exception;
+
+
+import com.neueda.leap.reporting.model.InvalidReportDateRangeException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.ErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+
+/**
+ * Global exception handler for REST controllers.
+ *
+ * &lt;p&gt;This class centralizes exception handling logic and converts
+ * application-specific exceptions into appropriate HTTP responses.&lt;/p&gt;
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /** Creates the exception handler; Spring registers it as controller advice. */
+<span class="fc" id="L32">    public GlobalExceptionHandler() {</span>
+        // No state to initialize.
+<span class="fc" id="L34">    }</span>
+
+    private static final String ERROR_KEY = &quot;error&quot;;
+    private static final String MESSAGE_KEY = &quot;message&quot;;
+    private static final String REQUEST_FAILED = &quot;REQUEST_FAILED&quot;;
+    private static final String INTERNAL_ERROR = &quot;INTERNAL_ERROR&quot;;
+    private static final String INVALID_REQUEST = &quot;INVALID_REQUEST&quot;;
+    private static final String ACCESS_DENIED = &quot;ACCESS_DENIED&quot;;
+    private static final String REQUEST_FAILED_MESSAGE = &quot;The request could not be completed.&quot;;
+    private static final String INVALID_FIELDS_MESSAGE = &quot;The request contains invalid or missing fields.&quot;;
+    private static final String INVALID_PARAMS_MESSAGE = &quot;The request contains invalid or missing parameters.&quot;;
+
+<span class="fc" id="L46">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    /**
+     * Preserves an explicit HTTP failure status while hiding exception details.
+     * @param exception status-bearing failure from the application
+     * @return the original status with a fixed REQUEST_FAILED response
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleStatusException(ResponseStatusException exception) {
+<span class="fc" id="L55">        return ResponseEntity.status(exception.getStatusCode()).body(Map.of(</span>
+                ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+    }
+
+    /**
+     * Converts unhandled failures into safe responses without exposing exception messages.
+     * Framework HTTP statuses and headers are retained; other failures log only
+     * the exception type and return HTTP 500.
+     * @param exception unhandled framework or application failure
+     * @return a fixed error body with the framework status or HTTP 500
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleUnexpectedException(Exception exception) {
+        // Preserve framework statuses such as 404/405/415 without their request-derived messages.
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        if (exception instanceof ErrorResponse error) {</span>
+<span class="fc" id="L70">            return ResponseEntity.status(error.getStatusCode()).headers(error.getHeaders()).body(Map.of(</span>
+                    ERROR_KEY, REQUEST_FAILED, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+        }
+        // Exception messages/causes can contain unlabelled secrets, so do not pass the throwable.
+<span class="fc" id="L74">        log.error(&quot;Request failed exceptionType={}&quot;, exception.getClass().getSimpleName());</span>
+<span class="fc" id="L75">        return ResponseEntity.internalServerError().body(Map.of(</span>
+                ERROR_KEY, INTERNAL_ERROR, MESSAGE_KEY, REQUEST_FAILED_MESSAGE));
+    }
+
+    /**
+     * Rejects invalid payloads without rendering or logging rejected values.
+     * @param exception validation or parsing failure that may contain credentials
+     * @return HTTP 400 with a fixed INVALID_REQUEST response
+     */
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleInvalidRequest(Exception exception) {
+<span class="fc" id="L86">        return ResponseEntity.badRequest().body(Map.of(</span>
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_FIELDS_MESSAGE));
+    }
+
+
+    /**
+     * Returns 403 when method security (for example {@code @PreAuthorize}) denies
+     * an authenticated caller. Without this, the catch-all handler above would
+     * intercept the denial before Spring Security and turn it into a 500.
+     * @param exception authorization failure raised by method security
+     * @return HTTP 403 with the same body as the security filter chain's access-denied handler
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleAccessDenied(AccessDeniedException exception) {
+<span class="fc" id="L100">        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(</span>
+                ERROR_KEY, ACCESS_DENIED, MESSAGE_KEY, &quot;Access is denied.&quot;));
+    }
+
+    /**
+     * Rejects missing, malformed, or out-of-bounds query parameters without
+     * echoing the rejected values.
+     * @param exception parameter binding or method validation failure
+     * @return HTTP 400 with a fixed INVALID_REQUEST response
+     */
+    @ExceptionHandler({MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class, HandlerMethodValidationException.class})
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleInvalidParameter(Exception exception) {
+<span class="fc" id="L113">        return ResponseEntity.badRequest().body(Map.of(</span>
+                ERROR_KEY, INVALID_REQUEST, MESSAGE_KEY, INVALID_PARAMS_MESSAGE));
+    }
+
+    /**
+     * Rejects a report request whose date range is inverted or too long.
+     * @param exception date range rule violation with a fixed, caller-safe message
+     * @return HTTP 400 with INVALID_DATE_RANGE and the rule that was violated
+     */
+    @ExceptionHandler(InvalidReportDateRangeException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handleInvalidDateRange(InvalidReportDateRangeException exception) {
+<span class="fc" id="L124">        return ResponseEntity.badRequest().body(Map.of(</span>
+<span class="fc" id="L125">                ERROR_KEY, &quot;INVALID_DATE_RANGE&quot;, MESSAGE_KEY, exception.getMessage()));</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

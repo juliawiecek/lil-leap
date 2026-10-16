@@ -204,7 +204,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationFrameId);
-    if (this.focusTimer) clearTimeout(this.focusTimer);
+    if (this.focusTimer) {
+      clearTimeout(this.focusTimer);
+    }
     this.renderer.removeClass(document.body, 'brand-phase');
     this.renderer.removeClass(document.body, 'auth-phase');
   }
@@ -621,7 +623,9 @@ export class App implements AfterViewInit, OnDestroy {
 
   private drawChartMorph(): void {
     const context = this.context;
-    if (!context) return;
+    if (!context) {
+      return;
+    }
     // Smoothstep settles with zero velocity at both ends. The final geometry
     // matches the login SVG, so fading between the renderers does not jump.
     const t = this.chartMorph ** 2 * (3 - 2 * this.chartMorph);

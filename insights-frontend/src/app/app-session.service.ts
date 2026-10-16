@@ -6,7 +6,8 @@ import { safeReturnUrl } from './page-state';
 @Injectable({ providedIn: 'root' })
 export class AppSessionService extends SessionCoordinator implements OnDestroy {
   constructor() {
-    super(inject(AuthService), inject(Router, { optional: true }), 'ANALYST', safeReturnUrl);
+    // Insights is for internal staff: analysts (reports) and operations (trade investigation, TS-03.5).
+    super(inject(AuthService), inject(Router, { optional: true }), ['ANALYST', 'OPERATIONS'], safeReturnUrl);
   }
   ngOnDestroy(): void {
     this.destroy();

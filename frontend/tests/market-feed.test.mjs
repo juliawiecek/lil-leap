@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
+import { apiHttp } from './http-helper.mjs';
+import { throwError } from 'rxjs';
 const { MarketFeed } = await import('../src/app/market-feed.service.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
 const { MarketFeedClient, isDelayed, changeFrom, QUOTE_STALE_MS } = await import('../src/app/market-feed-api.ts');
@@ -182,18 +184,24 @@ test('the client lists only tradable stocks and reads the first quote of the day
       { midpoint: '150', bid: 0, ask: 0, quotedAt: '2026-10-13T20:00:00' },
     ],
   };
-  const client = new MarketFeedClient({ accessToken: 'tok' }, async (url, init) => {
+  const client = new MarketFeedClient({ accessToken: 'tok' }, apiHttp(async (url, init) => {
     requests.push([url, init.headers.Authorization]);
     return new Response(JSON.stringify(rows[url]), { status: rows[url] ? 200 : 404 });
-  });
+  }));
   assert.equal(client.signedIn, true);
   assert.deepEqual((await client.instruments()).map((i) => i.symbol), ['AAPL', 'MSFT']);
   assert.deepEqual(await client.latest('a'), { price: 200, bid: 199.9, ask: 200.1, quotedAt: '2026-10-14T15:00:00Z' });
   assert.equal(await client.dayOpen('a', new Date('2026-10-14T16:00:00')), 198);
   assert.equal(await client.dayOpen('a', new Date('2026-10-16T16:00:00')), undefined);
-  assert.ok(requests.every(([, auth]) => auth === 'Bearer tok'));
+  assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');
   await assert.rejects(client.latest('missing'), /Could not load prices/);
   await assert.rejects(new MarketFeedClient({ accessToken: null }).instruments(), /Sign in/);
+});
+
+test('unexpected transport failures propagate from the market feed client', async () => {
+  const failure = new TypeError('offline');
+  const client = new MarketFeedClient({ accessToken: 'tok' }, { get: () => throwError(() => failure) });
+  await assert.rejects(client.latest('a'), (error) => error === failure);
 });
 
 test('the badge flips between open and closed in local time, and the ticket warns only while closed', () => {

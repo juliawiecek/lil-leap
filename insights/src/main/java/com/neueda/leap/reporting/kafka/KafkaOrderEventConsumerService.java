@@ -19,7 +19,12 @@ public class KafkaOrderEventConsumerService {
     private final ObjectMapper objectMapper;
     private final KafkaOrderEventCsvWriter writer;
 
-    /** Creates the consumer service. */
+    /**
+     * Creates the consumer service.
+     *
+     * @param objectMapper reads order event JSON payloads
+     * @param writer writes accepted events to the CSV files
+     */
     public KafkaOrderEventConsumerService(ObjectMapper objectMapper, KafkaOrderEventCsvWriter writer) {
         this.objectMapper = objectMapper;
         this.writer = writer;
@@ -27,6 +32,8 @@ public class KafkaOrderEventConsumerService {
 
     /**
      * Handles completed trades only.
+     *
+     * @param payload order event JSON from the order events topic
      */
     @KafkaListener(
             topics = "${insights.kafka.topic:order-events}",
@@ -37,6 +44,8 @@ public class KafkaOrderEventConsumerService {
 
     /**
      * Handles failed trades only.
+     *
+     * @param payload order event JSON from the order events topic
      */
     @KafkaListener(
             topics = "${insights.kafka.topic:order-events}",
@@ -47,6 +56,8 @@ public class KafkaOrderEventConsumerService {
 
     /**
      * Handles every terminal event for audit purposes.
+     *
+     * @param payload order event JSON from the order events topic
      */
     @KafkaListener(
             topics = "${insights.kafka.topic:order-events}",

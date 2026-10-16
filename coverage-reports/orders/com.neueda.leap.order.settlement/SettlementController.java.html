@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SettlementController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.settlement</a> &gt; <span class="el_source">SettlementController.java</span></div><h1>SettlementController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.settlement;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+/**
+ * Operator commands for one settlement (TS-10.3). Service-only: restricted to the OPERATIONS role
+ * and not routed by the gateway.
+ */
+@RestController
+@RequestMapping(&quot;/settlements&quot;)
+public class SettlementController {
+<span class="fc" id="L22">    private static final Pattern UUID_TEXT =</span>
+<span class="fc" id="L23">            Pattern.compile(&quot;^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$&quot;);</span>
+
+    private final SettlementRecoveryService settlements;
+
+    /**
+     * Creates the controller.
+     *
+     * @param settlements recovery and rollback
+     */
+<span class="fc" id="L32">    public SettlementController(SettlementRecoveryService settlements) {</span>
+<span class="fc" id="L33">        this.settlements = settlements;</span>
+<span class="fc" id="L34">    }</span>
+
+    /**
+     * Completes a partly applied settlement, e.g. {@code POST /settlements/recover?settlementId={fillId}}.
+     *
+     * @param settlementId the fill identifier
+     * @return 200 with the parts repaired, 400 for a malformed id, 404 for an unknown fill, or 409 when it cannot be completed
+     */
+    @PostMapping(&quot;/recover&quot;)
+    public ResponseEntity&lt;SettlementResult&gt; recover(@RequestParam(required = false) String settlementId) {
+<span class="fc" id="L44">        return ResponseEntity.ok(settlements.recover(parse(settlementId)));</span>
+    }
+
+    /**
+     * Rolls back a settlement that has not changed any balance.
+     *
+     * @param settlementId the fill identifier
+     * @return 200 when rolled back, 400 for a malformed id, 404 for an unknown fill, or 409 when balances already changed
+     */
+    @PostMapping(&quot;/rollback&quot;)
+    public ResponseEntity&lt;SettlementResult&gt; rollback(@RequestParam(required = false) String settlementId) {
+<span class="fc" id="L55">        return ResponseEntity.ok(settlements.rollback(parse(settlementId)));</span>
+    }
+
+    /**
+     * Returns the failure's fixed code and message.
+     *
+     * @param failure recover or rollback failure
+     * @return its status with {@code error} and {@code message}
+     */
+    @ExceptionHandler(SettlementException.class)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; handle(SettlementException failure) {
+<span class="fc" id="L66">        return ResponseEntity.status(failure.status())</span>
+<span class="fc" id="L67">                .body(Map.of(&quot;error&quot;, failure.code(), &quot;message&quot;, failure.getMessage()));</span>
+    }
+
+    private static UUID parse(String settlementId) {
+<span class="pc bpc" id="L71" title="1 of 4 branches missed.">        if (settlementId == null || !UUID_TEXT.matcher(settlementId.trim()).matches()) {</span>
+<span class="fc" id="L72">            throw new SettlementException(HttpStatus.BAD_REQUEST, &quot;INVALID_REQUEST&quot;,</span>
+                    &quot;Supply settlementId, the identifier of the fill.&quot;);
+        }
+<span class="fc" id="L75">        return UUID.fromString(settlementId.trim());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

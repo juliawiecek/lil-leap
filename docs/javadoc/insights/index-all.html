@@ -50,9 +50,13 @@ loadScripts(document, 'script');</script>
 <div class="header">
 <h1>Index</h1>
 </div>
-<a href="#I:A">A</a>&nbsp;<a href="#I:C">C</a>&nbsp;<a href="#I:D">D</a>&nbsp;<a href="#I:E">E</a>&nbsp;<a href="#I:F">F</a>&nbsp;<a href="#I:G">G</a>&nbsp;<a href="#I:H">H</a>&nbsp;<a href="#I:I">I</a>&nbsp;<a href="#I:J">J</a>&nbsp;<a href="#I:L">L</a>&nbsp;<a href="#I:M">M</a>&nbsp;<a href="#I:O">O</a>&nbsp;<a href="#I:P">P</a>&nbsp;<a href="#I:R">R</a>&nbsp;<a href="#I:S">S</a>&nbsp;<a href="#I:T">T</a>&nbsp;<a href="#I:U">U</a>&nbsp;<a href="#I:V">V</a>&nbsp;<br><a href="allclasses-index.html">All&nbsp;Classes&nbsp;and&nbsp;Interfaces</a><span class="vertical-separator">|</span><a href="allpackages-index.html">All&nbsp;Packages</a><span class="vertical-separator">|</span><a href="constant-values.html">Constant&nbsp;Field&nbsp;Values</a><span class="vertical-separator">|</span><a href="serialized-form.html">Serialized&nbsp;Form</a>
+<a href="#I:A">A</a>&nbsp;<a href="#I:C">C</a>&nbsp;<a href="#I:D">D</a>&nbsp;<a href="#I:E">E</a>&nbsp;<a href="#I:F">F</a>&nbsp;<a href="#I:G">G</a>&nbsp;<a href="#I:H">H</a>&nbsp;<a href="#I:I">I</a>&nbsp;<a href="#I:J">J</a>&nbsp;<a href="#I:K">K</a>&nbsp;<a href="#I:L">L</a>&nbsp;<a href="#I:M">M</a>&nbsp;<a href="#I:O">O</a>&nbsp;<a href="#I:P">P</a>&nbsp;<a href="#I:Q">Q</a>&nbsp;<a href="#I:R">R</a>&nbsp;<a href="#I:S">S</a>&nbsp;<a href="#I:T">T</a>&nbsp;<a href="#I:U">U</a>&nbsp;<a href="#I:V">V</a>&nbsp;<a href="#I:W">W</a>&nbsp;<br><a href="allclasses-index.html">All&nbsp;Classes&nbsp;and&nbsp;Interfaces</a><span class="vertical-separator">|</span><a href="allpackages-index.html">All&nbsp;Packages</a><span class="vertical-separator">|</span><a href="constant-values.html">Constant&nbsp;Field&nbsp;Values</a><span class="vertical-separator">|</span><a href="serialized-form.html">Serialized&nbsp;Form</a>
 <h2 class="title" id="I:A">A</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-accountId"><code>accountId</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html#activeClients()" class="member-name-link">activeClients()</a> - Method in record class com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html" title="class in com.neueda.leap.reporting.dto">InsightsOverviewResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/dto/InsightsOverviewResponse.html#param-activeClients"><code>activeClients</code></a> record component.</div>
@@ -118,6 +122,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Enumerations used by reporting responses.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/package-summary.html">com.neueda.leap.reporting.kafka</a> - package com.neueda.leap.reporting.kafka</dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/neueda/leap/reporting/model/package-summary.html">com.neueda.leap.reporting.model</a> - package com.neueda.leap.reporting.model</dt>
 <dd>
 <div class="block">Validated value objects shared by the reporting service and repositories.</div>
@@ -134,6 +140,22 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/security/package-summary.html">com.neueda.leap.security</a> - package com.neueda.leap.security</dt>
 <dd>
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#completedAt()" class="member-name-link">completedAt()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-completedAt"><code>completedAt</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html#consumeAudit(java.lang.String)" class="member-name-link">consumeAudit(String)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></dt>
+<dd>
+<div class="block">Handles every terminal event for audit purposes.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html#consumeCompleted(java.lang.String)" class="member-name-link">consumeCompleted(String)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></dt>
+<dd>
+<div class="block">Handles completed trades only.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html#consumeFailed(java.lang.String)" class="member-name-link">consumeFailed(String)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></dt>
+<dd>
+<div class="block">Handles failed trades only.</div>
 </dd>
 <dt><a href="com/neueda/leap/config/SpringDocConfig.html#customOpenAPI()" class="member-name-link">customOpenAPI()</a> - Method in class com.neueda.leap.config.<a href="com/neueda/leap/config/SpringDocConfig.html" title="class in com.neueda.leap.config">SpringDocConfig</a></dt>
 <dd>
@@ -206,6 +228,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Indicates whether some other object is "equal to" this one.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/model/ReportDateRange.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
@@ -214,9 +240,21 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#executionPrice()" class="member-name-link">executionPrice()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-executionPrice"><code>executionPrice</code></a> record component.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:F">F</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#filledAt()" class="member-name-link">filledAt()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-filledAt"><code>filledAt</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#filledQuantity()" class="member-name-link">filledQuantity()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-filledQuantity"><code>filledQuantity</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html#findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(java.time.Instant,java.time.Instant)" class="member-name-link">findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(Instant, Instant)</a> - Method in interface com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></dt>
 <dd>
 <div class="block">Returns trades executed in the requested window.</div>
@@ -421,6 +459,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns a hash code value for this object.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/model/ReportDateRange.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
@@ -475,6 +517,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/reporting/entity/InstrumentEntity.html#%3Cinit%3E()" class="member-name-link">InstrumentEntity()</a> - Constructor for class com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/InstrumentEntity.html" title="class in com.neueda.leap.reporting.entity">InstrumentEntity</a></dt>
 <dd>
 <div class="block">Required by JPA; not for application use.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#instrumentId()" class="member-name-link">instrumentId()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-instrumentId"><code>instrumentId</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/reporting/model/InvalidReportDateRangeException.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a> - Exception Class in <a href="com/neueda/leap/reporting/model/package-summary.html">com.neueda.leap.reporting.model</a></dt>
 <dd>
@@ -532,6 +578,33 @@ loadScripts(document, 'script');</script>
 <div class="block">Creates a new JWT service from configuration.</div>
 </dd>
 </dl>
+<h2 class="title" id="I:K">K</h2>
+<dl class="index">
+<dt><a href="com/neueda/leap/config/KafkaOrderEventConfiguration.html" class="type-name-link" title="class in com.neueda.leap.config">KafkaOrderEventConfiguration</a> - Class in <a href="com/neueda/leap/config/package-summary.html">com.neueda.leap.config</a></dt>
+<dd>
+<div class="block">Configures Kafka listener infrastructure for the Insights application.</div>
+</dd>
+<dt><a href="com/neueda/leap/config/KafkaOrderEventConfiguration.html#%3Cinit%3E()" class="member-name-link">KafkaOrderEventConfiguration()</a> - Constructor for class com.neueda.leap.config.<a href="com/neueda/leap/config/KafkaOrderEventConfiguration.html" title="class in com.neueda.leap.config">KafkaOrderEventConfiguration</a></dt>
+<dd>
+<div class="block">Creates the Kafka configuration; Spring instantiates it.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" class="type-name-link" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a> - Class in <a href="com/neueda/leap/reporting/kafka/package-summary.html">com.neueda.leap.reporting.kafka</a></dt>
+<dd>
+<div class="block">Three independent Kafka consumers for order lifecycle events.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html#%3Cinit%3E(com.fasterxml.jackson.databind.ObjectMapper,com.neueda.leap.reporting.kafka.KafkaOrderEventCsvWriter)" class="member-name-link">KafkaOrderEventConsumerService(ObjectMapper, KafkaOrderEventCsvWriter)</a> - Constructor for class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></dt>
+<dd>
+<div class="block">Creates the consumer service.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" class="type-name-link" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a> - Class in <a href="com/neueda/leap/reporting/kafka/package-summary.html">com.neueda.leap.reporting.kafka</a></dt>
+<dd>
+<div class="block">Writes terminal order events into CSV files under a configurable output directory.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html#%3Cinit%3E(java.lang.String)" class="member-name-link">KafkaOrderEventCsvWriter(String)</a> - Constructor for class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></dt>
+<dd>
+<div class="block">Creates the writer.</div>
+</dd>
+</dl>
 <h2 class="title" id="I:L">L</h2>
 <dl class="index">
 <dt><a href="com/neueda/leap/reporting/enums/ClientSegment.html#label()" class="member-name-link">label()</a> - Method in enum class com.neueda.leap.reporting.enums.<a href="com/neueda/leap/reporting/enums/ClientSegment.html" title="enum class in com.neueda.leap.reporting.enums">ClientSegment</a></dt>
@@ -564,6 +637,22 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:O">O</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#orderId()" class="member-name-link">orderId()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-orderId"><code>orderId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" class="type-name-link" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a> - Record Class in <a href="com/neueda/leap/reporting/kafka/package-summary.html">com.neueda.leap.reporting.kafka</a></dt>
+<dd>
+<div class="block">Shared Kafka payload for terminal order lifecycle events consumed by Insights.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#%3Cinit%3E(java.util.UUID,java.util.UUID,java.util.UUID,java.lang.String,java.lang.String,long,java.lang.String,java.lang.String,java.lang.String,java.time.Instant,java.time.Instant,java.time.Instant,java.lang.Long,java.math.BigDecimal)" class="member-name-link">OrderLifecycleEvent(UUID, UUID, UUID, String, String, long, String, String, String, Instant, Instant, Instant, Long, BigDecimal)</a> - Constructor for record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>OrderLifecycleEvent</code> record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#orderType()" class="member-name-link">orderType()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-orderType"><code>orderType</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/dto/OverviewDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">OverviewDto</a> - Record Class in <a href="com/neueda/leap/reporting/dto/package-summary.html">com.neueda.leap.reporting.dto</a></dt>
 <dd>
 <div class="block">Current-day dashboard summary for internal stakeholders.</div>
@@ -580,8 +669,19 @@ loadScripts(document, 'script');</script>
 <div class="block">Experienced individual clients trading at the advanced tier.</div>
 </dd>
 </dl>
+<h2 class="title" id="I:Q">Q</h2>
+<dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#quantity()" class="member-name-link">quantity()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-quantity"><code>quantity</code></a> record component.</div>
+</dd>
+</dl>
 <h2 class="title" id="I:R">R</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#reasonCode()" class="member-name-link">reasonCode()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-reasonCode"><code>reasonCode</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/model/ReportDateRange.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">ReportDateRange</a> - Record Class in <a href="com/neueda/leap/reporting/model/package-summary.html">com.neueda.leap.reporting.model</a></dt>
 <dd>
 <div class="block">Inclusive calendar-date range for a report, interpreted in UTC.</div>
@@ -673,6 +773,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates the converter; Logback instantiates it from the logging configuration.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#side()" class="member-name-link">side()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-side"><code>side</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/config/SpringDocConfig.html" class="type-name-link" title="class in com.neueda.leap.config">SpringDocConfig</a> - Class in <a href="com/neueda/leap/config/package-summary.html">com.neueda.leap.config</a></dt>
 <dd>
 <div class="block">Configuration for SpringDoc OpenAPI (Swagger) documentation.</div>
@@ -693,6 +797,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/dto/ReportGenerationResponseDto.html#param-status"><code>status</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-status"><code>status</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#submittedAt()" class="member-name-link">submittedAt()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-submittedAt"><code>submittedAt</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html#summarize(java.time.Instant,java.time.Instant)" class="member-name-link">summarize(Instant, Instant)</a> - Method in interface com.neueda.leap.reporting.repository.<a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></dt>
 <dd>
 <div class="block">Summarizes all trades in the window.</div>
@@ -704,6 +816,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/reporting/ReportingQueryService.html#summary()" class="member-name-link">summary()</a> - Method in class com.neueda.leap.reporting.<a href="com/neueda/leap/reporting/ReportingQueryService.html" title="class in com.neueda.leap.reporting">ReportingQueryService</a></dt>
 <dd>
 <div class="block">Reads all metrics in one statement for a consistent replica snapshot.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#symbol()" class="member-name-link">symbol()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#param-symbol"><code>symbol</code></a> record component.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:T">T</h2>
@@ -761,6 +877,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/reporting/dto/TopInstrumentResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/TopInstrumentResponse.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentResponse</a></dt>
+<dd>
+<div class="block">Returns a string representation of this record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
@@ -886,7 +1006,22 @@ loadScripts(document, 'script');</script>
 the order they are declared.</div>
 </dd>
 </dl>
-<a href="#I:A">A</a>&nbsp;<a href="#I:C">C</a>&nbsp;<a href="#I:D">D</a>&nbsp;<a href="#I:E">E</a>&nbsp;<a href="#I:F">F</a>&nbsp;<a href="#I:G">G</a>&nbsp;<a href="#I:H">H</a>&nbsp;<a href="#I:I">I</a>&nbsp;<a href="#I:J">J</a>&nbsp;<a href="#I:L">L</a>&nbsp;<a href="#I:M">M</a>&nbsp;<a href="#I:O">O</a>&nbsp;<a href="#I:P">P</a>&nbsp;<a href="#I:R">R</a>&nbsp;<a href="#I:S">S</a>&nbsp;<a href="#I:T">T</a>&nbsp;<a href="#I:U">U</a>&nbsp;<a href="#I:V">V</a>&nbsp;<br><a href="allclasses-index.html">All&nbsp;Classes&nbsp;and&nbsp;Interfaces</a><span class="vertical-separator">|</span><a href="allpackages-index.html">All&nbsp;Packages</a><span class="vertical-separator">|</span><a href="constant-values.html">Constant&nbsp;Field&nbsp;Values</a><span class="vertical-separator">|</span><a href="serialized-form.html">Serialized&nbsp;Form</a></main>
+<h2 class="title" id="I:W">W</h2>
+<dl class="index">
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html#writeAudit(com.neueda.leap.reporting.kafka.OrderLifecycleEvent)" class="member-name-link">writeAudit(OrderLifecycleEvent)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></dt>
+<dd>
+<div class="block">Writes every terminal order event to the audit file.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html#writeCompleted(com.neueda.leap.reporting.kafka.OrderLifecycleEvent)" class="member-name-link">writeCompleted(OrderLifecycleEvent)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></dt>
+<dd>
+<div class="block">Writes a completed trade row when the event reached FILLED.</div>
+</dd>
+<dt><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html#writeFailed(com.neueda.leap.reporting.kafka.OrderLifecycleEvent)" class="member-name-link">writeFailed(OrderLifecycleEvent)</a> - Method in class com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></dt>
+<dd>
+<div class="block">Writes a failed trade row when the event reached REJECTED.</div>
+</dd>
+</dl>
+<a href="#I:A">A</a>&nbsp;<a href="#I:C">C</a>&nbsp;<a href="#I:D">D</a>&nbsp;<a href="#I:E">E</a>&nbsp;<a href="#I:F">F</a>&nbsp;<a href="#I:G">G</a>&nbsp;<a href="#I:H">H</a>&nbsp;<a href="#I:I">I</a>&nbsp;<a href="#I:J">J</a>&nbsp;<a href="#I:K">K</a>&nbsp;<a href="#I:L">L</a>&nbsp;<a href="#I:M">M</a>&nbsp;<a href="#I:O">O</a>&nbsp;<a href="#I:P">P</a>&nbsp;<a href="#I:Q">Q</a>&nbsp;<a href="#I:R">R</a>&nbsp;<a href="#I:S">S</a>&nbsp;<a href="#I:T">T</a>&nbsp;<a href="#I:U">U</a>&nbsp;<a href="#I:V">V</a>&nbsp;<a href="#I:W">W</a>&nbsp;<br><a href="allclasses-index.html">All&nbsp;Classes&nbsp;and&nbsp;Interfaces</a><span class="vertical-separator">|</span><a href="allpackages-index.html">All&nbsp;Packages</a><span class="vertical-separator">|</span><a href="constant-values.html">Constant&nbsp;Field&nbsp;Values</a><span class="vertical-separator">|</span><a href="serialized-form.html">Serialized&nbsp;Form</a></main>
 <footer role="contentinfo">
 <hr>
 <p class="legal-copy"><small>Copyright &#169; 2026. All rights reserved.</small></p>

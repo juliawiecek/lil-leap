@@ -384,7 +384,7 @@
               "TRADER",
               "ANALYST"
             ],
-            "description": "Decides which of the other fields are required."
+            "description": "Decides which of the other fields are required. Operations staff cannot self-register."
           },
           "email": {
             "type": "string",
@@ -611,7 +611,8 @@
             "type": "string",
             "enum": [
               "TRADER",
-              "ANALYST"
+              "ANALYST",
+              "OPERATIONS"
             ]
           },
           "createdAt": {

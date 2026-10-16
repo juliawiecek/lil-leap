@@ -17,6 +17,9 @@ import java.util.UUID;
 @Service
 public class JdbcOrderExecutor implements OrderExecutor {
     private static final String PRICE_OUT_OF_TOLERANCE = "PRICE_OUT_OF_TOLERANCE";
+    /** The price moved past the client's tolerance from the reference recorded at submission (PS-12). */
+    private static final String PRICE_MOVED = "PRICE_MOVED";
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private final JdbcTemplate jdbc;
     private final ExecutionQuoteService quotes;
     private final CashMovementAdapter cashMovements;
@@ -56,10 +59,10 @@ public class JdbcOrderExecutor implements OrderExecutor {
     @Transactional(propagation = Propagation.MANDATORY)
     public Result execute(UUID orderId) {
         var order = jdbc.queryForObject("""
-                SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent
+                SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent, reference_price
                 FROM orders WHERE order_id = ?
                 """, (rs, n) -> new Trade(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
-                rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6)), orderId);
+                rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6), rs.getBigDecimal(7)), orderId);
         if (order == null) throw new IllegalArgumentException("Order not found");
 
         Account account = lockAccount(order.account());
@@ -115,9 +118,18 @@ public class JdbcOrderExecutor implements OrderExecutor {
             return new QuoteContext(null, null, null, quoteResult);
         }
         var quote = decision.quote();
-        auditQuoteDecision(orderId, quote);
         boolean buy = "BUY".equals(order.side());
         BigDecimal price = buy ? quote.ask() : quote.bid();
+        BigDecimal tolerance = resolveBuffer(order, account);
+        if (order.reference() != null) {
+            // PS-12: a buy may fill up to reference + tolerance, a sell down to reference - tolerance.
+            BigDecimal limit = protectionLimit(order.reference(), tolerance, buy);
+            auditQuoteDecision(orderId, quote, new Protection(order.reference(), tolerance, limit, price));
+            boolean moved = buy ? price.compareTo(limit) > 0 : price.compareTo(limit) < 0;
+            return new QuoteContext(quote, buy, price,
+                    moved ? reject(orderId, PRICE_MOVED, priceMovedMessage(order.reference(), price, tolerance)) : null);
+        }
+        auditQuoteDecision(orderId, quote, null);
         if (!isWithinTolerance(order, account, quote, buy, price)) {
             Result result = order.attempts() >= maxAttempts
                     ? reject(orderId, PRICE_OUT_OF_TOLERANCE) : Result.requeue(PRICE_OUT_OF_TOLERANCE);
@@ -126,20 +138,53 @@ public class JdbcOrderExecutor implements OrderExecutor {
         return new QuoteContext(quote, buy, price, null);
     }
 
-    private void auditQuoteDecision(UUID orderId, com.neueda.leap.marketdata.MarketQuote quote) {
+    /** Records the quote used; for a protected order also the reference, tolerance, limit and actual price. */
+    private void auditQuoteDecision(UUID orderId, com.neueda.leap.marketdata.MarketQuote quote, Protection protection) {
+        Protection p = protection == null ? new Protection(null, null, null, null) : protection;
         jdbc.update("""
                 INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
                 SELECT account_id, order_id, 'SYSTEM', 'PRICE_DECISION',
                        jsonb_build_object('quoteId', CAST(? AS uuid), 'quotedAt', CAST(? AS timestamptz),
                                           'bid', CAST(? AS numeric), 'ask', CAST(? AS numeric),
-                                          'attemptNumber', execution_attempts) FROM orders WHERE order_id = ?
-                """, quote.quoteId(), quote.quotedAt(), quote.bid(), quote.ask(), orderId);
+                                          'attemptNumber', execution_attempts,
+                                          'referencePrice', CAST(? AS numeric), 'tolerancePct', CAST(? AS numeric),
+                                          'limitPrice', CAST(? AS numeric), 'actualPrice', CAST(? AS numeric))
+                FROM orders WHERE order_id = ?
+                """, quote.quoteId(), quote.quotedAt(), quote.bid(), quote.ask(),
+                p.reference(), p.tolerance(), p.limit(), p.actual(), orderId);
+    }
+
+    /**
+     * What the client is told when price protection rejects a fill, e.g. "The price rose 3.1% before
+     * your order filled, more than your 2% limit. Nothing was charged."
+     */
+    static String priceMovedMessage(BigDecimal reference, BigDecimal actual, BigDecimal tolerancePercent) {
+        BigDecimal move = actual.subtract(reference).multiply(HUNDRED).divide(reference, 1, RoundingMode.HALF_UP);
+        return "The price %s %s%% before your order filled, more than your %s%% limit. Nothing was charged.".formatted(
+                move.signum() >= 0 ? "rose" : "fell", move.abs().toPlainString(),
+                tolerancePercent.stripTrailingZeros().toPlainString());
+    }
+
+    /** The worst price a protected order accepts: reference x (1 +/- tolerance%), to four decimals. */
+    static BigDecimal protectionLimit(BigDecimal reference, BigDecimal tolerancePercent, boolean buy) {
+        BigDecimal factor = tolerancePercent.divide(HUNDRED);
+        return reference.multiply(buy ? BigDecimal.ONE.add(factor) : BigDecimal.ONE.subtract(factor))
+                .setScale(4, RoundingMode.HALF_UP);
     }
 
     private Result reject(UUID orderId, String reason) {
+        return reject(orderId, reason, null);
+    }
+
+    private Result reject(UUID orderId, String reason, String explanation) {
         jdbc.update("UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?",
                 reason, orderId);
-        history(orderId, "REJECTED", reason);
+        if (explanation == null) {
+            history(orderId, "REJECTED", reason);
+        } else {
+            jdbc.update("INSERT INTO order_status_history(order_id, status, reason_code, reason_text) VALUES (?, ?, ?, ?)",
+                    orderId, "REJECTED", reason, explanation);
+        }
         jdbc.update("""
                 INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
                 SELECT account_id, order_id, 'SYSTEM', 'ORDER_REJECTED',
@@ -225,7 +270,9 @@ public class JdbcOrderExecutor implements OrderExecutor {
         return new SettlementResult(fill, cashChange);
     }
 
-    private record Trade(UUID account, UUID instrument, String side, long quantity, long attempts, BigDecimal buffer) {}
+    private record Trade(UUID account, UUID instrument, String side, long quantity, long attempts, BigDecimal buffer,
+                         BigDecimal reference) {}
+    private record Protection(BigDecimal reference, BigDecimal tolerance, BigDecimal limit, BigDecimal actual) {}
     private record Account(String status, boolean enabled, BigDecimal buffer, BigDecimal minimum) {}
     private record Position(long quantity, BigDecimal cost) {}
     private record SettlementResult(UUID fillId, BigDecimal cashChange) {}

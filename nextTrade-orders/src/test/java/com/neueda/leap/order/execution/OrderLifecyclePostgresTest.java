@@ -390,4 +390,31 @@ class OrderLifecyclePostgresTest {
         assertThat(count("fills")).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE event_type='ORDER_CANCELLED'", Integer.class)).isZero();
     }
+
+    @Test
+    void priceProtectionMeasuresMovesFromTheQuoteSeenAtSubmission() {
+        UUID moved = submit("BUY", 1);
+        assertThat(jdbc.queryForObject("SELECT reference_price FROM orders WHERE order_id=?", BigDecimal.class, moved))
+                .isEqualByComparingTo("100");
+        // The market jumps 5% before the worker runs; the account default tolerance is 2%.
+        jdbc.update("INSERT INTO quotes(instrument_id,bid,ask,quoted_at,source) VALUES (?,104.9,105,clock_timestamp(),'TEST')", instrument);
+        worker.execute(worker.claimNext());
+        assertThat(status(moved)).isEqualTo("REJECTED");
+        assertThat(jdbc.queryForObject("SELECT reason_text FROM order_status_history WHERE order_id=? AND status='REJECTED'",
+                String.class, moved))
+                .isEqualTo("The price rose 5.0% before your order filled, more than your 2% limit. Nothing was charged.");
+        assertThat(jdbc.queryForMap("""
+                SELECT payload->>'referencePrice' AS reference, payload->>'limitPrice' AS lim, payload->>'actualPrice' AS actual
+                FROM audit_log WHERE event_type='PRICE_DECISION' AND related_order_id=?
+                """, moved)).containsEntry("reference", "100.0000").containsEntry("lim", "102.0000").containsEntry("actual", "105.00000000");
+        assertThat(count("fills")).isZero();
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10000");
+
+        // A new order is measured from the new price, so a small move from there still fills.
+        UUID fills = submit("BUY", 1);
+        jdbc.update("INSERT INTO quotes(instrument_id,bid,ask,quoted_at,source) VALUES (?,105.9,106,clock_timestamp(),'TEST')", instrument);
+        worker.execute(worker.claimNext());
+        assertThat(status(fills)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT execution_price FROM fills", BigDecimal.class)).isEqualByComparingTo("106");
+    }
 }

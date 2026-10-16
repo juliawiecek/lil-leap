@@ -1,3 +1,4 @@
+import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
@@ -22,15 +23,12 @@ import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
-import { OrderStatusClient, orderReviewSummary, rejectionReason } from './order-feedback';
+import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
+import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
+import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
+import { tradingClients } from './trading-clients';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
-
-const THRESHOLD_BY_RISK_PROFILE: Record<string, number> = {
-  CONSERVATIVE: 7,
-  MODERATE: 5,
-  AGGRESSIVE: 3,
-};
 
 interface Quote {
   instrumentId: string;
@@ -78,14 +76,15 @@ interface NewsItem {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, OrderHistory, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
-  readonly orderSubmissionClient: OrderSubmissionClient;
-  readonly orderHistoryClient: OrderHistoryClient;
-  readonly portfolioClient: PortfolioClient;
+  // The four API clients are assigned from tradingClients() in the constructor.
+  declare readonly orderSubmissionClient: OrderSubmissionClient;
+  declare readonly orderHistoryClient: OrderHistoryClient;
+  declare readonly portfolioClient: PortfolioClient;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #priceTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
@@ -163,7 +162,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
   /** Corner messages when an order fills or is rejected (PS-15). */
   readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
-  readonly orderStatusClient: OrderStatusClient;
+  declare readonly orderStatusClient: OrderStatusClient;
   readonly #stopFeed: () => void;
   readonly #stopFeedUpdates: () => void;
   readonly selected = signal<Quote>(NO_QUOTE);
@@ -177,7 +176,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       quantity: Number(this.quantity()) || 0,
       symbol: this.selected().symbol,
       price: this.selected().price,
-      thresholdDollars: this.executionThresholdDollars(),
+      tolerancePercent: this.tolerance(),
       opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.currentTime()) : '',
     });
   });
@@ -248,7 +247,25 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly modal = signal('review');
   readonly alertPrice = signal('180.00');
   readonly alerts = signal<{ symbol: string; price: number }[]>([]);
-  readonly executionThresholdDollars = signal(5);
+  /** Price protection (PS-12): the saved default and per-stock overrides. */
+  readonly protection = inject(PriceProtectionStore, { optional: true }) ?? new PriceProtectionStore();
+  /** A one-off percentage for the order being placed; null uses the saved setting for the stock. */
+  readonly orderTolerance = signal<number | null>(null);
+  readonly editingTolerance = signal(false);
+  readonly tolerance = computed(() => this.orderTolerance() ?? this.protection.toleranceFor(this.selected().symbol));
+  /** "Fills at up to $231.95 (2% above $227.40)" for the ticket's stock. */
+  readonly protectionNote = computed(() => {
+    const { price } = this.selected();
+    return price > 0 ? protectionText(price, this.tolerance(), this.side() === 'Sell' ? 'Sell' : 'Buy') : '';
+  });
+  readonly listedSymbols = computed(() => this.quotes().map((q) => q.symbol));
+  /** Sets price protection for this order only; an out-of-range value leaves it unchanged. */
+  setOrderTolerance(value: unknown): void {
+    const percent = validProtection(value);
+    if (percent !== null) {
+      this.orderTolerance.set(percent);
+    }
+  }
   readonly cost = computed(
     () =>
       Number(this.quantity()) *
@@ -326,6 +343,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   choose(quote: Quote): void {
     this.symbol.set(quote.symbol);
+    this.orderTolerance.set(null);
+    this.editingTolerance.set(false);
     this.setTicketQuote(quote);
     this.query.set('');
     this.message.set('');
@@ -366,7 +385,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     let reason = rejectionReason(null);
     try {
-      reason = rejectionReason((await this.orderStatusClient.status(order.id)).reasonCode);
+      reason = rejectionMessage(await this.orderStatusClient.status(order.id));
     } catch {
       // The generic reason still tells the client where to look.
     }
@@ -489,8 +508,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         quantity: count,
         orderType: 'MARKET',
         clientReference: this.clientReference(),
-        bufferPercent: this.bufferPercentForPrice(quote.price),
+        bufferPercent: this.tolerance(),
       });
+      this.orderTolerance.set(null);
+      this.editingTolerance.set(false);
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
       this.message.set(
@@ -508,17 +529,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
 
-  private bufferPercentForPrice(indicativePrice: number): number {
-    if (!Number.isFinite(indicativePrice) || indicativePrice <= 0) { return 0; }
-    const percent = (this.executionThresholdDollars() / indicativePrice) * 100;
-    return Math.round(percent * 100) / 100;
-  }
-
-  private defaultThresholdDollars(): number {
-    const byRisk = this.auth.riskProfile ? THRESHOLD_BY_RISK_PROFILE[this.auth.riskProfile] : undefined;
-    if (byRisk) { return byRisk; }
-    return this.auth.traderLevel === 'ADVANCED' ? 3 : 6;
-  }
   /** Reloads the Orders and Executions tabs from the backend; false when the load failed. */
   async refreshOrders(): Promise<boolean> {
     try {
@@ -651,10 +661,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
-    this.orderSubmissionClient = new OrderSubmissionClient(this.auth);
-    this.orderHistoryClient = new OrderHistoryClient(this.auth);
-    this.portfolioClient = new PortfolioClient(this.auth);
-    this.orderStatusClient = new OrderStatusClient(this.auth);
+    Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();
@@ -675,7 +682,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.executionThresholdDollars.set(this.defaultThresholdDollars());
     this.#clockTimer = setInterval(() => this.currentTime.set(new Date()), 1000);
     void this.#start();
   }

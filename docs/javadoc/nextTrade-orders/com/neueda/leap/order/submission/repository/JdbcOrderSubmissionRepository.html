@@ -145,11 +145,17 @@ implements <a href="OrderSubmissionRepository.html" title="interface in com.neue
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Looks up an earlier submission using the account-scoped idempotency key.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)" class="member-name-link">insert</a><wbr>(<a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#findClientCountry(java.util.UUID)" class="member-name-link">findClientCountry</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Reads the declared country from the profile of the user who owns the account.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.math.BigDecimal)" class="member-name-link">insert</a><wbr>(<a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;referencePrice)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.</div>
 </div>
 </div>
@@ -223,6 +229,22 @@ implements <a href="OrderSubmissionRepository.html" title="interface in com.neue
 </section>
 </li>
 <li>
+<section class="detail" id="findClientCountry(java.util.UUID)">
+<h3>findClientCountry</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;</span>&nbsp;<span class="element-name">findClientCountry</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="OrderSubmissionRepository.html#findClientCountry(java.util.UUID)">OrderSubmissionRepository</a></code></span></div>
+<div class="block">Reads the declared country from the profile of the user who owns the account.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="OrderSubmissionRepository.html#findClientCountry(java.util.UUID)">findClientCountry</a></code>&nbsp;in interface&nbsp;<code><a href="OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>accountId</code> - persistent account identifier</dd>
+<dt>Returns:</dt>
+<dd>the country as entered, or empty when there is no profile or no country</dd>
+</dl>
+</section>
+</li>
+<li>
 <section class="detail" id="findByAccountAndClientReference(java.util.UUID,java.util.UUID)">
 <h3>findByAccountAndClientReference</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</span>&nbsp;<span class="element-name">findByAccountAndClientReference</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
@@ -241,20 +263,22 @@ implements <a href="OrderSubmissionRepository.html" title="interface in com.neue
 </section>
 </li>
 <li>
-<section class="detail" id="insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)">
+<section class="detail" id="insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.math.BigDecimal)">
 <h3>insert</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</span>&nbsp;<span class="element-name">insert</span><wbr><span class="parameters">(<a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</span></div>
-<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="OrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)">OrderSubmissionRepository</a></code></span></div>
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/math/BigDecimal.html" title="class or interface in java.math" class="external-link">BigDecimal</a>&nbsp;referencePrice)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="OrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.math.BigDecimal)">OrderSubmissionRepository</a></code></span></div>
 <div class="block">Inserts a SUBMITTED order without overwriting an existing account/client-reference pair.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="OrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String)">insert</a></code>&nbsp;in interface&nbsp;<code><a href="OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a></code></dd>
+<dd><code><a href="OrderSubmissionRepository.html#insert(com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.math.BigDecimal)">insert</a></code>&nbsp;in interface&nbsp;<code><a href="OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a></code></dd>
 <dt>Parameters:</dt>
 <dd><code>request</code> - validated order submission, normalized before persistence</dd>
 <dd><code>instrumentId</code> - resolved persistent instrument identifier</dd>
 <dd><code>symbol</code> - resolved instrument trading symbol</dd>
+<dd><code>referencePrice</code> - indicative price orders saw at submission, for price protection; null when no quote</dd>
 <dt>Returns:</dt>
 <dd>inserted order, or empty when the idempotency key conflicts</dd>
 </dl>

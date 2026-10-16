@@ -332,7 +332,7 @@ test('sell submission uses backend instrument and stops tracking rejected orders
   assert.equal(desk.message(), 'Order o1 rejected.');
   const [toast] = desk.toasts.toasts();
   assert.equal(toast.kind, 'rejected');
-  assert.match(toast.detail, /price moved past your execution threshold/);
+  assert.match(toast.detail, /price moved past your price protection/);
 });
 
 test('a filled order pops a toast, and the review line and market badge come from live data', async t => {
@@ -344,7 +344,7 @@ test('a filled order pops a toast, and the review line and market badge come fro
   desk.orderHistoryClient = new ScriptedOrderHistory([{ ...historyRow('REJECTED'), orderId: 'o2' }]);
   await desk.trackOrder('o2');
   assert.match(desk.toasts.toasts().at(-1).detail, /Check Orders/);
-  desk.quantity.set('2'); desk.executionThresholdDollars.set(3);
+  desk.quantity.set('2'); desk.orderTolerance.set(1.7);
   assert.equal(desk.reviewSummary(), 'Buy 2 AAPL · about $353.12 · fills at up to $359.12');
   desk.feed.status.set({ open: true, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
   assert.match(desk.marketBadge(), /^Open · Closes /);

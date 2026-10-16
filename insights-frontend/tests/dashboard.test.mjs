@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { App } = await import('../src/app/app.ts');
+const { AuthService } = await import('../src/app/auth.service.ts');
+/** Providers for an App signed in with the given role, as the token's user_role claim says. */
+const signedInAs = (role) => [{ provide: AuthService, useValue: { userRole: role, email: `${role.toLowerCase()}@nexttrade.local` } }];
 
 test('navigation clears stale selections, search, notices, and the mobile menu', t => {
   const app = component(t, App);
@@ -72,12 +75,23 @@ test('client selection scopes orders and segment activity totals reconcile', t =
   assert.deepEqual(app.clientRows(), [target]);
 });
 
-test('search destination follows role and returning to Analyst exits investigation', t => {
-  const app = component(t, App);
+test('an analyst sees only reporting, and cannot open trade investigation', t => {
+  const app = component(t, App, signedInAs('ANALYST'));
+  assert.equal(app.role(), 'Analyst');
+  assert.deepEqual(app.visibleNav().map(item => item.label),
+    ['Overview', 'Trading Activity', 'Client Activity', 'Clients', 'Reports', 'Settings']);
   app.search(); assert.equal(app.page(), 'Clients');
-  app.useRole('Operations'); app.search(); assert.equal(app.page(), 'Trade Investigation');
-  app.openTrade(app.rows()[0]); app.useRole('Analyst');
-  assert.equal(app.page(), 'Overview'); assert.equal(app.selectedTrade(), null);
+  app.navigate('Trade Investigation'); assert.equal(app.page(), 'Overview');
+});
+
+test('operations staff land on trade investigation and see only operations pages', t => {
+  const app = component(t, App, signedInAs('OPERATIONS'));
+  assert.equal(app.role(), 'Operations');
+  assert.equal(app.page(), 'Trade Investigation', 'the default dashboard is not theirs, so they are moved');
+  assert.deepEqual(app.visibleNav().map(item => item.label), ['Trade Investigation', 'Compliance', 'Settings']);
+  app.search(); assert.equal(app.page(), 'Trade Investigation');
+  app.openTrade(app.rows()[0]); assert.ok(app.selectedTrade());
+  app.navigate('Reports'); assert.equal(app.page(), 'Trade Investigation');
 });
 
 test('reset restores the default data after restrictive filters and search', t => {

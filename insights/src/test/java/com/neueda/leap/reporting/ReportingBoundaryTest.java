@@ -33,8 +33,20 @@ class ReportingBoundaryTest {
         when(reports.summary()).thenReturn(Map.of("fills", 2));
         mvc.perform(get("/reports/summary")).andExpect(status().isUnauthorized());
         mvc.perform(get("/reports/summary").header("Authorization", token("TRADER"))).andExpect(status().isForbidden());
+        mvc.perform(get("/reports/summary").header("Authorization", token("OPERATIONS"))).andExpect(status().isForbidden());
         mvc.perform(get("/reports/summary").header("Authorization", token("ANALYST")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.fills").value(2));
+    }
+
+    @Test
+    void onlyOperationsStaffCanReachTradeInvestigation() throws Exception {
+        String route = "/trades/" + UUID.randomUUID() + "/timeline";
+        mvc.perform(get(route)).andExpect(status().isUnauthorized());
+        mvc.perform(get(route).header("Authorization", token("TRADER"))).andExpect(status().isForbidden());
+        mvc.perform(get(route).header("Authorization", token("ANALYST"))).andExpect(status().isForbidden());
+        int operations = mvc.perform(get(route).header("Authorization", token("OPERATIONS"))).andReturn().getResponse().getStatus();
+        assertThat(operations).as("security lets operations staff through to the trade routes").isNotIn(401, 403);
+        mvc.perform(post(route).header("Authorization", token("OPERATIONS"))).andExpect(status().isForbidden());
     }
 
     @Test

@@ -68,7 +68,14 @@ test('wrong-role sign-in revokes the session and displays the role requirement',
   assert.equal(f.logouts(), 1);
   assert.equal(f.starts(), 0);
   assert.deepEqual(f.navigations, []);
-  assert.match(f.login.message(), /analyst account/);
+  assert.match(f.login.message(), /analyst or operations account/);
+});
+test('operations staff sign in to Insights like analysts (TS-03.5)', async (t) => {
+  const f = setup(t, { role: 'OPERATIONS' });
+  await f.login.signIn('a', 'b');
+  assert.equal(f.logouts(), 0);
+  assert.equal(f.starts(), 1);
+  assert.equal(f.navigations[0], '/dashboard');
 });
 test('login failures show fixed messages and always release the pending state', async (t) => {
   for (const error of [
