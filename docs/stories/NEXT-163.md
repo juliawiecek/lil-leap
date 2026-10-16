@@ -47,7 +47,7 @@ app configuration. They cover GET/POST headers and payloads, rotation, exclusion
 empty/malformed/JSON 401 bodies, concurrent failures, stale requests after a new
 login, non-401 responses, and protected routes. The existing real-stack suite
 also verifies NestJS-issued tokens, guards, and server-expired-token 401s in both
-apps: `npm --prefix e2e run test:stack` requires Docker Compose v2.
+apps: `npm --prefix e2e run test:full` requires Docker Compose v2.
 
 The local browser suite uses mocked service responses and is regression evidence;
 it does not establish real NestJS integration acceptance.

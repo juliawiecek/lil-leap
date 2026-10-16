@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { chown, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -8,11 +8,12 @@ const project = `nexttrade-e2e-${randomUUID().replaceAll('-', '').slice(0, 12)}`
 const artifactDir = fileURLToPath(new URL(`./artifacts/${project}/`, import.meta.url));
 const compose = ['compose', '-f', 'docker-compose.e2e.yml', '-p', project];
 const args = process.argv.slice(2);
-if (args.length > 1 || (args.length === 1 && args[0] !== '--project=auth')) {
-  console.error('Usage: node run-stack.mjs [--project=auth]');
+if (args.length > 1 || (args.length === 1 && !['--smoke', '--full', '--project=auth'].includes(args[0]))) {
+  console.error('Usage: node run-stack.mjs [--smoke | --full | --project=auth]');
   process.exit(1);
 }
-const phases = args.length ? ['auth'] : ['auth', 'journey', 'default-timeout'];
+const phases = args[0] === '--full' ? ['auth', 'journey', 'default-timeout']
+  : args[0] === '--project=auth' ? ['auth'] : ['smoke'];
 const completedPhases = [];
 const startedAt = new Date().toISOString();
 let sessionMinutes = '10';
@@ -47,18 +48,22 @@ try {
   const model = await readFile(new URL('../docker-compose.e2e.yml', import.meta.url), 'utf8');
   if (!model.includes(`playwright:v${pkg.devDependencies['@playwright/test']}-`)) throw new Error('Playwright package/image versions differ.');
   await mkdir(artifactDir, { recursive: true });
+  const uid = process.env.E2E_RUNNER_UID ?? process.getuid?.();
+  const gid = process.env.E2E_RUNNER_GID ?? process.getgid?.();
+  // The Node fallback runs as root, but Playwright writes as the Jenkins UID.
+  if (process.getuid?.() === 0 && uid !== undefined && gid !== undefined) {
+    await chown(artifactDir, Number(uid), Number(gid));
+  }
   console.log(`Isolated Compose project: ${project}`);
   console.log(`Reports: ${artifactDir}`);
   started = true;
   await must([...compose, 'config', '--quiet']);
   await must([...compose, 'up', '-d', '--build', 'gateway']);
-  const uid = process.env.E2E_RUNNER_UID ?? process.getuid?.();
-  const gid = process.env.E2E_RUNNER_GID ?? process.getgid?.();
   const userArgs = uid !== undefined ? ['--user', `${uid}:${gid}`] : [];
   const containerCommand = projectName =>
     `mkdir -p /tmp/e2e; cp /source/package*.json /source/playwright.config.ts /source/global-setup.ts /tmp/e2e/; cp -R /source/tests /tmp/e2e/; cd /tmp/e2e; npm ci --no-audit --no-fund; npx playwright test --project=${projectName}`;
   for (const phase of phases) {
-    if (phase !== 'auth') {
+    if (phase === 'journey' || phase === 'default-timeout') {
       sessionMinutes = phase === 'journey' ? '1' : '10';
       await must([...compose, 'up', '-d', '--no-deps', '--force-recreate', 'auth']);
       // Static nginx upstreams resolve at startup; refresh Identity's container IP.

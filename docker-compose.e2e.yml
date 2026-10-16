@@ -35,8 +35,8 @@ services:
       PORT: 8081
       SSN_ENCRYPTION_KEY: e2e-ssn-key
       NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: e2e-ssn-key
-      SESSION_INACTIVITY_MINUTES: ${E2E_SESSION_MINUTES:-1}
-      APP_JWT_EXPIRATION_MINUTES: ${E2E_SESSION_MINUTES:-1}
+      SESSION_INACTIVITY_MINUTES: ${E2E_SESSION_MINUTES:-10}
+      APP_JWT_EXPIRATION_MINUTES: ${E2E_SESSION_MINUTES:-10}
     depends_on:
       db:
         condition: service_healthy
@@ -187,7 +187,7 @@ services:
     command:
     - mkdir -p /tmp/e2e; cp /source/package*.json /source/playwright.config.ts /source/global-setup.ts
       /tmp/e2e/; cp -R /source/tests /tmp/e2e/; cd /tmp/e2e; npm ci --no-audit --no-fund;
-      npx playwright test
+      npx playwright test --project=smoke
 volumes:
   db_data: null
   reporting_data: null

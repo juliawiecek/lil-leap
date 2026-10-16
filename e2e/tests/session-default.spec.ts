@@ -1,7 +1,7 @@
 import { test, expect, login } from './fixtures';
 
 for (const app of ['NextTrade', 'Insights']) {
-  test(`${app}: default ten-minute client inactivity boundary`, async ({ page, trader, analyst }) => {
+  test(`${app}: default ten-minute client inactivity boundary`, { tag: '@smoke' }, async ({ page, trader, analyst }) => {
     await page.clock.install();
     const tokens = await login(page, app === 'Insights' ? analyst : trader, app === 'Insights');
     const claims = JSON.parse(Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString());

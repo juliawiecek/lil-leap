@@ -25,10 +25,12 @@ From the repository root with Node 24 and Docker Compose v2:
 ```powershell
 npm --prefix e2e run test:auth
 npm --prefix e2e run test:stack
+npm --prefix e2e run test:full
 ```
 
-The first command runs all 13 NEXT-157 cases. The second also runs the existing
-journey and session regressions (22 tests total). `npm run test:e2e:auth` in
+The first command runs all 13 NEXT-157 cases. The second runs the eight-test
+Jenkins smoke suite; the third runs all 22 authentication, journey, and session
+regressions, including real server-expiry waits. `npm run test:e2e:auth` in
 either Angular app invokes the same real-stack authentication run.
 
 Each invocation uses a unique Compose project and fresh database volumes.
@@ -40,8 +42,28 @@ or cleanup produces a nonzero exit code.
 
 The existing Jenkins Playwright stage runs `scripts/run_e2e_ci.sh`, clears old
 reports before execution, and publishes the artifacts even when the run fails.
+It selects the `smoke` project in one browser container with ten-minute sessions:
+registration through an order fill and holdings, both apps' login/refresh and
+route guards, both client inactivity boundaries (using browser time), and the
+Insights reporting summary. No authentication restart or real expiry wait is
+needed. The full suite remains available via `test:full`.
 To establish completion, run the full suite successfully twice with fresh
 databases and record both Jenkins build URLs and archived reports here.
+
+## Smoke-suite verification — 2026-10-16
+
+- The CI selection is eight tests; all 22 regression tests remain in `test:full`.
+- The smoke suite passed against real native services and a fresh PostgreSQL 18
+  primary/streaming replica using production Angular builds: Edge (55.9s) and
+  Playwright 1.58.2's pinned Chromium (51.6s), each with a fresh database.
+  This local harness forwards API requests; it does not exercise Docker or nginx.
+- Fixed an analyst fixture exceeding Identity's 30-character employee-ID limit
+  and a logout URL assertion that rejected the valid `returnUrl` query string.
+- The Docker fallback now gives Jenkins ownership of the report directory before
+  starting Playwright as that UID. Seven simulated runner scenarios verified
+  selection, session settings, ownership, failure propagation, and cleanup.
+- The Jenkins endpoint still times out and Docker is unavailable locally, so a
+  passing Jenkins build remains unverified.
 
 ## Verification status — 2026-10-15
 

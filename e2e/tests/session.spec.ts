@@ -1,7 +1,7 @@
 import { test, expect, login, waitForServerExpiry, tradingUrl, insightsUrl } from './fixtures';
 
 for (const [name, url] of [['NextTrade', tradingUrl], ['Insights', insightsUrl]]) {
-  test(`${name}: guards block unauthenticated navigation; invalid login stays on login`, async ({ page }) => {
+  test(`${name}: guards block unauthenticated navigation; invalid login stays on login`, { tag: '@smoke' }, async ({ page }) => {
     await page.goto(`${url}/dashboard`);
     await expect(page).toHaveURL(url => url.pathname === '/login');
     await expect(page.locator('app-trading-workspace, app-insights-workspace')).toHaveCount(0);
@@ -48,7 +48,7 @@ for (const app of ['NextTrade', 'Insights']) {
   });
 }
 
-test('Insights analyst sees the real reporting summary', async ({ page, analyst }) => {
+test('Insights analyst sees the real reporting summary', { tag: '@smoke' }, async ({ page, analyst }) => {
   const summaryResponse = page.waitForResponse(r => r.url().endsWith('/api/v1/reports/summary') && r.status() === 200);
   const tokens = await login(page, analyst, true);
   const response = await summaryResponse;

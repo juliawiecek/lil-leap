@@ -426,6 +426,17 @@ npm --prefix e2e ci
 npm --prefix e2e run test:stack
 ```
 
+This is the eight-test Jenkins smoke suite: registration through a real order
+fill and holdings, both apps' login/refresh and route guards, client inactivity,
+and the Insights reporting summary. It uses one Playwright container and
+ten-minute sessions, without service restarts or real token-expiry waits.
+
+For all 22 regression cases, including server expiry and registration validation:
+
+```powershell
+npm --prefix e2e run test:full
+```
+
 To run only NEXT-157's 13 authentication cases against the same real stack:
 
 ```powershell
@@ -455,12 +466,12 @@ activate accounts or write cash, orders, fills, or holdings directly to SQL.
 The existing golden path buys AAPL and checks the real fill, holdings, and cash.
 Market hours are disabled only in the E2E stack to permit overnight execution.
 
-Three phases run in order: `auth` with normal ten-minute sessions, `journey`
+The full suite runs three phases: `auth` with normal ten-minute sessions, `journey`
 with one-minute server expiry, and `default-timeout` with ten-minute sessions.
 The latter checks the client inactivity boundary using the browser clock.
 Production session settings are unchanged.
 
-Jenkins runs the same command, fails on test/infrastructure errors, and publishes
+Jenkins runs the smoke suite, fails on test/infrastructure errors, and publishes
 JUnit, failure screenshots/traces, HTML reports, and container logs under
 `e2e/artifacts/<compose-project>/`. Each invocation keeps separate reports and
 a `run.json` summary with completed phases and final status. Jenkins clears old

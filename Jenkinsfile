@@ -330,12 +330,12 @@ pipeline {
       }
     }
 
-    stage('Playwright - Real Client Journey') {
+    stage('Playwright - Smoke') {
       options { timeout(time: 30, unit: 'MINUTES') }
       steps {
         // Publish only this build's evidence, never reports left by an older build.
         dir('e2e/artifacts') { deleteDir() }
-        // Use Node 24 and the isolated Compose runner on the Docker-capable agent.
+        // Eight real-service smoke checks, one stack startup and no token-expiry waits.
         sh 'bash scripts/run_e2e_ci.sh'
       }
       post {

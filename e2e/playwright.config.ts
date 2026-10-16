@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const phase = process.env.E2E_REPORT_PHASE ?? 'journey';
+const phase = process.env.E2E_REPORT_PHASE ?? 'smoke';
 const artifacts = process.env.E2E_ARTIFACTS ?? fileURLToPath(new URL('./artifacts/', import.meta.url));
 export default defineConfig({
   testDir: './tests',
@@ -16,6 +16,7 @@ export default defineConfig({
     ['html', { outputFolder: `${artifacts}/${phase}/html`, open: 'never' }] ],
   use: {
     browserName: 'chromium',
+    channel: process.env.PLAYWRIGHT_CHANNEL,
     baseURL: process.env.TRADING_URL ?? 'http://localhost:4200',
     reducedMotion: 'reduce',
     viewport: { width: 1440, height: 1000 },
@@ -23,6 +24,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
+    { name: 'smoke', grep: /@smoke/, timeout: 60_000 },
     { name: 'auth', testMatch: '**/auth.spec.ts' },
     { name: 'journey', testIgnore: ['**/session-default.spec.ts', '**/auth.spec.ts'] },
     { name: 'default-timeout', testMatch: '**/session-default.spec.ts' },
