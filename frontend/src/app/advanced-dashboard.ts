@@ -201,6 +201,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly positions = signal<Position[]>([]);
   readonly buyingPower = signal(0);
   readonly portfolio = signal(0);
+  readonly exposureAllocation = computed(() => {
+    const equities = this.positions().reduce((sum, position) => sum + position.value, 0);
+    const cash = this.buyingPower();
+    const total = equities + cash;
+    const equitiesPercent = total > 0 ? Math.round((equities / total) * 1000) / 10 : 0;
+    return { equities, cash, total, equitiesPercent, cashPercent: Math.round((100 - equitiesPercent) * 10) / 10 };
+  });
   /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
   readonly totalReturn = signal(0);
   readonly totalReturnPercent = signal(0);
@@ -590,6 +597,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const valuation = valuePortfolio(this.#portfolio, this.#bids);
     this.buyingPower.set(valuation.cash);
     this.portfolio.set(valuation.total);
+    this.portfolioValueHistory.update(history => [...history, valuation.total].slice(-60));
     this.totalReturn.set(valuation.gain);
     this.totalReturnPercent.set(valuation.gainPercent);
     this.positions.set(

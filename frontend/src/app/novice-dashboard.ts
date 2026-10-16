@@ -119,6 +119,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly notifications = signal(false);
   /** Balances and holdings, loaded from the backend and reloaded after each fill. */
   readonly portfolioValue = signal(0);
+  readonly portfolioValueHistory = signal<number[]>([]);
   readonly buyingPower = signal(0);
   readonly invested = signal(0);
   readonly holdings = signal<Holding[]>([]);
@@ -189,7 +190,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       cashPercent: Math.round((cashValue / total) * 100),
     };
   });
-  readonly chartPath = computed(() => this.makePath(780, 133, this.periods.indexOf(this.period())));
   readonly chartTimes = computed(
     () =>
       ({
@@ -502,6 +502,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.buyingPower.set(valuation.cash);
     this.invested.set(valuation.holdingsValue);
     this.portfolioValue.set(valuation.total);
+    this.portfolioValueHistory.update(history => [...history, valuation.total].slice(-60));
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {

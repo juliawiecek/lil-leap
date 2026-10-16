@@ -23,6 +23,7 @@ import { PasswordResetToken } from './password-reset/entities/password-reset-tok
 import { PasswordResetController } from './password-reset/password-reset.controller';
 import { PasswordResetService } from './password-reset/password-reset.service';
 import { mailDeliveryProvider } from './mail/mail-delivery.provider';
+import { ProfileService } from './user/profile.service';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { mailDeliveryProvider } from './mail/mail-delivery.provider';
     PasswordEncoderService,
     AccessTokenGuard,
     PasswordResetService,
+    ProfileService,
     // MAIL_DELIVERY=outbox (default, the VM) writes .eml files; smtp sends to Mailpit on dev laptops.
     mailDeliveryProvider,
   ],
