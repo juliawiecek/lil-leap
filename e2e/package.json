@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=smoke",
     "test:stack": "node run-stack.mjs",
+    "test:full": "node run-stack.mjs --full",
     "test:auth": "node run-stack.mjs --project=auth"
   },
   "devDependencies": { "@playwright/test": "1.58.2", "pg": "8.18.0" }

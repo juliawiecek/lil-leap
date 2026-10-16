@@ -69,7 +69,7 @@ test('NEXT-157 AC2/AC4: duplicate registration shows the real Identity rejection
 for (const app of ['NextTrade', 'Insights']) {
   const insights = app === 'Insights';
   const url = insights ? insightsUrl : tradingUrl;
-  test(`NEXT-157 AC1/AC3/AC4 ${app}: valid credentials open the authenticated workspace`, async ({ page, trader, analyst }) => {
+  test(`NEXT-157 AC1/AC3/AC4 ${app}: valid credentials open the authenticated workspace`, { tag: '@smoke' }, async ({ page, trader, analyst }) => {
     const tokens = await login(page, insights ? analyst : trader, insights);
     expect(tokens.user.userRole).toBe(insights ? 'ANALYST' : 'TRADER');
     await expect(page.locator(insights ? 'app-insights-workspace' : 'app-trading-workspace')).toBeVisible();

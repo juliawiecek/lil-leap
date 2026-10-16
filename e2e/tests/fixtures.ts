@@ -15,6 +15,7 @@ export const test = base.extend<{ trader: Credentials; analyst: Credentials }>({
   analyst: async ({ request }, use) => {
     const credentials = uniqueCredentials('analyst');
     const response = await request.post(`${insightsUrl}/auth/register`, {
+      // Identity and PostgreSQL limit employee IDs to 30 characters.
       data: { user_role: 'ANALYST', email: credentials.email, password: credentials.password, employee_id: randomUUID().slice(0, 30) },
     });
     expect(response.status(), `Analyst registration: ${await response.text()}`).toBe(201);

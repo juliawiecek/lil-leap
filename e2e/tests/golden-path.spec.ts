@@ -1,6 +1,6 @@
 import { test, expect, uniqueCredentials, registerThroughBrowser, openedAccount, login, authedGet } from './fixtures';
 
-test('AC1/AC4: register ? login ? real order fill ? holdings', async ({ page, request }) => {
+test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }, async ({ page, request }) => {
   const credentials = uniqueCredentials('trader');
   await registerThroughBrowser(page, credentials);
   await page.getByRole('button', { name: /^Sign out/ }).first().click();

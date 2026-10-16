@@ -351,7 +351,21 @@ pipeline {
       }
     }
 
-    // The Playwright e2e suite is not part of the Jenkins gate; run it locally with `node e2e/run-stack.mjs`.
+    stage('Playwright - Smoke') {
+      options { timeout(time: 30, unit: 'MINUTES') }
+      steps {
+        // Publish only this build's evidence, never reports left by an older build.
+        dir('e2e/artifacts') { deleteDir() }
+        // Eight real-service smoke checks, one stack startup and no token-expiry waits.
+        sh 'bash scripts/run_e2e_ci.sh'
+      }
+      post {
+        always {
+          junit testResults: 'e2e/artifacts/**/junit.xml', allowEmptyResults: true
+          archiveArtifacts artifacts: 'e2e/artifacts/**', allowEmptyArchive: true
+        }
+      }
+    }
 
     stage('Build Compose Services') {
       // Building every image is slow, so only main checks the release compose file.
