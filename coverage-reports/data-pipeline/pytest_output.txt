@@ -1,0 +1,36 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\Administrator\lil-leap\data-pipeline
+plugins: cov-7.0.0
+collected 85 items
+
+tests\test_coverage_enhancements.py ..............................       [ 35%]
+tests\test_database.py ..                                                [ 37%]
+tests\test_generate_quotes.py ..........                                 [ 49%]
+tests\test_instrument_catalog.py ....                                    [ 54%]
+tests\test_postgres_quote_provider.py ..                                 [ 56%]
+tests\test_quote_api.py ........                                         [ 65%]
+tests\test_quote_ingestor.py ........                                    [ 75%]
+tests\test_quote_ingestor_integration.py ...........                     [ 88%]
+tests\test_service_runner.py ..........                                  [100%]
+
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.14.0-final-0 _______________
+
+Name                           Stmts   Miss Branch BrPart  Cover
+----------------------------------------------------------------
+src\__init__.py                    5      0      2      1    86%
+src\app.py                        44      7      8      2    83%
+src\database.py                   33      0      6      2    95%
+src\generate_quotes.py            80     12     38      3    87%
+src\instrument_catalog.py         40      4     10      4    84%
+src\instrument_repository.py      28      0     10      3    92%
+src\quote_ingestor.py             81      0     14      2    98%
+src\quote_provider.py            121     17     18      5    84%
+src\quote_repository.py           37      0      4      1    98%
+src\service_runner.py             53      0     20      0   100%
+----------------------------------------------------------------
+TOTAL                            522     40    130     23    90%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+============================= 85 passed in 12.60s =============================

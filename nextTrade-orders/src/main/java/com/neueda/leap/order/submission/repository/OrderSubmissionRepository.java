@@ -44,6 +44,7 @@ public interface OrderSubmissionRepository {
      * @param request validated order submission, normalized before persistence
      * @param instrumentId resolved persistent instrument identifier
      * @param symbol resolved instrument trading symbol
+     * @param referencePrice indicative price orders saw at submission, for price protection; null when no quote
      * @return inserted order, or empty when the idempotency key conflicts
      */
     Optional<OrderSubmissionResponse> insert(SubmitOrderRequest request, UUID instrumentId, String symbol,

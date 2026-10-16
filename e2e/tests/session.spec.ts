@@ -36,7 +36,8 @@ for (const app of ['NextTrade', 'Insights']) {
     const tokens = await login(page, insights ? analyst : trader, insights);
     if (insights) await expect(page.getByTestId('summary-accounts')).not.toHaveText('?');
     else await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
-    await page.clock.pauseAt(new Date());
+    // Pause just ahead of the browser's own clock; the runner's clock can trail it.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 1_000);
     await waitForServerExpiry(tokens.accessToken);
     const rejected = page.waitForResponse(r => r.url().includes('/api/v1/') && r.status() === 401);
     if (insights) await page.getByRole('button', { name: 'Refresh summary', exact: true }).click();

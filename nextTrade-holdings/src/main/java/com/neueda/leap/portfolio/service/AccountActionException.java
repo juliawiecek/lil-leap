@@ -46,6 +46,7 @@ public class AccountActionException extends RuntimeException {
         }
     }
 
+    /** Why the action was rejected, kept for the error response. */
     private final Reason reason;
 
     /**

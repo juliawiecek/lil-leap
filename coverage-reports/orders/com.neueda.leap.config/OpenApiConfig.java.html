@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OpenApiConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.config</a> &gt; <span class="el_source">OpenApiConfig.java</span></div><h1>OpenApiConfig.java</h1><pre class="source lang-java linenums">package com.neueda.leap.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI metadata for the generated spec and Swagger UI.
+ *
+ * &lt;p&gt;Declares the bearer-JWT security scheme so Swagger UI's &quot;Authorize&quot;
+ * button can attach a token to requests against protected endpoints; the
+ * scheme is descriptive only and does not itself enforce anything - actual
+ * enforcement is {@link SecurityConfig}'s job.&lt;/p&gt;
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /** Creates the OpenAPI configuration; Spring instantiates it. */
+<span class="nc" id="L23">    public OpenApiConfig() {</span>
+        // No state to initialize.
+<span class="nc" id="L25">    }</span>
+
+    private static final String BEARER_SCHEME = &quot;bearerAuth&quot;;
+
+
+    /**
+     * Builds the OpenAPI document's info block and bearer-auth security scheme.
+     *
+     * @return the configured {@link OpenAPI} bean picked up by springdoc
+     */
+    @Bean
+    public OpenAPI nextTradeOrdersOpenApi() {
+<span class="nc" id="L37">        return new OpenAPI()</span>
+<span class="nc" id="L38">                .info(new Info()</span>
+<span class="nc" id="L39">                        .title(&quot;NextTrade Orders API&quot;)</span>
+<span class="nc" id="L40">                        .description(&quot;Validated, idempotent order submission. &quot;</span>
+                                + &quot;Also runs the scheduled fill-or-reject execution engine (not exposed over HTTP).&quot;)
+<span class="nc" id="L42">                        .version(&quot;v1&quot;))</span>
+<span class="nc" id="L43">                .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME))</span>
+<span class="nc" id="L44">                .components(new Components()</span>
+<span class="nc" id="L45">                        .addSecuritySchemes(BEARER_SCHEME, new SecurityScheme()</span>
+<span class="nc" id="L46">                                .name(BEARER_SCHEME)</span>
+<span class="nc" id="L47">                                .type(SecurityScheme.Type.HTTP)</span>
+<span class="nc" id="L48">                                .scheme(&quot;bearer&quot;)</span>
+<span class="nc" id="L49">                                .bearerFormat(&quot;JWT&quot;)));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

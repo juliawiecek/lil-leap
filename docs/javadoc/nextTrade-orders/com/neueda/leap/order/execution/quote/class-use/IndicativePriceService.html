@@ -58,6 +58,10 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Execution-time quote selection, timestamp freshness and retry decisions.</div>
 </div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Transactional order submission with ownership checks and retry handling.</div>
+</div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
@@ -70,9 +74,29 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Constructor</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>&nbsp;</code></div>
-<div class="col-second even-row-color"><code><a href="../QuotePreviewController.html#%3Cinit%3E(com.neueda.leap.order.execution.quote.IndicativePriceService)" class="member-name-link">QuotePreviewController</a><wbr>(<a href="../IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;indicativePriceService)</code></div>
+<div class="col-second even-row-color"><code><a href="../QuotePreviewController.html#%3Cinit%3E(com.neueda.leap.order.execution.quote.IndicativePriceService,com.neueda.leap.instrument.service.InstrumentService)" class="member-name-link">QuotePreviewController</a><wbr>(<a href="../IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices,
+ <a href="../../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments)</code></div>
 <div class="col-last even-row-color">
-<div class="block">Creates a QuotePreviewController with the supplied dependencies.</div>
+<div class="block">Creates the controller.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.service">
+<h2>Uses of <a href="../IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a> in <a href="../../../submission/service/package-summary.html">com.neueda.leap.order.submission.service</a></h2>
+<div class="caption"><span>Constructors in <a href="../../../submission/service/package-summary.html">com.neueda.leap.order.submission.service</a> with parameters of type <a href="../IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier</div>
+<div class="table-header col-second">Constructor</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>&nbsp;</code></div>
+<div class="col-second even-row-color"><code><a href="../../../submission/service/OrderSubmissionService.html#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)" class="member-name-link">OrderSubmissionService</a><wbr>(<a href="../../../submission/repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
+ <a href="../../../service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a>&nbsp;sufficiency,
+ <a href="../../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments,
+ <a href="../IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 </div>
 </div>
 </section>

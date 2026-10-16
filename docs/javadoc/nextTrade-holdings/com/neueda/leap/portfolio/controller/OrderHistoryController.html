@@ -126,10 +126,11 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id,
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;from,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;to,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;status,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the caller's own orders, newest first.</div>
@@ -171,7 +172,7 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,com.neueda.leap.security.JwtPrincipal)">
+<section class="detail" id="getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,java.util.UUID,com.neueda.leap.security.JwtPrincipal)">
 <h3>getOrders</h3>
 <div class="member-signature"><span class="annotations">@GetMapping("/clients/{id}/orders")
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a>&gt;&gt;</span>&nbsp;<span class="element-name">getOrders</span><wbr><span class="parameters">(@PathVariable
@@ -182,6 +183,8 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;to,
  @RequestParam(required=false)
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;status,
+ @RequestParam(required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
  @AuthenticationPrincipal
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</span></div>
 <div class="block">Returns the caller's own orders, newest first.
@@ -192,6 +195,7 @@ loadScripts(document, 'script');</script>
 <dd><code>from</code> - first day to include, e.g. 2026-09-01</dd>
 <dd><code>to</code> - last day to include</dd>
 <dd><code>status</code> - one order status, e.g. FILLED</dd>
+<dd><code>accountId</code> - optional owned account to narrow to</dd>
 <dd><code>principal</code> - authenticated identity from the bearer token</dd>
 <dt>Returns:</dt>
 <dd>HTTP 200 with the matching orders</dd>

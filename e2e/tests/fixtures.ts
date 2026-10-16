@@ -9,7 +9,7 @@ export const test = base.extend<{ trader: Credentials; analyst: Credentials }>({
   trader: async ({ request }, use) => {
     const credentials = uniqueCredentials('trader');
     const response = await request.post(`${tradingUrl}/auth/register`, { data: traderPayload(credentials) });
-    expect(response.status()).toBe(201);
+    expect(response.status(), `Trader registration: ${await response.text()}`).toBe(201);
     await use(credentials);
   },
   analyst: async ({ request }, use) => {
@@ -18,7 +18,7 @@ export const test = base.extend<{ trader: Credentials; analyst: Credentials }>({
       // Identity and PostgreSQL limit employee IDs to 30 characters.
       data: { user_role: 'ANALYST', email: credentials.email, password: credentials.password, employee_id: randomUUID().slice(0, 30) },
     });
-    expect(response.status()).toBe(201);
+    expect(response.status(), `Analyst registration: ${await response.text()}`).toBe(201);
     await use(credentials);
   },
 });

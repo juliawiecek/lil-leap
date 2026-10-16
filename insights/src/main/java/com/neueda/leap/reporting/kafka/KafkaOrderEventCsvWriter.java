@@ -51,17 +51,29 @@ public class KafkaOrderEventCsvWriter {
         Files.createDirectories(outputDir);
     }
 
-    /** Writes a completed trade row when the event reached FILLED. */
+    /**
+     * Writes a completed trade row when the event reached FILLED.
+     *
+     * @param event the filled order event
+     */
     public synchronized void writeCompleted(OrderLifecycleEvent event) {
         appendCsv(completedFile, COMPLETED_HEADERS, completedRow(event));
     }
 
-    /** Writes a failed trade row when the event reached REJECTED. */
+    /**
+     * Writes a failed trade row when the event reached REJECTED.
+     *
+     * @param event the rejected order event
+     */
     public synchronized void writeFailed(OrderLifecycleEvent event) {
         appendCsv(failedFile, FAILED_HEADERS, failedRow(event));
     }
 
-    /** Writes every terminal order event to the audit file. */
+    /**
+     * Writes every terminal order event to the audit file.
+     *
+     * @param event the terminal order event
+     */
     public synchronized void writeAudit(OrderLifecycleEvent event) {
         appendCsv(auditFile, AUDIT_HEADERS, auditRow(event));
     }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketHoursConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.market</a> &gt; <span class="el_source">MarketHoursConfiguration.java</span></div><h1>MarketHoursConfiguration.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.market;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/** NYSE session rules, overridable with {@code nexttrade.market.*} properties. */
+@Configuration
+public class MarketHoursConfiguration {
+    /** NYSE full-day closures for 2026 and 2027, including observed dates. */
+    static final String NYSE_HOLIDAYS = &quot;2026-01-01,2026-01-19,2026-02-16,2026-04-03,2026-05-25,2026-06-19,&quot;
+            + &quot;2026-07-03,2026-09-07,2026-11-26,2026-12-25,&quot;
+            + &quot;2027-01-01,2027-01-18,2027-02-15,2027-03-26,2027-05-31,2027-06-18,&quot;
+            + &quot;2027-07-05,2027-09-06,2027-11-25,2027-12-24&quot;;
+
+    /** Creates the configuration; Spring instantiates it. */
+<span class="fc" id="L24">    public MarketHoursConfiguration() {</span>
+        // No state to initialize.
+<span class="fc" id="L26">    }</span>
+
+    @Bean
+    MarketHours marketHours(
+            @Value(&quot;${nexttrade.market.time-zone:America/New_York}&quot;) String zone,
+            @Value(&quot;${nexttrade.market.open:09:30}&quot;) String open,
+            @Value(&quot;${nexttrade.market.close:16:00}&quot;) String close,
+            @Value(&quot;${nexttrade.market.holidays:&quot; + NYSE_HOLIDAYS + &quot;}&quot;) String holidays,
+            @Value(&quot;${nexttrade.market.respect-hours:true}&quot;) boolean respectHours) {
+<span class="fc" id="L35">        return new MarketHours(ZoneId.of(zone), LocalTime.parse(open), LocalTime.parse(close),</span>
+<span class="fc" id="L36">                parseDates(holidays), respectHours);</span>
+    }
+
+    /** Parses a comma-separated list of ISO dates, ignoring blanks. */
+    static Set&lt;LocalDate&gt; parseDates(String dates) {
+<span class="fc" id="L41">        return Arrays.stream(dates.split(&quot;,&quot;))</span>
+<span class="fc" id="L42">                .map(String::trim)</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">                .filter(date -&gt; !date.isEmpty())</span>
+<span class="fc" id="L44">                .map(LocalDate::parse)</span>
+<span class="fc" id="L45">                .collect(Collectors.toUnmodifiableSet());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

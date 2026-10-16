@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CashController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade Holdings</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.portfolio.controller</a> &gt; <span class="el_source">CashController.java</span></div><h1>CashController.java</h1><pre class="source lang-java linenums">package com.neueda.leap.portfolio.controller;
+
+import com.neueda.leap.portfolio.dto.CashBalanceResponse;
+import com.neueda.leap.portfolio.service.ClientNotFoundException;
+import com.neueda.leap.portfolio.service.ClientFinancialQueryService;
+import com.neueda.leap.security.JwtPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Exposes cash balance reads at {@code GET /clients/{id}/cash} and
+ * {@code GET /cash/balance/{clientId}}.
+ *
+ * &lt;p&gt;Both routes return the same client-scoped data under different shapes;
+ * see TS-11.1b. Either path parameter must match the authenticated caller's
+ * own id - a mismatch is reported as 404, identically to an unknown id, so a
+ * caller cannot probe for other clients' ids (BR-02).&lt;/p&gt;
+ */
+@RestController
+@PreAuthorize(&quot;hasAnyRole('TRADER', 'ANALYST')&quot;)
+@Tag(name = &quot;Cash&quot;, description = &quot;Client cash balance reads&quot;)
+public class CashController {
+
+    private final ClientFinancialQueryService queryService;
+
+    /**
+     * Creates the cash balance controller.
+     *
+     * @param queryService service that reads client-scoped cash balances
+     */
+<span class="fc" id="L42">    public CashController(ClientFinancialQueryService queryService) {</span>
+<span class="fc" id="L43">        this.queryService = queryService;</span>
+<span class="fc" id="L44">    }</span>
+
+    /**
+     * Lists cash balances for the given client via the {@code /clients/{id}/cash} shape.
+     *
+     * @param id requested client id; must match the authenticated caller
+     * @param principal authenticated identity from the bearer token
+     * @return HTTP 200 with owned balances, including an empty list when absent
+     */
+    @GetMapping(&quot;/clients/{id}/cash&quot;)
+    @Operation(summary = &quot;Get a client's cash balances&quot;,
+            description = &quot;id must be the caller's own id - a mismatch returns 404, identically to an unknown id.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Owned balances, or an empty list if none exist&quot;)
+    @ApiResponse(responseCode = &quot;404&quot;, description = &quot;id does not match the authenticated caller&quot;)
+    public ResponseEntity&lt;List&lt;CashBalanceResponse&gt;&gt; getByClientId(
+            @Parameter(description = &quot;Client (user) id; must be the caller's own&quot;) @PathVariable UUID id,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L61">        return ResponseEntity.ok(getOwnedBalances(id, principal));</span>
+    }
+
+    /**
+     * Lists cash balances for the given client via the {@code /cash/balance/{clientId}} shape.
+     *
+     * @param clientId requested client id; must match the authenticated caller
+     * @param principal authenticated identity from the bearer token
+     * @return HTTP 200 with owned balances, including an empty list when absent
+     */
+    @GetMapping(&quot;/cash/balance/{clientId}&quot;)
+    @Operation(summary = &quot;Get a client's cash balances (alternate path shape)&quot;,
+            description = &quot;Same data as GET /clients/{id}/cash under a different URL shape; &quot;
+                    + &quot;clientId must be the caller's own id.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Owned balances, or an empty list if none exist&quot;)
+    @ApiResponse(responseCode = &quot;404&quot;, description = &quot;clientId does not match the authenticated caller&quot;)
+    public ResponseEntity&lt;List&lt;CashBalanceResponse&gt;&gt; getByBalancePath(
+            @Parameter(description = &quot;Client (user) id; must be the caller's own&quot;) @PathVariable UUID clientId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+<span class="fc" id="L80">        return ResponseEntity.ok(getOwnedBalances(clientId, principal));</span>
+    }
+
+    private List&lt;CashBalanceResponse&gt; getOwnedBalances(UUID requestedClientId, JwtPrincipal principal) {
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (!requestedClientId.equals(principal.userId())) {</span>
+<span class="fc" id="L85">            throw new ClientNotFoundException(&quot;Client not found&quot;);</span>
+        }
+<span class="fc" id="L87">        return queryService.getCashBalances(principal.userId());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

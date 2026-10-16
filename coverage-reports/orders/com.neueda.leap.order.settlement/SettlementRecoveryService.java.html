@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SettlementRecoveryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.settlement</a> &gt; <span class="el_source">SettlementRecoveryService.java</span></div><h1>SettlementRecoveryService.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.settlement;
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Detects and repairs settlements of a fill that were only partly applied (TS-10.3, BR-09).
+ * A settlement is identified by its fill. The fill is the permanent trade record, so recovery rebuilds
+ * any missing ledger, projection, status or audit row from it; the cash balance only ever moves together
+ * with the cash ledger row that explains it. Rollback is limited to settlements that have not yet
+ * changed any balance. Every action is audited separately from the settlement it corrects.
+ */
+@Service
+public class SettlementRecoveryService {
+    static final String INCOMPLETE = &quot;SETTLEMENT_INCOMPLETE&quot;;
+    static final String RECOVERED = &quot;SETTLEMENT_RECOVERED&quot;;
+    static final String ROLLED_BACK = &quot;SETTLEMENT_ROLLED_BACK&quot;;
+    static final String COMPLETED = &quot;SETTLEMENT_COMPLETED&quot;;
+    static final String ALREADY_COMPLETE = &quot;ALREADY_COMPLETE&quot;;
+
+    private static final String SELECT_SETTLEMENTS = &quot;&quot;&quot;
+            SELECT f.fill_id, f.order_id, o.account_id, o.instrument_id, o.side, f.filled_quantity,
+                   f.execution_price, o.status,
+                   EXISTS (SELECT 1 FROM holding_movements m WHERE m.fill_id = f.fill_id) AS has_movement,
+                   EXISTS (SELECT 1 FROM cash_transactions c WHERE c.fill_id = f.fill_id) AS has_cash,
+                   EXISTS (SELECT 1 FROM audit_log a WHERE a.related_order_id = f.order_id
+                           AND a.event_type = 'SETTLEMENT_COMPLETED') AS has_completion
+            FROM fills f JOIN orders o ON o.order_id = f.order_id
+            &quot;&quot;&quot;;
+    private static final String SELECT_INCOMPLETE = SELECT_SETTLEMENTS + &quot;&quot;&quot;
+            WHERE o.status &lt;&gt; 'FILLED'
+               OR NOT EXISTS (SELECT 1 FROM holding_movements m WHERE m.fill_id = f.fill_id)
+               OR NOT EXISTS (SELECT 1 FROM cash_transactions c WHERE c.fill_id = f.fill_id)
+               OR NOT EXISTS (SELECT 1 FROM audit_log a WHERE a.related_order_id = f.order_id
+                              AND a.event_type = 'SETTLEMENT_COMPLETED')
+            ORDER BY f.filled_at
+            &quot;&quot;&quot;;
+    private static final String SELECT_ONE = SELECT_SETTLEMENTS + &quot; WHERE f.fill_id = ?&quot;;
+<span class="fc" id="L51">    private static final RowMapper&lt;Settlement&gt; SETTLEMENT = (rs, row) -&gt; new Settlement(</span>
+<span class="fc" id="L52">            rs.getObject(&quot;fill_id&quot;, UUID.class), rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L53">            rs.getObject(&quot;account_id&quot;, UUID.class), rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="fc" id="L54">            rs.getString(&quot;side&quot;), rs.getLong(&quot;filled_quantity&quot;), rs.getBigDecimal(&quot;execution_price&quot;),</span>
+<span class="fc" id="L55">            rs.getString(&quot;status&quot;), rs.getBoolean(&quot;has_movement&quot;), rs.getBoolean(&quot;has_cash&quot;),</span>
+<span class="fc" id="L56">            rs.getBoolean(&quot;has_completion&quot;));</span>
+
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transactions;
+
+    /**
+     * Creates the service.
+     *
+     * @param jdbc database access
+     * @param manager transaction manager; each action runs in one transaction
+     */
+<span class="fc" id="L67">    public SettlementRecoveryService(JdbcTemplate jdbc, PlatformTransactionManager manager) {</span>
+<span class="fc" id="L68">        this.jdbc = jdbc;</span>
+<span class="fc" id="L69">        this.transactions = new TransactionTemplate(manager);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Finds every incomplete settlement and records each one in the audit log, once until it is recovered.
+     *
+     * @return identifiers of all settlements that are currently incomplete
+     */
+    public List&lt;UUID&gt; reportIncomplete() {
+<span class="fc" id="L78">        return transactions.execute(status -&gt; {</span>
+<span class="fc" id="L79">            List&lt;Settlement&gt; incomplete = jdbc.query(SELECT_INCOMPLETE, SETTLEMENT);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            for (Settlement settlement : incomplete) {</span>
+<span class="fc" id="L81">                jdbc.update(&quot;&quot;&quot;</span>
+                        INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                        SELECT ?, ?, 'SYSTEM', ?, CAST(? AS jsonb)
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM audit_log a WHERE a.related_order_id = ? AND a.event_type = ?
+                              AND a.created_at &gt; COALESCE((SELECT MAX(r.created_at) FROM audit_log r
+                                  WHERE r.related_order_id = ? AND r.event_type = ?), TIMESTAMP '1970-01-01 00:00:00'))
+<span class="fc" id="L88">                        &quot;&quot;&quot;, settlement.accountId(), settlement.orderId(), INCOMPLETE,</span>
+<span class="fc" id="L89">                        partsPayload(settlement.fillId(), &quot;missing&quot;, settlement.missing()),</span>
+<span class="fc" id="L90">                        settlement.orderId(), INCOMPLETE, settlement.orderId(), RECOVERED);</span>
+<span class="fc" id="L91">            }</span>
+<span class="fc" id="L92">            return incomplete.stream().map(Settlement::fillId).toList();</span>
+        });
+    }
+
+    /**
+     * Completes a partly applied settlement by writing only the parts it is missing.
+     *
+     * @param settlementId the fill whose settlement to complete
+     * @return the parts written, or ALREADY_COMPLETE when nothing was missing
+     * @throws SettlementException 404 when the fill does not exist, 409 when a repair would break a balance rule
+     */
+    public SettlementResult recover(UUID settlementId) {
+<span class="fc" id="L104">        return transactions.execute(status -&gt; {</span>
+<span class="fc" id="L105">            Settlement settlement = lockAndLoad(settlementId);</span>
+<span class="fc" id="L106">            List&lt;SettlementPart&gt; missing = settlement.missing();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">            String action = missing.isEmpty() ? ALREADY_COMPLETE : &quot;RECOVERED&quot;;</span>
+            try {
+<span class="fc bfc" id="L109" title="All 2 branches covered.">                for (SettlementPart part : missing) {</span>
+<span class="fc" id="L110">                    apply(settlement, part);</span>
+<span class="fc" id="L111">                }</span>
+<span class="fc" id="L112">            } catch (DataAccessException failure) {</span>
+<span class="fc" id="L113">                throw new SettlementException(HttpStatus.CONFLICT, &quot;RECOVERY_FAILED&quot;,</span>
+                        &quot;The settlement cannot be completed without breaking a balance rule.&quot;, failure);
+<span class="fc" id="L115">            }</span>
+<span class="fc" id="L116">            audit(settlement, RECOVERED, partsPayload(settlementId, &quot;repaired&quot;, missing));</span>
+<span class="fc" id="L117">            return new SettlementResult(settlementId, action, missing);</span>
+        });
+    }
+
+    /**
+     * Rolls back a settlement that has not changed any balance: removes the fill and rejects its order.
+     *
+     * @param settlementId the fill whose settlement to roll back
+     * @return the ROLLED_BACK result
+     * @throws SettlementException 404 when the fill does not exist, 409 when balances already changed
+     */
+    public SettlementResult rollback(UUID settlementId) {
+<span class="fc" id="L129">        return transactions.execute(status -&gt; {</span>
+<span class="fc" id="L130">            Settlement settlement = lockAndLoad(settlementId);</span>
+<span class="pc bpc" id="L131" title="1 of 4 branches missed.">            if (settlement.hasMovement() || settlement.hasCash()) {</span>
+<span class="fc" id="L132">                throw new SettlementException(HttpStatus.CONFLICT, &quot;SETTLEMENT_APPLIED&quot;,</span>
+                        &quot;This settlement already changed balances; recover it instead of rolling it back.&quot;);
+            }
+<span class="fc" id="L135">            jdbc.update(&quot;DELETE FROM fills WHERE fill_id = ?&quot;, settlementId);</span>
+<span class="fc" id="L136">            jdbc.update(&quot;&quot;&quot;</span>
+                    UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE order_id = ?
+<span class="fc" id="L139">                    &quot;&quot;&quot;, ROLLED_BACK, settlement.orderId());</span>
+<span class="fc" id="L140">            jdbc.update(&quot;INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, 'REJECTED', ?)&quot;,</span>
+<span class="fc" id="L141">                    settlement.orderId(), ROLLED_BACK);</span>
+<span class="fc" id="L142">            audit(settlement, ROLLED_BACK, tradePayload(settlement) + &quot;}&quot;);</span>
+<span class="fc" id="L143">            return new SettlementResult(settlementId, &quot;ROLLED_BACK&quot;, List.of());</span>
+        });
+    }
+
+    /** Serializes with execution, which locks the account row before settling. */
+    private Settlement lockAndLoad(UUID settlementId) {
+<span class="fc" id="L149">        List&lt;UUID&gt; account = jdbc.queryForList(&quot;&quot;&quot;</span>
+                SELECT o.account_id FROM fills f JOIN orders o ON o.order_id = f.order_id WHERE f.fill_id = ?
+                &quot;&quot;&quot;, UUID.class, settlementId);
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (account.isEmpty()) {</span>
+<span class="fc" id="L153">            throw new SettlementException(HttpStatus.NOT_FOUND, &quot;SETTLEMENT_NOT_FOUND&quot;, &quot;No fill exists with this settlementId.&quot;);</span>
+        }
+<span class="fc" id="L155">        jdbc.queryForList(&quot;SELECT account_id FROM accounts WHERE account_id = ? FOR UPDATE&quot;, UUID.class, account.get(0));</span>
+<span class="fc" id="L156">        return jdbc.queryForObject(SELECT_ONE, SETTLEMENT, settlementId);</span>
+    }
+
+    /** Writes one missing part; the switch expression must cover every part, so none can be skipped. */
+    private int apply(Settlement settlement, SettlementPart part) {
+<span class="fc bfc" id="L161" title="All 4 branches covered.">        return switch (part) {</span>
+<span class="fc" id="L162">            case HOLDING_MOVEMENT -&gt; jdbc.update(&quot;&quot;&quot;</span>
+                    INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
+                    VALUES (?, ?, ?, ?, ?, ?)
+<span class="fc" id="L165">                    &quot;&quot;&quot;, settlement.accountId(), settlement.instrumentId(), settlement.fillId(),</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">                    settlement.buy() ? settlement.quantity() : -settlement.quantity(), settlement.price(), settlement.side());</span>
+<span class="fc" id="L167">            case CASH_TRANSACTION -&gt; applyCash(settlement);</span>
+<span class="fc" id="L168">            case ORDER_STATUS -&gt; markFilled(settlement);</span>
+<span class="fc" id="L169">            case COMPLETION_AUDIT -&gt; audit(settlement, COMPLETED,</span>
+<span class="fc" id="L170">                    tradePayload(settlement) + &quot;,\&quot;cashDelta\&quot;:&quot; + settlement.cashDelta().toPlainString() + &quot;}&quot;);</span>
+        };
+    }
+
+    private int applyCash(Settlement settlement) {
+<span class="fc" id="L175">        BigDecimal delta = settlement.cashDelta();</span>
+<span class="fc" id="L176">        int written = jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at)
+                VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)
+<span class="fc" id="L179">                &quot;&quot;&quot;, settlement.accountId(), settlement.fillId(), settlement.side(), delta);</span>
+<span class="fc" id="L180">        int updated = jdbc.update(&quot;&quot;&quot;</span>
+                UPDATE cash_balances SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE account_id = ?
+<span class="fc" id="L182">                &quot;&quot;&quot;, delta, settlement.accountId());</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        if (updated == 0) {</span>
+<span class="fc" id="L184">            updated = jdbc.update(&quot;INSERT INTO cash_balances(account_id, currency, balance) VALUES (?, 'USD', ?)&quot;,</span>
+<span class="fc" id="L185">                    settlement.accountId(), delta);</span>
+        }
+<span class="fc" id="L187">        return written + updated;</span>
+    }
+
+    private int markFilled(Settlement settlement) {
+<span class="fc" id="L191">        return jdbc.update(&quot;&quot;&quot;</span>
+                UPDATE orders SET status = 'FILLED', last_execution_error = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+<span class="fc" id="L194">                &quot;&quot;&quot;, settlement.orderId())</span>
+<span class="fc" id="L195">                + jdbc.update(&quot;INSERT INTO order_status_history(order_id, status, reason_code) VALUES (?, 'FILLED', ?)&quot;,</span>
+<span class="fc" id="L196">                        settlement.orderId(), RECOVERED);</span>
+    }
+
+    private int audit(Settlement settlement, String event, String payload) {
+<span class="fc" id="L200">        return jdbc.update(&quot;&quot;&quot;</span>
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                VALUES (?, ?, 'SYSTEM', ?, CAST(? AS jsonb))
+<span class="fc" id="L203">                &quot;&quot;&quot;, settlement.accountId(), settlement.orderId(), event, payload);</span>
+    }
+
+    // Payload values are identifiers, numbers and enum names only, so no JSON escaping is needed.
+
+    private static String fillPayload(UUID settlementId) {
+<span class="fc" id="L209">        return &quot;{\&quot;fillId\&quot;:\&quot;&quot; + settlementId + &quot;\&quot;&quot;;</span>
+    }
+
+    /** Same fields execution records for the fill; left open so callers can append fields. */
+    private static String tradePayload(Settlement settlement) {
+<span class="fc" id="L214">        return fillPayload(settlement.fillId()) + &quot;,\&quot;quantity\&quot;:&quot; + settlement.quantity()</span>
+<span class="fc" id="L215">                + &quot;,\&quot;executionPrice\&quot;:&quot; + settlement.price().toPlainString();</span>
+    }
+
+    private static String partsPayload(UUID settlementId, String field, List&lt;SettlementPart&gt; parts) {
+<span class="fc" id="L219">        String names = parts.stream().map(part -&gt; &quot;\&quot;&quot; + part.name() + &quot;\&quot;&quot;).collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L220">        return fillPayload(settlementId) + &quot;,\&quot;&quot; + field + &quot;\&quot;:[&quot; + names + &quot;]}&quot;;</span>
+    }
+
+    /** One fill with what its settlement currently has. */
+<span class="fc" id="L224">    record Settlement(UUID fillId, UUID orderId, UUID accountId, UUID instrumentId, String side, long quantity,</span>
+                      BigDecimal price, String orderStatus, boolean hasMovement, boolean hasCash,
+                      boolean hasCompletion) {
+        boolean buy() {
+<span class="fc" id="L228">            return &quot;BUY&quot;.equals(side);</span>
+        }
+
+        /** Same rounding and sign as execution: buys pay, sells receive, rounded to cents. */
+        BigDecimal cashDelta() {
+<span class="fc" id="L233">            BigDecimal amount = price.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">            return buy() ? amount.negate() : amount;</span>
+        }
+
+        List&lt;SettlementPart&gt; missing() {
+<span class="fc" id="L238">            List&lt;SettlementPart&gt; missing = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L239" title="All 2 branches covered.">            if (!hasMovement) {</span>
+<span class="fc" id="L240">                missing.add(SettlementPart.HOLDING_MOVEMENT);</span>
+            }
+<span class="fc bfc" id="L242" title="All 2 branches covered.">            if (!hasCash) {</span>
+<span class="fc" id="L243">                missing.add(SettlementPart.CASH_TRANSACTION);</span>
+            }
+<span class="fc bfc" id="L245" title="All 2 branches covered.">            if (!&quot;FILLED&quot;.equals(orderStatus)) {</span>
+<span class="fc" id="L246">                missing.add(SettlementPart.ORDER_STATUS);</span>
+            }
+<span class="fc bfc" id="L248" title="All 2 branches covered.">            if (!hasCompletion) {</span>
+<span class="fc" id="L249">                missing.add(SettlementPart.COMPLETION_AUDIT);</span>
+            }
+<span class="fc" id="L251">            return missing;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

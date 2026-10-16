@@ -57,13 +57,45 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OrderSummaryResponse.html#param-acceptedAt"><code>acceptedAt</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#ACCOUNT_ACCESS_DENIED" class="member-name-link">ACCOUNT_ACCESS_DENIED</a> - Enum constant in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">An account is missing or belongs to another client.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#ACCOUNT_LIMIT_REACHED" class="member-name-link">ACCOUNT_LIMIT_REACHED</a> - Enum constant in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">The client already has the maximum number of accounts.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#ACCOUNT_UNAVAILABLE" class="member-name-link">ACCOUNT_UNAVAILABLE</a> - Enum constant in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">An account is blocked or closed.</div>
+</dd>
+<dt><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html#accountAction(com.neueda.leap.portfolio.service.AccountActionException)" class="member-name-link">accountAction(AccountActionException)</a> - Method in class com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></dt>
+<dd>
+<div class="block">Reports a rejected account action with its fixed code and message.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.html" class="type-name-link" title="class in com.neueda.leap.portfolio.service">AccountActionException</a> - Exception Class in <a href="com/neueda/leap/portfolio/service/package-summary.html">com.neueda.leap.portfolio.service</a></dt>
+<dd>
+<div class="block">A rejected account action with a fixed, user-safe code and message.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.html#%3Cinit%3E(com.neueda.leap.portfolio.service.AccountActionException.Reason)" class="member-name-link">AccountActionException(AccountActionException.Reason)</a> - Constructor for exception class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.html" title="class in com.neueda.leap.portfolio.service">AccountActionException</a></dt>
+<dd>
+<div class="block">Creates the rejection.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" class="type-name-link" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a> - Enum Class in <a href="com/neueda/leap/portfolio/service/package-summary.html">com.neueda.leap.portfolio.service</a></dt>
+<dd>
+<div class="block">Why the action was rejected, with the HTTP status and message shown to the client.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/controller/AccountController.html" class="type-name-link" title="class in com.neueda.leap.portfolio.controller">AccountController</a> - Class in <a href="com/neueda/leap/portfolio/controller/package-summary.html">com.neueda.leap.portfolio.controller</a></dt>
 <dd>
-<div class="block">Provides the caller's trading accounts for portfolio selection and order submission.</div>
+<div class="block">The caller's trading accounts: list for selection, open another, and move cash between them (PS-05).</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/controller/AccountController.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">AccountController(JdbcTemplate)</a> - Constructor for class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/AccountController.html" title="class in com.neueda.leap.portfolio.controller">AccountController</a></dt>
+<dt><a href="com/neueda/leap/portfolio/controller/AccountController.html#%3Cinit%3E(com.neueda.leap.portfolio.service.AccountService)" class="member-name-link">AccountController(AccountService)</a> - Constructor for class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/AccountController.html" title="class in com.neueda.leap.portfolio.controller">AccountController</a></dt>
 <dd>
-<div class="block">Creates the account query API.</div>
+<div class="block">Creates the account API.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-accountId"><code>accountId</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceDetailResponse</a></dt>
 <dd>
@@ -85,21 +117,41 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/PortfolioSummaryResponse.html#param-accountId"><code>accountId</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#accountNumber()" class="member-name-link">accountNumber()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
 <dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#param-accountId"><code>accountId</code></a> record component.</div>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-accountNumber"><code>accountNumber</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
 <dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-accountId"><code>accountId</code></a> record component.</div>
+<div class="block">A newly opened account.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#accountId()" class="member-name-link">accountId()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#%3Cinit%3E(java.util.UUID,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,boolean,java.math.BigDecimal,java.time.Instant)" class="member-name-link">AccountResponse(UUID, String, String, String, String, String, boolean, BigDecimal, Instant)</a> - Constructor for record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
 <dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#param-accountId"><code>accountId</code></a> record component.</div>
+<div class="block">Creates an instance of a <code>AccountResponse</code> record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/controller/AccountController.html#accounts(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">accounts(JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/AccountController.html" title="class in com.neueda.leap.portfolio.controller">AccountController</a></dt>
 <dd>
 <div class="block">Lists accounts owned by the authenticated caller.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountService.html" class="type-name-link" title="class in com.neueda.leap.portfolio.service">AccountService</a> - Class in <a href="com/neueda/leap/portfolio/service/package-summary.html">com.neueda.leap.portfolio.service</a></dt>
+<dd>
+<div class="block">Lists, opens and moves cash between the caller's own accounts (PS-05, BR-02).</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountService.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">AccountService(JdbcTemplate)</a> - Constructor for class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountService.html" title="class in com.neueda.leap.portfolio.service">AccountService</a></dt>
+<dd>
+<div class="block">Creates the account service.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#accountType()" class="member-name-link">accountType()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-accountType"><code>accountType</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#amount()" class="member-name-link">amount()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferRequest.html#param-amount"><code>amount</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#amount()" class="member-name-link">amount()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-amount"><code>amount</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/marketdata/dto/QuoteResponse.html#ask()" class="member-name-link">ask()</a> - Method in record class com.neueda.leap.marketdata.dto.<a href="com/neueda/leap/marketdata/dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a></dt>
 <dd>
@@ -143,25 +195,17 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:C">C</h2>
 <dl class="index">
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#cachedAvgCost()" class="member-name-link">cachedAvgCost()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-cachedAvgCost"><code>cachedAvgCost</code></a> record component.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#cachedBalance()" class="member-name-link">cachedBalance()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#param-cachedBalance"><code>cachedBalance</code></a> record component.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#cachedQuantity()" class="member-name-link">cachedQuantity()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-cachedQuantity"><code>cachedQuantity</code></a> record component.</div>
-</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/PortfolioSummaryResponse.html#cash()" class="member-name-link">cash()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/PortfolioSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">PortfolioSummaryResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/PortfolioSummaryResponse.html#param-cash"><code>cash</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html#cash(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash(JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html" title="class in com.neueda.leap.portfolio.controller">ClientFinancialController</a></dt>
+<dt><a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html#cash(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash(UUID, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html" title="class in com.neueda.leap.portfolio.controller">ClientFinancialController</a></dt>
 <dd>
 <div class="block">Lists cash balances owned by the authenticated caller.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#cashBalance()" class="member-name-link">cashBalance()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-cashBalance"><code>cashBalance</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">CashBalanceDetailResponse</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
 <dd>
@@ -187,14 +231,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/portfolio/controller/CashController.html#%3Cinit%3E(com.neueda.leap.portfolio.service.ClientFinancialQueryService)" class="member-name-link">CashController(ClientFinancialQueryService)</a> - Constructor for class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/CashController.html" title="class in com.neueda.leap.portfolio.controller">CashController</a></dt>
 <dd>
 <div class="block">Creates the cash balance controller.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#%3Cinit%3E(java.util.UUID,java.math.BigDecimal,java.math.BigDecimal)" class="member-name-link">CashMismatch(UUID, BigDecimal, BigDecimal)</a> - Constructor for record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
-<dd>
-<div class="block">Creates an instance of a <code>CashMismatch</code> record class.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#cashReconciled()" class="member-name-link">cashReconciled()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#param-cashReconciled"><code>cashReconciled</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html" class="type-name-link" title="class in com.neueda.leap.portfolio.controller">ClientFinancialController</a> - Class in <a href="com/neueda/leap/portfolio/controller/package-summary.html">com.neueda.leap.portfolio.controller</a></dt>
 <dd>
@@ -305,11 +341,13 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Financial queries scoped through account ownership using the authenticated user ID.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a> - package com.neueda.leap.portfolio.settlement</dt>
-<dd>&nbsp;</dd>
 <dt><a href="com/neueda/leap/security/package-summary.html">com.neueda.leap.security</a> - package com.neueda.leap.security</dt>
 <dd>
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#createdAt()" class="member-name-link">createdAt()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-createdAt"><code>createdAt</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/instrument/dto/InstrumentResponse.html#currency()" class="member-name-link">currency()</a> - Method in record class com.neueda.leap.instrument.dto.<a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></dt>
 <dd>
@@ -318,6 +356,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/marketdata/dto/QuoteResponse.html#currency()" class="member-name-link">currency()</a> - Method in record class com.neueda.leap.marketdata.dto.<a href="com/neueda/leap/marketdata/dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/marketdata/dto/QuoteResponse.html#param-currency"><code>currency</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#currency()" class="member-name-link">currency()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-currency"><code>currency</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html#currency()" class="member-name-link">currency()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceDetailResponse</a></dt>
 <dd>
@@ -330,10 +372,6 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:D">D</h2>
 <dl class="index">
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#details()" class="member-name-link">details()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#param-details"><code>details</code></a> record component.</div>
-</dd>
 <dt><a href="com/neueda/leap/security/JwtAuthenticationFilter.html#doFilterInternal(jakarta.servlet.http.HttpServletRequest,jakarta.servlet.http.HttpServletResponse,jakarta.servlet.FilterChain)" class="member-name-link">doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)</a> - Method in class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security">JwtAuthenticationFilter</a></dt>
 </dl>
 <h2 class="title" id="I:E">E</h2>
@@ -358,6 +396,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Indicates whether some other object is "equal to" this one.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceDetailResponse</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
@@ -367,6 +409,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/HoldingResponse.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a></dt>
+<dd>
+<div class="block">Indicates whether some other object is "equal to" this one.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
@@ -382,15 +428,11 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Indicates whether some other object is "equal to" this one.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
@@ -435,6 +477,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the caller's matching orders, newest first, with nullable fill details.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/repository/OrderHistoryRepository.html#findHistory(java.util.UUID,java.util.UUID,java.util.Collection,java.time.Instant,java.time.Instant)" class="member-name-link">findHistory(UUID, UUID, Collection&lt;String&gt;, Instant, Instant)</a> - Method in class com.neueda.leap.portfolio.repository.<a href="com/neueda/leap/portfolio/repository/OrderHistoryRepository.html" title="class in com.neueda.leap.portfolio.repository">OrderHistoryRepository</a></dt>
+<dd>
+<div class="block">Returns the caller's matching orders in one account, or in all of them, newest first.</div>
+</dd>
 <dt><a href="com/neueda/leap/marketdata/JdbcQuoteRepository.html#findHistoryByInstrumentId(java.util.UUID,int)" class="member-name-link">findHistoryByInstrumentId(UUID, int)</a> - Method in class com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/JdbcQuoteRepository.html" title="class in com.neueda.leap.marketdata">JdbcQuoteRepository</a></dt>
 <dd>
 <div class="block">Finds up to <code>limit</code> most recent quotes for an instrument, ordered newest first.</div>
@@ -467,6 +513,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates a QuoteResponse from a MarketQuote.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#fromAccountId()" class="member-name-link">fromAccountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferRequest.html#param-fromAccountId"><code>fromAccountId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#fromAccountId()" class="member-name-link">fromAccountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-fromAccountId"><code>fromAccountId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#fromBalance()" class="member-name-link">fromBalance()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-fromBalance"><code>fromBalance</code></a> record component.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:G">G</h2>
 <dl class="index">
@@ -482,13 +540,13 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Reads cash balances across the user's accounts, sorted by account.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getCashBalances(java.util.UUID,java.util.UUID)" class="member-name-link">getCashBalances(UUID, UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
+<dd>
+<div class="block">Reads the cash balance of one of the user's accounts, or of all of them when no account is given.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getCashBalancesDetailed(java.util.UUID)" class="member-name-link">getCashBalancesDetailed(UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
 <dd>
 <div class="block">Reads detailed cash balances with settlement distinction.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html#getCashMismatch(java.util.UUID)" class="member-name-link">getCashMismatch(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></dt>
-<dd>
-<div class="block">Retrieves cash balance mismatch for an account (ledger vs cache).</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getDefaultAccountId(java.util.UUID)" class="member-name-link">getDefaultAccountId(UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
 <dd>
@@ -502,6 +560,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the user's orders, newest first, narrowed by any filters supplied.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/service/OrderHistoryService.html#getHistory(java.util.UUID,java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String)" class="member-name-link">getHistory(UUID, UUID, LocalDate, LocalDate, String)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/OrderHistoryService.html" title="class in com.neueda.leap.portfolio.service">OrderHistoryService</a></dt>
+<dd>
+<div class="block">Returns the user's orders in one account (or all accounts), newest first, narrowed by any filters.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/controller/ClientPortfolioController.html#getHolding(java.util.UUID,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getHolding(UUID, UUID, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/ClientPortfolioController.html" title="class in com.neueda.leap.portfolio.controller">ClientPortfolioController</a></dt>
 <dd>
 <div class="block">TS-11.1c AC1: Returns detail for one holding by account and instrument.</div>
@@ -510,13 +572,13 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Fetches a single holding by account and instrument, scoped to the authenticated caller.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html#getHoldingMismatches(java.util.UUID)" class="member-name-link">getHoldingMismatches(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></dt>
-<dd>
-<div class="block">Retrieves all holding mismatches for an account (ledger vs cache).</div>
-</dd>
 <dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getHoldings(java.util.UUID)" class="member-name-link">getHoldings(UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
 <dd>
 <div class="block">Reads holdings across the user's accounts, sorted by symbol and account.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getHoldings(java.util.UUID,java.util.UUID)" class="member-name-link">getHoldings(UUID, UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
+<dd>
+<div class="block">Reads holdings in one of the user's accounts, or across all of them when no account is given.</div>
 </dd>
 <dt><a href="com/neueda/leap/instrument/controller/InstrumentController.html#getInstrument(java.util.UUID)" class="member-name-link">getInstrument(UUID)</a> - Method in class com.neueda.leap.instrument.controller.<a href="com/neueda/leap/instrument/controller/InstrumentController.html" title="class in com.neueda.leap.instrument.controller">InstrumentController</a></dt>
 <dd>
@@ -546,7 +608,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Reads the user's orders, newest submissions first with order ID as a tie-breaker.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/controller/OrderHistoryController.html#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders(UUID, LocalDate, LocalDate, String, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/OrderHistoryController.html" title="class in com.neueda.leap.portfolio.controller">OrderHistoryController</a></dt>
+<dt><a href="com/neueda/leap/portfolio/controller/OrderHistoryController.html#getOrders(java.util.UUID,java.time.LocalDate,java.time.LocalDate,java.lang.String,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">getOrders(UUID, LocalDate, LocalDate, String, UUID, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/OrderHistoryController.html" title="class in com.neueda.leap.portfolio.controller">OrderHistoryController</a></dt>
 <dd>
 <div class="block">Returns the caller's own orders, newest first.</div>
 </dd>
@@ -557,10 +619,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html#getPortfolioSummary(java.util.UUID,java.util.UUID)" class="member-name-link">getPortfolioSummary(UUID, UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/ClientFinancialQueryService.html" title="class in com.neueda.leap.portfolio.service">ClientFinancialQueryService</a></dt>
 <dd>
 <div class="block">Reads the portfolio summary for a specific account.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html#getSettlementMovementCount(java.util.UUID)" class="member-name-link">getSettlementMovementCount(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></dt>
-<dd>
-<div class="block">Counts settlement movements (holding_movements + cash_transactions) for an account.</div>
 </dd>
 <dt><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" class="type-name-link" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a> - Class in <a href="com/neueda/leap/common/exception/package-summary.html">com.neueda.leap.common.exception</a></dt>
 <dd>
@@ -597,6 +655,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns a hash code value for this object.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceDetailResponse</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
@@ -606,6 +668,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/HoldingResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/HoldingResponse.html" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a></dt>
+<dd>
+<div class="block">Returns a hash code value for this object.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
@@ -621,29 +687,17 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns a hash code value for this object.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
 <dt><a href="com/neueda/leap/security/JwtPrincipal.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html#hasIncompleteSettlement(java.util.UUID)" class="member-name-link">hasIncompleteSettlement(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></dt>
-<dd>
-<div class="block">Detects partially applied settlements by comparing cache vs ledger (AC1).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#%3Cinit%3E(java.util.UUID,java.util.UUID,java.lang.Long,java.lang.Long,java.math.BigDecimal,java.math.BigDecimal)" class="member-name-link">HoldingMismatch(UUID, UUID, Long, Long, BigDecimal, BigDecimal)</a> - Constructor for record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Creates an instance of a <code>HoldingMismatch</code> record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/HoldingResponse.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">HoldingResponse</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
 <dd>
@@ -657,13 +711,9 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/PortfolioSummaryResponse.html#param-holdings"><code>holdings</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html#holdings(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings(JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html" title="class in com.neueda.leap.portfolio.controller">ClientFinancialController</a></dt>
+<dt><a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html#holdings(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">holdings(UUID, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/ClientFinancialController.html" title="class in com.neueda.leap.portfolio.controller">ClientFinancialController</a></dt>
 <dd>
 <div class="block">Lists holdings owned by the authenticated caller.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#holdingsReconciled()" class="member-name-link">holdingsReconciled()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#param-holdingsReconciled"><code>holdingsReconciled</code></a> record component.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:I">I</h2>
@@ -695,10 +745,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/portfolio/dto/OrderSummaryResponse.html#instrumentId()" class="member-name-link">instrumentId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OrderSummaryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderSummaryResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OrderSummaryResponse.html#param-instrumentId"><code>instrumentId</code></a> record component.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#instrumentId()" class="member-name-link">instrumentId()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-instrumentId"><code>instrumentId</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/instrument/dto/InstrumentResponse.html#instrumentName()" class="member-name-link">instrumentName()</a> - Method in record class com.neueda.leap.instrument.dto.<a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></dt>
 <dd>
@@ -739,6 +785,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/instrument/service/InstrumentService.html#%3Cinit%3E(com.neueda.leap.instrument.repository.InstrumentRepository)" class="member-name-link">InstrumentService(InstrumentRepository)</a> - Constructor for class com.neueda.leap.instrument.service.<a href="com/neueda/leap/instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a></dt>
 <dd>
 <div class="block">Creates a <code>InstrumentService</code> with the supplied dependencies.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#INSUFFICIENT_FUNDS" class="member-name-link">INSUFFICIENT_FUNDS</a> - Enum constant in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">The source account does not have enough settled cash.</div>
 </dd>
 <dt><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html#invalidFilter(java.lang.Exception)" class="member-name-link">invalidFilter(Exception)</a> - Method in class com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></dt>
 <dd>
@@ -823,17 +873,9 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:L">L</h2>
 <dl class="index">
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#ledgerAvgCost()" class="member-name-link">ledgerAvgCost()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/service/AccountService.html#list(java.util.UUID)" class="member-name-link">list(UUID)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountService.html" title="class in com.neueda.leap.portfolio.service">AccountService</a></dt>
 <dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-ledgerAvgCost"><code>ledgerAvgCost</code></a> record component.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#ledgerBalance()" class="member-name-link">ledgerBalance()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#param-ledgerBalance"><code>ledgerBalance</code></a> record component.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#ledgerQuantity()" class="member-name-link">ledgerQuantity()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#param-ledgerQuantity"><code>ledgerQuantity</code></a> record component.</div>
+<div class="block">Lists the caller's accounts, oldest first, with settled cash that is free to move or trade.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:M">M</h2>
@@ -870,6 +912,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates an instance of a <code>MarketQuote</code> record class.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#message()" class="member-name-link">message()</a> - Method in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">Message safe to show the client.</div>
+</dd>
 <dt><a href="com/neueda/leap/marketdata/dto/QuoteResponse.html#midpoint()" class="member-name-link">midpoint()</a> - Method in record class com.neueda.leap.marketdata.dto.<a href="com/neueda/leap/marketdata/dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/marketdata/dto/QuoteResponse.html#param-midpoint"><code>midpoint</code></a> record component.</div>
@@ -885,9 +931,34 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Builds the OpenAPI document's info block and bearer-auth security scheme.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#nickname()" class="member-name-link">nickname()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-nickname"><code>nickname</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html#nickname()" class="member-name-link">nickname()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OpenAccountRequest.html#param-nickname"><code>nickname</code></a> record component.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:O">O</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/portfolio/controller/AccountController.html#open(com.neueda.leap.portfolio.dto.OpenAccountRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">open(OpenAccountRequest, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/AccountController.html" title="class in com.neueda.leap.portfolio.controller">AccountController</a></dt>
+<dd>
+<div class="block">Opens another individual cash account in USD, ACTIVE with $0.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountService.html#open(java.util.UUID,java.lang.String)" class="member-name-link">open(UUID, String)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountService.html" title="class in com.neueda.leap.portfolio.service">AccountService</a></dt>
+<dd>
+<div class="block">Opens an ACTIVE individual cash account in USD with no cash, holdings or orders, and records
+ an ACCOUNT_OPENED audit event.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
+<dd>
+<div class="block">Request to open another account for the caller (PS-05).</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html#%3Cinit%3E(java.lang.String)" class="member-name-link">OpenAccountRequest(String)</a> - Constructor for record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>OpenAccountRequest</code> record class.</div>
+</dd>
 <dt><a href="com/neueda/leap/config/OpenApiConfig.html" class="type-name-link" title="class in com.neueda.leap.config">OpenApiConfig</a> - Class in <a href="com/neueda/leap/config/package-summary.html">com.neueda.leap.config</a></dt>
 <dd>
 <div class="block">OpenAPI metadata for the generated spec and Swagger UI.</div>
@@ -1034,33 +1105,21 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:R">R</h2>
 <dl class="index">
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html#recover(java.util.UUID)" class="member-name-link">recover(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryController</a></dt>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.html#reason()" class="member-name-link">reason()</a> - Method in exception class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.html" title="class in com.neueda.leap.portfolio.service">AccountActionException</a></dt>
 <dd>
-<div class="block">Detects and recovers from partially applied settlements (AC2).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html#recover(java.util.UUID)" class="member-name-link">recover(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService</a></dt>
-<dd>
-<div class="block">Detects and recovers from partially applied settlements (AC1, AC2).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#%3Cinit%3E(java.util.UUID,java.lang.String,int,int,java.lang.String)" class="member-name-link">RecoveryResult(UUID, String, int, int, String)</a> - Constructor for record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
-<dd>
-<div class="block">Creates an instance of a <code>RecoveryResult</code> record class.</div>
+<div class="block">Why the action was rejected.</div>
 </dd>
 <dt><a href="com/neueda/leap/security/JwtPrincipal.html#role()" class="member-name-link">role()</a> - Method in record class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/security/JwtPrincipal.html#param-role"><code>role</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html#rollback(java.util.UUID)" class="member-name-link">rollback(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryController</a></dt>
-<dd>
-<div class="block">Rolls back a settlement by removing cache entries (AC3).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html#rollback(java.util.UUID)" class="member-name-link">rollback(UUID)</a> - Method in class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService</a></dt>
-<dd>
-<div class="block">Rolls back a settlement by removing its cache entries (holdings, cash_balances).</div>
-</dd>
 </dl>
 <h2 class="title" id="I:S">S</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#SAME_ACCOUNT" class="member-name-link">SAME_ACCOUNT</a> - Enum constant in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">Source and target are the same account.</div>
+</dd>
 <dt><a href="com/neueda/leap/instrument/repository/InstrumentRepository.html#searchBySymbolOrName(java.lang.String)" class="member-name-link">searchBySymbolOrName(String)</a> - Method in interface com.neueda.leap.instrument.repository.<a href="com/neueda/leap/instrument/repository/InstrumentRepository.html" title="interface in com.neueda.leap.instrument.repository">InstrumentRepository</a></dt>
 <dd>
 <div class="block">Searches for instruments by partial symbol or name match (case-insensitive).</div>
@@ -1103,42 +1162,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/CashBalanceDetailResponse.html#param-settledBalance"><code>settledBalance</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a> - Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">Repository for detecting settlement integrity mismatches (TS-10.3, BR-09, AC1).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">SettlementIntegrityRepository(JdbcTemplate)</a> - Constructor for class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository</a></dt>
-<dd>
-<div class="block">Creates a SettlementIntegrityRepository with the supplied dependencies.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a> - Record Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">Record for cash balance mismatch details.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a> - Record Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">Record for holding mismatch details.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryController</a> - Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">REST API for settlement recovery and rollback operations (TS-10.3, BR-09).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html#%3Cinit%3E(com.neueda.leap.portfolio.settlement.SettlementRecoveryService)" class="member-name-link">SettlementRecoveryController(SettlementRecoveryService)</a> - Constructor for class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryController.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryController</a></dt>
-<dd>
-<div class="block">Creates a SettlementRecoveryController with the supplied dependencies.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService</a> - Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">Service for settlement recovery and rollback (TS-10.3, BR-09).</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html#%3Cinit%3E(com.neueda.leap.portfolio.settlement.SettlementIntegrityRepository,org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">SettlementRecoveryService(SettlementIntegrityRepository, JdbcTemplate)</a> - Constructor for class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService</a></dt>
-<dd>
-<div class="block">Creates a SettlementRecoveryService with the supplied dependencies.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" class="type-name-link" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a> - Record Class in <a href="com/neueda/leap/portfolio/settlement/package-summary.html">com.neueda.leap.portfolio.settlement</a></dt>
-<dd>
-<div class="block">Record for recovery result details.</div>
-</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#side()" class="member-name-link">side()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#param-side"><code>side</code></a> record component.</div>
@@ -1155,6 +1178,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/marketdata/MarketQuote.html#param-source"><code>source</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-status"><code>status</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#param-status"><code>status</code></a> record component.</div>
@@ -1163,9 +1190,9 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/OrderSummaryResponse.html#param-status"><code>status</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#status()" class="member-name-link">status()</a> - Method in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
 <dd>
-<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#param-status"><code>status</code></a> record component.</div>
+<div class="block">HTTP status for this rejection.</div>
 </dd>
 <dt><a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#submittedAt()" class="member-name-link">submittedAt()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a></dt>
 <dd>
@@ -1210,6 +1237,18 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:T">T</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#toAccountId()" class="member-name-link">toAccountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferRequest.html#param-toAccountId"><code>toAccountId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#toAccountId()" class="member-name-link">toAccountId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-toAccountId"><code>toAccountId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#toBalance()" class="member-name-link">toBalance()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-toBalance"><code>toBalance</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/instrument/dto/InstrumentResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.instrument.dto.<a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
@@ -1219,6 +1258,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/marketdata/MarketQuote.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.marketdata.<a href="com/neueda/leap/marketdata/MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a></dt>
+<dd>
+<div class="block">Returns a string representation of this record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
@@ -1234,6 +1277,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
+<dt><a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a></dt>
+<dd>
+<div class="block">Returns a string representation of this record class.</div>
+</dd>
 <dt><a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/OrderHistoryResponse.html" title="class in com.neueda.leap.portfolio.dto">OrderHistoryResponse</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
@@ -1246,15 +1293,11 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.CashMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.CashMismatch</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementIntegrityRepository.HoldingMismatch.html" title="class in com.neueda.leap.portfolio.settlement">SettlementIntegrityRepository.HoldingMismatch</a></dt>
-<dd>
-<div class="block">Returns a string representation of this record class.</div>
-</dd>
-<dt><a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.settlement.<a href="com/neueda/leap/portfolio/settlement/SettlementRecoveryService.RecoveryResult.html" title="class in com.neueda.leap.portfolio.settlement">SettlementRecoveryService.RecoveryResult</a></dt>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
@@ -1273,6 +1316,43 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/instrument/dto/InstrumentResponse.html#tradable()" class="member-name-link">tradable()</a> - Method in record class com.neueda.leap.instrument.dto.<a href="com/neueda/leap/instrument/dto/InstrumentResponse.html" title="class in com.neueda.leap.instrument.dto">InstrumentResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/instrument/dto/InstrumentResponse.html#param-tradable"><code>tradable</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/AccountResponse.html#tradingEnabled()" class="member-name-link">tradingEnabled()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/AccountResponse.html#param-tradingEnabled"><code>tradingEnabled</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/controller/AccountController.html#transfer(com.neueda.leap.portfolio.dto.TransferRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">transfer(TransferRequest, JwtPrincipal)</a> - Method in class com.neueda.leap.portfolio.controller.<a href="com/neueda/leap/portfolio/controller/AccountController.html" title="class in com.neueda.leap.portfolio.controller">AccountController</a></dt>
+<dd>
+<div class="block">Moves settled cash between two of the caller's accounts.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountService.html#transfer(java.util.UUID,com.neueda.leap.portfolio.dto.TransferRequest)" class="member-name-link">transfer(UUID, TransferRequest)</a> - Method in class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountService.html" title="class in com.neueda.leap.portfolio.service">AccountService</a></dt>
+<dd>
+<div class="block">Moves settled cash between two of the caller's accounts in one transaction: a negative and a
+ positive TRANSFER ledger row, both cached balances, and one CASH_TRANSFER audit event.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#transferId()" class="member-name-link">transferId()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-transferId"><code>transferId</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#transferredAt()" class="member-name-link">transferredAt()</a> - Method in record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/portfolio/dto/TransferResponse.html#param-transferredAt"><code>transferredAt</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
+<dd>
+<div class="block">Moves settled USD cash between two of the caller's own accounts (PS-05).</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferRequest.html#%3Cinit%3E(java.util.UUID,java.util.UUID,java.math.BigDecimal)" class="member-name-link">TransferRequest(UUID, UUID, BigDecimal)</a> - Constructor for record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>TransferRequest</code> record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html" class="type-name-link" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a> - Record Class in <a href="com/neueda/leap/portfolio/dto/package-summary.html">com.neueda.leap.portfolio.dto</a></dt>
+<dd>
+<div class="block">A completed internal book transfer.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/dto/TransferResponse.html#%3Cinit%3E(java.util.UUID,java.util.UUID,java.util.UUID,java.math.BigDecimal,java.math.BigDecimal,java.math.BigDecimal,java.time.Instant)" class="member-name-link">TransferResponse(UUID, UUID, UUID, BigDecimal, BigDecimal, BigDecimal, Instant)</a> - Constructor for record class com.neueda.leap.portfolio.dto.<a href="com/neueda/leap/portfolio/dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>TransferResponse</code> record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/security/SensitiveLogConverter.html#transform(ch.qos.logback.classic.spi.ILoggingEvent,java.lang.String)" class="member-name-link">transform(ILoggingEvent, String)</a> - Method in class com.neueda.leap.security.<a href="com/neueda/leap/security/SensitiveLogConverter.html" title="class in com.neueda.leap.security">SensitiveLogConverter</a></dt>
 <dd>&nbsp;</dd>
@@ -1313,6 +1393,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/security/JwtServiceImpl.html#validate(java.lang.String)" class="member-name-link">validate(String)</a> - Method in class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtServiceImpl.html" title="class in com.neueda.leap.security">JwtServiceImpl</a></dt>
 <dd>
 <div class="block">Validates a bearer token and extracts the caller's identity.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html#values()" class="member-name-link">values()</a> - Static method in enum class com.neueda.leap.portfolio.service.<a href="com/neueda/leap/portfolio/service/AccountActionException.Reason.html" title="enum class in com.neueda.leap.portfolio.service">AccountActionException.Reason</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
 </dd>
 </dl>
 <a href="#I:A">A</a>&nbsp;<a href="#I:B">B</a>&nbsp;<a href="#I:C">C</a>&nbsp;<a href="#I:D">D</a>&nbsp;<a href="#I:E">E</a>&nbsp;<a href="#I:F">F</a>&nbsp;<a href="#I:G">G</a>&nbsp;<a href="#I:H">H</a>&nbsp;<a href="#I:I">I</a>&nbsp;<a href="#I:J">J</a>&nbsp;<a href="#I:L">L</a>&nbsp;<a href="#I:M">M</a>&nbsp;<a href="#I:N">N</a>&nbsp;<a href="#I:O">O</a>&nbsp;<a href="#I:P">P</a>&nbsp;<a href="#I:Q">Q</a>&nbsp;<a href="#I:R">R</a>&nbsp;<a href="#I:S">S</a>&nbsp;<a href="#I:T">T</a>&nbsp;<a href="#I:U">U</a>&nbsp;<a href="#I:V">V</a>&nbsp;<br><a href="allclasses-index.html">All&nbsp;Classes&nbsp;and&nbsp;Interfaces</a><span class="vertical-separator">|</span><a href="allpackages-index.html">All&nbsp;Packages</a><span class="vertical-separator">|</span><a href="serialized-form.html">Serialized&nbsp;Form</a></main>

@@ -10,11 +10,13 @@
 --   ops@nexttrade.local       OPERATIONS        insights trade investigation (TS-03.5)
 --
 -- Runs automatically on an empty volume as /docker-entrypoint-initdb.d/05-test-users.sql.
--- Idempotent, so it can be re-run on an existing volume:
+-- Idempotent, so it can be re-run on an existing volume, which also resets the test logins:
 --   docker compose exec db psql -U main -d nexttrade -f /docker-entrypoint-initdb.d/05-test-users.sql
+--   native setup: psql -h localhost -U main -d nexttrade -f db/seeds/002_test_users.sql
 --
 -- Every row has a fixed id (derived ids use md5(...)::uuid) and every insert is
--- ON CONFLICT DO NOTHING, so a re-run changes nothing. Holdings are not inserted
+-- ON CONFLICT DO NOTHING, so a re-run changes nothing, except that the four users
+-- get the shared password back and any lockout cleared. Holdings are not inserted
 -- directly: the holding_movements trigger projects them. cash_balances is written
 -- from the cash_transactions ledger so the cache always matches it.
 -- ==========================================================
@@ -66,7 +68,10 @@ INSERT INTO users (user_id, email, password_hash, user_role) VALUES
     -- Same shared password as the others, so the analyst's hash is reused.
     ('a0000000-0000-4000-8000-000000000004', 'ops@nexttrade.local',
      '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'OPERATIONS')
-ON CONFLICT DO NOTHING;
+-- A re-run restores the shared password and clears any lockout, so a test login
+-- whose password was changed or that was locked out works again.
+ON CONFLICT (user_id) DO UPDATE
+    SET password_hash = EXCLUDED.password_hash, failed_login_attempts = 0, locked_until = NULL;
 
 -- ----------------------------------------------------------
 -- Trader identity and KYC (SSNs are synthetic, stored as digits like auth does)

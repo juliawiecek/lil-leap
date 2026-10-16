@@ -32,6 +32,13 @@ function run(args, capture = false) {
   });
 }
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { interrupted = true; activeChild?.kill('SIGTERM'); });
+// In CI this runner is root inside a container; hand what it writes to the Jenkins user so
+// Playwright (run as that user) can write reports here and the next build can delete them.
+const runnerUid = process.env.E2E_RUNNER_UID ?? process.getuid?.();
+const runnerGid = process.env.E2E_RUNNER_GID ?? process.getgid?.();
+const handBack = async path => {
+  if (process.getuid?.() === 0 && runnerUid !== undefined) await chown(path, Number(runnerUid), Number(runnerGid));
+};
 const must = async args => {
   if (interrupted) throw new Error('End-to-end run interrupted.');
   const result = await run(args);
@@ -78,13 +85,26 @@ try {
   console.error(error.code === 'ENOENT' ? 'Docker is unavailable. Install and start Docker with Compose v2 to run the real-stack suite.' : error.message);
 } finally {
   if (started) {
+    if (failed || interrupted) {
+      try {
+        await run([...compose, 'ps', '--all']);
+        for (const service of ['gateway', 'frontend', 'insights-frontend', 'auth', 'holdings', 'orders', 'quote-service', 'insights']) {
+          console.error(`Last container log lines: ${service}`);
+          await run([...compose, 'logs', '--no-color', '--tail', '30', service]);
+        }
+      } catch (error) { console.error(`Could not print startup diagnostics: ${error.message}`); }
+    }
     try {
       const diagnostics = await run([...compose, 'logs', '--no-color'], true);
       await writeFile(`${artifactDir}/containers.log`, diagnostics.output);
+      await handBack(`${artifactDir}/containers.log`);
+      // Show why in the build log too, without downloading the archived artifacts.
+      if (failed) console.error(['Last container log lines:', ...diagnostics.output.split('\n').slice(-150)].join('\n'));
       if (diagnostics.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Could not collect container logs: ${error.message}`); }
     try {
-      const cleanup = await run([...compose, 'down', '--volumes', '--remove-orphans']);
+      // Each run builds its own images; remove them with the stack so the agent's disk does not fill.
+      const cleanup = await run([...compose, 'down', '--volumes', '--remove-orphans', '--rmi', 'local']);
       if (cleanup.code !== 0) failed = true;
     } catch (error) { failed = true; console.error(`Isolated stack cleanup failed: ${error.message}`); }
     try {
@@ -92,6 +112,7 @@ try {
         project, startedAt, finishedAt: new Date().toISOString(), phases, completedPhases,
         status: failed || interrupted ? 'failed' : 'passed',
       }, null, 2));
+      await handBack(`${artifactDir}/run.json`);
     } catch (error) { failed = true; console.error(`Could not write run summary: ${error.message}`); }
   }
 }

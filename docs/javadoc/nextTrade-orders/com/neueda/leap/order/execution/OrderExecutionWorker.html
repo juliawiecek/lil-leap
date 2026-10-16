@@ -39,7 +39,7 @@ loadScripts(document, 'script');</script>
 <p>Summary:</p>
 <ul>
 <li><a href="#nested-class-summary">Nested</a></li>
-<li>Field</li>
+<li><a href="#field-summary">Field</a></li>
 <li><a href="#constructor-summary">Constr</a></li>
 <li><a href="#method-summary">Method</a></li>
 </ul>
@@ -47,7 +47,7 @@ loadScripts(document, 'script');</script>
 <li>
 <p>Detail:</p>
 <ul>
-<li>Field</li>
+<li><a href="#field-detail">Field</a></li>
 <li><a href="#constructor-detail">Constr</a></li>
 <li><a href="#method-detail">Method</a></li>
 </ul>
@@ -59,13 +59,13 @@ loadScripts(document, 'script');</script>
 <ul class="sub-nav-list">
 <li>Summary:&nbsp;</li>
 <li><a href="#nested-class-summary">Nested</a>&nbsp;|&nbsp;</li>
-<li>Field&nbsp;|&nbsp;</li>
+<li><a href="#field-summary">Field</a>&nbsp;|&nbsp;</li>
 <li><a href="#constructor-summary">Constr</a>&nbsp;|&nbsp;</li>
 <li><a href="#method-summary">Method</a></li>
 </ul>
 <ul class="sub-nav-list">
 <li>Detail:&nbsp;</li>
-<li>Field&nbsp;|&nbsp;</li>
+<li><a href="#field-detail">Field</a>&nbsp;|&nbsp;</li>
 <li><a href="#constructor-detail">Constr</a>&nbsp;|&nbsp;</li>
 <li><a href="#method-detail">Method</a></li>
 </ul>
@@ -113,6 +113,23 @@ loadScripts(document, 'script');</script>
 </div>
 </section>
 </li>
+<!-- =========== FIELD SUMMARY =========== -->
+<li>
+<section class="field-summary" id="field-summary">
+<h2>Field Summary</h2>
+<div class="caption"><span>Fields</span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Field</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>static final long</code></div>
+<div class="col-second even-row-color"><code><a href="#DEFAULT_MAX_ATTEMPTS" class="member-name-link">DEFAULT_MAX_ATTEMPTS</a></code></div>
+<div class="col-last even-row-color">
+<div class="block">Default attempt limit for unexpected failures, matching the quote and price retry limits.</div>
+</div>
+</div>
+</section>
+</li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
 <li>
 <section class="constructor-summary" id="constructor-summary">
@@ -125,6 +142,43 @@ loadScripts(document, 'script');</script>
  org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
  <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
  int&nbsp;retrySeconds)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the default attempt limit for unexpected failures.</div>
+</div>
+<div class="col-constructor-name odd-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied attempt limit.</div>
+</div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> that only executes during market hours (NEXT-212).</div>
+</div>
+<div class="col-constructor-name odd-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Creates a <code>OrderExecutionWorker</code> with terminal-event publishing and the default attempt limit.</div>
+</div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)" class="member-name-link">OrderExecutionWorker</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied dependencies.</div>
 </div>
@@ -164,6 +218,29 @@ loadScripts(document, 'script');</script>
 </section>
 <section class="details">
 <ul class="details-list">
+<!-- ============ FIELD DETAIL =========== -->
+<li>
+<section class="field-details" id="field-detail">
+<h2>Field Details</h2>
+<ul class="member-list">
+<li>
+<section class="detail" id="DEFAULT_MAX_ATTEMPTS">
+<h3>DEFAULT_MAX_ATTEMPTS</h3>
+<div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type">long</span>&nbsp;<span class="element-name">DEFAULT_MAX_ATTEMPTS</span></div>
+<div class="block">Default attempt limit for unexpected failures, matching the quote and price retry limits.</div>
+<dl class="notes">
+<dt>See Also:</dt>
+<dd>
+<ul class="tag-list">
+<li><a href="../../../../../constant-values.html#com.neueda.leap.order.execution.OrderExecutionWorker.DEFAULT_MAX_ATTEMPTS">Constant Field Values</a></li>
+</ul>
+</dd>
+</dl>
+</section>
+</li>
+</ul>
+</section>
+</li>
 <!-- ========= CONSTRUCTOR DETAIL ======== -->
 <li>
 <section class="constructor-details" id="constructor-detail">
@@ -176,7 +253,7 @@ loadScripts(document, 'script');</script>
  org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
  <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
  int&nbsp;retrySeconds)</span></div>
-<div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied dependencies.</div>
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the default attempt limit for unexpected failures.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>jdbc</code> - JDBC operations participating in Spring transactions</dd>
@@ -185,6 +262,100 @@ loadScripts(document, 'script');</script>
 <dd><code>retrySeconds</code> - positive delay in seconds before a claimed order is eligible again</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the retry delay is less than one second</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int)">
+<h3>OrderExecutionWorker</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderExecutionWorker</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds)</span></div>
+<div class="block">Creates a <code>OrderExecutionWorker</code> with terminal-event publishing and the default attempt limit.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>jdbc</code> - JDBC operations participating in Spring transactions</dd>
+<dd><code>manager</code> - transaction manager used for independent claim and execution transactions</dd>
+<dd><code>executor</code> - executor invoked while the order row is locked</dd>
+<dd><code>eventPublisher</code> - Kafka publisher invoked after terminal commits</dd>
+<dd><code>retrySeconds</code> - positive delay in seconds before a claimed order is eligible again</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the retry delay is less than one second</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long)">
+<h3>OrderExecutionWorker</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderExecutionWorker</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts)</span></div>
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied attempt limit.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>jdbc</code> - JDBC operations participating in Spring transactions</dd>
+<dd><code>manager</code> - transaction manager used for independent claim and execution transactions</dd>
+<dd><code>executor</code> - executor invoked while the order row is locked</dd>
+<dd><code>retrySeconds</code> - positive delay in seconds before a claimed order is eligible again</dd>
+<dd><code>maxAttempts</code> - attempts after which an unexpected failure rejects the order instead of requeueing it</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the retry delay or attempt limit is less than one</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)">
+<h3>OrderExecutionWorker</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderExecutionWorker</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
+<div class="block">Creates a <code>OrderExecutionWorker</code> that only executes during market hours (NEXT-212).</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>jdbc</code> - JDBC operations participating in Spring transactions</dd>
+<dd><code>manager</code> - transaction manager used for independent claim and execution transactions</dd>
+<dd><code>executor</code> - executor invoked while the order row is locked</dd>
+<dd><code>retrySeconds</code> - positive delay in seconds before a claimed order is eligible again</dd>
+<dd><code>maxAttempts</code> - attempts after which an unexpected failure rejects the order instead of requeueing it</dd>
+<dd><code>marketHours</code> - session rules; null executes at any time</dd>
+<dd><code>clock</code> - source of the current time</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the retry delay or attempt limit is less than one</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.transaction.PlatformTransactionManager,com.neueda.leap.order.execution.OrderExecutor,com.neueda.leap.order.execution.event.OrderLifecycleEventPublisher,int,long,com.neueda.leap.order.market.MarketHours,java.time.Clock)">
+<h3>OrderExecutionWorker</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderExecutionWorker</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ org.springframework.transaction.PlatformTransactionManager&nbsp;manager,
+ <a href="OrderExecutor.html" title="interface in com.neueda.leap.order.execution">OrderExecutor</a>&nbsp;executor,
+ <a href="event/OrderLifecycleEventPublisher.html" title="interface in com.neueda.leap.order.execution.event">OrderLifecycleEventPublisher</a>&nbsp;eventPublisher,
+ int&nbsp;retrySeconds,
+ long&nbsp;maxAttempts,
+ <a href="../market/MarketHours.html" title="class in com.neueda.leap.order.market">MarketHours</a>&nbsp;marketHours,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
+<div class="block">Creates a <code>OrderExecutionWorker</code> with the supplied dependencies.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>jdbc</code> - JDBC operations participating in Spring transactions</dd>
+<dd><code>manager</code> - transaction manager used for independent claim and execution transactions</dd>
+<dd><code>executor</code> - executor invoked while the order row is locked</dd>
+<dd><code>eventPublisher</code> - Kafka publisher invoked after terminal commits</dd>
+<dd><code>retrySeconds</code> - positive delay in seconds before a claimed order is eligible again</dd>
+<dd><code>maxAttempts</code> - attempts after which an unexpected failure rejects the order instead of requeueing it</dd>
+<dd><code>marketHours</code> - session rules; null executes at any time</dd>
+<dd><code>clock</code> - source of the current time</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the retry delay or attempt limit is less than one</dd>
 </dl>
 </section>
 </li>
@@ -213,8 +384,10 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">execute</span><wbr><span class="parameters">(<a href="OrderExecutionWorker.Claim.html" title="class in com.neueda.leap.order.execution">OrderExecutionWorker.Claim</a>&nbsp;claim)</span></div>
 <div class="block">Executes a matching, locked claim in a new transaction; stale or locked claims are skipped.
  FILLED requires exactly one persisted fill. REJECTED requires a rejection audit entry
- and relies on the executor to set terminal status. PENDING rolls back trade effects.
- Failures and pending outcomes schedule a later attempt in a separate transaction.</div>
+ and relies on the executor to set terminal status. PENDING rolls back trade effects and
+ requeues with the executor's <code>RETRY_</code> reason. An unexpected failure is requeued as
+ <code>RETRY_EXECUTION_FAILED</code> until the attempt limit, then rejected as <code>EXECUTION_FAILED</code>.
+ Requeues and failure rejections are written in a separate transaction.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>claim</code> - persisted claim and attempt number</dd>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcOrderQueryRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.query</a> &gt; <span class="el_source">JdbcOrderQueryRepository.java</span></div><h1>JdbcOrderQueryRepository.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.query;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * PostgreSQL implementation of caller-scoped order reads. Ownership is part of each query
+ * (the NEXT-89 pattern): an order on another user's account returns no row, exactly like an
+ * unknown order id.
+ */
+@Repository
+public class JdbcOrderQueryRepository implements OrderQueryRepository {
+    private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * Creates a {@code JdbcOrderQueryRepository} with the supplied dependencies.
+     *
+     * @param jdbcTemplate JDBC operations participating in Spring transactions
+     */
+<span class="fc" id="L26">    public JdbcOrderQueryRepository(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }</span>
+
+    @Override
+    public Optional&lt;OrderDetailResponse&gt; findDetail(UUID orderId, UUID userId) {
+<span class="fc" id="L30">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT o.order_id, o.account_id, o.instrument_id, i.symbol, o.client_reference,
+                       o.side, o.quantity, o.order_type, o.status, o.submitted_at, o.accepted_at,
+                       o.updated_at, o.buffer_percent, f.filled_quantity, f.execution_price, f.filled_at
+                FROM orders o
+                JOIN accounts a ON a.account_id = o.account_id
+                JOIN instruments i ON i.instrument_id = o.instrument_id
+                LEFT JOIN fills f ON f.order_id = o.order_id
+                WHERE o.order_id = ? AND a.user_id = ?
+<span class="fc" id="L39">                &quot;&quot;&quot;, this::mapDetail, orderId, userId).stream().findFirst();</span>
+    }
+
+    @Override
+    public Optional&lt;OrderStatusResponse&gt; findStatus(UUID orderId, UUID userId) {
+        // Rows written in one transaction share a timestamp; prefer the one matching the order's status.
+<span class="fc" id="L45">        return jdbcTemplate.query(&quot;&quot;&quot;</span>
+                SELECT o.order_id, o.status, h.reason_code, h.reason_text, h.occurred_at
+                FROM orders o
+                JOIN accounts a ON a.account_id = o.account_id
+                LEFT JOIN LATERAL (
+                    SELECT sh.reason_code, sh.reason_text, sh.occurred_at
+                    FROM order_status_history sh
+                    WHERE sh.order_id = o.order_id
+                    ORDER BY sh.occurred_at DESC, (sh.status = o.status) DESC, sh.status_history_id DESC
+                    LIMIT 1
+                ) h ON TRUE
+                WHERE o.order_id = ? AND a.user_id = ?
+<span class="fc" id="L57">                &quot;&quot;&quot;, (rs, row) -&gt; new OrderStatusResponse(</span>
+<span class="fc" id="L58">                rs.getObject(&quot;order_id&quot;, UUID.class), rs.getString(&quot;status&quot;),</span>
+<span class="fc" id="L59">                rs.getString(&quot;reason_code&quot;), rs.getString(&quot;reason_text&quot;),</span>
+<span class="fc" id="L60">                instant(rs.getTimestamp(&quot;occurred_at&quot;))), orderId, userId).stream().findFirst();</span>
+    }
+
+    private OrderDetailResponse mapDetail(ResultSet rs, int rowNum) throws SQLException {
+<span class="fc" id="L64">        return new OrderDetailResponse(rs.getObject(&quot;order_id&quot;, UUID.class),</span>
+<span class="fc" id="L65">                rs.getObject(&quot;account_id&quot;, UUID.class), rs.getObject(&quot;instrument_id&quot;, UUID.class),</span>
+<span class="fc" id="L66">                rs.getString(&quot;symbol&quot;), rs.getObject(&quot;client_reference&quot;, UUID.class),</span>
+<span class="fc" id="L67">                rs.getString(&quot;side&quot;), rs.getLong(&quot;quantity&quot;), rs.getString(&quot;order_type&quot;),</span>
+<span class="fc" id="L68">                rs.getString(&quot;status&quot;), instant(rs.getTimestamp(&quot;submitted_at&quot;)),</span>
+<span class="fc" id="L69">                instant(rs.getTimestamp(&quot;accepted_at&quot;)), instant(rs.getTimestamp(&quot;updated_at&quot;)),</span>
+<span class="fc" id="L70">                rs.getBigDecimal(&quot;buffer_percent&quot;), rs.getObject(&quot;filled_quantity&quot;, Long.class),</span>
+<span class="fc" id="L71">                rs.getBigDecimal(&quot;execution_price&quot;), instant(rs.getTimestamp(&quot;filled_at&quot;)));</span>
+    }
+
+    private static Instant instant(Timestamp timestamp) {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        return timestamp == null ? null : timestamp.toInstant();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

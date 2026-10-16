@@ -205,9 +205,9 @@ reporting to verify that even a connection to the primary cannot write or read
 credentials under the reporting role. Check `SELECT pg_is_in_recovery()` on the
 replica and verify a primary insert becomes visible there.
 
-Historical story documents and checked-in generated Javadocs predate this split.
-This document and current source are authoritative; regenerate HTML with
-`python scripts/generate_javadocs.py` when publishing updated documentation.
+Historical story documents predate this split. This document and current source
+are authoritative. The checked-in Javadocs are generated from the split services;
+regenerate them with `python scripts/generate_javadocs.py` after changing a public API.
 
 ### Verification performed for this refactor
 

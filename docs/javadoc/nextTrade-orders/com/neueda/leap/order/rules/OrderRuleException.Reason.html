@@ -143,8 +143,12 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">The requested instrument is not supported.</div>
 </div>
-<div class="col-first odd-row-color"><code><a href="#TRADING_NOT_ENABLED" class="member-name-link">TRADING_NOT_ENABLED</a></code></div>
+<div class="col-first odd-row-color"><code><a href="#LOCATION_RESTRICTED" class="member-name-link">LOCATION_RESTRICTED</a></code></div>
 <div class="col-last odd-row-color">
+<div class="block">The client's location is not permitted to trade the requested instrument.</div>
+</div>
+<div class="col-first even-row-color"><code><a href="#TRADING_NOT_ENABLED" class="member-name-link">TRADING_NOT_ENABLED</a></code></div>
+<div class="col-last even-row-color">
 <div class="block">Trading is not enabled for this account.</div>
 </div>
 </div>
@@ -237,6 +241,13 @@ the order they are declared.</div>
 <h3>INSTRUMENT_NOT_TRADABLE</h3>
 <div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></span>&nbsp;<span class="element-name">INSTRUMENT_NOT_TRADABLE</span></div>
 <div class="block">The requested instrument is halted or restricted.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="LOCATION_RESTRICTED">
+<h3>LOCATION_RESTRICTED</h3>
+<div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></span>&nbsp;<span class="element-name">LOCATION_RESTRICTED</span></div>
+<div class="block">The client's location is not permitted to trade the requested instrument.</div>
 </section>
 </li>
 </ul>

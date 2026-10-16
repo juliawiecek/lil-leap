@@ -74,7 +74,8 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../controller/ClientFinancialController.html#cash(com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">ClientFinancialController.</span><code><a href="../../controller/ClientFinancialController.html#cash(java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cash</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ <a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Lists cash balances owned by the authenticated caller.</div>
 </div>
@@ -105,6 +106,12 @@ loadScripts(document, 'script');</script>
 <div class="col-second even-row-color"><span class="type-name-label">ClientFinancialQueryService.</span><code><a href="../../service/ClientFinancialQueryService.html#getCashBalances(java.util.UUID)" class="member-name-link">getCashBalances</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Reads cash balances across the user's accounts, sorted by account.</div>
+</div>
+<div class="col-first odd-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../CashBalanceResponse.html" title="class in com.neueda.leap.portfolio.dto">CashBalanceResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">ClientFinancialQueryService.</span><code><a href="../../service/ClientFinancialQueryService.html#getCashBalances(java.util.UUID,java.util.UUID)" class="member-name-link">getCashBalances</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId)</code></div>
+<div class="col-last odd-row-color">
+<div class="block">Reads the cash balance of one of the user's accounts, or of all of them when no account is given.</div>
 </div>
 </div>
 </section>

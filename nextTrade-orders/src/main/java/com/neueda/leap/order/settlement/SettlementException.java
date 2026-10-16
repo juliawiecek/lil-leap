@@ -4,7 +4,9 @@ import org.springframework.http.HttpStatus;
 
 /** A recover or rollback request that cannot be carried out; the message is safe to return to the caller. */
 public class SettlementException extends RuntimeException {
+    /** HTTP status returned to the caller. */
     private final HttpStatus status;
+    /** Stable machine-readable error code. */
     private final String code;
 
     /**
@@ -34,12 +36,20 @@ public class SettlementException extends RuntimeException {
         this.code = code;
     }
 
-    /** @return HTTP status to return */
+    /**
+     * Returns the HTTP status for the response.
+     *
+     * @return HTTP status to return
+     */
     public HttpStatus status() {
         return status;
     }
 
-    /** @return stable machine-readable error code */
+    /**
+     * Returns the error code for the response.
+     *
+     * @return stable machine-readable error code
+     */
     public String code() {
         return code;
     }

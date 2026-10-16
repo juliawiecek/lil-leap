@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketHours.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.order.market</a> &gt; <span class="el_source">MarketHours.java</span></div><h1>MarketHours.java</h1><pre class="source lang-java linenums">package com.neueda.leap.order.market;
+
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Set;
+
+/**
+ * The regular trading session of one exchange (NYSE by default: 09:30-16:00 America/New_York,
+ * Monday to Friday, closed on configured full-day holidays). Times are stored as UTC instants and
+ * converted to the exchange zone only to decide open or closed, so daylight-saving changes in other
+ * countries never shift the session. Half days are out of scope.
+ */
+public final class MarketHours {
+    /** How far ahead to look for the next session; covers any run of weekends and holidays. */
+    private static final int MAX_DAYS_AHEAD = 14;
+
+    private final ZoneId zone;
+    private final LocalTime open;
+    private final LocalTime close;
+    private final Set&lt;LocalDate&gt; holidays;
+    private final boolean respectHours;
+
+    /**
+     * Creates the session rules.
+     *
+     * @param zone exchange time zone
+     * @param open session start, inclusive
+     * @param close session end, exclusive
+     * @param holidays full-day closures in the exchange's calendar
+     * @param respectHours false treats the market as always open (demo switch)
+     * @throws IllegalArgumentException if the session does not end after it starts
+     */
+<span class="fc" id="L37">    public MarketHours(ZoneId zone, LocalTime open, LocalTime close, Set&lt;LocalDate&gt; holidays, boolean respectHours) {</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (!close.isAfter(open)) {</span>
+<span class="fc" id="L39">            throw new IllegalArgumentException(&quot;Market close must be after market open&quot;);</span>
+        }
+<span class="fc" id="L41">        this.zone = zone;</span>
+<span class="fc" id="L42">        this.open = open;</span>
+<span class="fc" id="L43">        this.close = close;</span>
+<span class="fc" id="L44">        this.holidays = Set.copyOf(holidays);</span>
+<span class="fc" id="L45">        this.respectHours = respectHours;</span>
+<span class="fc" id="L46">    }</span>
+
+    /** @return the exchange time zone */
+    public ZoneId zone() {
+<span class="fc" id="L50">        return zone;</span>
+    }
+
+    /**
+     * @param now current instant
+     * @return true during a regular session, or always when hours are not respected
+     */
+    public boolean isOpen(Instant now) {
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (!respectHours) {</span>
+<span class="fc" id="L59">            return true;</span>
+        }
+<span class="fc" id="L61">        ZonedDateTime local = now.atZone(zone);</span>
+<span class="fc" id="L62">        LocalTime time = local.toLocalTime();</span>
+<span class="fc bfc" id="L63" title="All 6 branches covered.">        return isTradingDay(local.toLocalDate()) &amp;&amp; !time.isBefore(open) &amp;&amp; time.isBefore(close);</span>
+    }
+
+    /**
+     * @param now current instant
+     * @return the start of the next session that begins after {@code now}
+     */
+    public Instant nextOpen(Instant now) {
+<span class="fc" id="L71">        return nextSessionBoundary(now, open);</span>
+    }
+
+    /**
+     * @param now current instant
+     * @return the end of the current session, or of the next one when the market is closed
+     */
+    public Instant nextClose(Instant now) {
+<span class="fc" id="L79">        return nextSessionBoundary(now, close);</span>
+    }
+
+    /**
+     * @param now current instant
+     * @return whether the market is open and when it next opens and closes
+     */
+    public MarketStatus status(Instant now) {
+<span class="fc" id="L87">        return new MarketStatus(isOpen(now), zone.getId(), nextOpen(now), nextClose(now));</span>
+    }
+
+    private Instant nextSessionBoundary(Instant now, LocalTime boundary) {
+<span class="fc" id="L91">        LocalDate day = now.atZone(zone).toLocalDate();</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        for (int i = 0; i &lt;= MAX_DAYS_AHEAD; i++) {</span>
+<span class="fc" id="L93">            LocalDate candidate = day.plusDays(i);</span>
+<span class="fc" id="L94">            Instant at = candidate.atTime(boundary).atZone(zone).toInstant();</span>
+<span class="fc bfc" id="L95" title="All 4 branches covered.">            if (isTradingDay(candidate) &amp;&amp; at.isAfter(now)) {</span>
+<span class="fc" id="L96">                return at;</span>
+            }
+        }
+<span class="fc" id="L99">        throw new IllegalStateException(&quot;No trading session within &quot; + MAX_DAYS_AHEAD + &quot; days&quot;);</span>
+    }
+
+    private boolean isTradingDay(LocalDate day) {
+<span class="fc" id="L103">        DayOfWeek weekday = day.getDayOfWeek();</span>
+<span class="fc bfc" id="L104" title="All 6 branches covered.">        return weekday != DayOfWeek.SATURDAY &amp;&amp; weekday != DayOfWeek.SUNDAY &amp;&amp; !holidays.contains(day);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

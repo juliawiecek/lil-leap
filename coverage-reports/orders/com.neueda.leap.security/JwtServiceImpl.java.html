@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">NextTrade-orders</a> &gt; <a href="index.source.html" class="el_package">com.neueda.leap.security</a> &gt; <span class="el_source">JwtServiceImpl.java</span></div><h1>JwtServiceImpl.java</h1><pre class="source lang-java linenums">package com.neueda.leap.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Service responsible for issuing and validating JWT session tokens.
+ *
+ * &lt;p&gt;Tokens are signed with HMAC-SHA using a shared secret. The subject claim
+ * carries the user's ID, with the user's email and a {@code client_id} claim
+ * included for downstream consumers.&lt;/p&gt;
+ */
+@Service
+public class JwtServiceImpl implements JwtService {
+
+    /**
+     * Claim name identifying which client application requested the token.
+     */
+    private static final String CLIENT_ID_CLAIM = &quot;client_id&quot;;
+
+    /**
+     * Claim name carrying the authenticated user's email address.
+     */
+    private static final String EMAIL_CLAIM = &quot;email&quot;;
+
+    /**
+     * Claim name carrying the authenticated user's role.
+     */
+    private static final String ROLE_CLAIM = &quot;user_role&quot;;
+
+    /**
+     * Key used to sign and verify tokens, derived from the configured secret.
+     */
+    private final SecretKey key;
+
+    /**
+     * How long an issued token remains valid.
+     */
+    private final Duration expiration;
+
+    /**
+     * Identifier for the client application embedded in issued tokens.
+     */
+    private final String clientId;
+
+    /**
+     * Creates a new JWT service from configuration.
+     *
+     * &lt;p&gt;{@code app.jwt.secret} must be set via the {@code APP_JWT_SECRET}
+     * environment variable.&lt;/p&gt;
+     *
+     * @param secret the HMAC signing secret, at least 32 bytes long
+     * @param expirationMinutes how many minutes an issued token remains valid
+     * @param clientId identifier for the client application embedded in issued tokens
+     */
+    public JwtServiceImpl(
+            @Value(&quot;${app.jwt.secret}&quot;) String secret,
+            @Value(&quot;${app.jwt.expiration-minutes:60}&quot;) long expirationMinutes,
+            @Value(&quot;${app.jwt.client-id:nexttrade-web}&quot;) String clientId
+<span class="fc" id="L71">    ) {</span>
+<span class="fc" id="L72">        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L73">        this.expiration = Duration.ofMinutes(expirationMinutes);</span>
+<span class="fc" id="L74">        this.clientId = clientId;</span>
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @return a signed, compact JWT string
+     */
+    @Override
+    public String issueToken(UUID userId, String email) {
+<span class="fc" id="L86">        return issueToken(userId, email, &quot;TRADER&quot;);</span>
+    }
+
+    /**
+     * Issues a new signed session token for the given user.
+     *
+     * @param userId the authenticated user's unique identifier
+     * @param email the authenticated user's email address
+     * @param role the authenticated user's role
+     * @return a signed, compact JWT string
+     */
+    public String issueToken(UUID userId, String email, String role) {
+<span class="fc" id="L98">        Instant now = Instant.now();</span>
+<span class="fc" id="L99">        Date issuedAt = Date.from(now); // NOSONAR: JJWT issuedAt/expiration API requires java.util.Date.</span>
+<span class="fc" id="L100">        Date expiresAt = Date.from(now.plus(expiration)); // NOSONAR: Converted from java.time.Instant for JJWT compatibility.</span>
+
+<span class="fc" id="L102">        return Jwts.builder()</span>
+<span class="fc" id="L103">                .subject(userId.toString())</span>
+<span class="fc" id="L104">                .claim(EMAIL_CLAIM, email)</span>
+<span class="fc" id="L105">                .claim(CLIENT_ID_CLAIM, clientId)</span>
+<span class="fc" id="L106">                .claim(ROLE_CLAIM, role)</span>
+<span class="fc" id="L107">                .issuedAt(issuedAt)</span>
+<span class="fc" id="L108">                .expiration(expiresAt)</span>
+<span class="fc" id="L109">                .signWith(key)</span>
+<span class="fc" id="L110">                .compact();</span>
+    }
+
+    /**
+     * Validates a bearer token and extracts the caller's identity.
+     *
+     * &lt;p&gt;Returns an empty {@link Optional} for any invalid token: a bad
+     * signature, malformed structure, or an expired token.&lt;/p&gt;
+     *
+     * @param token the raw JWT string, without the {@code &quot;Bearer &quot;} prefix
+     * @return the extracted principal if the token is valid, otherwise empty
+     */
+    @Override
+    public Optional&lt;JwtPrincipal&gt; validate(String token) {
+        try {
+<span class="fc" id="L125">            Claims claims = Jwts.parser()</span>
+<span class="fc" id="L126">                    .verifyWith(key)</span>
+<span class="fc" id="L127">                    .build()</span>
+<span class="fc" id="L128">                    .parseSignedClaims(token)</span>
+<span class="fc" id="L129">                    .getPayload();</span>
+            // A token without an expiry would never expire, and one without a subject names nobody.
+<span class="fc bfc" id="L131" title="All 4 branches covered.">            if (claims.getExpiration() == null || claims.getSubject() == null) {</span>
+<span class="fc" id="L132">                return Optional.empty();</span>
+            }
+
+<span class="fc" id="L135">            UUID userId = UUID.fromString(claims.getSubject());</span>
+<span class="fc" id="L136">            String email = claims.get(EMAIL_CLAIM, String.class);</span>
+<span class="fc" id="L137">            String role = claims.get(ROLE_CLAIM, String.class);</span>
+
+<span class="fc bfc" id="L139" title="All 4 branches covered.">            return Optional.of(new JwtPrincipal(userId, email, role == null || role.isBlank() ? &quot;TRADER&quot; : role));</span>
+<span class="fc" id="L140">        } catch (RuntimeException e) {</span>
+            // Fail closed (TS-SEC-01): any verification failure, expected or not, denies access.
+<span class="fc" id="L142">            return Optional.empty();</span>
+        }
+    }
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
