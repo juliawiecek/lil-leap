@@ -6,7 +6,7 @@ import { AuthApiError, AuthClient } from '../src/auth-api.ts';
 function fakeFetch(...responses) {
   const calls = [];
   const fetchImpl = async (url, init) => {
-    calls.push({ url, method: init.method, body: JSON.parse(init.body) });
+    calls.push({ url, method: init.method, body: init.body === undefined ? undefined : JSON.parse(init.body) });
     const next = responses.shift();
     if (next instanceof Error) {
       throw next;
@@ -32,6 +32,31 @@ test('calls same-origin /auth paths so nginx can proxy them without CORS', async
   await new AuthClient(fetchImpl).login('a@example.com', 'pw');
   assert.equal(calls[0].url, '/auth/login');
   assert.equal(calls[0].method, 'POST');
+});
+
+test('loads the authenticated user profile with its bearer token', async () => {
+  const token = tokenWith({ sub: 'u1' });
+  const { calls, fetchImpl } = fakeFetch(
+    { ...loginResponse, body: { ...loginResponse.body, accessToken: token, user: { ...loginResponse.body.user, id: 'u1' } } },
+    { status: 200, body: { id: 'u1', firstName: 'Ada', lastName: 'Lovelace', address: '1 Main St', email: 'a@example.com', phone: '555-0100' } },
+  );
+  const client = new AuthClient(fetchImpl);
+
+  await client.login('a@example.com', 'pw');
+  await client.getProfile();
+
+  assert.equal(calls[1].url, '/auth/users/u1');
+  assert.equal(calls[1].method, 'GET');
+  assert.equal(calls[1].body, undefined);
+});
+
+test('keeps the signed-in user id from the login response', async () => {
+  const { fetchImpl } = fakeFetch(loginResponse);
+  const client = new AuthClient(fetchImpl);
+
+  await client.login('a@example.com', 'pw');
+
+  assert.equal(client.userId, 'u1');
 });
 
 test('login keeps tokens in memory, and logout revokes the refresh token then clears them', async () => {

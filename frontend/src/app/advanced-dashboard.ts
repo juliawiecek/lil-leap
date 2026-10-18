@@ -29,6 +29,7 @@ import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
 import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
+import type { UserProfile } from './auth-api';
 
 interface Quote {
   instrumentId: string;
@@ -93,6 +94,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   #bids = new Map<string, number>();
   readonly name = input('');
+  readonly profile = input<UserProfile | null>(null);
+  readonly profileLoading = input(false);
+  readonly profileError = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');

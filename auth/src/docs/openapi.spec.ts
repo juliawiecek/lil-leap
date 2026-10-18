@@ -39,6 +39,7 @@ describe('OpenAPI docs (NEXT-152)', () => {
       '/auth/refresh',
       '/auth/register',
       '/auth/reset-password',
+      '/auth/users/{id}',
       '/health',
       '/rules/tier-eligibility',
     ]);

@@ -512,6 +512,22 @@
         @if (page() === 'Settings') {
           <section class="panel settings-panel">
             <h2>Workspace settings</h2>
+            @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
+            @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
+            @if (profile(); as userProfile) {
+              <div>
+                <span>Full name</span><strong>{{ userProfile.firstName }} {{ userProfile.lastName }}</strong>
+              </div>
+              <div>
+                <span>Email</span><strong>{{ userProfile.email }}</strong>
+              </div>
+              <div>
+                <span>Phone</span><strong>{{ userProfile.phone }}</strong>
+              </div>
+              <div>
+                <span>Address</span><strong>{{ userProfile.address }}</strong>
+              </div>
+            }
             <div>
               <span>Account</span><strong>{{ name() || 'Your account' }}</strong>
             </div>

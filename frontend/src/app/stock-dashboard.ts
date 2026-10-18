@@ -1,6 +1,7 @@
 ﻿import { Component, computed, input, output } from '@angular/core';
 import { NoviceDashboard } from './novice-dashboard';
 import { AdvancedDashboard } from './advanced-dashboard';
+import type { UserProfile } from './auth-api';
 
 export type Experience = 'NOVICE' | 'ADVANCED';
 
@@ -12,6 +13,9 @@ export type Experience = 'NOVICE' | 'ADVANCED';
 })
 export class StockDashboard {
   readonly name = input('');
+  readonly profile = input<UserProfile | null>(null);
+  readonly profileLoading = input(false);
+  readonly profileError = input('');
   /** The server-assigned tier from the access token; users can't switch tiers themselves (NEXT-152). */
   readonly level = input<Experience>('NOVICE');
   readonly newAccount = input(false);

@@ -5,6 +5,7 @@ import { User } from './entities/user.entity';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { PasswordEncoderService } from '../security/password-encoder.service';
+import { CustomerProfile } from '../onboarding/entities/customer-profile.entity';
 
 /** Emails are stored and compared trimmed and lower-cased. */
 export function normalizeEmail(email: string): string {
@@ -16,6 +17,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(CustomerProfile)
+    private readonly customerProfileRepository: Repository<CustomerProfile>,
     private readonly passwordEncoder: PasswordEncoderService,
   ) {}
 
@@ -36,5 +39,10 @@ export class UserService {
     }
 
     return user;
+  }
+
+  /** Loads the identity/contact profile for one user; callers must enforce authorization before calling this method. */
+  findProfileByUserId(userId: string): Promise<CustomerProfile | null> {
+    return this.customerProfileRepository.findOne({ where: { user: { userId } }, relations: { user: true } });
   }
 }
