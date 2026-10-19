@@ -207,6 +207,10 @@ test('the client lists only tradable stocks and reads the first quote of the day
       { instrumentId: 'd', symbol: 'META', instrumentName: 'Meta', sector: 'TECH', enabled: false, tradable: true },
     ],
     '/api/v1/quotes/latest/by-instrument/a': { bid: '199.9', ask: '200.1', midpoint: '200', quotedAt: '2026-10-14T15:00:00Z' },
+    '/api/v1/quotes/candles/a?interval=5m&limit=3': [
+      { time: '2026-10-14T14:05:00Z', close: '202' }, { time: '2026-10-14T14:00:00Z', close: '201' },
+      { time: '2026-10-14T14:10:00Z', close: '203' },
+    ],
     '/api/v1/quotes/latest/by-instruments?ids=a,b': [
       { instrumentId: 'a', bid: '199.9', ask: '200.1', midpoint: '200', quotedAt: '2026-10-14T15:00:00Z' },
     ],
@@ -228,6 +232,13 @@ test('the client lists only tradable stocks and reads the first quote of the day
   assert.equal(batch.get('a').price, 200);
   assert.equal((await client.latestMany([])).size, 0);
   assert.deepEqual((await client.history('a')).map((p) => p.price), [150, 198, 201], 'the chart gets prices oldest first');
+  // Each bar's close is dated when the bar ended; the bar still open is dated now.
+  const now = Date.parse('2026-10-14T14:12:00Z');
+  assert.deepEqual(await client.closes('a', '5m', 3, now), [
+    { at: Date.parse('2026-10-14T14:05:00Z'), price: 201 },
+    { at: Date.parse('2026-10-14T14:10:00Z'), price: 202 },
+    { at: now, price: 203 },
+  ]);
   assert.equal(await client.dayOpen('a', new Date('2026-10-14T16:00:00')), 198);
   assert.equal(await client.dayOpen('a', new Date('2026-10-16T16:00:00')), undefined);
   assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');

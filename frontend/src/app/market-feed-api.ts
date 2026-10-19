@@ -9,6 +9,8 @@ import type { AccessTokenSource } from './order-history-api';
 
 /** A quote older than this is shown as "Price delayed", matching the orders service's freshness rule. */
 export const QUOTE_STALE_MS = 60000;
+/** Width of each price-bar interval the holdings service offers. */
+const BAR_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
 /** Rows of history read to find the day's first quote; the server caps history at 1000. */
 const HISTORY_ROWS = 1000;
 
@@ -119,6 +121,22 @@ export class MarketFeedClient {
       `/quotes/latest/by-instruments?ids=${instrumentIds.map(encodeURIComponent).join(',')}`,
     );
     return new Map(rows.map((row) => [row.instrumentId, tick(row)]));
+  }
+
+  /**
+   * One stock's closing price per bar over the last `limit` bars of `interval` (1m, 5m, 15m, 1h,
+   * 1d), oldest first, for the portfolio-value chart. A bar is dated by when it ends.
+   */
+  async closes(instrumentId: string, interval: string, limit: number, now = Date.now()): Promise<PricePoint[]> {
+    const rows = await this.#get<{ time: string; close: number | string }[]>(
+      `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
+    );
+    const width = BAR_MS[interval] ?? 0;
+    return rows
+      // The service dates a bar by its start; its close was taken at its end (or now, for the open bar).
+      .map((row) => ({ at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) }))
+      .filter((point) => Number.isFinite(point.at) && point.price > 0)
+      .sort((a, b) => a.at - b.at);
   }
 
   /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */

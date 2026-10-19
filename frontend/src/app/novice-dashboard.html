@@ -130,6 +130,16 @@
                   </div>
                 </div>
               </div>
+              @if (showBalance()) {
+                <app-portfolio-chart
+                  [points]="chartPoints()"
+                  [range]="chartSpan()"
+                  [period]="chartPeriod()"
+                  [loading]="chartLoading()"
+                  [error]="chartError()"
+                  (periodChange)="setChartPeriod($event)"
+                />
+              }
               <div class="portfolio-stats">
                 <div>
                   <span>Buying power</span

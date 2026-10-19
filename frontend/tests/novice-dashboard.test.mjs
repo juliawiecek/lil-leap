@@ -27,7 +27,7 @@ const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), 
 
 // A dashboard wired to fake backends: records submitted orders, returns scripted order history
 // and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
-async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'] } = {}) {
+async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'], chart = false } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
   const feed = feedWith();
   const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
@@ -44,6 +44,9 @@ async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], 
   desk.orderHistoryClient = { list: async () => history[Math.min(historyCalls++, history.length - 1)] };
   // ngOnInit reads the signed-in user's tier to pick the default execution threshold.
   desk.auth = { traderLevel: 'NOVICE', riskProfile: null };
+  desk.cashActivityClient = { list: async () => [] };
+  // The chart reads order history too; tests about order tracking keep their scripted reads to themselves.
+  if (!chart) { desk.loadChart = async () => {}; }
   await desk.ngOnInit(); await flush();
   return { desk, feed, submitted, historyCalls: () => historyCalls };
 }
@@ -91,6 +94,46 @@ test('the guided workspace has four pages, and an unreachable service shows a ba
   await desk.refreshPortfolio();
   assert.equal(desk.serviceDown(), true);
   assert.equal(desk.portfolioValue(), 20111.94, 'the last values stay on screen');
+});
+
+test('the overview chart rebuilds the account’s value from its deposits, fills and recorded prices', async t => {
+  const now = Date.now();
+  const at = (hoursAgo) => new Date(now - hoursAgo * 3600000).toISOString();
+  const { desk, feed } = await tradingDesk(t, { history: [[]], portfolios: [{ cash: 500, holdings: [] }], chart: true });
+  desk.accountState.use([{ account_id: 'acct-1', account_status: 'ACTIVE', trading_enabled: true, created_at: at(10) }]);
+  desk.cashActivityClient = { list: async (filters) => {
+    assert.deepEqual(filters, { accountId: 'acct-1' });
+    return [{ transactionId: 't1', accountId: 'acct-1', accountName: 'Main', type: 'DEPOSIT', amount: 1000, settlementStatus: 'SETTLED', occurredAt: at(10) }];
+  } };
+  desk.orderHistoryClient = { list: async () => [historyRow('FILLED', { quantity: 5, fillPrice: 100, filledQuantity: 5, filledAt: at(8) })] };
+  const requests = [];
+  feed.client = { closes: async (id, interval, limit) => {
+    requests.push([id, interval]);
+    return [{ at: now - 4 * 3600000, price: 110 }];
+  } };
+  await desk.loadChart();
+  assert.equal(desk.chartError(), '');
+  assert.equal(desk.chartSpan().fromOpening, true, 'a ten-hour-old account: the day view starts at its first deposit');
+  assert.equal(desk.chartSpan().start, Date.parse(at(10)));
+  assert.deepEqual(requests, [['aapl-id', '5m']]);
+  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1050, 1050, 1050]);
+  desk.applyPortfolio({ cash: 500, holdings: [] });
+  assert.equal(desk.chartPoints().at(-1).value, 500, 'the line ends at the live value shown above it');
+  desk.setChartPeriod('ALL');
+  await flush();
+  assert.equal(desk.chartPeriod(), 'ALL');
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  await desk.loadChart();
+  assert.match(desk.chartError(), /could not be loaded/);
+  desk.ngOnDestroy();
+});
+
+test('the chart starts when money first arrived, else when the account opened', async () => {
+  const { fundedAt } = await import('../src/app/novice-dashboard.ts');
+  assert.equal(fundedAt('2026-10-16T19:00:00Z', [{ at: 5, amount: 1 }, { at: 3, amount: 1 }]), 3);
+  assert.equal(fundedAt('2026-10-16T19:00:00Z', []), Date.parse('2026-10-16T19:00:00Z'));
+  assert.equal(fundedAt(undefined, []), null);
+  assert.equal(fundedAt('not a date', []), null);
 });
 
 test('greeting, diversification and loading states come from the real data (PS-06)', async t => {
