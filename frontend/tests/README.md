@@ -15,8 +15,10 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
 
 - `novice-dashboard.test.mjs`: search, watchlists, order validation, buying power,
   fills, holdings, weighted cost, and revalidation at confirmation.
-- `advanced-dashboard.test.mjs`: screeners, ticket pricing, validation, bracket
-  prices, fees, market/limit orders, cancellation, and price alerts.
+- `advanced-dashboard.test.mjs`: screeners, market ticket pricing and validation,
+  order submission, live portfolio values, execution tracking, and price protection.
+- `advanced-ticket.test.mjs`: NEXT-251 market-only controls, fee-free buying-power
+  boundaries, live estimates, and rendered buy/sell reviews matched to request bodies.
 - `novice-learn.test.mjs`: quiz completion, stored progress, topic selection,
   unavailable storage, and compound-growth calculations.
 - `investor-profile.test.mjs`: conditional fields, review masking, and emitted answers.
