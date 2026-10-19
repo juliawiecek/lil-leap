@@ -29,7 +29,6 @@ import { PriceProtectionStore, protectionText, validProtection } from './price-p
 import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
-import { periodWindow, plotMarks, priceLabels, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 import type { UserProfile } from './auth-api';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
