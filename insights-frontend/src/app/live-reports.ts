@@ -1,17 +1,24 @@
 import { InjectionToken } from '@angular/core';
 
+/** Today's totals for the New York trading day (midnight to midnight, America/New_York). */
 export interface ReportSummary {
+  /** The trading day, yyyy-mm-dd. */
+  date: string;
+  time_zone: string;
+  /** Accounts that placed at least one order today. */
   accounts: number;
+  /** Orders submitted today. */
   orders: number;
+  /** Fills executed today. */
   fills: number;
   gross_executed_value: number | string;
 }
-/** A stock and how many times it traded today (UTC). */
+/** A stock and how many times it traded today (New York trading day). */
 export interface TopInstrument {
   instrument: string;
   tradeCount: number;
 }
-/** Trades in one UTC hour of today, labelled "HH:00". */
+/** Trades in one New York hour of today, labelled "HH:00". */
 export interface ActivityPoint {
   hour: string;
   tradeCount: number;

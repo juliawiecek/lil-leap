@@ -1,21 +1,21 @@
-<app-page-heading title="Insights" subtitle="Trading across every account, read from the reporting data." />
+<app-page-heading title="Insights" [subtitle]="subtitle()" />
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
-<section class="kpi-grid" aria-label="Live trading summary" [attr.aria-busy]="loading()">
-  <app-kpi-tile label="Accounts" icon="users" note="Trading accounts" testId="summary-accounts" [value]="count(summary()?.accounts)" />
-  <app-kpi-tile label="Orders" icon="orders" note="Submitted, all time" testId="summary-orders" [value]="count(summary()?.orders)" />
-  <app-kpi-tile label="Fills" icon="chart" note="Executed orders" testId="summary-fills" [value]="count(summary()?.fills)" />
-  <app-kpi-tile label="Gross executed value" icon="coins" note="Filled notional · USD" testId="summary-value" [value]="money(summary()?.gross_executed_value)" />
+<section class="kpi-grid" aria-label="Today's trading summary" [attr.aria-busy]="loading()">
+  <app-kpi-tile label="Active accounts" icon="users" note="Placed an order today" testId="summary-accounts" [value]="count(summary()?.accounts)" />
+  <app-kpi-tile label="Orders" icon="orders" note="Submitted today" testId="summary-orders" [value]="count(summary()?.orders)" />
+  <app-kpi-tile label="Fills" icon="chart" note="Executed today" testId="summary-fills" [value]="count(summary()?.fills)" />
+  <app-kpi-tile label="Traded value" icon="coins" note="Filled today · USD" testId="summary-value" [value]="money(summary()?.gross_executed_value)" />
 </section>
 <div class="two-columns">
   <section class="panel" aria-labelledby="trend-title">
     <div class="panel-heading">
       <h2 id="trend-title">Trades by hour today</h2>
-      <span class="muted">{{ count(tradesToday()) }} trades · UTC</span>
+      <span class="muted">{{ count(tradesToday()) }} trades · New York time</span>
     </div>
     @if (tradesToday()) {
-      <app-insights-chart [points]="trendPoints()" label="Trades per hour today, UTC" prefix="" />
+      <app-insights-chart [points]="trendPoints()" label="Trades per hour today, New York time" prefix="" />
     } @else {
       <div class="empty">
         <app-dashboard-icon name="chart" />

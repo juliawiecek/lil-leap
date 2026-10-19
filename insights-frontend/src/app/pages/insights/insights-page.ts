@@ -7,8 +7,10 @@ import { PageHeading } from '../../shared/page-heading';
 
 const COUNT = new Intl.NumberFormat('en-US');
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+/** Formats the server's yyyy-mm-dd trading day without shifting it into the browser's time zone. */
+const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-/** Home page: live totals, today's trades by hour and the most traded stocks, from the reporting data. */
+/** Home page: today's totals, trades by hour and the most traded stocks for the New York trading day. */
 @Component({
   selector: 'app-insights-page',
   imports: [DashboardIcon, InsightsChart, KpiTile, PageHeading],
@@ -25,6 +27,12 @@ export class InsightsPage implements OnDestroy {
   /** Hourly points for the shared chart. */
   readonly trendPoints = computed(() => this.trend().map((point) => ({ label: point.hour, value: point.tradeCount })));
   readonly tradesToday = computed(() => this.trend().reduce((sum, point) => sum + point.tradeCount, 0));
+  /** Names the day the figures cover, once the server has said which day that is. */
+  readonly subtitle = computed(() => {
+    const day = this.summary()?.date;
+    const date = day ? DAY.format(new Date(`${day}T12:00:00Z`)) : '';
+    return `Today's trading across every account${date ? `, ${date}` : ''} (New York time).`;
+  });
   /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
   private destroyed = false;
