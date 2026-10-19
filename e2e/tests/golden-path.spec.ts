@@ -21,7 +21,14 @@ test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }
   const response = await submitted;
   expect(response.status()).toBe(201);
   expect(response.request().headers().authorization).toBe(`Bearer ${tokens.accessToken}`);
-  const order = await response.json();
+  // Chromium can discard a streamed Fetch response body after Angular consumes it.
+  // Correlate the real browser submission with persisted state using its retry key.
+  const submittedOrder = response.request().postDataJSON();
+  const orders = await authedGet(request, '/api/v1/orders', tokens.accessToken);
+  const matches = orders.filter(row => row.accountId === accountId && row.clientReference === submittedOrder.clientReference);
+  expect(matches).toHaveLength(1);
+  const order = matches[0];
+  expect(order).toMatchObject({ symbol: 'AAPL', side: 'BUY', quantity: 1 });
   const claims = JSON.parse(Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString());
   let filled;
   await expect.poll(async () => {

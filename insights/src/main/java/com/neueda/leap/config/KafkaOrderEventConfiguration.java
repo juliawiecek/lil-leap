@@ -1,5 +1,6 @@
 package com.neueda.leap.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -20,13 +21,16 @@ public class KafkaOrderEventConfiguration {
      * Creates the Kafka listener factory used by the three Insights consumers.
      *
      * @param consumerFactory consumer factory configured from the Spring Kafka properties
+     * @param autoStartup whether listeners should start connecting to the broker
      * @return the listener container factory
      */
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-            ConsumerFactory<String, String> consumerFactory) {
+            ConsumerFactory<String, String> consumerFactory,
+            @Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
+        factory.setAutoStartup(autoStartup);
         return factory;
     }
 }

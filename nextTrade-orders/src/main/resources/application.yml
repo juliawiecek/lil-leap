@@ -20,6 +20,7 @@ app:
     secret: ${APP_JWT_SECRET}
 orders:
   kafka:
+    enabled: ${ORDERS_KAFKA_ENABLED:true}
     topic: ${ORDERS_KAFKA_TOPIC:order-events}
 server:
   port: ${PORT:8082}

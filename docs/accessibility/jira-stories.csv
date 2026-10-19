@@ -1,0 +1,450 @@
+﻿Issue ID,Parent ID,Issue Type,Summary,Epic Name,Description,Priority,Story Points,Labels,Labels,Labels,Labels,Labels
+1,,Epic,Audio market briefing,Audio market briefing,"A short spoken summary of the market, the portfolio and recent orders, on demand or on a timer, so users can check their account by ear.",High,,accessibility,audio-briefing,,,
+2,1,Story,Play a spoken market briefing from the top bar,,"As a trader with low vision, I want to hear a short summary of my account, so that I can check it without reading the screen.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Briefing button in the top bar of both dashboards, plus Alt+B from anywhere.
+* Uses the browser's speech engine, one sentence at a time; the panel shows the text and highlights the sentence being read.
+
+h4. Acceptance criteria
+# Clicking Briefing or pressing Alt+B opens the panel and starts reading within 2 seconds.
+# The text of every sentence is shown, and the sentence being read is highlighted.
+# Stop, Play again and Close work by mouse and keyboard; Close stops speech.
+# Without a speech engine, the briefing is shown as text with a note saying so.
+# Alt+B is listed in the advanced dashboard's Keyboard Shortcuts dialog.",High,3,accessibility,audio-briefing,prototype,,
+3,1,Story,"Briefing content: market, portfolio, biggest mover, orders, buying power",,"As a trader, I want the briefing to cover what changed, so that it is worth listening to.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Wording comes from pure functions in briefing.ts, unit tested.
+* Amounts are rounded for speech (""about $24,500""); companies are said by name (""Apple"", not ""AAPL"").
+
+h4. Acceptance criteria
+# Greets by time of day and says whether the market is open, with time to close or open.
+# States portfolio value and gain or loss since purchase, in dollars and percent.
+# Names the holding that moved most today, up or down.
+# Reports orders that filled or were rejected since the last briefing (or in the last 24 hours), at most 3, then ""The rest are under Orders.""
+# Says when prices are delayed.
+# A new user with no holdings hears how much cash they have to invest.",High,3,accessibility,audio-briefing,prototype,,
+4,1,Story,Never read amounts aloud while the balance is hidden,,"As a trader in a shared space, I want hidden balances to stay private in the briefing, so that people nearby can't hear them.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+
+h4. Acceptance criteria
+# When the balance is hidden (novice eye icon or advanced privacy toggle), no dollar amount is spoken or shown in the briefing.
+# The briefing says ""Your balance is hidden, so amounts are not read out.""
+# Order sentences still name the stock and number of shares, without prices.",High,1,accessibility,audio-briefing,prototype,privacy,
+5,1,Story,Repeat the briefing on a timer and when the market opens or closes,,"As a trader who keeps the app open, I want regular spoken updates, so that I don't have to keep checking.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Repeat options: only when asked, every 15, 30 or 60 minutes. Voice speed: slow, normal, fast, faster. Saved per browser.
+
+h4. Acceptance criteria
+# With a repeat chosen, a new briefing plays when the interval has passed since the last one.
+# With a repeat chosen, a briefing plays when the market opens or closes.
+# No automatic briefing plays while one is already playing or loading.
+# Speed and repeat choices are remembered after a reload.",Medium,2,accessibility,audio-briefing,prototype,,
+6,1,Story,Remember the last briefing time across page reloads,,"As a trader, I want ""since your last briefing"" to survive a reload, so that I'm not told about the same orders again.
+
+h4. Details
+* Today the last-briefing time is kept in memory only, so a reload falls back to ""today"".
+* Store it per account in localStorage (wrapped in try/catch like the other settings).
+
+h4. Acceptance criteria
+# After a reload, the next briefing reports only orders that changed since the previous briefing.
+# Switching accounts keeps a separate last-briefing time per account.
+# Blocked storage falls back to the last 24 hours without errors.",Low,1,accessibility,audio-briefing,follow-up,,
+7,1,Story,Let screen reader users get the briefing through their screen reader,,"As a screen reader user, I want the briefing read by my own screen reader, so that two voices don't talk over each other.
+
+h4. Details
+* Add a ""Voice"" option: Browser voice (default) or My screen reader.
+* Screen reader mode skips speechSynthesis and moves focus to the transcript (or announces it through a polite live region).
+
+h4. Acceptance criteria
+# With ""My screen reader"" selected, no browser speech plays.
+# NVDA and VoiceOver read the full briefing once, in order, after pressing Alt+B.
+# The setting is remembered.",Medium,2,accessibility,audio-briefing,follow-up,screen-reader,
+8,,Epic,Switch control: one-button trading,Switch control: one-button trading,"Let people who can press only one button (head switch, sip-and-puff, big button or the space bar) use the whole dashboard and place trades.",High,,accessibility,switch-control,,,
+9,8,Story,"Turn switch control on in Settings, with speed and switch key",,"As a trader with limited movement, I want to turn on switch control and set its speed, so that the app moves at a pace I can follow.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Settings card on both dashboards: On/Off, scan speed (0.7, 1.2, 2 or 3 seconds), switch key (Space or Enter). Saved per browser.
+
+h4. Acceptance criteria
+# The toggle uses aria-pressed and shows On/Off.
+# Turning it on starts scanning straight away; it stays on after a reload.
+# A status bar shows ""Switch control on"" and has a Turn off button for helpers using a mouse.
+# Changing the speed or key takes effect without a reload.",High,2,accessibility,switch-control,prototype,,
+10,8,Story,"Scan the page by groups, with Back and Pause",,"As a switch user, I want to jump between sections before picking a control, so that reaching anything takes a few presses rather than dozens.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Groups are marked with data-scan-group (Menu, Top bar, Live prices, Portfolio, Ready to trade, …).
+* Groups show a dashed ring; controls a solid ring. The ring also moves keyboard focus, so screen readers follow it.
+
+h4. Acceptance criteria
+# Pressing the switch on a group scans the controls inside it.
+# Every group ends with ""Back"", and the top level ends with ""Pause scanning"".
+# After two passes with no press, scanning steps back out of a group.
+# Disabled, hidden and closed-dialog controls are never highlighted.
+# Pressing the switch never types a space or clicks on its own; it still counts as activity for the session timeout.",High,5,accessibility,switch-control,prototype,,
+11,8,Story,"On-screen keypads for number, text and dropdown fields",,"As a switch user, I want to enter a share count or search for a stock, so that I'm not blocked by fields that need typing.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Number pad (0-9, ., Delete), letter pad (A-Z, Space, Delete), and a scanned list for dropdown options, five per row.
+
+h4. Acceptance criteria
+# Choosing a number or text field opens the right keypad; each key updates the field immediately.
+# The first key replaces a pre-filled value, like a selected field.
+# Done keeps the value; Cancel restores the original.
+# Choosing a dropdown option selects it and closes the list.
+# Afterwards the ring continues from the field that was edited.",High,3,accessibility,switch-control,prototype,,
+12,8,Story,Place a complete trade using only the switch,,"As a switch user, I want to buy and sell shares on my own, so that I don't need someone to help me trade.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Works in the novice trade dialog and the advanced trade ticket. The ring and keypads are drawn inside an open dialog so they stay visible.
+
+h4. Acceptance criteria
+# Demo script passes: Ready to trade → Buy → Number of shares → 2 → Done → Review buy → Confirm buy, and the fill toast appears.
+# The review step cannot be skipped.
+# In the advanced ticket, Buy/Sell, Quantity, Order type and Limit price can all be set.
+# Closing the dialog returns scanning to the page.",High,3,accessibility,switch-control,prototype,demo,
+13,8,Story,Keep the scanning position when a page changes,,"As a switch user, I want to stay in the menu after changing pages, so that I don't have to start over each time.
+
+h4. Details
+* Prototype built on branch feat/switch-scan-and-briefing; this story covers review, polish and merge.
+* Changing route re-creates the dashboard; the engine finds the same groups by name and the same control by its label.
+
+h4. Acceptance criteria
+# After choosing Watchlist in the menu, the ring stays in the menu on Watchlist.
+# If the group no longer exists, scanning returns to the nearest group that does.",Medium,2,accessibility,switch-control,prototype,,
+14,8,Story,Switch control on the sign-in page and in the Insights app,,"As a switch user, I want to sign in and use Insights with my switch, so that I can use the whole product independently.
+
+h4. Details
+* Move the engine into shared/ (next to session-core) so both frontends use it.
+* Add a way to turn it on before sign-in (e.g. a link on the sign-in page, or a URL parameter).
+
+h4. Acceptance criteria
+# Sign-in can be completed with the switch, including the password field via the letter keypad.
+# Insights reports and charts can be reached and opened with the switch.
+# Both apps share one implementation and its tests.",Low,5,accessibility,switch-control,follow-up,,
+15,8,Story,"Work with system switch tools (iOS Switch Control, Android and Chromebook Switch Access)",,"As a switch user with my own switch software, I want the site to work with it, so that I can use the setup I already know instead of the built-in mode.
+
+h4. Details
+* Most switch users already have scanning on their device; the built-in mode is a fallback (e.g. for Windows, which has no full built-in switch scanning) and stays off by default.
+* System tools scan the browser's accessibility tree, so this is mostly keyboard and structure work that overlaps the screen reader epic.
+* Turn the data-scan-group sections into named regions with headings, so system tools and the built-in mode group the page the same way.
+
+h4. Acceptance criteria
+# Every action can be done with Tab and Enter alone (how two-switch users often work), in a logical order, with a visible focus ring.
+# Each data-scan-group section is a region with an accessible name and a heading.
+# Toasts with actions stay until dismissed while a keyboard or switch user is focused on them, or their action is also available elsewhere (WCAG 2.2.1).
+# Dialogs move focus in when they open and return it when they close.
+# Click targets are at least 24 by 24 pixels (WCAG 2.5.8), and nothing needs dragging or hovering.
+# A trade can be placed in Safari on an iPhone with Switch Control; a short recording is kept for the presentation.",High,3,accessibility,switch-control,compatibility,demo,
+16,,Epic,Voice mode: read the app aloud in plain language,Voice mode: read the app aloud in plain language,"An optional read-aloud mode for people with low vision or dyslexia, switch users, and anyone not looking at the screen. It speaks what matters in plain English, with captions and sound cues. It is not a screen reader: screen reader users keep using their own, and voice mode is off by default.",High,,accessibility,voice-mode,,,
+17,16,Story,Voice mode toggle and settings,,"As a user who benefits from hearing the app, I want to turn voice mode on and set it up, so that it speaks the way I need.
+
+h4. Details
+* Settings card next to Switch control: On/Off, detail level (Brief or Detailed), sound cues On/Off, voice speed (shared with the audio briefing).
+* Reuses the briefing's speech service; saved per browser like the other settings.
+
+h4. Acceptance criteria
+# Voice mode is off by default and stays as set after a reload.
+# Turning it on says ""Voice mode on""; turning it off stops any speech at once.
+# The toggle uses aria-pressed and works by mouse, keyboard and switch control.
+# Changing the voice speed here also changes the briefing's speed, and the other way round.",High,2,accessibility,voice-mode,,,
+18,16,Story,Speak controls and prices in plain language,,"As a voice mode user, I want to hear ""Apple, 185 dollars, up 1.2 percent"" rather than ""AAPL dollar 185.16 plus 1.20 percent"", so that it is quick to understand.
+
+h4. Details
+* Speak the focused control. Reuse the briefing's wording helpers (rounded amounts, company names, ""up""/""down"" for changes).
+* Templates can give an element a hand-written phrase with a data-voice attribute (ticker, holdings, watchlist rows, Buy/Sell).
+
+h4. Acceptance criteria
+# Ticker, holdings and watchlist items are spoken as company name, rounded price and change in words, e.g. ""Apple, 185 dollars, up 1.2 percent. Select to trade.""
+# Fields say their label and value (""Number of shares, 2""; empty fields say ""empty"").
+# Symbols such as $, %, +, ★ and × are never read out literally.
+# Hidden balances are never spoken (same rule as the briefing).",High,3,accessibility,voice-mode,,,
+19,16,Story,Caption bar showing what is being said,,"As a user who is hard of hearing, or in a noisy room, I want to read what voice mode says, so that I don't miss anything.
+
+h4. Details
+* A strip at the bottom of the screen shows each spoken phrase as it is said, then fades.
+* Also makes the presentation easy to follow for judges.
+
+h4. Acceptance criteria
+# Every spoken phrase appears in the caption bar while it is spoken and for about 4 seconds after.
+# Captions meet WCAG AA contrast and can be read at 200% zoom.
+# The bar does not cover the switch-control status bar, toasts or the trade ticket buttons.
+# The bar is hidden from screen readers (aria-hidden), since it repeats what is spoken.",High,2,accessibility,voice-mode,demo,,
+20,16,Story,Sound cues for scanning and order results,,"As a voice mode user, I want short sounds for common events, so that I get feedback without long speech.
+
+h4. Details
+* Web Audio, no sound files: a soft tick when the switch ring moves, a rising chime when an order fills, a low tone when an order is rejected, a click when a keypad opens.
+
+h4. Acceptance criteria
+# Each event has a distinct sound under half a second long.
+# Sound cues can be turned off on their own, without turning off speech.
+# Audio starts only after the user has interacted with the page (browser rule), and fails silently if Web Audio is unavailable.
+# Every sound has a matching spoken or captioned message, so nothing relies on sound alone.",Medium,2,accessibility,voice-mode,,,
+21,16,Story,Read back the order before it is placed,,"As a trader using voice mode, I want to hear my order before I confirm it, so that I don't place the wrong trade.
+
+h4. Details
+* When Review is pressed on the novice dialog or the advanced ticket, speak a read-back built from the order, e.g. ""You're about to buy 2 shares of Apple for about 374 dollars. Press Confirm buy to place the order.""
+
+h4. Acceptance criteria
+# The read-back plays for every reviewed order, on both dashboards, and interrupts other speech.
+# It includes side, number of shares, company name, estimated total and, for limit orders, the limit price.
+# It mentions a closed market or delayed price when the review shows that warning.
+# Editing the order and reviewing again reads the new details.",High,2,accessibility,voice-mode,demo,,
+22,16,Story,"""What's this?"" explanations and a trading glossary",,"As a novice trader, I want to ask what a control or term means, so that I understand before I use it.
+
+h4. Details
+* A shortcut (e.g. Alt+W) explains the focused item; in Detailed mode the explanation follows automatically.
+* Glossary entries for Limit price, Market order, Time in force (Day, GTC), Take profit, Stop loss, Price protection, Buying power, Bid/Ask, Order book, Volume, RSI, EMA, VWAP, Total return and Average cost.
+* Share the glossary with the novice Learn hub so the wording matches.
+
+h4. Acceptance criteria
+# Pressing the shortcut on a glossary term speaks and captions its plain-English explanation.
+# Items without an entry say ""No extra help for this item"".
+# The shortcut is listed in the Keyboard Shortcuts dialog and does not clash with browser shortcuts.
+# Explanations are written at a plain-language reading level and reviewed by the team.",Medium,3,accessibility,voice-mode,novice,,
+23,16,Story,"Important messages first, without a backlog of speech",,"As a voice mode user, I want urgent messages to interrupt and old ones dropped, so that what I hear is always current.
+
+h4. Details
+* Two priorities: urgent (errors, fills, rejections, trade read-back) interrupts; polite (focus moves) waits and is replaced by the newest one.
+* Polite speech never interrupts a playing briefing.
+
+h4. Acceptance criteria
+# Moving quickly through several controls speaks only the last one.
+# An order fill or rejection interrupts anything polite that is playing.
+# The same phrase is not repeated twice in a row within half a second.
+# Escape stops the current speech.",Medium,2,accessibility,voice-mode,,,
+24,16,Story,Brief and Detailed speech levels,,"As a voice mode user, I want to choose how much is said, so that it is fast once I know the app and helpful while I'm learning.
+
+h4. Details
+* Brief: name and value only (""Buy, Apple""). Detailed: adds the kind of control, its state and what it does (""Buy, button. Opens the trade ticket. You have 10,000 dollars to invest."").
+
+h4. Acceptance criteria
+# Both levels are available in the voice mode settings; Brief is the default.
+# Detailed mode adds role, state (selected, expanded, checked) and the glossary hint when there is one.
+# Switching level takes effect on the next spoken item.",Low,2,accessibility,voice-mode,,,
+25,16,Story,Speak a chart summary when a chart is focused,,"As a voice mode user, I want a one-sentence summary when I reach a chart, so that I get its meaning without seeing it.
+
+h4. Details
+* Shares the summary text with the ""Explain this chart"" story in the charts epic.
+* Until chart data is real (see ""Feed charts from real data""), summaries use only real figures, e.g. ""Your portfolio is worth about 16,700 dollars, up 422 dollars since you bought.""
+
+h4. Acceptance criteria
+# The novice portfolio chart, allocation donut and advanced price chart can be focused and speak a summary.
+# Summaries update when the period or stock changes.
+# No summary speaks a placeholder or hard-coded number.",Medium,3,accessibility,voice-mode,charts,,
+26,16,Story,Read the switch-control ring aloud (auditory scanning),,"As a switch user with low vision, I want to hear where the ring is, so that I can use one button without seeing the screen.
+
+h4. Details
+* When voice mode and switch control are both on, each ring move speaks the group or control name (""Trade ticket"", ""Quantity, 100"", ""Back"") with a soft tick.
+* The engine already announces groups and moves focus to controls; voice mode listens to that instead of adding new hooks to every page.
+
+h4. Acceptance criteria
+# Every ring move is spoken (polite, latest wins) and captioned.
+# Keypad keys are spoken as they are highlighted (""5"", ""Delete"", ""Done"").
+# At the slowest scan speeds the full phrase is heard before the ring moves on; at fast speeds it is cut short rather than queued.
+# Demo script: place a trade with one button and voice only, with the screen turned away.",High,3,accessibility,voice-mode,demo,switch-control,
+27,16,Story,Stay out of screen readers' way,,"As a screen reader user, I want voice mode to keep quiet unless I turn it on, so that it never talks over my own screen reader.
+
+h4. Details
+* Voice mode is a read-aloud feature, not a screen reader. Screen reader support is covered by the screen reader epic.
+
+h4. Acceptance criteria
+# Voice mode is off by default and never turns itself on.
+# Its settings text says it is for people who don't use a screen reader.
+# Caption bar and sound cues add nothing extra to the accessibility tree.
+# With NVDA running and voice mode off, nothing extra is spoken.",Medium,1,accessibility,voice-mode,screen-reader,,
+28,,Epic,Screen reader support across the site,Screen reader support across the site,"NVDA, JAWS and VoiceOver users can find their way around, understand live prices and place trades on both apps.",High,,accessibility,screen-reader,,,
+29,28,Story,"Page structure: titles, landmarks, headings and a skip link",,"As a screen reader user, I want each page to have a clear title, landmarks and headings, so that I know where I am and can jump around.
+
+h4. Details
+* Every page is currently titled ""NextTrade — Intro & Secure Access"", including the dashboards.
+* There is no skip link in the NextTrade app.
+
+h4. Acceptance criteria
+# Each route sets its own document title, e.g. ""Portfolio · NextTrade"", and it updates on navigation.
+# A ""Skip to main content"" link is the first focusable element and moves focus to <main>.
+# Each page has one h1, headings go in order, and every panel starts with a heading.
+# Sidebar, header, main and toasts are exposed as landmarks with names.",High,3,accessibility,screen-reader,,,
+30,28,Story,"Real tab semantics for ticket, chart and investment tabs",,"As a screen reader user, I want tabs announced as tabs, so that I know which view is selected and how to switch.
+
+h4. Details
+* The advanced ticket tabs (Trade, Order Book, Options, Alerts) and the positions tabs are plain buttons.
+
+h4. Acceptance criteria
+# Tab sets use role=tablist/tab/tabpanel with aria-selected and aria-controls.
+# Arrow keys move between tabs; Tab moves into the panel.
+# Toggle groups that are not tabs (periods, Buy/Sell) keep aria-pressed.",Medium,3,accessibility,screen-reader,,,
+31,28,Story,"Announce trade validation, review and order status",,"As a screen reader user, I want to hear errors, the order review and fill status, so that I know what happened to my order.
+
+h4. Details
+* Messages appear in <output> elements that are not reliably announced.
+
+h4. Acceptance criteria
+# Invalid fields get aria-invalid and an error linked with aria-describedby.
+# The review summary is announced when Review is pressed, and focus moves to Confirm.
+# ""Order sent"", ""Order accepted"", ""Filled"" and ""Rejected"" are announced once each (polite; rejection is assertive).
+# Tested with NVDA + Chrome and VoiceOver + Safari.",High,3,accessibility,screen-reader,,,
+32,28,Story,Live prices without the noise,,"As a screen reader user, I want price updates that I choose, so that the ticker doesn't talk over everything or stay silent.
+
+h4. Details
+* The ticker updates every few seconds and flashes; screen readers either hear nothing or too much.
+* Add ""Price watch"": pick stocks and a move threshold; one polite live region, rate limited and grouped.
+
+h4. Acceptance criteria
+# The ticker itself is not a live region.
+# Price watch announces at most one message every 10 seconds, grouping moves (""2 alerts: AAPL up 1.3%, MSFT down 1.1%"").
+# A ""Pause live updates"" control stops the ticker and quote refresh (WCAG 2.2.2).
+# Settings are remembered.",Medium,5,accessibility,screen-reader,,,
+33,28,Story,Tables read gains and losses in words,,"As a screen reader user, I want holdings and orders tables to read clearly, so that I understand gains and losses without seeing the colours.
+
+h4. Details
+* Green/red values rely on colour; a leading ""+"" is sometimes read as ""plus"" and sometimes skipped.
+
+h4. Acceptance criteria
+# Header cells use scope; tables have captions.
+# Changes are read as ""up 1.2 percent"" / ""down 3 percent"" (visually hidden text) and show ▲/▼.
+# Icon-only buttons in rows have names, e.g. ""Trade AAPL"".",Medium,2,accessibility,screen-reader,,,
+34,28,Story,Automated accessibility checks in CI and a manual screen reader script,,"As the team, we want accessibility checked on every build, so that we don't break it before the final presentation.
+
+h4. Details
+* Add @axe-core/playwright to the existing Playwright suite; run it in Jenkins.
+* Write a short NVDA test script covering sign-in, briefing, a trade and reading a chart.
+
+h4. Acceptance criteria
+# Every dashboard page and dialog is scanned; the build fails on serious or critical violations.
+# Current violations are fixed or recorded with a reason.
+# The manual script is in the repo and has been run once before the presentation.",High,3,accessibility,screen-reader,testing,,
+35,28,Story,Screen reader pass on the Insights app,,"As an analyst who uses a screen reader, I want to read Insights reports, so that I can do my job.
+
+h4. Details
+* Same checks as the NextTrade stories: titles, landmarks, headings, tables, live report updates.
+
+h4. Acceptance criteria
+# Insights passes the axe check with no serious or critical violations.
+# Live report refreshes are announced politely, not on every tick.
+# All report filters have labels and announce result counts.",Medium,3,accessibility,screen-reader,insights,,
+36,,Epic,Charts a screen reader can read and explain,Charts a screen reader can read and explain,"Every chart has a plain-English explanation, a data table and keyboard exploration, so that blind and low-vision users get the same information as sighted users.",High,,accessibility,screen-reader,charts,,
+37,36,Story,Feed charts from real data instead of placeholder values,,"As any user, I want charts to show my real data, so that what is described and read aloud is true.
+
+h4. Details
+* The novice portfolio chart is drawn from generated sample points (makePath).
+* The advanced chart's EMA, VWAP and RSI values, the volume label and the exposure ring percentages are hard-coded.
+* Use /api/v1/quotes/history and the order history. This must land before the explanation stories, or the screen reader will read made-up numbers.
+
+h4. Acceptance criteria
+# Each chart is built from an array of {time, value} points that the explanation, table and keyboard stories can share.
+# No chart label or indicator shows a hard-coded number.
+# Unit tests cover the data mapping.",Highest,5,accessibility,screen-reader,charts,prerequisite,
+38,36,Story,Explain this chart: a plain-English summary for every chart,,"As a screen reader user, I want each chart explained in a sentence or two, so that I understand the trend without seeing it.
+
+h4. Details
+* Add describeSeries(points) in a shared helper: change over the period, high and low with dates, and the overall trend.
+* Example: ""AAPL rose 4.2% this week, from $175 to $182. Low was Tuesday at $171; high was today.""
+* For the advanced chart, also mention your trades: ""You bought 2 shares on Oct 14 at $182; the price is above your average cost.""
+
+h4. Acceptance criteria
+# Every chart (novice portfolio, advanced price/volume/RSI, sparklines, allocation donut, exposure ring, Insights charts) has role=img and an accessible name plus a summary linked with aria-describedby.
+# An ""Explain this chart"" button reads the summary (shown as text, and spoken when the briefing voice is on).
+# Summaries update when the period changes and are announced politely.
+# describeSeries is unit tested for rising, falling, flat and empty series.",High,5,accessibility,screen-reader,charts,,
+39,36,Story,Show any chart as a data table,,"As a screen reader or keyboard user, I want to read a chart's numbers as a table, so that I can check exact values.
+
+h4. Details
+* A ""Show as table"" toggle under each chart.
+
+h4. Acceptance criteria
+# The table has a caption, column headers with scope, and the same points as the chart.
+# The toggle uses aria-expanded and keeps focus in place.
+# Large series are grouped (e.g. daily for 1Y) so the table stays readable.",High,3,accessibility,screen-reader,charts,,
+40,36,Story,Explore a chart point by point with the keyboard,,"As a screen reader user, I want to step through a chart with arrow keys, so that I can find specific moments.
+
+h4. Details
+* One focusable chart element; Left/Right move a cursor; the value is announced and drawn on the chart.
+
+h4. Acceptance criteria
+# Left/Right step one point; Home/End jump to the first/last point; PageUp/PageDown jump 10%.
+# Each step announces date, value and change, e.g. ""Oct 14, $182.40, up 1.2%"".
+# Trade markers are announced when the cursor reaches them (""You bought 2 shares here"").
+# D reads the chart summary, T toggles the table; the keys are listed in the shortcuts dialog.",Medium,5,accessibility,screen-reader,charts,,
+41,36,Story,Fix Insights chart points hidden from screen readers,,"As an analyst using a screen reader, I want to reach the chart's data points, so that I can read report values.
+
+h4. Details
+* insights-chart.ts puts focusable circles inside an svg with role=""img""; children of role=img are hidden from assistive technology, so the points can be focused but not read.
+
+h4. Acceptance criteria
+# Points are reachable and announced by NVDA and VoiceOver (or replaced by the keyboard-exploration pattern above).
+# The svg's accessible name describes the chart, not just its title.",High,2,accessibility,screen-reader,charts,insights,bug
+42,36,Story,Listen to the chart (sonification),,"As a blind trader, I want to hear the shape of a price chart, so that I can sense trends quickly.
+
+h4. Details
+* Stretch goal. Web Audio: price → pitch (log scale 220-880 Hz), time → left-to-right stereo, buy/sell trades as clicks, average cost as a quiet steady tone.
+
+h4. Acceptance criteria
+# Space plays the whole series in about 3 seconds; pressing again stops it.
+# Respects reduced motion and the pause-live-updates setting; audio starts only after a user action.
+# Value-to-pitch mapping is unit tested.",Low,5,accessibility,screen-reader,charts,stretch,demo
+43,,Epic,Colour-blind mode,Colour-blind mode,"Gains, losses, order status and chart lines can be told apart by people with red-green or blue-yellow colour blindness, using colours that stay distinct and signals that never rely on colour alone.",High,,accessibility,colour-blind,,,
+44,43,Story,Move colours into shared design tokens,,"As the team, we want every colour defined once, so that a colour-blind palette can be switched on in one place.
+
+h4. Details
+* About 390 colours are hard-coded across the SCSS files, plus more inline in templates and components (chart candles, volume bars, sparklines, ticker flashes, toasts, and the new briefing and switch-control components).
+* Define CSS custom properties on :root (e.g. --gain, --loss, --warning, --chart-1 to --chart-4, --surface, --text) and use them everywhere, including SVG fill and stroke.
+
+h4. Acceptance criteria
+# No hex colour remains in component SCSS or templates except in the token file.
+# The app looks the same as before with the default palette (compare screenshots of each page).
+# Chart SVGs take their colours from tokens rather than hard-coded attributes.",High,5,accessibility,colour-blind,prerequisite,,
+45,43,Story,Colour-blind palette setting,,"As a trader with colour blindness, I want a palette I can tell apart, so that I can see at a glance what went up and what went down.
+
+h4. Details
+* Add a Colour-blind mode option in Account settings: Off, Red-green safe (blue for gains, orange for losses), Blue-yellow safe.
+* Applied as a data attribute on <html> that switches the tokens; saved per browser and applied before the app starts, so the page doesn't flash the old colours.
+
+h4. Acceptance criteria
+# Each mode changes gains, losses, warnings, toasts, ticker flashes and every chart colour.
+# In each mode, gain and loss colours stay distinct in Coblis or Chrome DevTools simulations of protanopia, deuteranopia and tritanopia.
+# Text in every mode keeps WCAG AA contrast (4.5:1) against its background.
+# The setting can be changed by mouse, keyboard and switch control, and is remembered after a reload.",High,3,accessibility,colour-blind,,,
+46,43,Story,"Never use colour alone for gains, losses and status",,"As a colour-blind trader, I want arrows, signs and words next to colours, so that I don't misread a loss as a gain in any mode.
+
+h4. Details
+* Today ▲/▼ appears in only one place (the advanced portfolio summary); most up/down values rely on green or red text.
+* Covers holdings, positions, watchlists, the ticker, order status badges, rejected-order toasts and the market open/closed badge (WCAG 1.4.1).
+
+h4. Acceptance criteria
+# Every change value shows ▲ or ▼ and a + or − sign, as well as colour.
+# Order and market status show a word or icon (Filled, Rejected, Open, Closed), not just a coloured dot.
+# Ticker flashes add a small arrow, so the direction is clear without the colour.
+# Checked in greyscale: no information is lost.",High,3,accessibility,colour-blind,,,
+47,43,Story,Charts readable without colour,,"As a colour-blind trader, I want to tell chart lines and candles apart without relying on colour, so that I can read the technical chart.
+
+h4. Details
+* The advanced chart tells EMA 50, EMA 200 and VWAP apart only by blue, purple and yellow; candles and volume bars only by green and red.
+* The allocation donut and exposure ring tell segments apart only by colour.
+
+h4. Acceptance criteria
+# Up candles are hollow and down candles filled (a common trading convention), in every palette.
+# Indicator lines use different dash patterns and are labelled at the line end, as well as in the legend.
+# Donut and ring segments have patterns or direct labels.
+# The chart is still readable in greyscale and in every colour-blind simulation.",Medium,3,accessibility,colour-blind,charts,,
+48,43,Story,Support Windows High Contrast and the system contrast setting,,"As a user who relies on Windows High Contrast, I want the app to follow my system colours, so that it stays usable.
+
+h4. Details
+* Use @media (forced-colors: active) and (prefers-contrast: more) with system colour keywords (CanvasText, Highlight, and so on).
+
+h4. Acceptance criteria
+# With Windows High Contrast on, all text, focus rings, buttons and chart lines stay visible.
+# Gains and losses are still told apart by their ▲/▼ arrows and signs.
+# With prefers-contrast: more, borders and focus rings get stronger.",Low,2,accessibility,colour-blind,,,
