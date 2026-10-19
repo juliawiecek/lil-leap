@@ -11,10 +11,9 @@
 | Component | Guide |
 | --- | --- |
 | Identity | [auth](../auth/README.md) |
-| Holdings, portfolio and instruments | [nextTrade-holdings](../nextTrade-holdings/README.md) |
+| Holdings, portfolio, instruments and synthetic quotes | [nextTrade-holdings](../nextTrade-holdings/README.md) |
 | Submission and execution | [nextTrade-orders](../nextTrade-orders/README.md) |
 | Replica-backed reporting | [insights](../insights/README.md) |
-| Synthetic quotes | [data-pipeline](../data-pipeline/README.md) |
 | Trading client | [frontend](../frontend/README.md) |
 | Reporting client | [insights-frontend](../insights-frontend/README.md) |
 | Shared routing | [gateway configuration](../gateway/nginx.conf) |

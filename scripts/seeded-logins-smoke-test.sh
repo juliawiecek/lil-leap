@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TS-DB-04: the seeded test logins work on a fresh stack.
 #
-# Starts db, auth, holdings and quote-service on an empty volume, then checks that:
+# Starts db, auth and holdings (which also generates quotes) on an empty volume, then checks that:
 #   - novice@, advanced@, analyst@ and ops@nexttrade.local log in with the shared test password (200 + token)
 #   - each token carries the expected role and trader tier
 #   - the novice and advanced portfolios return 200 with $10,000 and $150,000 cash
@@ -29,7 +29,7 @@ CURL_IMAGE="curlimages/curl:8.10.1"
 PASSWORD="${SEED_TEST_PASSWORD:-}"
 NOVICE_ID="a0000000-0000-4000-8000-000000000001"
 ADVANCED_ID="a0000000-0000-4000-8000-000000000002"
-SERVICES=(db auth holdings quote-service)
+SERVICES=(db auth holdings)
 RESET_PASSWORDS=0
 
 if [[ -z "$PASSWORD" ]]; then
@@ -132,7 +132,7 @@ for user in novice:TRADER:NOVICE advanced:TRADER:ADVANCED analyst:ANALYST: ops:O
 done
 check "wrong password is rejected" "$(login novice@nexttrade.local wrong-password)" 401
 
-echo "Portfolios (waits for the first quotes from quote-service)"
+echo "Portfolios (waits for the first quotes from holdings)"
 portfolio() { # portfolio <user id> <token>
   request -H "Authorization: Bearer $2" "http://holdings:8080/api/v1/clients/$1/portfolio-summary"
 }

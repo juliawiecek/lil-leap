@@ -13,7 +13,6 @@ branches covered overall. The figures and what SonarQube counts are in
   `mvn -B clean verify`; open `target/site/jacoco/index.html` for that service.
 - In `auth`, run `npm run test:cov`; open `coverage/lcov-report/index.html`.
 - In each frontend, run `npm run test:coverage`; see its tests README for reports.
-- In `data-pipeline`, follow [Python coverage](../data-pipeline/PYTEST_COVERAGE.md).
 
 Install each component's dependencies first. PostgreSQL-dependent tests require
 the disposable database settings described in [service verification](architecture/service-boundaries.md#verification).

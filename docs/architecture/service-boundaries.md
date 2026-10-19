@@ -6,10 +6,10 @@ are retained so CI and Docker build contexts remain recognizable.
 | Diagram component | Directory / Compose service | Internal port | Responsibility |
 | --- | --- | --- | --- |
 | Identity | `auth` / `auth` | 8081 | Registration, login, token issuance/rotation and identity policy |
-| Holdings & Trade | `nextTrade-holdings` / `holdings` | 8080 | Accounts, cash, positions, order history and instrument-reference APIs |
+| Holdings & Trade | `nextTrade-holdings` / `holdings` | 8080 | Accounts, cash, positions, order history, instrument reference, quote reads and live synthetic quote generation |
 | Order & Execution | `nextTrade-orders` / `orders` | 8082 | Submission, validation, acceptance, execution and atomic settlement |
-| Quote Service | `data-pipeline` / `quote-service` | 8083 | Generate, persist and serve source-tagged synthetic quotes |
 | Insights | `insights` / `insights` | 8084 | Analyst-only reporting queries against the reporting replica |
+| Event streaming | `kafka` / `kafka` (`docker-compose.kafka.yml`) | 9092 | Order lifecycle events from Orders to Insights; optional, never on the request path |
 | API Gateway | `gateway` / `gateway` | 4200, 4201 | Same-origin routing and optional TLS termination for both clients |
 
 ```mermaid
@@ -19,12 +19,12 @@ flowchart TD
   Gateway --> Identity[Identity :8081]
   Gateway --> Holdings[Holdings & Trade :8080]
   Gateway --> Orders[Orders & Execution :8082]
-  Gateway --> Quotes[Quotes :8083]
   Gateway --> Insights[Insights :8084]
   Identity --> Primary[(PostgreSQL primary)]
   Holdings --> Primary
   Orders --> Primary
-  Quotes --> Primary
+  Orders -.->|order events, optional| Kafka[Kafka :9092]
+  Kafka -.-> Insights
   Primary -->|Physical streaming replication| Replica[(Reporting replica)]
   Insights -->|SELECT only| Replica
 ```
@@ -41,9 +41,13 @@ Holdings owns the public account/portfolio/reference read APIs. Orders uses smal
 local read contracts for account eligibility, instrument flags and stored quotes
 to validate and settle trades against the shared primary. The instrument API
 controller exists only in Holdings; Orders' instrument classes are validation
-dependencies, not another catalog endpoint. Quote ingestion remains solely in
-the Python service. The current execution quote contract is a JDBC query against
-that service's persisted quotes; it is not an HTTP call or a second quote producer.
+dependencies, not another catalog endpoint. Holdings is the only quote producer:
+a scheduled job writes one synthetic GBM quote per catalog stock every
+`QUOTE_INTERVAL_SECONDS` (default 2), from
+`nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv`. The
+execution quote contract is a JDBC query against those persisted quotes; it is not
+an HTTP call. The separate Python quote service was folded into Holdings so the
+system runs five services: Identity, Holdings & Trade, Orders, Insights and Kafka.
 
 Identity retains provisioning of a trader's initial account in its registration
 transaction. Portfolio access and order history belong to Holdings. Java services
@@ -76,8 +80,7 @@ All service ports are internal to Compose. The client URLs remain
 | NextTrade | `POST /api/v1/orders` | Orders |
 | NextTrade | `GET /api/v1/orders` | Holdings |
 | NextTrade | `/api/v1/accounts`, `/holdings`, `/cash`, `/instruments` | Holdings (all use `/api/v1`) |
-| NextTrade | `/api/v1/quotes/{symbol}` | Quotes |
-| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*` | Holdings display reads |
+| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*`, `/api/v1/quotes/candles/*` | Holdings display reads |
 | NextTrade | `/api/v1/clients/{id}/holdings`, `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Holdings (caller-scoped) |
 | NextTrade | `/api/v1/clients/{id}/orders?from=YYYY-MM-DD&to=YYYY-MM-DD&status=FILLED` | Holdings (TRADER-only, caller-scoped history and fills) |
 | Insights | `/api/v1/reports/*` | Insights |
@@ -170,8 +173,8 @@ These are separate product requirements; moving folders does not implement them:
   workflows are needed before a newly registered account can trade. Do not bypass
   these controls or invent balances to make demonstrations pass.
 - The external HTTP market-data provider shown in the diagram is currently an
-  in-process synthetic generator in `data-pipeline`. A separate provider/HTTP
-  adapter is needed if independent deployment is required.
+  in-process synthetic generator in Holdings. A provider adapter is needed to use
+  real market data.
 - The existing `v_account_holdings` view computes average cost using signed execution
   prices, which gives incorrect remaining cost after profitable/loss-making sells.
   The live Holdings API reads the correctly maintained `holdings` cache instead.

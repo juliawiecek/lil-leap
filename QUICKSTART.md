@@ -25,7 +25,6 @@ This single script creates the local roles, creates the `nexttrade` database if 
 Create these files from their examples:
 
 - `auth/.env` from `auth/.env.example`
-- `data-pipeline/.env` from `data-pipeline/.env.example`
 
 Spring Boot services use committed local profile files instead of `.env` files:
 
@@ -119,7 +118,8 @@ mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 cd nextTrade-holdings
 mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
-**Ready when:** "Tomcat started on port(s): 8080"
+**Ready when:** "Tomcat started on port(s): 8080". Holdings also writes a fresh synthetic
+price for every stock every 2 seconds; orders need these to fill.
 
 ### Terminal 4: Insights Service
 ```cmd
@@ -128,17 +128,7 @@ mvn spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 **Ready when:** "Tomcat started on port(s): 8084"
 
-### Terminal 5: Data Pipeline
-```cmd
-cd data-pipeline
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m src.service_runner
-```
-**Ready when:** "Generating and ingesting synthetic quotes continuously"
-
-### Terminal 6: Frontend
+### Terminal 5: Frontend
 ```cmd
 cd frontend
 npm ci
@@ -146,7 +136,7 @@ npm start
 ```
 **Ready when:** "Angular Live Development Server is listening on localhost:4300"
 
-### Terminal 7: Insights Frontend
+### Terminal 6: Insights Frontend
 ```cmd
 cd insights-frontend
 npm ci
@@ -158,7 +148,7 @@ npm start
 > property on Maven, not on the app, so the app starts without its local settings and fails on
 > `APP_JWT_SECRET`.
 
-### Optional Terminal 8: Mailpit (password reset emails)
+### Optional Terminal 7: Mailpit (password reset emails)
 Download `mailpit-windows-amd64.zip` from https://github.com/axllent/mailpit/releases, unzip it, then:
 ```cmd
 mailpit.exe --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025
@@ -223,10 +213,10 @@ For detailed explanations, see:
 ## Key Concepts
 
 - **No Docker:** All services run natively on your Windows machine
-- **Local Ports:** Each service has its own port (8080–8084 for backends, 4300–4301 for frontends)
+- **Local Ports:** Each service has its own port (8080–8082 and 8084 for backends, 4300–4301 for frontends)
 - **Shared Database:** All services connect to the same PostgreSQL on localhost:5432
 - **Shared JWT Secret:** Services must use the same local JWT secret value across `auth/.env` and the Spring local profile files
-- **Per-Service Local Config:** `auth` and `data-pipeline` use `.env`; Spring Boot services use `application-local.yml`
+- **Per-Service Local Config:** `auth` uses `.env`; Spring Boot services use `application-local.yml`
 - **No Global Setup Scripts:** Start each service directly from its own folder
 
 ---
