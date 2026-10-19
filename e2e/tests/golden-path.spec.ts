@@ -21,7 +21,7 @@ test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }
   const response = await submitted;
   expect(response.status()).toBe(201);
   expect(response.request().headers().authorization).toBe(`Bearer ${tokens.accessToken}`);
-  const order = await response.json();
+  const order = JSON.parse((await response.body()).toString());
   const claims = JSON.parse(Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString());
   let filled;
   await expect.poll(async () => {
