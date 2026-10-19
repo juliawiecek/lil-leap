@@ -54,6 +54,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/settlements/recover", "/settlements/rollback").hasRole("OPERATIONS")
+                        .requestMatchers(HttpMethod.GET, "/settlements/status/**").hasRole("OPERATIONS")
                         .requestMatchers(HttpMethod.POST, "/orders").access(traderWithoutParameters())
                         // UUID ids only, so sibling routes such as /orders/quote-preview are matched separately.
                         .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, ORDER_READ_PATH))
