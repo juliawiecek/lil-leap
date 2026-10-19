@@ -60,7 +60,7 @@ class InstrumentSearchRepositoryTest {
 
     @BeforeEach
     void fixtures() {
-        jdbc.execute("TRUNCATE instruments CASCADE");
+        com.neueda.leap.TradeRecordsForTests.unlocked(jdbc, "TRUNCATE instruments CASCADE");
         
         // Insert test instruments
         jdbc.update("INSERT INTO instruments(instrument_id,symbol,instrument_name,asset_class,market_code,currency,enabled,tradable) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -186,7 +186,7 @@ class InstrumentSearchRepositoryTest {
     @Test
     void resultSetIsBoundedTo100() {
         // Clear and insert 150 test instruments
-        jdbc.execute("TRUNCATE instruments CASCADE");
+        com.neueda.leap.TradeRecordsForTests.unlocked(jdbc, "TRUNCATE instruments CASCADE");
         for (int i = 0; i < 150; i++) {
             jdbc.update("INSERT INTO instruments(instrument_id,symbol,instrument_name,asset_class,market_code,currency,enabled,tradable) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     UUID.randomUUID(), "TEST" + i, "Test Instrument " + i, "COMMON_STOCK", "TEST", "USD", true, true);

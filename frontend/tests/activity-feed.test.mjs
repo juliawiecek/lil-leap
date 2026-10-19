@@ -249,3 +249,62 @@ test('a slow earlier response never overwrites a newer one, and the feed refresh
   t.mock.timers.tick(20000);
   assert.equal(calls, after, 'and stops when it goes away');
 });
+test('client cancels with a POST through the shared transport, and explains a refusal (PS-14)', async () => {
+  const ok = fakeFetch(json(200, { orderId: 'o 1', status: 'CANCELLED' }));
+  await new OrderHistoryClient({ accessToken: token }, apiHttp(ok.fetchImpl)).cancel('o 1');
+  assert.equal(ok.calls[0].url, '/api/v1/orders/o%201/cancel');
+  assert.equal(ok.calls[0].init.method, 'POST');
+  assert.equal(ok.calls[0].init.headers.Authorization, undefined);
+
+  const cancelWith = response => new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(response).fetchImpl)).cancel('o-1');
+  await assert.rejects(cancelWith(json(409, { error: 'ORDER_EXECUTING', message: 'Order is already executing.' })), /already executing/);
+  await assert.rejects(cancelWith(json(404, { error: 'ORDER_NOT_FOUND', message: 'The order was not found.' })), /That order was not found/);
+  await assert.rejects(cancelWith(new Response('oops', { status: 500 })), /Could not cancel the order/);
+  await assert.rejects(cancelWith(new TypeError('network')), /Could not reach the server/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }, apiHttp(ok.fetchImpl)).cancel('o-1'), /Sign in/);
+});
+
+/** A feed whose order service also records cancels; the orders it lists can change after one. */
+function cancellableFeed(t, { cancel = async () => {} } = {}) {
+  let status = 'PENDING';
+  const cancelled = [];
+  const orders = {
+    list: async () => [row({ orderId: 'waiting', status, fillPrice: null, submittedAt: '2026-10-01T18:00:00Z' }), row({ orderId: 'done' })],
+    cancel: async id => { cancelled.push(id); await cancel(id); status = 'CANCELLED'; },
+  };
+  const feed = component(t, ActivityFeed, [
+    { provide: OrderHistoryService, useValue: orders },
+    { provide: CashActivityService, useValue: { list: async () => [] } },
+  ]);
+  return { feed, cancelled };
+}
+
+test('only waiting orders offer Cancel, and a confirmed cancel shows Cancelled after reloading (PS-14)', async t => {
+  const { feed, cancelled } = cancellableFeed(t);
+  feed.ngOnInit();
+  await flush();
+  const [waiting, done] = feed.items();
+  assert.equal(feed.canCancel(waiting), true);
+  assert.equal(feed.canCancel(done), false);
+
+  feed.askCancel(waiting);
+  assert.equal(feed.confirming(), 'waiting');
+  await feed.confirmCancel(waiting);
+  assert.deepEqual(cancelled, ['waiting']);
+  assert.equal(feed.confirming(), null);
+  assert.equal(feed.notice(), 'Order cancelled: 1 AAPL. Nothing was charged.');
+  assert.equal(feed.items()[0].status, 'CANCELLED');
+  assert.equal(feed.items()[0].detail, 'Cancelled, nothing was charged');
+  assert.equal(feed.canCancel(feed.items()[0]), false);
+  feed.ngOnDestroy();
+});
+
+test('a refused cancel shows the reason and reloads the real status (PS-14)', async t => {
+  const { feed } = cancellableFeed(t, { cancel: async () => { throw new Error('Order is already executing.'); } });
+  feed.ngOnInit();
+  await flush();
+  await feed.confirmCancel(feed.items()[0]);
+  assert.equal(feed.notice(), 'Order is already executing.');
+  assert.equal(feed.cancelling(), false);
+  feed.ngOnDestroy();
+});

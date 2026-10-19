@@ -35,6 +35,8 @@ export interface ActivityItem {
   amount: number | null;
   /** FILLED, REJECTED, SUBMITTED… for orders; SETTLED or PENDING for cash. */
   status: string;
+  /** The order behind an order row, so a waiting one can be cancelled (PS-14). */
+  orderId?: string;
 }
 
 export interface ActivityFilters {
@@ -83,6 +85,8 @@ export function orderItem(row: OrderHistoryRow): ActivityItem {
     detail = `Filled at ${formatMoney(row.fillPrice!)}`;
   } else if (row.status === 'REJECTED') {
     detail = 'Rejected, nothing was charged';
+  } else if (row.status === 'CANCELLED') {
+    detail = 'Cancelled, nothing was charged';
   }
   return {
     id: `order-${row.orderId}`,
@@ -92,6 +96,7 @@ export function orderItem(row: OrderHistoryRow): ActivityItem {
     detail,
     amount: filled ? round((buy ? -1 : 1) * shares * row.fillPrice!) : null,
     status: row.status,
+    orderId: row.orderId,
   };
 }
 

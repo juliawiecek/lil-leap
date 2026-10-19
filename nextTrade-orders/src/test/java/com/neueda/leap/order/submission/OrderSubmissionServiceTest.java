@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission;
 
+import com.neueda.leap.order.submission.audit.RuleChecks;
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.repository.AccountTradingProfile;
@@ -42,6 +43,8 @@ class OrderSubmissionServiceTest {
     private OrderSubmissionService service;
     private final InstrumentService instruments = mock(InstrumentService.class);
     private final IndicativePriceService prices = mock(IndicativePriceService.class);
+    private final com.neueda.leap.order.submission.audit.SubmissionAuditRepository audit =
+            mock(com.neueda.leap.order.submission.audit.SubmissionAuditRepository.class);
     private OrderSufficiencyService sufficiency;
     private UUID userId;
     private UUID accountId;
@@ -52,7 +55,7 @@ class OrderSubmissionServiceTest {
     void setUp() {
         repository = mock(OrderSubmissionRepository.class);
         sufficiency = mock(OrderSufficiencyService.class);
-        service = new OrderSubmissionService(repository, sufficiency, instruments, prices);
+        service = new OrderSubmissionService(repository, sufficiency, instruments, prices, audit);
         userId = UUID.randomUUID();
         accountId = UUID.randomUUID();
         instrumentId = UUID.randomUUID();
@@ -205,6 +208,77 @@ class OrderSubmissionServiceTest {
         assertThrows(OrderSufficiencyException.class, () -> service.submit(userId, request));
 
         verify(repository, never()).insert(any(), any(), any(), any());
+    }
+
+    @Test
+    void acceptedOrderRecordsAPassForEveryRuleUnderItsRequestId() {
+        SubmitOrderRequest request = request("aapl", "buy", 10);
+        OrderSubmissionResponse saved = response("AAPL");
+        givenActiveAccountTrading(request);
+        when(repository.insert(request, instrumentId, "AAPL", null)).thenReturn(Optional.of(saved));
+        UUID requestId = UUID.randomUUID();
+
+        service.submit(userId, request, requestId);
+
+        verify(audit).recordAccepted(userId, accountId, saved.orderId(), requestId, List.of(
+                pass("ACCOUNT_ACTIVE"), pass("TRADING_ENABLED"), pass("INSTRUMENT_SUPPORTED"), pass("INSTRUMENT_ENABLED"),
+                pass("INSTRUMENT_TRADABLE"), pass("LOCATION"), pass("SUFFICIENCY")));
+        verify(audit, never()).recordRefused(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void refusalForInsufficientCashRecordsEachEarlierPassAndOneFail() {
+        SubmitOrderRequest request = request("aapl", "buy", 10);
+        givenActiveAccountTrading(request);
+        doThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.INSUFFICIENT_CASH))
+                .when(sufficiency).validate(request, instrumentId);
+        UUID requestId = UUID.randomUUID();
+
+        assertThrows(OrderSufficiencyException.class, () -> service.submit(userId, request, requestId));
+
+        verify(audit).recordRefused(userId, request, requestId, "INSUFFICIENT_CASH", List.of(
+                pass("ACCOUNT_ACTIVE"), pass("TRADING_ENABLED"), pass("INSTRUMENT_SUPPORTED"), pass("INSTRUMENT_ENABLED"),
+                pass("INSTRUMENT_TRADABLE"), pass("LOCATION"),
+                new RuleChecks.Check("SUFFICIENCY", false, "INSUFFICIENT_CASH")));
+        verify(repository, never()).insert(any(), any(), any(), any());
+    }
+
+    @Test
+    void ruleRefusalStopsAtTheFirstFailedRule() {
+        SubmitOrderRequest request = request("aapl", "buy", 10);
+        givenActiveAccountTrading(request);
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, false, true)));
+        UUID requestId = UUID.randomUUID();
+
+        assertThrows(OrderRuleException.class, () -> service.submit(userId, request, requestId));
+
+        verify(audit).recordRefused(userId, request, requestId, "INSTRUMENT_DISABLED", List.of(
+                pass("ACCOUNT_ACTIVE"), pass("TRADING_ENABLED"), pass("INSTRUMENT_SUPPORTED"),
+                new RuleChecks.Check("INSTRUMENT_ENABLED", false, "INSTRUMENT_DISABLED")));
+        verifyNoInteractions(sufficiency);
+    }
+
+    @Test
+    void aRefusalThatCannotBeRecordedIsNeverReturnedAsARefusal() {
+        SubmitOrderRequest request = request("aapl", "buy", 10);
+        givenActiveAccountTrading(request);
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, false)));
+        doThrow(new IllegalStateException("audit store down"))
+                .when(audit).recordRefused(any(), any(), any(), any(), any());
+
+        assertThrows(IllegalStateException.class, () -> service.submit(userId, request, UUID.randomUUID()));
+    }
+
+    private void givenActiveAccountTrading(SubmitOrderRequest request) {
+        when(repository.accountBelongsToUser(accountId, userId)).thenReturn(true);
+        when(repository.findAccountTradingProfile(accountId)).thenReturn(Optional.of(
+                new AccountTradingProfile("ACTIVE", true, "level1", BigDecimal.valueOf(100), BigDecimal.valueOf(1000))));
+        when(repository.findByAccountAndClientReference(accountId, request.clientReference())).thenReturn(Optional.empty());
+        when(instruments.findInstrumentBySymbol("AAPL")).thenReturn(Optional.of(instrument(instrumentId, true, true)));
+    }
+
+    private static RuleChecks.Check pass(String rule) {
+        return new RuleChecks.Check(rule, true, null);
     }
 
     private SubmitOrderRequest request(String symbol, String side, long quantity) {

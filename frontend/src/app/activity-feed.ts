@@ -4,10 +4,13 @@ import { OrderHistoryRow } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
 import { AccountsService } from './accounts.service';
 import { CashActivityService } from './cash-activity.service';
-import { ACTIVITY_KINDS, ActivityKind, CashMovement, buildActivity, formatLocalTime, formatMoney } from './activity-api';
+import { ACTIVITY_KINDS, ActivityItem, ActivityKind, CashMovement, buildActivity, formatLocalTime, formatMoney } from './activity-api';
 
 /** How often the feed re-reads, matching the dashboards' price refresh. */
 export const ACTIVITY_REFRESH_MS = 5000;
+
+/** Statuses in which an order is still waiting and can be cancelled (PS-14). */
+export const CANCELLABLE: ReadonlySet<string> = new Set(['SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED']);
 
 /**
  * One activity feed (PS-11, BR-11): orders, fills, rejections and cash movements in a single
@@ -56,6 +59,11 @@ export class ActivityFeed implements OnInit, OnDestroy {
     return limit ? all.slice(0, limit) : all;
   });
   readonly hasFilters = computed(() => this.kind() !== 'All' || !!this.from() || !!this.to());
+  /** The order whose one-line "Cancel this order?" confirm is showing, if any. */
+  readonly confirming = signal<string | null>(null);
+  readonly cancelling = signal(false);
+  /** Outcome of the last cancel, e.g. "Order cancelled: 1 AAPL. Nothing was charged." */
+  readonly notice = signal('');
   readonly money = formatMoney;
   readonly when = formatLocalTime;
 
@@ -97,6 +105,33 @@ export class ActivityFeed implements OnInit, OnDestroy {
     this.from.set('');
     this.to.set('');
     void this.load();
+  }
+
+  canCancel(item: ActivityItem): boolean {
+    return item.kind === 'order' && !!item.orderId && CANCELLABLE.has(item.status);
+  }
+
+  askCancel(item: ActivityItem): void {
+    this.confirming.set(item.orderId ?? null);
+    this.notice.set('');
+  }
+
+  /** Cancels the confirmed order; the feed then reloads, so it shows "Cancelled" or the order's real status. */
+  async confirmCancel(item: ActivityItem): Promise<void> {
+    if (this.cancelling() || !item.orderId) {
+      return;
+    }
+    this.cancelling.set(true);
+    try {
+      await this.#orders.cancel(item.orderId);
+      this.notice.set(`Order cancelled: ${item.title.replace(/^(Buy|Sell) /, '')}. Nothing was charged.`);
+    } catch (e) {
+      this.notice.set(reason(e, 'Could not cancel the order. Please try again.'));
+    } finally {
+      this.cancelling.set(false);
+      this.confirming.set(null);
+      await this.load();
+    }
   }
 
   /** "FILLED" becomes "Filled", "SETTLED" becomes "Settled". */

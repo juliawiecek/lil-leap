@@ -21,6 +21,9 @@
   }
 </div>
 
+@if (notice()) {
+  <p class="activity-message notice" role="status">{{ notice() }}</p>
+}
 @if (error()) {
   <p class="activity-message error" role="alert">{{ error() }}</p>
 } @else if (!loaded()) {
@@ -47,11 +50,25 @@
             class="status"
             [class.filled]="item.status === 'FILLED'"
             [class.rejected]="item.status === 'REJECTED'"
+            [class.cancelled]="item.status === 'CANCELLED'"
             >{{ statusLabel(item.status) }}</span
           >
           <span class="amount" [class.gain]="(item.amount ?? 0) > 0" [class.loss]="(item.amount ?? 0) < 0">{{
             item.amount === null ? '—' : money(item.amount, true)
           }}</span>
+          @if (canCancel(item)) {
+            <span class="actions">
+              @if (confirming() === item.orderId) {
+                <span class="confirm" role="group" [attr.aria-label]="'Cancel ' + item.title + '?'">
+                  Cancel this order?
+                  <button type="button" class="danger" [disabled]="cancelling()" (click)="confirmCancel(item)">Yes, cancel</button>
+                  <button type="button" (click)="confirming.set(null)">Keep</button>
+                </span>
+              } @else {
+                <button type="button" (click)="askCancel(item)">Cancel</button>
+              }
+            </span>
+          }
         </li>
       }
     </ol>

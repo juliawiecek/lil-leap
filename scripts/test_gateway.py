@@ -60,6 +60,7 @@ def main():
         cases = [
             (18420, 'GET', '/api/v1/orders?limit=5', 'holdings:8080'),
             (18420, 'POST', '/api/v1/orders', 'orders:8082'),
+            (18420, 'POST', '/api/v1/orders/123e4567-e89b-12d3-a456-426614174000/cancel', 'orders:8082'),
             (18420, 'GET', '/api/v1/market/status', 'orders:8082'),
             (18420, 'GET', '/api/v1/holdings', 'holdings:8080'),
             (18420, 'GET', '/api/v1/accounts', 'holdings:8080'),
@@ -79,6 +80,7 @@ def main():
             (18420, 'GET', '/', 'frontend:8080'),
             (18421, 'GET', '/', 'insights-frontend:8080'),
             (18421, 'GET', '/api/v1/reports/summary', 'insights:8084'),
+            (18421, 'GET', '/api/v1/trades/test/events', 'insights:8084'),
             (18421, 'POST', '/auth/login', 'auth:8081'),
             (18421, 'POST', '/api/v1/orders', None),
             (18421, 'GET', '/api/v1/quotes/history/test', None),

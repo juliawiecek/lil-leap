@@ -140,6 +140,44 @@
   color: #e5484d;
 }
 
+.status.cancelled {
+  opacity: 0.6;
+}
+
+// PS-14: cancel a waiting order, with a one-line confirm under the row.
+.activity-item .actions {
+  grid-column: 1 / -1;
+  justify-self: end;
+
+  button {
+    font: inherit;
+    font-size: 0.8rem;
+    color: inherit;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-radius: 6px;
+    padding: 3px 9px;
+    cursor: pointer;
+  }
+
+  button.danger {
+    color: #e5484d;
+    border-color: color-mix(in srgb, #e5484d 50%, transparent);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
 // The dashboard panels are narrow: stack the time above each row and drop the status column.
 :host(.compact) .activity-item {
   grid-template-columns: minmax(0, 1fr) auto;
