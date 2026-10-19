@@ -53,12 +53,13 @@ psql -v ON_ERROR_STOP=1 \
         accounts,
         orders,
         fills,
-        order_status_history,
         holdings,
-        holding_movements,
-        cash_balances,
-        cash_transactions
+        cash_balances
     TO :"app_user";
+
+    -- Trade records are permanent (BR-14): the application may add to them, never change them.
+    GRANT SELECT, INSERT ON order_status_history, holding_movements, cash_transactions TO :"app_user";
+    REVOKE UPDATE, DELETE, TRUNCATE ON order_status_history, holding_movements, cash_transactions FROM :"app_user";
 
     -- Portfolio detail reads active holds; no reservation writer is implemented yet.
     GRANT SELECT ON cash_holds TO :"app_user";

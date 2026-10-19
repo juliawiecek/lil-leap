@@ -66,7 +66,7 @@ class OrderLifecyclePostgresTest {
 
     @BeforeEach
     void fixtures() {
-        jdbc.execute("TRUNCATE users, instruments CASCADE");
+        com.neueda.leap.order.TradeRecordsForTests.unlocked(jdbc, "TRUNCATE users, instruments CASCADE");
         user = UUID.randomUUID(); account = UUID.randomUUID(); instrument = UUID.randomUUID();
         jdbc.update("INSERT INTO users(user_id,email,password_hash) VALUES (?, 'trader@example.test', 'test-only')", user);
         jdbc.update("INSERT INTO customer_profiles(user_id,first_name,last_name,phone,address,country,date_of_birth,ssn_encrypted) VALUES (?, 'Test', 'Trader', '555-0100', '1 Main St', 'US', DATE '1990-01-01', decode('00','hex'))", user);
@@ -116,7 +116,7 @@ class OrderLifecyclePostgresTest {
         assertThat(submissions.submit(user, request).created()).isFalse();
         assertThat(count("fills")).isEqualTo(1);
         assertThat(count("holding_movements")).isEqualTo(1);
-        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log WHERE event_type <> 'RULE_CHECKED' ORDER BY event_type", String.class))
                 .containsExactly("ORDER_ACCEPTED", "ORDER_FILLED", "PRICE_DECISION", "SETTLEMENT_COMPLETED");
         assertThat(jdbc.queryForObject("SELECT payload->>'executionPrice' FROM audit_log WHERE event_type='ORDER_FILLED'", String.class))
                 .isEqualTo("100.00000000");
@@ -179,7 +179,8 @@ class OrderLifecyclePostgresTest {
     void sellAfterSpendingBelowOpeningMinimumFillsAndKeepsLedgerConsistent() {
         jdbc.update("UPDATE accounts SET min_balance_requirement=5000 WHERE account_id=?", account);
         jdbc.update("UPDATE cash_balances SET balance=5000 WHERE account_id=?", account);
-        jdbc.update("UPDATE cash_transactions SET amount=5000 WHERE account_id=? AND transaction_type='DEPOSIT'", account);
+        com.neueda.leap.order.TradeRecordsForTests.unlocked(jdbc,
+                "UPDATE cash_transactions SET amount=5000 WHERE account_id='" + account + "' AND transaction_type='DEPOSIT'");
         UUID buy = submit("BUY", 40);
         worker.execute(worker.claimNext());
         assertThat(status(buy)).isEqualTo("FILLED");
@@ -290,7 +291,7 @@ class OrderLifecyclePostgresTest {
         assertThat(count("holding_movements")).isZero();
         assertThat(count("holdings")).isZero();
         assertThat(count("cash_transactions")).isEqualTo(1);
-        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log WHERE event_type <> 'RULE_CHECKED' ORDER BY event_type", String.class))
                 .containsExactly("ORDER_ACCEPTED", "ORDER_REQUEUED");
         assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10000");
     }
@@ -298,7 +299,7 @@ class OrderLifecyclePostgresTest {
     @Test
     void legacyUnvalidatedSubmissionIsNotAutomaticallyTraded() {
         UUID id = submit("BUY", 1);
-        jdbc.update("DELETE FROM order_status_history WHERE order_id=?", id);
+        com.neueda.leap.order.TradeRecordsForTests.unlocked(jdbc, "DELETE FROM order_status_history WHERE order_id='" + id + "'");
         assertThat(worker.claimNext()).isNull();
         assertThat(status(id)).isEqualTo("SUBMITTED");
         assertThat(count("fills")).isZero();
@@ -326,7 +327,7 @@ class OrderLifecyclePostgresTest {
         jdbc.update("UPDATE orders SET execution_attempts=9,next_execution_at=CURRENT_TIMESTAMP WHERE order_id=?", id);
         worker.execute(worker.claimNext());
         assertThat(status(id)).isEqualTo("REJECTED");
-        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log ORDER BY event_type", String.class))
+        assertThat(jdbc.queryForList("SELECT event_type FROM audit_log WHERE event_type <> 'RULE_CHECKED' ORDER BY event_type", String.class))
                 .containsExactly("ORDER_ACCEPTED", "ORDER_REJECTED", "ORDER_REQUEUED");
         assertThat(count("fills")).isZero();
     }
@@ -356,5 +357,63 @@ class OrderLifecyclePostgresTest {
         worker.execute(worker.claimNext());
         assertThat(status(fills)).isEqualTo("FILLED");
         assertThat(jdbc.queryForObject("SELECT execution_price FROM fills", BigDecimal.class)).isEqualByComparingTo("106");
+    }
+
+    @Test
+    void tradeRecordsCannotBeChangedOrRemovedEvenByTheOwner() {
+        UUID id = submit("BUY", 1);
+        worker.execute(worker.claimNext());
+        assertThat(status(id)).isEqualTo("FILLED");
+        for (String table : new String[]{"audit_log", "order_status_history", "holding_movements", "cash_transactions"}) {
+            String column = table.equals("order_status_history") ? "occurred_at" : "created_at";
+            assertThatThrownBy(() -> jdbc.update("UPDATE " + table + " SET " + column + " = " + column))
+                    .rootCause().hasMessageContaining("permanent trade record");
+            assertThatThrownBy(() -> jdbc.update("DELETE FROM " + table)).rootCause().hasMessageContaining("permanent trade record");
+            assertThatThrownBy(() -> jdbc.execute("TRUNCATE " + table + " CASCADE")).rootCause().hasMessageContaining("permanent trade record");
+        }
+    }
+
+    @Test
+    void deletingAUserCannotEraseWhoTheirAuditRecordsBelongTo() {
+        UUID other = UUID.randomUUID();
+        jdbc.update("INSERT INTO users(user_id,email,password_hash) VALUES (?, 'other@example.test', 'test-only')", other);
+        jdbc.update("INSERT INTO audit_log(user_id, actor_type, event_type) VALUES (?, 'USER', 'LOGIN')", other);
+        assertThatThrownBy(() -> jdbc.update("DELETE FROM users WHERE user_id=?", other))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void aRefusedOrderCanBeLookedUpByItsRequestIdWithEveryRuleChecked() throws Exception {
+        String bearer = "Bearer " + tokens.issueToken(user, "trader@example.test");
+        String body = """
+                {"accountId":"%s","symbol":"AAPL","clientReference":"%s","side":"BUY","quantity":1000,"orderType":"MARKET"}
+                """.formatted(account, UUID.randomUUID());
+        String requestId = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/api/v1/orders").contextPath("/api/v1").header("Authorization", bearer)
+                        .contentType("application/json").content(body))
+                .andExpect(MockMvcResultMatchers.status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error").value("INSUFFICIENT_CASH"))
+                .andReturn().getResponse().getHeader("X-Request-Id");
+
+        assertThat(requestId).isNotBlank();
+        assertThat(jdbc.queryForObject("""
+                SELECT payload->>'reasonCode' FROM audit_log
+                WHERE event_type='SUBMISSION_REFUSED' AND payload->>'requestId'=? AND related_order_id IS NULL
+                """, String.class, requestId)).isEqualTo("INSUFFICIENT_CASH");
+        assertThat(jdbc.queryForList("""
+                SELECT payload->>'rule' || ':' || (payload->>'result') || COALESCE(':' || (payload->>'reasonCode'), '')
+                FROM audit_log WHERE event_type='RULE_CHECKED' AND payload->>'requestId'=? ORDER BY created_at, audit_id
+                """, String.class, requestId)).containsExactlyInAnyOrder(
+                "ACCOUNT_ACTIVE:PASS", "TRADING_ENABLED:PASS", "INSTRUMENT_SUPPORTED:PASS", "INSTRUMENT_ENABLED:PASS",
+                "INSTRUMENT_TRADABLE:PASS", "LOCATION:PASS", "SUFFICIENCY:FAIL:INSUFFICIENT_CASH");
+        assertThat(count("orders")).isZero();
+    }
+
+    @Test
+    void anAcceptedOrderRecordsAPassForEveryRuleWithTheOrder() {
+        UUID id = submit("BUY", 1);
+        assertThat(jdbc.queryForList("""
+                SELECT payload->>'result' FROM audit_log WHERE event_type='RULE_CHECKED' AND related_order_id=?
+                """, String.class, id)).hasSize(7).containsOnly("PASS");
     }
 }
