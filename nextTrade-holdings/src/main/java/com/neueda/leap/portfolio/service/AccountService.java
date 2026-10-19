@@ -1,6 +1,7 @@
 package com.neueda.leap.portfolio.service;
 
 import com.neueda.leap.portfolio.dto.AccountResponse;
+import com.neueda.leap.portfolio.dto.CashActivityResponse;
 import com.neueda.leap.portfolio.dto.TransferRequest;
 import com.neueda.leap.portfolio.dto.TransferResponse;
 import com.neueda.leap.portfolio.service.AccountActionException.Reason;
@@ -10,7 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,7 +23,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Lists, opens and moves cash between the caller's own accounts (PS-05, BR-02).
+ * Lists, opens and moves cash between the caller's own accounts (PS-05, BR-02), and lists their
+ * non-trade cash movements for the activity feed (PS-11).
  *
  * <p>Every statement is scoped by the user id from the validated JWT. A transfer locks both
  * account rows -- the lock the orders service takes before it moves cash -- in id order, so
@@ -58,6 +64,29 @@ public class AccountService {
             VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
             RETURNING account_id, created_at
             """;
+    /** Newest rows the feed shows; older movements stay in the ledger. Matches the LIMIT below. */
+    static final int MAX_CASH_ACTIVITY = 500;
+    /** Fills already appear in the feed as orders, so BUY and SELL rows are left out. */
+    private static final String CASH_ACTIVITY_SQL = """
+            SELECT ct.transaction_id, ct.account_id, a.account_name, ct.transaction_type, ct.amount,
+                   ct.settlement_status, ct.created_at
+            FROM cash_transactions ct JOIN accounts a ON a.account_id = ct.account_id
+            WHERE a.user_id = ? AND ct.transaction_type NOT IN ('BUY', 'SELL')
+              AND ct.created_at >= ? AND ct.created_at < ?
+            ORDER BY ct.created_at DESC, ct.transaction_id
+            LIMIT 500
+            """;
+    private static final String ACCOUNT_CASH_ACTIVITY_SQL = """
+            SELECT ct.transaction_id, ct.account_id, a.account_name, ct.transaction_type, ct.amount,
+                   ct.settlement_status, ct.created_at
+            FROM cash_transactions ct JOIN accounts a ON a.account_id = ct.account_id
+            WHERE a.user_id = ? AND ct.transaction_type NOT IN ('BUY', 'SELL')
+              AND ct.created_at >= ? AND ct.created_at < ? AND ct.account_id = ?
+            ORDER BY ct.created_at DESC, ct.transaction_id
+            LIMIT 500
+            """;
+    private static final Instant EARLIEST = Instant.EPOCH;
+    private static final Instant LATEST = Instant.parse("9999-12-31T00:00:00Z");
     private static final String AUDIT_SQL = """
             INSERT INTO audit_log(user_id, account_id, actor_type, event_type, payload)
             VALUES (?, ?, 'USER', ?, CAST(? AS jsonb))
@@ -81,6 +110,38 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list(UUID userId) {
         return jdbc.queryForList(LIST_SQL, userId);
+    }
+
+    /**
+     * Lists the caller's deposits, withdrawals, transfers and other non-trade cash movements, newest
+     * first, for the activity feed (PS-11). Days are UTC and inclusive, like order history.
+     * @param userId identity from the validated JWT
+     * @param accountId one owned account, or null for all of them; another client's account yields nothing
+     * @param from first day to include, or null
+     * @param to last day to include, or null
+     * @return at most {@link #MAX_CASH_ACTIVITY} movements
+     * @throws InvalidFilterException when {@code from} is after {@code to}
+     */
+    @Transactional(readOnly = true)
+    public List<CashActivityResponse> cashActivity(UUID userId, UUID accountId, LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new InvalidFilterException("from must not be after to");
+        }
+        Instant lower = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : EARLIEST;
+        Instant upper = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : LATEST;
+        List<Object> args = new ArrayList<>(List.of(userId, Timestamp.from(lower), Timestamp.from(upper)));
+        if (accountId != null) {
+            args.add(accountId);
+        }
+        String sql = accountId != null ? ACCOUNT_CASH_ACTIVITY_SQL : CASH_ACTIVITY_SQL;
+        return jdbc.query(sql, (rs, row) -> new CashActivityResponse(
+                rs.getObject("transaction_id", UUID.class),
+                rs.getObject("account_id", UUID.class),
+                rs.getString("account_name"),
+                rs.getString("transaction_type"),
+                rs.getBigDecimal("amount"),
+                rs.getString("settlement_status"),
+                rs.getTimestamp("created_at").toInstant()), args.toArray());
     }
 
     /**

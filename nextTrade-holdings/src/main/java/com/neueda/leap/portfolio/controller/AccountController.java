@@ -1,6 +1,7 @@
 package com.neueda.leap.portfolio.controller;
 
 import com.neueda.leap.portfolio.dto.AccountResponse;
+import com.neueda.leap.portfolio.dto.CashActivityResponse;
 import com.neueda.leap.portfolio.dto.OpenAccountRequest;
 import com.neueda.leap.portfolio.dto.TransferRequest;
 import com.neueda.leap.portfolio.dto.TransferResponse;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,11 +20,17 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-/** The caller's trading accounts: list for selection, open another, and move cash between them (PS-05). */
+/**
+ * The caller's trading accounts: list for selection, open another, move cash between them (PS-05),
+ * and list their cash movements for the activity feed (PS-11).
+ */
 @RestController
 @Tag(name = "Accounts", description = "The caller's own accounts and transfers between them")
 @SecurityRequirement(name = "bearerAuth")
@@ -44,6 +52,29 @@ public class AccountController {
     @Operation(summary = "List my accounts", description = "Oldest first, with settled cash available to move or trade.")
     public List<Map<String, Object>> accounts(@AuthenticationPrincipal JwtPrincipal principal) {
         return accounts.list(principal.userId());
+    }
+
+    /**
+     * Lists the caller's deposits, withdrawals and transfers for the activity feed (PS-11).
+     * @param from first day to include (ISO date, UTC)
+     * @param to last day to include (ISO date, UTC)
+     * @param accountId one owned account; omit for all of them
+     * @param principal identity verified from the JWT
+     * @return non-trade cash movements, newest first
+     */
+    @GetMapping("/accounts/cash-activity")
+    @PreAuthorize("hasRole('TRADER')")
+    @Operation(summary = "List my cash movements",
+            description = "Deposits, withdrawals, transfers and other non-trade cash, newest first, at most 500. "
+                    + "Trades are in order history.")
+    @ApiResponse(responseCode = "200", description = "Matching movements, or an empty list")
+    @ApiResponse(responseCode = "400", description = "from is after to, or a filter is malformed")
+    public List<CashActivityResponse> cashActivity(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) UUID accountId,
+            @AuthenticationPrincipal JwtPrincipal principal) {
+        return accounts.cashActivity(principal.userId(), accountId, from, to);
     }
 
     /**

@@ -1,7 +1,7 @@
 import { apiHttp } from './http-helper.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-const { PortfolioClient, valuePortfolio } = await import('../src/app/portfolio-api.ts');
+const { PortfolioClient, valuePortfolio, dayGainOf } = await import('../src/app/portfolio-api.ts');
 import { HttpErrorResponse } from '@angular/common/http';
 import { throwError } from 'rxjs';
 
@@ -28,7 +28,7 @@ test('holdings are valued at the latest bid, falling back to average cost withou
 
 test('an empty portfolio is worth its cash with no gain', () => {
   assert.deepEqual(valuePortfolio({ cash: 50, holdings: [] }, new Map()), {
-    cash: 50, holdings: [], holdingsValue: 0, total: 50, gain: 0, gainPercent: 0,
+    cash: 50, holdings: [], holdingsValue: 0, total: 50, gain: 0, gainPercent: 0, dayGain: 0, dayGainPercent: 0,
   });
 });
 
@@ -47,14 +47,18 @@ test('load sums cash, keeps instrument ids and drops empty positions', async () 
   assert.deepEqual(requests.map(([url, auth]) => [url, auth]).sort(), [['/api/v1/cash', undefined], ['/api/v1/holdings', undefined]]);
 });
 
-test('latestBids reads each quote and leaves out the ones that fail', async () => {
-  const fetchImpl = async (url) => {
-    if (url.endsWith('/bad')) return new Response('{}', { status: 503 });
-    if (url.endsWith('/zero')) return new Response(JSON.stringify({ bid: 0 }), { status: 200 });
-    return new Response(JSON.stringify({ bid: '225.10' }), { status: 200 });
-  };
-  const bids = await new PortfolioClient({ accessToken: 'tok' }, apiHttp(fetchImpl)).latestBids(['good', 'bad', 'zero']);
-  assert.deepEqual([...bids], [['good', 225.1]]);
+test("today's gain comes from each stock's change since the day's first quote (PS-06)", () => {
+  // AAPL is up 5% today: 10 shares worth $2,100 now were worth $2,000 at the open.
+  const valuation = valuePortfolio(
+    { cash: 0, holdings: [holding('aapl', 10, 150), holding('msft', 1, 400)] },
+    new Map([['aapl', 210], ['msft', 400]]),
+    new Map([['aapl', 5], ['msft', 0]]),
+  );
+  assert.deepEqual(valuation.holdings.map(h => [h.dayGain, h.dayChangePercent]), [[100, 5], [0, 0]]);
+  assert.equal(valuation.dayGain, 100);
+  assert.equal(valuation.dayGainPercent, 4.17, '100 on the 2,400 the positions were worth at the open');
+  assert.equal(dayGainOf(110, 10), 10);
+  assert.equal(dayGainOf(110, 0), 0);
 });
 
 test('loading without a session fails with a readable message', async () => {

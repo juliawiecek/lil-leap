@@ -93,4 +93,45 @@ public class JdbcQuoteRepository implements QuoteRepository {
                 + " LIMIT ?";
         return jdbc.query(query, mapper, instrumentId, clampedLimit);
     }
+
+    /** Most candles one request may cover. */
+    static final int MAX_CANDLE_LIMIT = 500;
+    // Buckets align to a fixed origin so the same quote always lands in the same candle.
+    private static final String CANDLES = """
+            SELECT date_bin(CAST(? AS interval), q.quoted_at, TIMESTAMPTZ '2000-01-01 00:00:00+00') AS bucket,
+                   (array_agg(q.mid ORDER BY q.quoted_at, q.quote_id))[1] AS open,
+                   MAX(q.mid) AS high,
+                   MIN(q.mid) AS low,
+                   (array_agg(q.mid ORDER BY q.quoted_at DESC, q.quote_id DESC))[1] AS close
+            FROM (
+                SELECT quote_id, quoted_at, ROUND((bid + ask) / 2, 8) AS mid
+                FROM quotes
+                WHERE instrument_id = ?
+                  AND quoted_at <= CURRENT_TIMESTAMP
+                  AND quoted_at > CURRENT_TIMESTAMP - CAST(? AS interval) * ?
+            ) q
+            GROUP BY bucket
+            ORDER BY bucket
+            """;
+
+    /**
+     * Groups the instrument's quotes from the last {@code limit} intervals into midpoint candles.
+     * Future-dated quotes are ignored, matching the latest-quote reads.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param interval candle width
+     * @param limit number of intervals to cover (clamped to MAX_CANDLE_LIMIT)
+     * @return candles ordered oldest first
+     */
+    @Override
+    public List<PriceCandle> findCandles(UUID instrumentId, CandleInterval interval, int limit) {
+        int clampedLimit = Math.max(1, Math.min(limit, MAX_CANDLE_LIMIT));
+        return jdbc.query(CANDLES, (rs, n) -> new PriceCandle(
+                        rs.getObject("bucket", java.time.OffsetDateTime.class),
+                        rs.getBigDecimal("open"),
+                        rs.getBigDecimal("high"),
+                        rs.getBigDecimal("low"),
+                        rs.getBigDecimal("close")),
+                interval.sqlInterval(), instrumentId, interval.sqlInterval(), clampedLimit);
+    }
 }

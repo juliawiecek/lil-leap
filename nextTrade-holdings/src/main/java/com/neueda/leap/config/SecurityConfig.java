@@ -29,6 +29,11 @@ public class SecurityConfig {
             "/clients/*/orders", API_PREFIX + "/clients/*/orders"
     };
 
+    /** A client's own deposits and transfers for the activity feed (PS-11). */
+    private static final String[] CASH_ACTIVITY_ROUTES = {
+            "/accounts/cash-activity", API_PREFIX + "/accounts/cash-activity"
+    };
+
     private static final String[] ACCOUNT_WRITE_ROUTES = {
             "/accounts", "/accounts/transfers", API_PREFIX + "/accounts", API_PREFIX + "/accounts/transfers"
     };
@@ -36,7 +41,9 @@ public class SecurityConfig {
     private static final String[] PORTFOLIO_READ_ROUTES = {
             "/clients/*/portfolio-summary", "/accounts", "/holdings", "/holdings/**", "/cash", "/orders",
             "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*",
-            "/quotes/latest/by-instrument/*", "/quotes/latest/by-market-symbol", "/quotes/history/*",
+            "/quotes/latest/by-instrument/*", "/quotes/latest/by-instruments", "/quotes/latest/by-market-symbol",
+            "/quotes/history/*", "/quotes/candles/*", API_PREFIX + "/quotes/latest/by-instruments",
+            API_PREFIX + "/quotes/candles/*",
             API_PREFIX + "/clients/*/portfolio-summary", API_PREFIX + "/accounts", API_PREFIX + "/holdings",
             API_PREFIX + "/holdings/**", API_PREFIX + "/cash", API_PREFIX + "/orders", API_PREFIX + "/instruments",
             API_PREFIX + "/instruments/*", API_PREFIX + "/clients/*/holdings", API_PREFIX + "/clients/*/cash",
@@ -70,6 +77,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, DOC_ROUTES).permitAll()
                         .requestMatchers(HttpMethod.GET, TRADER_ORDER_ROUTES).hasRole("TRADER")
+                        .requestMatchers(HttpMethod.GET, CASH_ACTIVITY_ROUTES).hasRole("TRADER")
                         .requestMatchers(HttpMethod.GET, PORTFOLIO_READ_ROUTES).hasAnyRole("TRADER", "ANALYST")
                         .requestMatchers(HttpMethod.POST, ACCOUNT_WRITE_ROUTES).hasRole("TRADER")
                         .anyRequest().denyAll())

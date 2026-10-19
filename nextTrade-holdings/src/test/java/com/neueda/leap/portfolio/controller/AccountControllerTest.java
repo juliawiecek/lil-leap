@@ -2,6 +2,7 @@ package com.neueda.leap.portfolio.controller;
 
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.portfolio.dto.AccountResponse;
+import com.neueda.leap.portfolio.dto.CashActivityResponse;
 import com.neueda.leap.portfolio.dto.TransferRequest;
 import com.neueda.leap.portfolio.dto.TransferResponse;
 import com.neueda.leap.portfolio.service.AccountActionException;
@@ -20,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -119,6 +121,29 @@ class AccountControllerTest {
                 .andExpect(status().isForbidden());
         mvc.perform(post("/accounts").contentType(MediaType.APPLICATION_JSON).content("{\"nickname\":\"x\"}"))
                 .andExpect(status().isUnauthorized());
+        verifyNoInteractions(accounts);
+    }
+
+    @Test
+    void listsTheCallersCashActivityWithItsFilters() throws Exception {
+        when(accounts.cashActivity(userId, from, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15))).thenReturn(List.of(
+                new CashActivityResponse(UUID.randomUUID(), from, "Brokerage", "DEPOSIT", new BigDecimal("25000.00"),
+                        "SETTLED", Instant.EPOCH)));
+        mvc.perform(get("/accounts/cash-activity").header("Authorization", bearer("TRADER"))
+                        .param("accountId", from.toString()).param("from", "2026-10-01").param("to", "2026-10-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("DEPOSIT"))
+                .andExpect(jsonPath("$[0].amount").value(25000.0))
+                .andExpect(jsonPath("$[0].accountName").value("Brokerage"));
+    }
+
+    @Test
+    void cashActivityRejectsAMalformedDateAndAnAnonymousCaller() throws Exception {
+        mvc.perform(get("/accounts/cash-activity").header("Authorization", bearer("TRADER")).param("from", "yesterday"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/accounts/cash-activity")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/accounts/cash-activity").header("Authorization", bearer("ANALYST")))
+                .andExpect(status().isForbidden());
         verifyNoInteractions(accounts);
     }
 

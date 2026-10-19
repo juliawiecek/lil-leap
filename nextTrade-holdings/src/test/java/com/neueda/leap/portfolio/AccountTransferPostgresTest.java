@@ -228,6 +228,28 @@ class AccountTransferPostgresTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    @Test
+    void cashActivityListsDepositsAndTransfersNewestFirstButNotTradesOrOtherClients() throws Exception {
+        accounts.transfer(owner, new TransferRequest(brokerage, growth, new BigDecimal("100.00")));
+        jdbc.update("INSERT INTO cash_transactions(account_id, transaction_type, amount) VALUES (?, 'BUY', -50.00)", brokerage);
+        deposit(account(user(), "Not yours"), "999.00");
+
+        mvc.perform(get("/accounts/cash-activity").header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[2].type").value("DEPOSIT"))
+                .andExpect(jsonPath("$[2].amount").value(1000.0))
+                .andExpect(jsonPath("$[2].accountName").value("Individual Brokerage"));
+        mvc.perform(get("/accounts/cash-activity").param("accountId", growth.toString()).header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("TRANSFER"))
+                .andExpect(jsonPath("$[0].amount").value(100.0));
+        mvc.perform(get("/accounts/cash-activity").param("from", "2999-01-01").header("Authorization", bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     private boolean succeeded(Future<Boolean> result) {
         try {
             return result.get();

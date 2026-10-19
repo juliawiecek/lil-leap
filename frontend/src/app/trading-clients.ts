@@ -3,6 +3,7 @@ import { OrderHistoryClient, type AccessTokenSource } from './order-history-api'
 import { OrderSubmissionClient } from './order-submission-api';
 import { PortfolioClient } from './portfolio-api';
 import { OrderStatusClient } from './order-feedback';
+import { CashActivityClient } from './activity-api';
 
 /** The API clients both trading dashboards use. */
 export interface TradingClients {
@@ -10,6 +11,7 @@ export interface TradingClients {
   readonly orderHistoryClient: OrderHistoryClient;
   readonly portfolioClient: PortfolioClient;
   readonly orderStatusClient: OrderStatusClient;
+  readonly cashActivityClient: CashActivityClient;
 }
 
 /**
@@ -22,5 +24,6 @@ export function tradingClients(tokens: AccessTokenSource, http: ApiHttpClient): 
     orderHistoryClient: new OrderHistoryClient(tokens, http),
     portfolioClient: new PortfolioClient(tokens, http),
     orderStatusClient: new OrderStatusClient(tokens, http),
+    cashActivityClient: new CashActivityClient(tokens, http),
   };
 }

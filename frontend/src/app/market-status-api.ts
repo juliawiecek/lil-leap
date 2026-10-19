@@ -2,6 +2,7 @@ import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
+import { centralDay, centralTime } from './app-time';
 
 /** GET /market/status: instants are UTC ISO strings. */
 export interface MarketStatus {
@@ -27,8 +28,8 @@ export function countdown(until: Date, now: Date): string {
 }
 
 /**
- * Header text for the market status in the user's local time, e.g. "Market closes in 2h 14m",
- * "Market opens in 3h 5m" or "Market closed · Opens Mon 2:30 PM" when the open is a day or more away.
+ * Header text for the market status, e.g. "Market closes in 2h 14m", "Market opens in 3h 5m" or
+ * "Market closed · Opens Mon 8:30 AM CT" (Central time) when the open is a day or more away.
  */
 export function marketStatusText(status: MarketStatus | null, now: Date, locale?: string): string {
   if (!status) {
@@ -41,8 +42,8 @@ export function marketStatusText(status: MarketStatus | null, now: Date, locale?
   if (opens.getTime() - now.getTime() < DAY_MS) {
     return `Market opens in ${countdown(opens, now)}`;
   }
-  const when = new Intl.DateTimeFormat(locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(opens);
-  return `Market closed · Opens ${when}`;
+  const when = centralTime(opens, { weekday: 'short', hour: 'numeric', minute: '2-digit' }, locale);
+  return `Market closed · Opens ${when} CT`;
 }
 
 /** Client for the exchange's open/closed status. */
@@ -78,17 +79,17 @@ export class MarketStatusClient {
   }
 }
 
-/** "14:30" today, or "Mon 14:30" on another day, in the user's time zone. */
+/** "8:30 AM CT" today, or "Mon 8:30 AM CT" on another day, in Central time. */
 export function localOpeningTime(instant: string, now: Date, locale?: string): string {
   const when = new Date(instant);
-  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(when);
-  if (when.toDateString() === now.toDateString()) {
+  const time = `${centralTime(when, { hour: 'numeric', minute: '2-digit' }, locale)} CT`;
+  if (centralDay(when) === centralDay(now)) {
     return time;
   }
-  return `${new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(when)} ${time}`;
+  return `${centralTime(when, { weekday: 'short' }, locale)} ${time}`;
 }
 
-/** Header badge (PS-02): "Open · Closes 21:00" or "Closed · Opens 14:30", in the user's local time. */
+/** Header badge (PS-02): "Open · Closes 3:00 PM CT" or "Closed · Opens Mon 8:30 AM CT", in Central time. */
 export function marketBadgeText(status: MarketStatus | null, now: Date, locale?: string): string {
   if (!status) {
     return 'Market status unavailable';

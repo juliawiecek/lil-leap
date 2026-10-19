@@ -10,16 +10,17 @@ export class PageState extends SharedPageState {
     super();
   }
 }
+/**
+ * The workspace's pages (PS-11: fewer pages). Orders and history are one Activity page; the
+ * watchlist and screener live on Markets and the overview. Old paths redirect in app.routes.
+ */
 export const PAGE_PATHS: Record<string, string> = {
   Overview: '/dashboard',
-  Orders: '/orders',
-  History: '/history',
-  Settings: '/settings',
-  Watchlist: '/watchlist',
   Portfolio: '/portfolio',
-  Learn: '/learn',
+  Activity: '/activity',
   Markets: '/markets',
-  Screeners: '/screeners',
+  Settings: '/settings',
+  Learn: '/learn',
 };
 export function safeReturnUrl(value: string): string | null {
   return sharedReturnUrl(value, PAGE_PATHS, []);
