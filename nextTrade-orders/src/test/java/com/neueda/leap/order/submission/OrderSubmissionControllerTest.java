@@ -38,20 +38,20 @@ class OrderSubmissionControllerTest {
     void authenticatedSubmissionReturnsSafeRuleRejection(OrderSufficiencyException.Reason reason) throws Exception {
         var request = request();
         var rejection = new OrderSufficiencyException(reason);
-        when(service.submit(user, request)).thenThrow(rejection);
+        when(service.submit(eq(user), eq(request), any(UUID.class))).thenThrow(rejection);
 
         mvc.perform(post("/orders").with(csrf().asHeader()).header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .contentType("application/json").content(json.writeValueAsBytes(request)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(content().json(json.writeValueAsString(java.util.Map.of(
                         "error", reason.name(), "message", rejection.getMessage())), true));
-        verify(service).submit(user, request);
+        verify(service).submit(eq(user), eq(request), any(UUID.class));
     }
 
     @Test
     void changedRetryOfAClientReferenceReturnsConflict() throws Exception {
         var request = request();
-        when(service.submit(user, request)).thenThrow(new IdempotencyConflictException());
+        when(service.submit(eq(user), eq(request), any(UUID.class))).thenThrow(new IdempotencyConflictException());
 
         mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .contentType("application/json").content(json.writeValueAsBytes(request)))
@@ -71,12 +71,12 @@ class OrderSubmissionControllerTest {
     void bearerSubmissionWithoutCsrfTokenReachesService() throws Exception {
         // The browser client sends only the bearer token; a CSRF requirement would 403 every order.
         var request = request();
-        when(service.submit(user, request)).thenThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.values()[0]));
+        when(service.submit(eq(user), eq(request), any(UUID.class))).thenThrow(new OrderSufficiencyException(OrderSufficiencyException.Reason.values()[0]));
 
         mvc.perform(post("/orders").header("Authorization", "Bearer " + tokens.issueToken(user, "test@example.test"))
                         .contentType("application/json").content(json.writeValueAsBytes(request)))
                 .andExpect(status().isUnprocessableEntity());
-        verify(service).submit(user, request);
+        verify(service).submit(eq(user), eq(request), any(UUID.class));
     }
 
     @Test
@@ -136,7 +136,7 @@ class OrderSubmissionControllerTest {
         var order = new com.neueda.leap.order.submission.dto.OrderSubmissionResponse(
                 UUID.randomUUID(), request.accountId(), UUID.randomUUID(), "AAPL", request.clientReference(),
                 "BUY", 10, "MARKET", "SUBMITTED", java.time.Instant.now(), null);
-        when(service.submit(user, request)).thenReturn(
+        when(service.submit(eq(user), eq(request), any(UUID.class))).thenReturn(
                 new com.neueda.leap.order.submission.service.OrderSubmissionResult(order, true),
                 new com.neueda.leap.order.submission.service.OrderSubmissionResult(order, false));
 
@@ -147,6 +147,6 @@ class OrderSubmissionControllerTest {
                     .andExpect(jsonPath("$.orderId").value(order.orderId().toString()))
                     .andExpect(jsonPath("$.status").value("SUBMITTED"));
         }
-        verify(service, times(3)).submit(user, request);
+        verify(service, times(3)).submit(eq(user), eq(request), any(UUID.class));
     }
 }

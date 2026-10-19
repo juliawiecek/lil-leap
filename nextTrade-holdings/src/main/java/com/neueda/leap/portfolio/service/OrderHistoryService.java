@@ -27,7 +27,7 @@ public class OrderHistoryService {
 
     /** Every value allowed by the orders.status check constraint. */
     static final Set<String> ALL_STATUSES =
-            Set.of("SUBMITTED", "ACCEPTED", "PENDING", "DELAYED", "FILLED", "REJECTED");
+            Set.of("SUBMITTED", "ACCEPTED", "PENDING", "DELAYED", "FILLED", "REJECTED", "CANCELLED");
 
     private static final Instant EARLIEST = Instant.EPOCH;
     private static final Instant LATEST = Instant.parse("9999-12-31T00:00:00Z");

@@ -256,8 +256,8 @@ class HoldingsSettlementPostgresTest {
         jdbc.execute("CREATE ROLE " + reader);
         try {
             jdbc.execute("GRANT SELECT ON cash_transactions TO " + reader);
-            jdbc.execute(migration);
-            jdbc.execute(migration);
+            // The migration backfills settled_at on existing ledger rows, which are permanent now (TS-15.5).
+            com.neueda.leap.TradeRecordsForTests.unlocked(jdbc, migration, migration);
             assertThat(jdbc.queryForObject("SELECT has_table_privilege(?, 'cash_holds', 'SELECT')", Boolean.class, reader)).isTrue();
             assertThat(jdbc.queryForObject("SELECT has_table_privilege(?, 'cash_holds', 'INSERT')", Boolean.class, reader)).isFalse();
         } finally {

@@ -31,7 +31,8 @@ class OrderTradingRulesTest {
     private final InstrumentService instruments = mock(InstrumentService.class);
     @BeforeEach void setUp() {
         repository = mock(OrderSubmissionRepository.class); sufficiency = mock(OrderSufficiencyService.class);
-        service = new OrderSubmissionService(repository, sufficiency, instruments, mock(IndicativePriceService.class));
+        service = new OrderSubmissionService(repository, sufficiency, instruments, mock(IndicativePriceService.class),
+                mock(com.neueda.leap.order.submission.audit.SubmissionAuditRepository.class));
         when(repository.accountBelongsToUser(account, user)).thenReturn(true);
         when(repository.findByAccountAndClientReference(any(), any())).thenReturn(Optional.empty());
         when(repository.findClientCountry(account)).thenReturn(Optional.of("US"));

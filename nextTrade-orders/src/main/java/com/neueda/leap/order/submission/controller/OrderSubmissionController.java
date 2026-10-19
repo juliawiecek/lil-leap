@@ -1,5 +1,6 @@
 package com.neueda.leap.order.submission.controller;
 
+import com.neueda.leap.order.submission.audit.RequestIdFilter;
 import com.neueda.leap.order.submission.dto.OrderSubmissionResponse;
 import com.neueda.leap.order.submission.dto.SubmitOrderRequest;
 import com.neueda.leap.order.submission.service.OrderSubmissionResult;
@@ -10,9 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 /** Exposes authenticated order submission at {@code POST /api/v1/orders}. */
 @RestController
@@ -33,13 +37,16 @@ public class OrderSubmissionController {
      * Submits a validated order on behalf of the authenticated caller.
      * @param principal authenticated identity supplied by Spring Security
      * @param request submission payload validated before this method is called
+     * @param requestId id already returned as {@code X-Request-Id}; generated here only without the filter
      * @return HTTP 201 for a new order or HTTP 200 for an existing retry
      */
     @PostMapping
     public ResponseEntity<OrderSubmissionResponse> submit(
             @AuthenticationPrincipal JwtPrincipal principal,
-            @Valid @RequestBody SubmitOrderRequest request) {
-        OrderSubmissionResult result = service.submit(principal.userId(), request);
+            @Valid @RequestBody SubmitOrderRequest request,
+            @RequestAttribute(name = RequestIdFilter.ATTRIBUTE, required = false) UUID requestId) {
+        OrderSubmissionResult result = service.submit(principal.userId(), request,
+                requestId == null ? UUID.randomUUID() : requestId);
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
                 .body(result.order());
     }
