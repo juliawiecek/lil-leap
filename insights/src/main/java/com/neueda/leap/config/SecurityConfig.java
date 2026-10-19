@@ -43,7 +43,8 @@ public class SecurityConfig {
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/reports/**").hasRole("ANALYST")
+                        // Operations staff see everything analysts see, plus trade investigation (TS-18.4).
+                        .requestMatchers(HttpMethod.GET, "/reports/**").hasAnyRole("ANALYST", "OPERATIONS")
                         // Trade investigation (lifecycle, timeline, events) is for trading operations staff (TS-03.5).
                         .requestMatchers(HttpMethod.GET, "/trades/**").hasRole("OPERATIONS")
                         .anyRequest().denyAll())

@@ -1,0 +1,15 @@
+<app-page-heading title="Insights" subtitle="Trading across every account, read from the reporting replica." />
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+<section class="kpi-grid" aria-label="Live trading summary" [attr.aria-busy]="loading()">
+  <app-kpi-tile label="Accounts" icon="users" note="Trading accounts" testId="summary-accounts" [value]="count(summary()?.accounts)" />
+  <app-kpi-tile label="Orders" icon="orders" note="Submitted, all time" testId="summary-orders" [value]="count(summary()?.orders)" />
+  <app-kpi-tile label="Fills" icon="chart" note="Executed orders" testId="summary-fills" [value]="count(summary()?.fills)" />
+  <app-kpi-tile label="Gross executed value" icon="coins" note="Filled notional · USD" testId="summary-value" [value]="money(summary()?.gross_executed_value)" />
+</section>
+<section class="panel empty">
+  <app-dashboard-icon name="chart" />
+  <h2>Trends and top stocks are on the way</h2>
+  <p>Traded value over time, the most traded stocks and comparisons with the previous period will appear here.</p>
+</section>

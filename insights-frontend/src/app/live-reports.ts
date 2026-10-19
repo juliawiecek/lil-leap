@@ -8,6 +8,5 @@ export interface ReportSummary {
 }
 export interface LiveReports {
   load(): Promise<ReportSummary>;
-  logout(): Promise<void>;
 }
 export const LIVE_REPORTS = new InjectionToken<LiveReports>('Live reporting API');

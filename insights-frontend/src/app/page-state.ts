@@ -1,25 +1,12 @@
-import { Injectable } from '@angular/core';
-import {
-  PageState as SharedPageState,
-  safeReturnUrl as sharedReturnUrl,
-} from '@lilleap/session-core/angular';
-export type { PageBinding, QueryField } from '@lilleap/session-core/angular';
-@Injectable({ providedIn: 'root' })
-export class PageState extends SharedPageState {
-  constructor() {
-    super();
-  }
-}
+import { safeReturnUrl as sharedReturnUrl } from '@lilleap/session-core/angular';
+
+/** Every page a signed-in user may be returned to after signing in. */
 export const PAGE_PATHS: Record<string, string> = {
-  Overview: '/dashboard',
-  'Trading Activity': '/history',
-  'Trade Investigation': '/orders',
-  'Client Activity': '/client-activity',
+  Insights: '/insights',
   Clients: '/clients',
   Reports: '/reports',
-  Compliance: '/compliance',
-  Settings: '/settings',
+  'Trade lookup': '/trades',
 };
 export function safeReturnUrl(value: string): string | null {
-  return sharedReturnUrl(value, PAGE_PATHS, ['clients', 'orders']);
+  return sharedReturnUrl(value, PAGE_PATHS, ['trades']);
 }

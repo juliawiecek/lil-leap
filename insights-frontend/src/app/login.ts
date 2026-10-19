@@ -4,25 +4,14 @@ import { AuthService } from './auth.service';
 import { AuthApiError } from './auth-api';
 import { AppSessionService } from './app-session.service';
 import { safeReturnUrl } from './page-state';
-@Component({ selector: 'app-insights-login', template: `
-  <main class="login"><section aria-labelledby="login-title">
-    <a href="/login" class="brand">Next<span>Trade</span></a><p>INSIGHTS / INTERNAL WORKSPACE</p>
-    <h1 id="login-title">Welcome back</h1><p>Sign in with your analyst account.</p>
-    <form (submit)="$event.preventDefault(); signIn(email.value, password.value)">
-      <label>Email<input #email id="email" type="email" autocomplete="username" required /></label>
-      <label>Password<input #password id="password" type="password" autocomplete="current-password" required /></label>
-      @if (message()) { <p role="alert">{{ message() }}</p> }
-      <button type="submit" [disabled]="pending()">{{ pending() ? 'Signing in...' : 'Sign in' }}</button>
-    </form>
-  </section></main>`, styles: [`
-    :host { display:block; color:#eee; font-family:Inter,Arial,sans-serif; }
-    .login { min-height:100vh; display:grid; place-items:center; background:#0c1011; padding:24px; box-sizing:border-box; }
-    section { width:100%; max-width:400px; padding:32px; border:1px solid #343a36; border-radius:12px; background:#151b18; }
-    .brand { color:#eee; font-size:26px; font-weight:700; text-decoration:none; } .brand span { color:#78a85f; }
-    h1 { font-size:32px; } p { color:#a8b5ac; line-height:1.5; } label { display:block; margin:20px 0; }
-    input { display:block; box-sizing:border-box; width:100%; margin-top:8px; padding:12px; background:#0c1011; border:1px solid #56635a; border-radius:6px; color:#eee; font:inherit; }
-    button { width:100%; padding:13px; border:0; border-radius:6px; background:#78a85f; color:#101710; font:inherit; font-weight:600; cursor:pointer; } button:disabled { opacity:.6; } [role=alert] { color:#f7abab; }
-  `] })
+import { homePath } from './roles';
+
+/** Insights sign-in, laid out like the NextTrade sign-in; only analyst and operations staff get in. */
+@Component({
+  selector: 'app-insights-login',
+  templateUrl: './login.html',
+  styleUrl: './login.scss',
+})
 export class Login {
   private readonly auth = inject(AuthService);
   private readonly session = inject(AppSessionService);
@@ -30,6 +19,25 @@ export class Login {
   private readonly route = inject(ActivatedRoute);
   readonly pending = signal(false);
   readonly message = signal('');
+  readonly passwordVisible = signal(false);
+  /** Words on the moving band at the top; NextTrade shows index prices there. */
+  readonly tape = ['Insights', 'Trading activity', 'Client accounts', 'Reports', 'Trade lookup', 'Audit trail', 'US equities'];
+  /** The same decorative candlestick chart NextTrade draws behind its sign-in. */
+  readonly candles = Array.from({ length: 44 }, (_, index) => {
+    const progress = index / 43;
+    const priceAt = (step: number) => 440 - 340 * (step / 43) + Math.sin(step * 0.63) * 35 + Math.sin(step * 1.81) * 12;
+    const close = priceAt(index);
+    const open = priceAt(index - 1);
+    return {
+      x: 10 + index * 9.2,
+      high: Math.min(open, close) - 6 - ((index * 7) % 17),
+      low: Math.max(open, close) + 5 + ((index * 11) % 14),
+      top: Math.min(open, close),
+      height: Math.max(3, Math.abs(open - close)),
+      falling: open < close,
+      opacity: (0.15 + (Math.sin(index * 2.41 + 0.8) + 1) * 0.3) * (0.65 + progress * 0.35),
+    };
+  });
   async signIn(email: string, password: string): Promise<void> {
     if (this.pending()) { return; }
     this.pending.set(true); this.message.set('');
@@ -40,7 +48,8 @@ export class Login {
         throw new AuthApiError('Please use an analyst or operations account to sign in to Insights.');
       }
       this.session.start();
-      await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '') ?? '/dashboard');
+      const requested = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl') ?? '');
+      await this.router.navigateByUrl(requested ?? homePath(this.auth.userRole));
     } catch (error) {
       this.message.set(error instanceof AuthApiError ? error.userMessage : 'Something went wrong. Please try again.');
     } finally { this.pending.set(false); }
