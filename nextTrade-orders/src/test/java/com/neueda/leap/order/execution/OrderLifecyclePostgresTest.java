@@ -367,9 +367,9 @@ class OrderLifecyclePostgresTest {
         for (String table : new String[]{"audit_log", "order_status_history", "holding_movements", "cash_transactions"}) {
             String column = table.equals("order_status_history") ? "occurred_at" : "created_at";
             assertThatThrownBy(() -> jdbc.update("UPDATE " + table + " SET " + column + " = " + column))
-                    .hasMessageContaining("permanent trade record");
-            assertThatThrownBy(() -> jdbc.update("DELETE FROM " + table)).hasMessageContaining("permanent trade record");
-            assertThatThrownBy(() -> jdbc.execute("TRUNCATE " + table + " CASCADE")).hasMessageContaining("permanent trade record");
+                    .rootCause().hasMessageContaining("permanent trade record");
+            assertThatThrownBy(() -> jdbc.update("DELETE FROM " + table)).rootCause().hasMessageContaining("permanent trade record");
+            assertThatThrownBy(() -> jdbc.execute("TRUNCATE " + table + " CASCADE")).rootCause().hasMessageContaining("permanent trade record");
         }
     }
 
