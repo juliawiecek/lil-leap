@@ -20,6 +20,9 @@
   }
 </fieldset>
 
+@if (notice()) {
+  <p class="history-message notice" role="status">{{ notice() }}</p>
+}
 @if (error()) {
   <p class="history-message error" role="alert">{{ error() }}</p>
 } @else if (loading() && rows().length === 0) {
@@ -40,6 +43,7 @@
           <th>Quantity</th>
           <th>Status</th>
           <th>Fill price</th>
+          <th><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
       <tbody>
@@ -54,10 +58,24 @@
                 class="status"
                 [class.filled]="order.status === 'FILLED'"
                 [class.rejected]="order.status === 'REJECTED'"
+                [class.cancelled]="order.status === 'CANCELLED'"
                 >{{ statusLabel(order.status) }}</span
               >
             </td>
             <td>{{ order.fillPrice === null ? '—' : (order.fillPrice | currency) }}</td>
+            <td class="actions">
+              @if (canCancel(order)) {
+                @if (confirming() === order.orderId) {
+                  <span class="confirm" role="group" [attr.aria-label]="'Cancel ' + order.symbol + ' order?'">
+                    Cancel this order?
+                    <button type="button" class="danger" [disabled]="cancelling()" (click)="confirmCancel(order)">Yes, cancel</button>
+                    <button type="button" (click)="confirming.set(null)">Keep</button>
+                  </span>
+                } @else {
+                  <button type="button" (click)="confirming.set(order.orderId); notice.set('')">Cancel</button>
+                }
+              }
+            </td>
           </tr>
         }
       </tbody>
