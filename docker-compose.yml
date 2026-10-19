@@ -83,8 +83,10 @@ services:
   insights:
     build: ./insights
     environment:
-      <<: *jwt
+      <<: [*primary-database, *jwt]
       PORT: 8084
+    depends_on:
+      db: {condition: service_healthy}
 
   db:
     image: postgres:16-alpine
@@ -108,6 +110,8 @@ services:
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
       # Dev/demo test logins (TS-DB-04). Never mount this in a production compose file.
       - ./db/seeds/002_test_users.sql:/docker-entrypoint-initdb.d/05-test-users.sql:ro
+      # Demo clients and trade book matching insights' reports/trades.csv. Dev/demo only.
+      - ./db/seeds/003_demo_trading_activity.sql:/docker-entrypoint-initdb.d/06-demo-trading-activity.sql:ro
 
 volumes:
   db_data:

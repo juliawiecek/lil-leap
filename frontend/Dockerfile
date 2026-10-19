@@ -5,6 +5,8 @@ RUN npm ci --prefix shared/session-core
 COPY shared/session-core/src shared/session-core/src
 COPY shared/session-core/tsconfig.json shared/session-core/tsconfig.json
 RUN npm run build --prefix shared/session-core
+# The app's prebuild script copies the shared build into node_modules with this.
+COPY scripts/sync-session-core-dist.mjs scripts/sync-session-core-dist.mjs
 WORKDIR /repo/frontend
 
 COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./

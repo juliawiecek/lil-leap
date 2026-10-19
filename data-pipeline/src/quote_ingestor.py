@@ -6,10 +6,15 @@ from decimal import Decimal
 import pandas as pd
 from src.database import connect, DatabaseUnavailableError
 from src.generate_quotes import generate_quotes, validate_quotes
+from src.instrument_catalog import INSTRUMENTS_BY_SYMBOL
 from src.instrument_repository import InstrumentRepository
 from src.quote_repository import QuoteRepository
 
 MARKET_CODE = "NASDAQ"
+
+def market_for(symbol: str) -> str:
+    spec = INSTRUMENTS_BY_SYMBOL.get(symbol)
+    return spec.market_code if spec else MARKET_CODE
 
 class QuoteIngestionError(RuntimeError): pass
 
@@ -20,13 +25,13 @@ def transform_batch(frame: pd.DataFrame, instruments: InstrumentRepository) -> l
         raise QuoteIngestionError(str(e)) from e
     resolved = {}
     for symbol in sorted(frame["symbol"].str.strip().str.upper().unique()):
-        resolved[symbol] = instruments.resolve(MARKET_CODE, symbol)
+        resolved[symbol] = instruments.resolve(market_for(symbol), symbol)
     rows=[]
     for record in frame.to_dict("records"):
         symbol=str(record["symbol"]).strip().upper()
         inst=resolved[symbol]
         if str(record["currency"]).strip().upper() != inst.currency.strip().upper():
-            raise QuoteIngestionError(f"Currency mismatch for {MARKET_CODE}:{symbol}")
+            raise QuoteIngestionError(f"Currency mismatch for {inst.market_code}:{symbol}")
         ts=pd.Timestamp(record["quote_timestamp"])
         if ts.tzinfo is None: ts=ts.tz_localize("UTC")
         rows.append((inst.instrument_id, Decimal(str(record["bid"])), Decimal(str(record["ask"])),

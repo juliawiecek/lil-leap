@@ -156,9 +156,9 @@ ports through the gateway. No backend ports are published.
 
 These are separate product requirements; moving folders does not implement them:
 
-- The Insights dashboard still uses sample data from `insights-data.ts`; it needs
-  an authenticated data-loading flow and agreed reporting contracts. The aggregate
-  summary endpoint is real, but it is not wired into the demo charts.
+- Insights pages read only from the insights service (TS-18.4); the range-based
+  insights and the client pages are TS-18.5, and report CSVs still come from the
+  bundled `trades.csv` until NEXT-252.
 - NextTrade's trading screens also simulate trading locally; their live network
   integration covers authentication and order history through Holdings. Connect order tickets, quotes and
   portfolio views to the gateway APIs in a dedicated frontend integration change.

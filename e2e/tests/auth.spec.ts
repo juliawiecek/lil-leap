@@ -82,7 +82,7 @@ for (const app of ['NextTrade', 'Insights']) {
     expect(rotated.accessToken).toEqual(expect.any(String));
     expect(rotated.refreshToken).toEqual(expect.any(String));
     expect(rotated.refreshToken).not.toBe(tokens.refreshToken);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/(dashboard|insights)$/);
     await expect(page.locator(insights ? 'app-insights-workspace' : 'app-trading-workspace')).toBeVisible();
   });
 

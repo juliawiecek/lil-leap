@@ -11,8 +11,15 @@ from src.instrument_catalog import (
 
 
 def test_common_stock_catalog_preserves_mvp_symbols():
-    assert set(INSTRUMENTS_BY_SYMBOL) == {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL"}
+    assert {"AAPL", "MSFT", "NVDA", "AMZN", "GOOGL"} <= set(INSTRUMENTS_BY_SYMBOL)
+    assert len(INSTRUMENTS_BY_SYMBOL) == len(COMMON_STOCKS)
     assert instruments_for(AssetClass.COMMON_STOCK) == COMMON_STOCKS
+
+
+def test_common_stock_catalog_spans_us_listing_markets():
+    assert {spec.market_code for spec in COMMON_STOCKS} == {"NASDAQ", "NYSE"}
+    assert INSTRUMENTS_BY_SYMBOL["JPM"].market_code == "NYSE"
+    assert INSTRUMENTS_BY_SYMBOL["AAPL"].market_code == "NASDAQ"
 
 
 def test_generator_compatibility_config_comes_from_typed_catalog():

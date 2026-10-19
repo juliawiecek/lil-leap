@@ -91,8 +91,8 @@
               <td>{{ typeLabel(event.type) }}</td>
               <td>{{ event.actor ?? '–' }}</td>
               <td class="details-cell">
-                @for (item of event.details ?? {} | keyvalue; track item.key) {
-                  <span><b>{{ item.key }}</b> {{ detail(item.value) }}</span>
+                @for (item of fields(event); track $index) {
+                  <span><b>{{ item.label }}</b> {{ item.value }}</span>
                 } @empty {
                   –
                 }

@@ -5,7 +5,10 @@ import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
 import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
+import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.service.ReportingService;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +25,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +40,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ReportingController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class, GlobalExceptionHandler.class})
 class ReportingControllerTest {
+
+    private static final ReportDateRange OCTOBER =
+            new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
 
     @Autowired MockMvc mvc;
     @Autowired JwtServiceImpl jwtService;
@@ -54,6 +61,16 @@ class ReportingControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
         verifyNoInteractions(reportingService);
+    }
+
+    @Test
+    void operationsStaffCanReadReportingToo() throws Exception {
+        when(reportingService.getOverview()).thenReturn(
+                new OverviewDto(1234, 87, new BigDecimal("1500000.00")));
+
+        mvc.perform(asRole("OPERATIONS", get("/reports/insights/overview")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tradeVolumeToday").value(1234));
     }
 
     @Test
@@ -91,14 +108,14 @@ class ReportingControllerTest {
 
     @Test
     void instrumentReportReturnsCsvDownload() throws Exception {
-        when(reportingService.generateInstrumentReport()).thenReturn(csvResponse(
+        when(reportingService.generateInstrumentReport(OCTOBER)).thenReturn(csvResponse(
                 "instrument-report.csv",
                 """
                 instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price
                 AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56
                 """));
 
-        mvc.perform(asAnalyst(get("/reports/generate/instrument-report")))
+        mvc.perform(asAnalyst(inOctober(get("/reports/generate/instrument-report"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("instrument-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
@@ -110,14 +127,14 @@ class ReportingControllerTest {
 
     @Test
     void clientSegmentReportReturnsCsvDownload() throws Exception {
-        when(reportingService.generateClientSegmentReport()).thenReturn(csvResponse(
+        when(reportingService.generateClientSegmentReport(OCTOBER)).thenReturn(csvResponse(
                 "client-segment-report.csv",
                 """
                 client_segment,trade_count,unique_clients,total_quantity,total_notional
                 NOVICE,6,2,150560,270770.00
                 """));
 
-        mvc.perform(asAnalyst(get("/reports/generate/client-segment-report")))
+        mvc.perform(asAnalyst(inOctober(get("/reports/generate/client-segment-report"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("client-segment-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
@@ -129,14 +146,14 @@ class ReportingControllerTest {
 
     @Test
     void tradingActivityReportReturnsCsvDownload() throws Exception {
-        when(reportingService.generateTradingActivityReport()).thenReturn(csvResponse(
+        when(reportingService.generateTradingActivityReport(OCTOBER)).thenReturn(csvResponse(
                 "trading-activity-report.csv",
                 """
                 trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional
                 2026-10-02,09:00,2,2,280,41430.00
                 """));
 
-        mvc.perform(asAnalyst(get("/reports/generate/trading-activity-report")))
+        mvc.perform(asAnalyst(inOctober(get("/reports/generate/trading-activity-report"))))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("trading-activity-report.csv")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
@@ -144,6 +161,44 @@ class ReportingControllerTest {
                         trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional
                         2026-10-02,09:00,2,2,280,41430.00
                         """));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report"})
+    void reportsRequireBothDates(String report) throws Exception {
+        mvc.perform(asAnalyst(get("/reports/generate/" + report)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
+        mvc.perform(asAnalyst(get("/reports/generate/" + report).param("startDate", "2026-10-01")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(asAnalyst(get("/reports/generate/" + report).param("endDate", "2026-10-31")))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(reportingService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report"})
+    void reportsRejectMalformedAndInvertedDates(String report) throws Exception {
+        mvc.perform(asAnalyst(get("/reports/generate/" + report)
+                        .param("startDate", "10/01/2026").param("endDate", "2026-10-31")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
+        mvc.perform(asAnalyst(get("/reports/generate/" + report)
+                        .param("startDate", "2026-10-31").param("endDate", "2026-10-01")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_DATE_RANGE"));
+        verifyNoInteractions(reportingService);
+    }
+
+    @Test
+    void reportsRejectTraders() throws Exception {
+        mvc.perform(asRole("TRADER", inOctober(get("/reports/generate/instrument-report"))))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(reportingService);
+    }
+
+    private MockHttpServletRequestBuilder inOctober(MockHttpServletRequestBuilder request) {
+        return request.param("startDate", "2026-10-01").param("endDate", "2026-10-31");
     }
 
     private MockHttpServletRequestBuilder asAnalyst(MockHttpServletRequestBuilder request) {

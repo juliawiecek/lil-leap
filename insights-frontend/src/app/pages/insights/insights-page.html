@@ -1,4 +1,4 @@
-<app-page-heading title="Insights" subtitle="Trading across every account, read from the reporting replica." />
+<app-page-heading title="Insights" subtitle="Trading across every account, read from the reporting data." />
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
@@ -8,8 +8,53 @@
   <app-kpi-tile label="Fills" icon="chart" note="Executed orders" testId="summary-fills" [value]="count(summary()?.fills)" />
   <app-kpi-tile label="Gross executed value" icon="coins" note="Filled notional · USD" testId="summary-value" [value]="money(summary()?.gross_executed_value)" />
 </section>
-<section class="panel empty">
-  <app-dashboard-icon name="chart" />
-  <h2>Trends and top stocks are on the way</h2>
-  <p>Traded value over time, the most traded stocks and comparisons with the previous period will appear here.</p>
-</section>
+<div class="two-columns">
+  <section class="panel" aria-labelledby="trend-title">
+    <div class="panel-heading">
+      <h2 id="trend-title">Trades by hour today</h2>
+      <span class="muted">{{ count(tradesToday()) }} trades · UTC</span>
+    </div>
+    @if (tradesToday()) {
+      <app-insights-chart [points]="trendPoints()" label="Trades per hour today, UTC" prefix="" />
+    } @else {
+      <div class="empty">
+        <app-dashboard-icon name="chart" />
+        <h2>No trades yet today</h2>
+        <p>Executed trades will appear here hour by hour.</p>
+      </div>
+    }
+  </section>
+  <section class="panel" aria-labelledby="top-title">
+    <div class="panel-heading">
+      <h2 id="top-title">Top traded today</h2>
+      <span class="muted">By number of trades</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Most traded stocks today</caption>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Stock</th>
+            <th class="numeric">Trades</th>
+            <th class="bar-cell"><span class="sr-only">Share of the busiest stock</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of top(); track row.instrument; let i = $index) {
+            <tr>
+              <td class="muted">{{ i + 1 }}</td>
+              <td><strong>{{ row.instrument }}</strong></td>
+              <td class="numeric">{{ count(row.tradeCount) }}</td>
+              <td class="bar-cell"><span class="bar" [style.width.%]="(row.tradeCount / topMax()) * 100"></span></td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">No trades yet today.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

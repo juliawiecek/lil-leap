@@ -1,13 +1,43 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe, KeyValuePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { TRADE_TRAIL, type TradeTrailResponse } from '../../trade-trail';
+import { TRADE_TRAIL, type TradeEvent, type TradeTrailResponse } from '../../trade-trail';
 import { DashboardIcon } from '../../shared/dashboard-icon';
 import { PageHeading } from '../../shared/page-heading';
 import { tradeCase } from './trade-case';
 
 const ORDER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type Kind = 'money' | 'signedMoney' | 'shares' | 'percent' | 'time' | 'code' | 'text';
+/** How each recorded field is shown to operations staff, in display order. Internal IDs are left out. */
+const FIELDS: Record<string, { label: string; kind: Kind }> = {
+  reasonText: { label: 'Reason', kind: 'text' },
+  reasonCode: { label: 'Reason code', kind: 'code' },
+  status: { label: 'Status', kind: 'code' },
+  previousStatus: { label: 'Was', kind: 'code' },
+  quantity: { label: 'Shares', kind: 'shares' },
+  quantityChange: { label: 'Shares', kind: 'shares' },
+  price: { label: 'Price', kind: 'money' },
+  executionPrice: { label: 'Price', kind: 'money' },
+  actualPrice: { label: 'Price offered', kind: 'money' },
+  bid: { label: 'Bid', kind: 'money' },
+  ask: { label: 'Ask', kind: 'money' },
+  referencePrice: { label: 'Price at submission', kind: 'money' },
+  limitPrice: { label: 'Worst accepted', kind: 'money' },
+  tolerancePct: { label: 'Tolerance', kind: 'percent' },
+  costBasis: { label: 'Cost basis', kind: 'money' },
+  amount: { label: 'Cash', kind: 'signedMoney' },
+  cashDelta: { label: 'Cash', kind: 'signedMoney' },
+  settlementStatus: { label: 'Settlement', kind: 'code' },
+  attemptNumber: { label: 'Attempt', kind: 'text' },
+  quotedAt: { label: 'Quote time', kind: 'time' },
+  quoteTimestamp: { label: 'Quote time', kind: 'time' },
+  settledAt: { label: 'Settled', kind: 'time' },
+};
+/** Identifiers that mean nothing to a reader, or point at a person; the step itself is enough. */
+const HIDDEN = new Set(['fillId', 'quoteId', 'cancelledBy', 'currency']);
+const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 });
 
 /** Plain names for where each step was recorded. */
 const SOURCES: Record<string, string> = {
@@ -24,7 +54,7 @@ const SOURCES: Record<string, string> = {
  */
 @Component({
   selector: 'app-trade-lookup-page',
-  imports: [DatePipe, DecimalPipe, KeyValuePipe, DashboardIcon, PageHeading],
+  imports: [DatePipe, DecimalPipe, DashboardIcon, PageHeading],
   templateUrl: './trade-lookup-page.html',
   styleUrl: './trade-lookup-page.scss',
 })
@@ -101,11 +131,50 @@ export class TradeLookupPage implements OnDestroy {
     const words = type.toLowerCase().replaceAll('_', ' ');
     return words.charAt(0).toUpperCase() + words.slice(1);
   }
-  detail(value: unknown): string {
-    if (value === null || value === undefined) {
-      return '–';
+  /**
+   * A step's recorded fields as labelled, formatted values. Audit entries keep their fields in a
+   * JSON payload, which is opened up here; the stored record itself is never changed.
+   */
+  fields(event: TradeEvent): { label: string; value: string }[] {
+    const values: Record<string, unknown> = { ...(event.details ?? {}) };
+    if (typeof values['payload'] === 'string') {
+      try {
+        Object.assign(values, JSON.parse(values['payload'] as string));
+        delete values['payload'];
+      } catch {
+        // Not JSON: shown as recorded below.
+      }
     }
-    return typeof value === 'object' ? JSON.stringify(value) : String(value);
+    const known = Object.keys(FIELDS).filter((key) => key in values);
+    const other = Object.keys(values).filter((key) => !(key in FIELDS) && !HIDDEN.has(key));
+    return [...known, ...other]
+      .filter((key) => values[key] !== null && values[key] !== undefined && values[key] !== '')
+      .map((key) => ({
+        label: FIELDS[key]?.label ?? this.typeLabel(key.replace(/([a-z])([A-Z])/g, '$1_$2')),
+        value: this.format(values[key], FIELDS[key]?.kind ?? 'text'),
+      }));
+  }
+
+  private format(value: unknown, kind: Kind): string {
+    const number = Number(value);
+    switch (kind) {
+      case 'money':
+        return Number.isFinite(number) ? MONEY.format(number) : String(value);
+      case 'signedMoney':
+        return Number.isFinite(number) ? (number < 0 ? '−' : '+') + MONEY.format(Math.abs(number)) : String(value);
+      case 'shares':
+        return Number.isFinite(number) ? `${number > 0 && String(value).startsWith('+') ? '+' : ''}${number}` : String(value);
+      case 'percent':
+        return Number.isFinite(number) ? `${number}%` : String(value);
+      case 'time': {
+        const time = new Date(String(value));
+        return Number.isNaN(time.getTime()) ? String(value) : time.toISOString().slice(11, 19) + ' UTC';
+      }
+      case 'code':
+        return this.typeLabel(String(value));
+      default:
+        return typeof value === 'object' ? JSON.stringify(value) : String(value);
+    }
   }
 
   ngOnDestroy(): void {

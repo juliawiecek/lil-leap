@@ -1,57 +1,73 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { LIVE_REPORTS, type ReportSummary } from '../../live-reports';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
+import { InsightsChart } from '../../shared/insights-chart';
 import { KpiTile } from '../../shared/kpi-tile';
 import { PageHeading } from '../../shared/page-heading';
 
-/** Analyst home page: live totals from the reporting replica (TS-18.4; trends follow in TS-18.5). */
+const COUNT = new Intl.NumberFormat('en-US');
+const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+/** Home page: live totals, today's trades by hour and the most traded stocks, from the reporting data. */
 @Component({
   selector: 'app-insights-page',
-  imports: [DashboardIcon, KpiTile, PageHeading],
-  providers: [CurrencyPipe, DecimalPipe],
+  imports: [DashboardIcon, InsightsChart, KpiTile, PageHeading],
   templateUrl: './insights-page.html',
   styleUrl: './insights-page.scss',
 })
 export class InsightsPage implements OnDestroy {
   private readonly reports = inject(LIVE_REPORTS, { optional: true });
-  private readonly currency = inject(CurrencyPipe);
-  private readonly decimal = inject(DecimalPipe);
   readonly summary = signal<ReportSummary | null>(null);
+  readonly top = signal<TopInstrument[]>([]);
+  readonly trend = signal<ActivityPoint[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
+  /** Hourly points for the shared chart. */
+  readonly trendPoints = computed(() => this.trend().map((point) => ({ label: point.hour, value: point.tradeCount })));
+  readonly tradesToday = computed(() => this.trend().reduce((sum, point) => sum + point.tradeCount, 0));
+  /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
+  readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
   private destroyed = false;
 
   constructor() {
     void this.refresh();
   }
 
-  /** Loads the totals once when the page opens. */
+  /** Loads the totals, today's activity and the top stocks once when the page opens. */
   async refresh(): Promise<void> {
     if (!this.reports || this.loading() || this.destroyed) {
       return;
     }
     this.loading.set(true);
     this.error.set('');
-    try {
-      const summary = await this.reports.load();
-      if (!this.destroyed) {
-        this.summary.set(summary);
-      }
-    } catch {
-      if (!this.destroyed) {
-        this.error.set('Could not load the reporting summary. Reload the page to try again.');
-      }
-    } finally {
-      this.loading.set(false);
+    const [summary, top, trend] = await Promise.allSettled([
+      this.reports.load(),
+      this.reports.topInstruments(),
+      this.reports.activityTrend(),
+    ]);
+    if (this.destroyed) {
+      return;
     }
+    if (summary.status === 'fulfilled') {
+      this.summary.set(summary.value);
+    }
+    if (top.status === 'fulfilled') {
+      this.top.set(top.value);
+    }
+    if (trend.status === 'fulfilled') {
+      this.trend.set(trend.value);
+    }
+    if ([summary, top, trend].some((result) => result.status === 'rejected')) {
+      this.error.set('Some reporting figures could not be loaded. Reload the page to try again.');
+    }
+    this.loading.set(false);
   }
 
   count(value: number | undefined): string {
-    return value === undefined ? '–' : (this.decimal.transform(value) ?? '–');
+    return value === undefined ? '–' : COUNT.format(value);
   }
   money(value: number | string | undefined): string {
-    return value === undefined ? '–' : (this.currency.transform(value) ?? '–');
+    return value === undefined ? '–' : MONEY.format(Number(value));
   }
 
   ngOnDestroy(): void {

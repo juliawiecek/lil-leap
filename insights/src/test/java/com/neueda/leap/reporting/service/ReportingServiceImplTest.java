@@ -36,6 +36,8 @@ class ReportingServiceImplTest {
     private static final Clock UTC_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     private static final ReportDateRange TODAY_RANGE =
             new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
+    private static final ReportDateRange FULL_RANGE =
+            new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 31));
 
     private final TradeReportingRepository repository = mock(TradeReportingRepository.class);
     private final ReportingServiceImpl service = new ReportingServiceImpl(repository, UTC_CLOCK, new DefaultResourceLoader());
@@ -109,24 +111,49 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void reportGenerationEndpointsReturnSharedPlaceholder() {
-        String instrumentCsv = csvBody(service.generateInstrumentReport());
-        String segmentCsv = csvBody(service.generateClientSegmentReport());
-        String activityCsv = csvBody(service.generateTradingActivityReport());
+    void reportsCoveringTheWholeDatasetAggregateEveryTrade() {
+        String instrumentCsv = csvBody(service.generateInstrumentReport(FULL_RANGE));
+        String segmentCsv = csvBody(service.generateClientSegmentReport(FULL_RANGE));
+        String activityCsv = csvBody(service.generateTradingActivityReport(FULL_RANGE));
 
         assertThat(instrumentCsv)
                 .startsWith("instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price")
-                .contains("AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,4,500,50780.00,101.56");
+                .contains("AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,7,372,82953.90,222.99")
+                .contains("JPM,JPMorgan Chase & Co.,COMMON_STOCK,NYSE,4,168,50701.61,301.80")
+                .hasLineCount(34);
 
         assertThat(segmentCsv)
                 .startsWith("client_segment,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("ADVANCED,6,2,100343,360265.50")
-                .contains("NOVICE,6,2,150560,270770.00");
+                .contains("ADVANCED,78,7,5672,1244086.96")
+                .contains("NOVICE,69,7,737,92219.81");
 
         assertThat(activityCsv)
                 .startsWith("trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("2026-10-02,09:00,2,2,150,41430.00")
-                .hasLineCount(11);
+                .contains("2026-10-16,14:00,8,8,286,68966.56")
+                .hasLineCount(68);
+    }
+
+    @Test
+    void reportsOnlyIncludeTradesInsideTheUtcDateRange() {
+        ReportDateRange anchorDay = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
+
+        List<String> activityRows = csvBody(service.generateTradingActivityReport(anchorDay)).lines().skip(1).toList();
+        assertThat(activityRows).isNotEmpty().allMatch(row -> row.startsWith("2026-10-16,"));
+        assertThat(activityRows.stream().mapToLong(row -> Long.parseLong(row.split(",")[2])).sum()).isEqualTo(60);
+
+        List<String> segmentRows = csvBody(service.generateClientSegmentReport(anchorDay)).lines().skip(1).toList();
+        assertThat(segmentRows.stream().mapToLong(row -> Long.parseLong(row.split(",")[1])).sum()).isEqualTo(60);
+    }
+
+    @Test
+    void rangeWithoutTradesReturnsHeaderOnlyWithDatedFilename() {
+        ReportDateRange empty = new ReportDateRange(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+
+        ResponseEntity<Resource> report = service.generateInstrumentReport(empty);
+
+        assertThat(csvBody(report)).startsWith("instrument_symbol,").hasLineCount(1);
+        assertThat(report.getHeaders().getContentDisposition().getFilename())
+                .isEqualTo("instrument-report_2026-01-01_2026-01-31.csv");
     }
 
     @Test
@@ -188,7 +215,7 @@ class ReportingServiceImplTest {
     @Test
     void quotedInstrumentNamesRoundTripThroughReport() throws Exception {
         String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,2,10.25";
-        var report = csvService(csvHeader() + "\n\n" + row + "\n").generateInstrumentReport();
+        var report = csvService(csvHeader() + "\n\n" + row + "\n").generateInstrumentReport(FULL_RANGE);
         assertThat(csvBody(report)).contains("AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,1,2,20.50,10.25");
         assertThat(report.getHeaders().getContentLength()).isEqualTo(report.getBody().contentLength());
     }
@@ -196,7 +223,7 @@ class ReportingServiceImplTest {
     @Test
     void quoteAtEndOfLastColumnAndZeroQuantityAreHandled() throws Exception {
         String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,Apple,EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,0,\"10.25\"";
-        assertThat(csvBody(csvService(csvHeader() + "\n" + row).generateInstrumentReport()))
+        assertThat(csvBody(csvService(csvHeader() + "\n" + row).generateInstrumentReport(FULL_RANGE)))
                 .contains("AAPL,Apple,EQUITY,NASDAQ,1,0,0.00,0.00");
     }
 
@@ -204,17 +231,17 @@ class ReportingServiceImplTest {
     void malformedDatasetsFailClearly() throws Exception {
         var emptyDataset = csvService("");
         var invalidHeader = csvService("wrong,header");
-        assertThatThrownBy(emptyDataset::generateInstrumentReport).hasMessageContaining("is empty");
-        assertThatThrownBy(invalidHeader::generateInstrumentReport).hasMessageContaining("header");
+        assertThatThrownBy(() -> emptyDataset.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("is empty");
+        assertThatThrownBy(() -> invalidHeader.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("header");
         var shortRow = csvService(csvHeader() + "\nmissing,columns");
-        assertThatThrownBy(shortRow::generateInstrumentReport).hasMessageContaining("column count");
+        assertThatThrownBy(() -> shortRow.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("column count");
         var loader = mock(org.springframework.core.io.ResourceLoader.class);
         var resource = mock(Resource.class);
         when(loader.getResource(any())).thenReturn(resource);
         var broken = new ReportingServiceImpl(repository, UTC_CLOCK, loader);
-        assertThatThrownBy(broken::generateInstrumentReport).hasMessageContaining("not found");
+        assertThatThrownBy(() -> broken.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("not found");
         when(resource.exists()).thenReturn(true);
         when(resource.getInputStream()).thenThrow(new java.io.IOException("read failure"));
-        assertThatThrownBy(broken::generateInstrumentReport).hasCauseInstanceOf(java.io.IOException.class);
+        assertThatThrownBy(() -> broken.generateInstrumentReport(FULL_RANGE)).hasCauseInstanceOf(java.io.IOException.class);
     }
 }
