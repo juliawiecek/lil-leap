@@ -59,4 +59,12 @@ public interface ReportingService {
      * @return downloadable CSV attachment generated from the reporting dataset
      */
     ResponseEntity<Resource> generateTradingActivityReport(ReportDateRange range);
+
+    /**
+     * Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.
+     *
+     * @param range UTC calendar days whose trades are included
+     * @return downloadable CSV attachment generated from the reporting dataset
+     */
+    ResponseEntity<Resource> generateBuySellBalanceReport(ReportDateRange range);
 }

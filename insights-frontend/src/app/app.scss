@@ -346,13 +346,6 @@ main {
 .filter-bar input {
   font-size: 12px;
 }
-.report-period {
-  gap: 16px;
-  margin: 0 0 16px;
-}
-.report-period legend {
-  color: var(--muted);
-}
 .grow {
   flex: 1;
 }
@@ -698,7 +691,7 @@ td small {
 }
 .report-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 .report-card {
   border: 1px solid #283439;

@@ -94,6 +94,12 @@ export class App implements OnDestroy {
       icon: 'file',
       description: 'Executed trades, active clients, quantity and notional per UTC day and hour.',
     },
+    {
+      kind: 'buy-sell-balance-report',
+      name: 'Buy/Sell Balance Report',
+      icon: 'coins',
+      description: 'Bought vs sold quantity and notional per instrument, with net buyers listed first.',
+    },
   ];
   readonly today = utcDate();
   /** Reports always carry a date range; it starts as the last 30 UTC days, ending today. */
@@ -181,7 +187,6 @@ export class App implements OnDestroy {
   readonly selectedTrade = signal<Trade | null>(null);
   readonly detailTab = signal('Overview');
   readonly reportType = signal('Monthly Executive Report');
-  readonly reportTab = signal('Standard Reports');
   readonly exports = signal<
     { name: string; at: Date; rows: number; csv: string; filename?: string; period?: string }[]
   >([]);
@@ -316,7 +321,6 @@ export class App implements OnDestroy {
       { key: 'cadence', value: this.cadence, allowed: ['Daily','Weekly','Monthly','Yearly'] },
       { key: 'detailTab', value: this.detailTab, allowed: ['Overview','Orders','Documents','Lifecycle','Audit Trail'] },
       { key: 'reportType', value: this.reportType, allowed: this.reportTypes },
-      { key: 'reportTab', value: this.reportTab, allowed: ['Standard Reports','Scheduled Reports'] },
       { key: 'reportStart', value: this.reportStart, date: true }, { key: 'reportEnd', value: this.reportEnd, date: true },
       { key: 'definitions', value: this.definitions }, { key: 'compact', value: this.compact },
     ], parts => {

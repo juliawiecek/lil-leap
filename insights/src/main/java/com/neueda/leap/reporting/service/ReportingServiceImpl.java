@@ -50,6 +50,9 @@ public class ReportingServiceImpl implements ReportingService {
     private static final String INSTRUMENT_REPORT_NAME = "instrument-report";
     private static final String CLIENT_SEGMENT_REPORT_NAME = "client-segment-report";
     private static final String TRADING_ACTIVITY_REPORT_NAME = "trading-activity-report";
+    private static final String BUY_SELL_BALANCE_REPORT_NAME = "buy-sell-balance-report";
+    private static final String BUY_SIDE = "BUY";
+    private static final String SELL_SIDE = "SELL";
     private static final String REPORTING_DATASET = "Reporting dataset";
     private static final String REPORTING_DATASET_ROW = REPORTING_DATASET + " row";
     private static final String HEADER_TRADE_COUNT = "trade_count";
@@ -99,6 +102,20 @@ public class ReportingServiceImpl implements ReportingService {
             "unique_clients",
             HEADER_TOTAL_QUANTITY,
             HEADER_TOTAL_NOTIONAL);
+
+    private static final List<String> BUY_SELL_BALANCE_REPORT_HEADERS = List.of(
+            "instrument_symbol",
+            "instrument_name",
+            "asset_class",
+            "market_code",
+            "buy_trade_count",
+            "sell_trade_count",
+            "buy_quantity",
+            "sell_quantity",
+            "net_quantity",
+            "buy_notional",
+            "sell_notional",
+            "net_notional");
 
     private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -193,6 +210,15 @@ public class ReportingServiceImpl implements ReportingService {
                 .map(this::tradingActivityReportRow)
                 .toList();
         return buildCsvAttachment(reportFilename(TRADING_ACTIVITY_REPORT_NAME, range), TRADING_ACTIVITY_REPORT_HEADERS, rows);
+    }
+
+    @Override
+    public ResponseEntity<Resource> generateBuySellBalanceReport(ReportDateRange range) {
+        List<TradeRow> trades = loadTrades(range);
+        List<List<String>> rows = aggregateBuySellBalance(trades).stream()
+                .map(this::buySellBalanceReportRow)
+                .toList();
+        return buildCsvAttachment(reportFilename(BUY_SELL_BALANCE_REPORT_NAME, range), BUY_SELL_BALANCE_REPORT_HEADERS, rows);
     }
 
     private String reportFilename(String reportName, ReportDateRange range) {
@@ -361,6 +387,38 @@ public class ReportingServiceImpl implements ReportingService {
                         entry.getValue().totalQuantity(),
                         entry.getValue().totalNotional()))
                 .toList();
+    }
+
+    /** Net buyers first (largest net quantity bought), net sellers last; ties by symbol. */
+    private List<BuySellBalanceRow> aggregateBuySellBalance(List<TradeRow> trades) {
+        Map<InstrumentKey, BalanceBucket> aggregated = new HashMap<>();
+        for (TradeRow trade : trades) {
+            aggregated.computeIfAbsent(trade.instrumentKey(), ignored -> new BalanceBucket()).accept(trade);
+        }
+
+        return aggregated.entrySet().stream()
+                .map(entry -> new BuySellBalanceRow(entry.getKey(), entry.getValue().buys, entry.getValue().sells))
+                .sorted(Comparator
+                        .comparingLong(BuySellBalanceRow::netQuantity)
+                        .reversed()
+                        .thenComparing(row -> row.instrument().instrumentSymbol()))
+                .toList();
+    }
+
+    private List<String> buySellBalanceReportRow(BuySellBalanceRow row) {
+        return List.of(
+                row.instrument().instrumentSymbol(),
+                row.instrument().instrumentName(),
+                row.instrument().assetClass(),
+                row.instrument().marketCode(),
+                Long.toString(row.buys().tradeCount()),
+                Long.toString(row.sells().tradeCount()),
+                Long.toString(row.buys().totalQuantity()),
+                Long.toString(row.sells().totalQuantity()),
+                Long.toString(row.netQuantity()),
+                formatMoney(row.buys().totalNotional()),
+                formatMoney(row.sells().totalNotional()),
+                formatMoney(row.netNotional()));
     }
 
     private List<String> instrumentReportRow(InstrumentAggregateRow row) {
@@ -543,6 +601,37 @@ public class ReportingServiceImpl implements ReportingService {
             long uniqueClients,
             long totalQuantity,
             BigDecimal totalNotional) {
+    }
+
+    /**
+     * Bought and sold totals for one instrument. Net values are bought minus sold, so a positive
+     * net quantity means clients accumulated the instrument over the period.
+     */
+    private record BuySellBalanceRow(InstrumentKey instrument, AggregateBucket buys, AggregateBucket sells) {
+
+        private long netQuantity() {
+            return buys.totalQuantity() - sells.totalQuantity();
+        }
+
+        private BigDecimal netNotional() {
+            return buys.totalNotional().subtract(sells.totalNotional());
+        }
+    }
+
+    private static final class BalanceBucket {
+
+        private final AggregateBucket buys = new AggregateBucket();
+        private final AggregateBucket sells = new AggregateBucket();
+
+        private void accept(TradeRow trade) {
+            if (BUY_SIDE.equals(trade.side())) {
+                buys.accept(trade);
+            } else if (SELL_SIDE.equals(trade.side())) {
+                sells.accept(trade);
+            } else {
+                throw new IllegalStateException("Unexpected side in " + REPORTING_DATASET_ROW.toLowerCase(Locale.ROOT) + ": " + trade.side());
+            }
+        }
     }
 
     private static final class AggregateBucket {

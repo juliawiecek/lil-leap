@@ -5,12 +5,12 @@ import { component } from './component-helper.mjs';
 const { App } = await import('../src/app/app.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const {
-  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, utcDate,
+  LIVE_REPORTS, REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, utcDate,
 } = await import('../src/app/live-reports.ts');
 
 const csv = 'instrument_symbol,trade_count\nAAPL,7\nJPM,4\n';
 const october = { startDate: '2026-10-01', endDate: '2026-10-16' };
-const kinds = ['instrument-report', 'client-segment-report', 'trading-activity-report'];
+const kinds = ['instrument-report', 'client-segment-report', 'trading-activity-report', 'buy-sell-balance-report'];
 
 function fakeReports(result = csv) {
   const calls = [];
@@ -141,16 +141,24 @@ test('the rendered reports page requires both dates before any report can be gen
   const fixture = await render(t, App, {}, [
     { provide: AuthService, useValue: { userRole: 'ANALYST', email: 'analyst@nexttrade.local' } },
     { provide: REPORT_FILES, useValue: reports.service },
+    { provide: LIVE_REPORTS, useValue: { load: async () => ({ accounts: 1, orders: 1, fills: 1, gross_executed_value: 1 }), logout: async () => {} } },
   ]);
   const instance = fixture.componentInstance;
   t.mock.method(instance, 'download', () => {});
+  const host = fixture.nativeElement;
+  assert.ok(host.querySelector('.live-summary'), 'other pages keep the live trading summary');
   instance.navigate('Reports'); fixture.detectChanges();
   await fixture.whenStable(); fixture.detectChanges();
-  const host = fixture.nativeElement;
   const buttons = () => kinds.map(kind => host.querySelector(`[data-testid="generate-${kind}"]`));
 
-  assert.equal(host.querySelectorAll('.report-card').length, 3);
-  assert.equal(host.querySelector('.date-range'), null, 'the dashboard date filter is replaced by the report period');
+  assert.equal(host.querySelectorAll('.report-card').length, 4);
+  assert.doesNotMatch(host.textContent, /Scheduled Reports|No scheduled reports/, 'there is no scheduled reports placeholder');
+  assert.match(host.textContent, /Buy\/Sell Balance Report/);
+  assert.equal(host.querySelector('.live-summary'), null, 'the reports page has no live trading summary');
+  const ranges = host.querySelectorAll('.date-tools .date-range');
+  assert.equal(ranges.length, 1, 'the report period replaces the dashboard date filter in the header');
+  assert.equal(ranges[0].getAttribute('data-testid'), 'report-period');
+  assert.ok(ranges[0].querySelector('[data-testid="report-start"]') && ranges[0].querySelector('[data-testid="report-end"]'));
   for (const id of ['report-start', 'report-end']) {
     const field = host.querySelector(`[data-testid="${id}"]`);
     assert.equal(field.required, true);
@@ -201,6 +209,9 @@ test('the configured report provider GETs CSV text with both dates and keeps the
   disposition = null;
   assert.equal((await files.generate('client-segment-report', october)).filename,
     'client-segment-report_2026-10-01_2026-10-16.csv');
+  await files.generate('buy-sell-balance-report', october);
+  assert.equal(requests[2].url, '/api/v1/reports/generate/buy-sell-balance-report');
+  assert.deepEqual(requests[2].options.params, october);
 });
 
 test('attachment filenames prefer the encoded form and fall back safely', () => {

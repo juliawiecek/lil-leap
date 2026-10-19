@@ -13,7 +13,11 @@ export interface LiveReports {
 export const LIVE_REPORTS = new InjectionToken<LiveReports>('Live reporting API');
 
 /** CSV reports the insights service generates from its trade dataset. */
-export type ReportKind = 'instrument-report' | 'client-segment-report' | 'trading-activity-report';
+export type ReportKind =
+  | 'instrument-report'
+  | 'client-segment-report'
+  | 'trading-activity-report'
+  | 'buy-sell-balance-report';
 export interface ReportFile {
   filename: string;
   csv: string;
