@@ -68,6 +68,7 @@
       "post": {
         "operationId": "AuthController_login",
         "summary": "Sign in and get an access + refresh token pair",
+        "description": "Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -101,7 +102,7 @@
             }
           },
           "401": {
-            "description": "INVALID_CREDENTIALS: same response for an unknown email and a wrong password.",
+            "description": "INVALID_CREDENTIALS: same response for an unknown email, incorrect password or active 15-minute lock.",
             "content": {
               "application/json": {
                 "schema": {

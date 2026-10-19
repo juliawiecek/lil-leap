@@ -71,7 +71,7 @@ test('maps error codes to fixed messages and never echoes the server message', a
   const cases = [
     [
       { status: 401, body: { error: 'INVALID_CREDENTIALS', message: 'x' } },
-      'Invalid email or password.',
+      'Invalid email or password, or sign-in is locked. After 3 failed attempts, wait 15 minutes and try again.',
     ],
     [{ status: 409, body: { error: 'USER_ALREADY_EXISTS', message: 'x' } }, /already exists/],
     [

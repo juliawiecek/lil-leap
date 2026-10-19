@@ -17,6 +17,12 @@ export class User {
   @Column({ name: 'user_role', length: 20, default: 'TRADER' })
   userRole: UserRole;
 
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ name: 'locked_until', type: 'timestamptz', nullable: true })
+  lockedUntil: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
