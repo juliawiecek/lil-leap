@@ -505,6 +505,16 @@ account. Tests verify its balance through authenticated APIs; fixtures do not
 activate accounts or write cash, orders, fills, or holdings directly to SQL.
 The existing golden path buys AAPL and checks the real fill, holdings, and cash.
 Market hours are disabled only in the E2E stack to permit overnight execution.
+The broker-free E2E stack also sets `ORDERS_KAFKA_ENABLED=false` and
+`SPRING_KAFKA_LISTENER_AUTO_STARTUP=false` so optional Kafka reporting does not
+connect to a nonexistent broker or delay order execution. Kafka remains enabled
+by default in other environments.
+
+The golden-path test matches the browser's submitted `clientReference` to the
+persisted order through the authenticated API. This avoids Chromium's
+`Network.getResponseBody: No data found for resource with given identifier`
+error when reading a streamed response body already consumed by Angular, while
+still checking HTTP 201, the bearer token, settlement, and the UI result.
 
 The full suite runs three phases: `auth` with normal ten-minute sessions, `journey`
 with one-minute server expiry, and `default-timeout` with ten-minute sessions.
