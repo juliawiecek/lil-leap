@@ -65,6 +65,8 @@ services:
       PORT: 8082
       # Keep the real order journey deterministic at night and on weekends.
       NEXTTRADE_MARKET_RESPECT_HOURS: 'false'
+      # Kafka reporting is optional; this stack exercises database settlement.
+      ORDERS_KAFKA_ENABLED: 'false'
     depends_on:
       db:
         condition: service_healthy
@@ -103,6 +105,7 @@ services:
       SPRING_DATASOURCE_USERNAME: reporting_user
       SPRING_DATASOURCE_PASSWORD: e2e-reporting-password
       SPRING_DATASOURCE_HIKARI_READ_ONLY: 'true'
+      SPRING_KAFKA_LISTENER_AUTO_STARTUP: 'false'
     depends_on:
       reporting-db:
         condition: service_healthy

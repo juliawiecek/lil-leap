@@ -410,7 +410,7 @@ CREATE TABLE orders (
     CONSTRAINT chk_order_quantity CHECK (quantity > 0),
     CONSTRAINT chk_order_type CHECK (order_type = 'MARKET'),
     CONSTRAINT chk_order_status CHECK (
-        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED')
+        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )
 );
 
@@ -462,7 +462,7 @@ CREATE TABLE order_status_history (
     CONSTRAINT fk_status_history_order
         FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE RESTRICT,
     CONSTRAINT chk_status_history_status CHECK (
-        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED')
+        status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )
 );
 
@@ -676,11 +676,11 @@ CREATE TABLE audit_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_audit_user
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
     CONSTRAINT fk_audit_account
-        FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE SET NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE RESTRICT,
     CONSTRAINT fk_audit_order
-        FOREIGN KEY (related_order_id) REFERENCES orders(order_id) ON DELETE SET NULL,
+        FOREIGN KEY (related_order_id) REFERENCES orders(order_id) ON DELETE RESTRICT,
     CONSTRAINT chk_audit_actor_type CHECK (
         actor_type IN ('USER', 'SYSTEM')
     )
@@ -691,6 +691,36 @@ CREATE INDEX idx_audit_account ON audit_log(account_id);
 CREATE INDEX idx_audit_order ON audit_log(related_order_id);
 CREATE INDEX idx_audit_created_at ON audit_log(created_at DESC);
 CREATE INDEX idx_audit_event_type ON audit_log(event_type);
+
+-- ==========================================================
+-- PERMANENT TRADE RECORDS (BR-14, TS-15.5)
+-- ==========================================================
+-- Trade records are never changed once written, by the application, the owner or a migration.
+-- The application role has no UPDATE/DELETE grant on these tables; this trigger also stops the owner.
+-- Tests that must clear them disable the trigger inside their own transaction, as the owner.
+CREATE OR REPLACE FUNCTION forbid_trade_record_change() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION '% is a permanent trade record: % is not allowed', TG_TABLE_NAME, TG_OP
+        USING ERRCODE = 'insufficient_privilege';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_log_permanent BEFORE UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_audit_log_no_truncate BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_order_status_history_permanent BEFORE UPDATE OR DELETE ON order_status_history
+    FOR EACH ROW EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_order_status_history_no_truncate BEFORE TRUNCATE ON order_status_history
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_holding_movements_permanent BEFORE UPDATE OR DELETE ON holding_movements
+    FOR EACH ROW EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_holding_movements_no_truncate BEFORE TRUNCATE ON holding_movements
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_cash_transactions_permanent BEFORE UPDATE OR DELETE ON cash_transactions
+    FOR EACH ROW EXECUTE FUNCTION forbid_trade_record_change();
+CREATE TRIGGER trg_cash_transactions_no_truncate BEFORE TRUNCATE ON cash_transactions
+    FOR EACH STATEMENT EXECUTE FUNCTION forbid_trade_record_change();
 
 -- ==========================================================
 -- HELPER VIEWS (Application query convenience)
@@ -743,6 +773,13 @@ CREATE OR REPLACE VIEW v_latest_quotes AS
         is_synthetic
     FROM quotes
     ORDER BY instrument_id, quoted_at DESC;
+
+-- BR-15 (TS-16.1b): An order's audit trail for trade investigation in Insights. Leaves out who
+-- and which account, so the reporting role can read it without access to user data.
+CREATE OR REPLACE VIEW v_trade_audit_events AS
+    SELECT audit_id, related_order_id AS order_id, actor_type, event_type, payload, created_at
+    FROM audit_log
+    WHERE related_order_id IS NOT NULL;
 
 -- BR-03: Active sessions per user
 CREATE OR REPLACE VIEW v_active_sessions AS

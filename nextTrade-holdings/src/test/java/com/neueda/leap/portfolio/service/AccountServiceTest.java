@@ -4,12 +4,14 @@ import com.neueda.leap.portfolio.dto.TransferRequest;
 import com.neueda.leap.portfolio.service.AccountActionException.Reason;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,9 +25,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** Rejection rules for opening accounts and transfers; the SQL itself is covered by AccountTransferPostgresTest. */
+/**
+ * Rejection rules for opening accounts and transfers, and the cash-activity filters; the SQL itself
+ * is covered by AccountTransferPostgresTest.
+ */
 class AccountServiceTest {
 
     private final UUID userId = UUID.randomUUID();
@@ -120,6 +126,39 @@ class AccountServiceTest {
     void listingIsScopedToTheCaller() {
         when(jdbc.queryForList(anyString(), eq(userId))).thenReturn(List.of(Map.of("account_id", from)));
         assertThat(service.list(userId)).containsExactly(Map.of("account_id", from));
+    }
+
+    @Test
+    void cashActivityRejectsAStartAfterTheEndWithoutQuerying() {
+        assertThatThrownBy(() -> service.cashActivity(userId, null, LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 1)))
+                .isInstanceOf(InvalidFilterException.class);
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void cashActivityCoversWholeUtcDaysForTheCallerAcrossEveryAccount() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class))).thenReturn(List.of());
+
+        service.cashActivity(userId, null, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class), eq(userId),
+                eq(Timestamp.from(Instant.parse("2026-10-01T00:00:00Z"))),
+                eq(Timestamp.from(Instant.parse("2026-10-02T00:00:00Z"))));
+        assertThat(sql.getValue()).contains("a.user_id = ?").contains("NOT IN ('BUY', 'SELL')")
+                .doesNotContain("ct.account_id = ?");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void cashActivityCanBeNarrowedToOneAccountWithOpenEndedDates() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class))).thenReturn(List.of());
+
+        service.cashActivity(userId, from, null, null);
+
+        verify(jdbc).query(contains("ct.account_id = ?"), any(RowMapper.class), eq(userId),
+                eq(Timestamp.from(Instant.EPOCH)), eq(Timestamp.from(Instant.parse("9999-12-31T00:00:00Z"))), eq(from));
     }
 
     @SuppressWarnings("unchecked")

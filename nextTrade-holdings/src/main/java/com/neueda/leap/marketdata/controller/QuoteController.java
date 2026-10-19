@@ -1,6 +1,8 @@
 package com.neueda.leap.marketdata.controller;
 
+import com.neueda.leap.marketdata.CandleInterval;
 import com.neueda.leap.marketdata.MarketQuote;
+import com.neueda.leap.marketdata.PriceCandle;
 import com.neueda.leap.marketdata.QuoteRepository;
 import com.neueda.leap.marketdata.dto.QuoteResponse;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,9 @@ import java.util.UUID;
 public class QuoteController {
     private final QuoteRepository repository;
     private static final int DEFAULT_HISTORY_LIMIT = 100;
+    private static final int DEFAULT_CANDLE_LIMIT = 120;
+    /** Most instruments one batch read may ask for. */
+    static final int MAX_BATCH = 100;
 
     /**
      * Creates a {@code QuoteController} with the supplied dependencies.
@@ -54,6 +59,26 @@ public class QuoteController {
                 .findLatestByInstrumentId(instrumentId)
                 .orElseThrow(() -> new QuoteNotFoundException("No quote found for instrument " + instrumentId));
         return QuoteResponse.from(quote);
+    }
+
+    /**
+     * Retrieves the latest quote for several instruments in one request, so a dashboard makes one
+     * price request per refresh instead of one per stock (PS-10). Instruments with no quote yet are
+     * left out rather than failing the whole batch.
+     *
+     * @param ids instrument identifiers, comma-separated, at most {@value #MAX_BATCH}
+     * @return the latest quote of each instrument that has one, in the order requested
+     * @throws IllegalArgumentException if no ids or more than {@value #MAX_BATCH} are given
+     */
+    @GetMapping("/latest/by-instruments")
+    public List<QuoteResponse> getLatestByInstruments(@RequestParam("ids") List<UUID> ids) {
+        if (ids.isEmpty() || ids.size() > MAX_BATCH) {
+            throw new IllegalArgumentException("Between 1 and " + MAX_BATCH + " instrument ids are required");
+        }
+        return ids.stream().distinct()
+                .flatMap(id -> repository.findLatestByInstrumentId(id).stream())
+                .map(QuoteResponse::from)
+                .toList();
     }
 
     /**
@@ -106,6 +131,29 @@ public class QuoteController {
             throw new QuoteNotFoundException("No quotes found for instrument " + instrumentId);
         }
         return quotes.stream().map(QuoteResponse::from).toList();
+    }
+
+    /**
+     * Returns midpoint candles for the price charts, e.g.
+     * {@code GET /quotes/candles/{instrumentId}?interval=1m&limit=120} for the last two hours.
+     * An instrument with no quotes in the window returns an empty list, so a chart can show
+     * "no data yet" instead of an error.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param interval candle width: 1m, 5m, 15m, 1h or 1d (default 1m)
+     * @param limit number of most recent intervals to cover (default 120, at most 500)
+     * @return candles ordered oldest first
+     * @throws IllegalArgumentException if the interval or limit is invalid
+     */
+    @GetMapping("/candles/{instrumentId}")
+    public List<PriceCandle> getCandles(
+            @PathVariable UUID instrumentId,
+            @RequestParam(value = "interval", defaultValue = "1m", required = false) String interval,
+            @RequestParam(value = "limit", defaultValue = DEFAULT_CANDLE_LIMIT + "", required = false) int limit) {
+        if (limit < 1) {
+            throw new IllegalArgumentException("Limit must be at least 1");
+        }
+        return repository.findCandles(instrumentId, CandleInterval.fromCode(interval), limit);
     }
 
     /**

@@ -71,13 +71,7 @@
           @if (notifications()) {
             <div class="notification-popover">
               <b>Notifications</b>
-              <p>
-                {{
-                  alerts().length
-                    ? alerts().length + ' price alerts configured.'
-                    : 'You’re all caught up.'
-                }}
-              </p>
+              <p>You’re all caught up. Fills and rejections appear as messages in the corner.</p>
             </div>
           }
         </div>
@@ -96,6 +90,13 @@
       <div class="session-line">
         <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketBadge() }}</span><span>{{ formattedTime().time }}</span><span>{{ formattedTime().date }}</span>
       </div>
+      @if (serviceDown()) {
+        <div class="service-banner" role="alert">
+          <strong>We can't reach NextTrade right now.</strong>
+          <span>Balances and positions may be out of date. Nothing you placed is lost.</span>
+          <button type="button" class="secondary-button" (click)="refreshPortfolio()">Try again</button>
+        </div>
+      }
       <app-market-ticker (pick)="choose(quote($event))" />
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel">
@@ -110,43 +111,41 @@
               <app-dashboard-icon name="eye" />
             </button>
           </h1>
-          <div class="summary-metrics">
-            <div class="main-value">
-              <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-              ><span [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0">{{ totalReturn() >= 0 ? '▲ ' : '▼ ' }}{{ totalReturn() | currency }} ({{ totalReturnPercent() | number: '1.2-2' }}%) <small>Today</small></span>
+          @if (!portfolioLoaded()) {
+            <p class="empty-note" aria-live="polite">Loading your balances…</p>
+          } @else {
+            <div class="summary-metrics">
+              <div class="main-value">
+                <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
+                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '▲ ' : dayGain() < 0 ? '▼ ' : '' }}{{ dayGain() | currency }} ({{ dayGainPercent() | number: '1.2-2' }}%) <small>Today</small></span>
+              </div>
+              <div>
+                <span>Buying Power</span
+                ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
+              </div>
+              <div>
+                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
+                ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0">{{ dayGainPercent() > 0 ? '+' : '' }}{{ dayGainPercent() | number: '1.2-2' }}%</b>
+              </div>
+              <div>
+                <span>Total Return</span
+                ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
+                  >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
+                  >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b
+                >
+              </div>
+              <div>
+                <span>Cash</span
+                ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong
+                ><small>{{ exposure().cashPercent | number: '1.1-1' }}% of total</small>
+              </div>
+              <div>
+                <span>Invested</span
+                ><strong>{{ privateBalance() ? '••••••' : (exposure().equities | currency) }}</strong
+                ><small>{{ exposure().equitiesPercent | number: '1.1-1' }}% of total</small>
+              </div>
             </div>
-            <div>
-              <span>Buying Power</span
-              ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
-            </div>
-            <div>
-              <span>Day P&amp;L</span><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0">{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
-              ><b [class.gain]="totalReturnPercent() >= 0" [class.loss]="totalReturnPercent() < 0">{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b>
-            </div>
-            <div>
-              <span>Total Return</span
-              ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
-                >{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
-              ><b [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
-                >{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b
-              >
-            </div>
-            <div>
-              <span>Cash</span
-              ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong
-              ><small>16.9% of total</small>
-            </div>
-            <div><span>Margin Used</span><strong>$12,400.00</strong><small>4.4%</small></div>
-            <div><span>Net Liquidity</span><strong>$272,250.17</strong></div>
-          </div>
-        </section>
-        <section class="panel index-panel" aria-label="Market indices">
-          @for (market of markets; track market.name) {
-            <button type="button" (click)="navigate('Markets')">
-              <span>{{ market.name }}</span
-              ><strong>{{ market.value }}</strong
-              ><b class="gain">{{ market.change }}</b>
-            </button>
           }
         </section>
         @if (page() === 'Overview') {
@@ -205,60 +204,30 @@
                         <td>{{ p.quantity }}</td>
                         <td>{{ p.cost | currency }}</td>
                         <td>{{ p.value | currency }}</td>
-                        <td [class.gain]="p.day >= 0" [class.loss]="p.day < 0">
-                          {{ p.day >= 0 ? '+' : '' }}{{ p.day | currency }}
+                        <td [class.gain]="p.day > 0" [class.loss]="p.day < 0">
+                          {{ p.day > 0 ? '+' : '' }}{{ p.day | currency }}
                         </td>
-                        <td [class.gain]="p.total >= 0" [class.loss]="p.total < 0">
-                          {{ p.total >= 0 ? '+' : '' }}{{ p.total | currency }}
+                        <td [class.gain]="p.total > 0" [class.loss]="p.total < 0">
+                          {{ p.total > 0 ? '+' : '' }}{{ p.total | currency }}
                         </td>
-                        <td>+{{ p.weight }}%</td>
+                        <td>{{ p.weight | number: '1.1-1' }}%</td>
                         <td>
                           <button
                             type="button"
                             class="icon-button"
                             [attr.aria-label]="'Trade ' + p.symbol"
-                            (click)="choose(quote(p.symbol)); ticketTab.set('Trade')"
+                            (click)="choose(quote(p.symbol))"
                           >
                             <app-dashboard-icon name="more" />
                           </button>
                         </td>
                       </tr>
-                    }
-                  </tbody>
-                </table>
-              } @else if (bottomTab() === 'Orders' || bottomTab() === 'Executions') {
-                <table>
-                  <caption class="sr-only">{{ bottomTab() }}</caption>
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Symbol</th>
-                      <th>Side</th>
-                      <th>Quantity</th>
-                      <th>Price</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (o of orders(); track o.id) {
-                      @if (bottomTab() === 'Orders' || o.status === 'Filled') {
-                        <tr>
-                          <td>{{ o.time }}</td>
-                          <td>{{ o.symbol }}</td>
-                          <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
-                            {{ o.side }}
-                          </td>
-                          <td>{{ o.quantity }}</td>
-                          <td>{{ o.price === null ? '—' : (o.price | currency) }}</td>
-                          <td>{{ o.type }}</td>
-                          <td [class.gain]="o.status === 'Filled'" [class.loss]="o.status === 'Rejected'">
-                            {{ o.status }}
-                          </td>
-                        </tr>
-                      }
                     } @empty {
-                      <tr><td colspan="7">No orders yet.</td></tr>
+                      <tr>
+                        <td colspan="11">
+                          {{ portfolioLoaded() ? 'No positions yet. Buy a stock from the ticket to start.' : 'Loading your positions…' }}
+                        </td>
+                      </tr>
                     }
                   </tbody>
                 </table>
@@ -270,22 +239,27 @@
                   <div>
                     <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
                   </div>
-                  <div><span>Margin Used</span><strong>$12,400.00</strong></div>
-                  <div><span>Net Liquidity</span><strong>$272,250.17</strong></div>
+                  <div><span>Invested</span><strong>{{ exposure().equities | currency }}</strong></div>
+                  <div><span>Total Value</span><strong>{{ portfolio() | currency }}</strong></div>
                 </div>
               } @else {
                 <div class="balance-details">
-                  <div><span>Day P&amp;L</span><strong class="gain">+$12,842.31</strong></div>
+                  <div>
+                    <span>Day P&amp;L</span
+                    ><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"
+                      >{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
+                    >
+                  </div>
                   <div>
                     <span>Total Return</span
-                    ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturn() >= 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                    ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
+                      >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
                     >
                   </div>
                   <div>
                     <span>Return %</span
-                    ><strong [class.gain]="totalReturn() >= 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturnPercent() >= 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</strong
+                    ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
+                      >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</strong
                     >
                   </div>
                 </div>
@@ -293,21 +267,23 @@
             </div>
           </section>
         }
-        @if (page() === 'Orders' || page() === 'History') {
+        @if (page() === 'Activity') {
           <section class="panel orders-history-panel">
-            <div class="panel-heading"><h2>Order History</h2></div>
-            <app-order-history />
+            <div class="panel-heading"><h2>Activity</h2></div>
+            <app-activity-feed />
           </section>
         }
-        @if (page() === 'Overview' || page() === 'Watchlist' || page() === 'Screeners') {
+        @if (page() === 'Overview' || page() === 'Markets') {
           <section class="panel watch-panel">
             <div class="panel-heading">
-              <h2>{{ page() === 'Screeners' ? 'Stock screener' : 'Watchlist' }}</h2>
-              <button type="button" class="text-link" (click)="navigate('Watchlist')">
-                More <app-dashboard-icon name="chevron" />
-              </button>
+              <h2>{{ page() === 'Markets' ? 'Stocks' : 'Watchlist' }}</h2>
+              @if (page() === 'Overview') {
+                <button type="button" class="text-link" (click)="navigate('Markets')">
+                  More <app-dashboard-icon name="chevron" />
+                </button>
+              }
             </div>
-            @if (page() === 'Screeners') {
+            @if (page() === 'Markets') {
               <select
                 aria-label="Stock filter"
                 [value]="filter()"
@@ -320,22 +296,17 @@
             }
             <div class="table-scroll">
               <table class="watch-table">
-                <caption class="sr-only">{{ page() === 'Screeners' ? 'Stock screener' : 'Watchlist' }}</caption>
+                <caption class="sr-only">{{ page() === 'Markets' ? 'Stocks' : 'Watchlist' }}</caption>
                 <thead>
                   <tr>
                     <th>Symbol</th>
                     <th>Last</th>
                     <th>Change</th>
                     <th>Sector</th>
-                    <th>1D</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (
-                    q of page() === 'Screeners' ? screened() : quotes();
-                    track q.symbol;
-                    let i = $index
-                  ) {
+                  @for (q of page() === 'Markets' ? screened() : quotes(); track q.symbol) {
                     <tr [class.selected]="selected().symbol === q.symbol">
                       <td>
                         <button type="button" (click)="choose(q)">
@@ -347,23 +318,9 @@
                         {{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%
                       </td>
                       <td class="muted">{{ q.sector }}</td>
-                      <td>
-                        <button
-                          type="button"
-                          [attr.aria-label]="'View ' + q.symbol + ' chart'"
-                          (click)="choose(q)"
-                        >
-                          <svg viewBox="0 0 80 28" aria-hidden="true">
-                            <path
-                              [attr.d]="spark(i, q.change < 0)"
-                              fill="none"
-                              [attr.stroke]="q.change > 0 ? '#53cb84' : '#f36367'"
-                              stroke-width="1"
-                            />
-                          </svg>
-                        </button>
-                      </td>
                     </tr>
+                  } @empty {
+                    <tr><td colspan="4">{{ page() === 'Markets' && quotes().length ? 'No stocks match this filter.' : 'Loading prices…' }}</td></tr>
                   }
                 </tbody>
               </table>
@@ -374,7 +331,7 @@
           <section class="panel market-panel">
             <div class="panel-heading"><h2>Market Overview</h2></div>
             <div class="market-tabs">
-              @for (tab of ['Sectors', 'Top Movers', '52W High/Low']; track tab) {
+              @for (tab of ['Sectors', 'Top Movers']; track tab) {
                 <button
                   type="button"
                   [class.active]="marketTab() === tab"
@@ -386,32 +343,30 @@
             </div>
             @if (marketTab() === 'Sectors') {
               <div class="sector-list">
-                @for (s of sectors; track s.name) {
+                @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
                     ><span class="sector-bar"
-                      ><i
-                        [style.width.%]="s.change > 0 ? s.change * 48 : -s.change * 48"
-                        [class.negative-bar]="s.change < 0"
-                      ></i></span
+                      ><i [style.width.%]="s.width" [class.negative-bar]="s.change < 0"></i></span
                     ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
                       >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
                     >
                   </div>
+                } @empty {
+                  <p class="empty-note">Loading prices…</p>
                 }
               </div>
-            } @else if (marketTab() === 'Top Movers') {
+              <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
+            } @else {
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   ><span>{{ q.price | currency }}</span
                   ><strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
-                    >{{ q.change > 0 ? '+' : '' }}{{ q.change }}%</strong
+                    >{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</strong
                   >
                 </button>
               }
-            } @else {
-              <p class="empty-note">52-week high and low data is not available.</p>
             }
           </section>
         }
@@ -419,60 +374,9 @@
           <div class="bottom-panels">
             <section class="panel executions-panel">
               <div class="panel-heading">
-                <h2>Recent Executions</h2>
-                <button
-                  class="text-link"
-                  type="button"
-                  (click)="navigate('Orders'); bottomTab.set('Executions')"
-                >
-                  View all <app-dashboard-icon name="chevron" />
-                </button>
+                <h2>Recent Activity</h2>
               </div>
-              <div class="table-scroll">
-                <table>
-                  <caption class="sr-only">Recent executions</caption>
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Symbol</th>
-                      <th>Side</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (o of executions().slice(0, 4); track o.id) {
-                      <tr>
-                        <td>{{ o.time }}</td>
-                        <td>{{ o.symbol }}</td>
-                        <td [class.gain]="o.side === 'Buy'" [class.loss]="o.side === 'Sell'">
-                          {{ o.side }}
-                        </td>
-                        <td>{{ o.quantity }}</td>
-                        <td>{{ o.price === null ? '—' : (o.price | number: '1.2-2') }}</td>
-                        <td class="gain">{{ o.status }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </section>
-            <section class="panel news-panel">
-              <div class="panel-heading">
-                <h2>News &amp; Analysis</h2>
-                <button type="button" class="text-link" (click)="navigate('Research')">
-                  View all <app-dashboard-icon name="chevron" />
-                </button>
-              </div>
-              @for (n of news; track n.symbol; let i = $index) {
-                <button type="button" class="news-row" (click)="article.set(i); openModal('news')">
-                  <span class="muted">{{ n.time }}</span
-                  ><b>{{ n.symbol }}</b
-                  ><span>{{ n.title }}</span
-                  ><small>{{ n.source }}</small>
-                </button>
-              }
+              <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
             <section class="panel exposure-panel">
               <div class="panel-heading">
@@ -484,15 +388,7 @@
               <div class="exposure-content">
                 <div>
                   <span class="muted">Asset Class</span>
-                  @for (
-                    asset of [
-                      { name: 'Equities', value: 82.4 },
-                      { name: 'Options', value: 5.6 },
-                      { name: 'Cash', value: 12 },
-                      { name: 'Other', value: 0 },
-                    ];
-                    track asset.name
-                  ) {
+                  @for (asset of [{ name: 'Equities', value: exposure().equitiesPercent }, { name: 'Cash', value: exposure().cashPercent }]; track asset.name) {
                     <div class="exposure-row">
                       <span>{{ asset.name }}</span
                       ><span>{{ asset.value | number: '1.1-1' }}%</span
@@ -500,9 +396,9 @@
                     </div>
                   }
                 </div>
-                <svg class="exposure-ring" aria-label="Equities 82.4%, Options 5.6%, Cash 12%, Other 0%">
+                <svg class="exposure-ring" [attr.aria-label]="'Equities ' + exposure().equitiesPercent + '%, Cash ' + exposure().cashPercent + '%'">
                   <foreignObject width="100%" height="100%">
-                    <div xmlns="http://www.w3.org/1999/xhtml"><b>$284.7K</b><small>Total</small></div>
+                    <div xmlns="http://www.w3.org/1999/xhtml"><b>{{ exposureLabel() }}</b><small>Total</small></div>
                   </foreignObject>
                 </svg>
               </div>
@@ -556,15 +452,11 @@
       {{
         modal() === 'review'
           ? 'Review Order'
-          : modal() === 'news'
-            ? 'News & Analysis'
-            : modal() === 'exposure'
-              ? 'Portfolio Exposure'
-              : modal() === 'indicators'
-                ? 'Chart Indicators'
-                : modal() === 'shortcuts'
-                  ? 'Keyboard Shortcuts'
-                  : 'Help & Support'
+          : modal() === 'exposure'
+            ? 'Portfolio Exposure'
+            : modal() === 'shortcuts'
+              ? 'Keyboard Shortcuts'
+              : 'Help & Support'
       }}
     </h2>
     <button class="icon-button" type="button" aria-label="Close dialog" (click)="closeModal()">
@@ -581,30 +473,14 @@
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
       </div>
       <div>
-        <span>Side / Type</span><strong>{{ side() }} / {{ orderType() }}</strong>
+        <span>Side / Type</span><strong>{{ side() }} / Market</strong>
       </div>
       <div>
         <span>Quantity</span><strong>{{ quantity() }}</strong>
       </div>
       <div>
-        <span>Price</span
-        ><strong>{{
-          (orderType() === 'Limit' ? +limitPrice() : selected().price) | currency
-        }}</strong>
+        <span>Live price</span><strong>{{ selected().price | currency }}</strong>
       </div>
-      <div>
-        <span>Time in Force</span><strong>{{ tif() }}</strong>
-      </div>
-      @if (takeProfit()) {
-        <div>
-          <span>Take Profit</span><strong>{{ +profitPrice() | currency }}</strong>
-        </div>
-      }
-      @if (stopLoss()) {
-        <div>
-          <span>Stop Loss</span><strong>{{ +stopPrice() | currency }}</strong>
-        </div>
-      }
       <div>
         <span>Estimated Total</span><strong>{{ total() | currency }}</strong>
       </div>
@@ -613,32 +489,12 @@
       <button class="secondary-button" type="button" (click)="closeModal()">Edit</button>
       <button class="primary-button" type="button" (click)="confirmOrder()">Confirm {{ side() }}</button>
     </div>
-  } @else if (modal() === 'news') {
-    <p class="muted">{{ news[article()].time }} · {{ news[article()].symbol }}</p>
-    <h3>{{ news[article()].title }}</h3>
-    <p>
-      This headline is part of the supplied dashboard reference. A full article and live news feed
-      are not connected.
-    </p>
-    <button
-      type="button"
-      class="secondary-button"
-      (click)="choose(quote(news[article()].symbol)); closeModal()"
-    >
-      View {{ news[article()].symbol }} chart
-    </button>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>82.4%</strong></div>
-      <div><span>Options</span><strong>5.6%</strong></div>
-      <div><span>Cash</span><strong>12.0%</strong></div>
-      <div><span>Other</span><strong>0.0%</strong></div>
+      <div><span>Equities</span><strong>{{ exposure().equitiesPercent | number: '1.1-1' }}% · {{ exposure().equities | currency }}</strong></div>
+      <div><span>Cash</span><strong>{{ exposure().cashPercent | number: '1.1-1' }}% · {{ exposure().cash | currency }}</strong></div>
+      <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
     </div>
-  } @else if (modal() === 'indicators') {
-    <p><b>EMA (50)</b> · Blue, 50-period exponential moving average.</p>
-    <p><b>EMA (200)</b> · Purple, 200-period exponential moving average.</p>
-    <p><b>VWAP</b> · Yellow, volume-weighted average price.</p>
-    <p><b>RSI (14)</b> · Relative strength index in the lower chart pane.</p>
   } @else if (modal() === 'shortcuts') {
     <p><kbd>Tab</kbd> Move between controls.</p>
     <p><kbd>Enter</kbd> Activate the focused control or review an order.</p>
@@ -648,7 +504,7 @@
       Select a symbol from the watchlist to link its chart and order ticket. Configure the order,
       then select Review Order.
     </p>
-    <p>Use the Orders tab to follow your orders as they fill. Chat support is not connected yet.</p>
+    <p>Use Activity to follow your orders, fills, deposits and transfers. Chat support is not connected yet.</p>
   }
 </dialog>
 <app-toasts (view)="viewOrders()" />

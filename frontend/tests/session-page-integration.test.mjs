@@ -42,10 +42,9 @@ test('advanced URL hydration selects the quote and initializes only a changed ti
   const f = workspace(t, AdvancedDashboard);
   f.selectSymbol('NVDA');
   assert.equal(f.desk.selected().symbol, 'NVDA');
-  assert.equal(f.desk.limitPrice(), f.desk.selected().price.toFixed(2));
-  f.desk.limitPrice.set('900.00');
+  f.desk.quantity.set('7');
   f.selectSymbol('NVDA');
-  assert.equal(f.desk.limitPrice(), '900.00');
+  assert.equal(f.desk.quantity(), '7', 'the same symbol again leaves the ticket as it is');
   f.selectSymbol('UNKNOWN');
   assert.match(f.desk.message(), /unavailable/);
 });

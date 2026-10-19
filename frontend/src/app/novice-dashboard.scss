@@ -140,9 +140,6 @@ h2 {
   font-size: 11px;
   color: var(--muted);
 }
-.sidebar-account > span {
-  margin-bottom: 2px;
-}
 .sidebar-account button {
   text-align: left;
   padding: 0;
@@ -383,7 +380,7 @@ h2 {
   width: 12px;
 }
 .portfolio-panel {
-  height: 393px;
+  height: auto;
   padding: 21px 20px 20px;
 }
 .portfolio-top {
@@ -423,90 +420,24 @@ h2 {
   gap: 12px;
 }
 .portfolio-gain strong {
-  color: var(--green);
+  color: var(--muted);
   font-size: 18px;
   font-weight: 600;
 }
 .portfolio-gain > span {
   color: var(--muted);
 }
-.period-picker {
-  display: flex;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  height: 26px;
-  padding: 1px;
+.portfolio-gain.up strong {
+  color: var(--green);
 }
-.period-picker button {
-  min-width: 43px;
-  border-radius: 5px;
-  padding: 0 9px;
-  color: #c0cad9;
-  font-size: 10px;
+.portfolio-gain.down strong {
+  color: #f45159;
 }
 .period-picker button.selected,
 .green-button {
   background: linear-gradient(#99dfa0, #79c885);
   color: #102917;
   box-shadow: inset 0 0 0 1px #a5e5a636;
-}
-.portfolio-chart {
-  display: flex;
-  margin-top: 17px;
-  height: 160px;
-  gap: 10px;
-  padding-top: 5px;
-}
-.chart-y-axis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 34px;
-  flex-shrink: 0;
-  padding-top: 0;
-  padding-bottom: 25px;
-  color: #c0c9d7;
-  font-size: 12px;
-}
-.chart-plot {
-  position: relative;
-  min-width: 0;
-  flex: 1;
-}
-.chart-plot > svg {
-  width: 100%;
-  height: 126px;
-  overflow: visible;
-  display: block;
-}
-.chart-price {
-  position: absolute;
-  z-index: 1;
-  right: -1px;
-  top: -32px;
-  padding: 5px 8px;
-  border-radius: 5px;
-  background: #253034;
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: 0 5px 15px #0002;
-}
-.chart-price::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  right: 11px;
-  border: 4px solid transparent;
-  border-top-color: #253034;
-  border-bottom: 0;
-}
-.chart-x-axis {
-  display: flex;
-  justify-content: space-between;
-  color: #c9d0dc;
-  font-size: 10px;
-  padding-top: 4px;
 }
 .portfolio-stats {
   display: grid;
@@ -676,41 +607,6 @@ th {
   width: 16px;
   height: 16px;
 }
-.market-panel {
-  padding: 10px 17px 12px;
-}
-.market-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 11px;
-  margin-top: 6px;
-}
-.market-card {
-  border: 1px solid #242d31;
-  border-radius: 7px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 13px;
-  text-align: left;
-  min-width: 0;
-  font-size: 12px;
-}
-.market-numbers {
-  display: block;
-  white-space: nowrap;
-  margin-top: 2px;
-}
-.market-numbers b {
-  margin-left: 10px;
-  font-weight: 400;
-}
-.market-card > svg {
-  width: 42%;
-  height: 35px;
-  min-width: 40px;
-}
 .allocation-panel {
   height: 286px;
   padding: 16px 16px 12px;
@@ -725,22 +621,34 @@ th {
 .allocation-donut {
   height: 156px;
   width: 156px;
-  padding: 26px;
-  border-radius: 50%;
   position: relative;
   margin: 0 auto;
-  background: conic-gradient(
-    #009b36 0deg 259deg,
-    #102019 259deg 261deg,
-    #919191 261deg 359deg,
-    #111817 359deg
-  );
 }
-.allocation-donut div {
+// Drawn from the real stock/cash split; the arc eases to each new share.
+.allocation-donut svg {
   width: 100%;
   height: 100%;
-  background: #0f1415;
-  border-radius: 50%;
+  transform: rotate(-90deg);
+}
+.allocation-donut .ring {
+  fill: none;
+  stroke-width: 6;
+}
+.allocation-donut .ring.cash {
+  stroke: #919191;
+}
+.allocation-donut .ring.stocks {
+  stroke: #009b36;
+  transition: stroke-dasharray 0.6s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .allocation-donut .ring.stocks {
+    transition: none;
+  }
+}
+.allocation-donut .donut-center {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -981,16 +889,6 @@ th {
 .expanded-list .panel-heading > span {
   color: var(--muted);
 }
-.watchlist-item {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 100px 1fr 150px 100px 20px;
-  align-items: center;
-  gap: 15px;
-  padding: 18px 8px;
-  border-top: 1px solid var(--line);
-  text-align: left;
-}
 .empty-state {
   text-align: center;
   padding: 70px 20px;
@@ -1129,9 +1027,6 @@ th {
   .portfolio-panel {
     padding-top: 23px;
   }
-  .portfolio-chart {
-    margin-top: 19px;
-  }
 }
 @media (max-width: 1350px) {
   .novice-shell {
@@ -1153,10 +1048,6 @@ th {
   .portfolio-value {
     font-size: 32px;
   }
-  .period-picker button {
-    min-width: 30px;
-    padding-inline: 5px;
-  }
   .portfolio-stats > div {
     padding-inline: 10px;
   }
@@ -1166,16 +1057,9 @@ th {
   .portfolio-stats span {
     font-size: 10px;
   }
-  .market-card {
-    padding-inline: 8px;
-  }
-  .market-card svg {
-    display: none;
-  }
   .allocation-donut {
     width: 135px;
     height: 135px;
-    padding: 23px;
   }
   .allocation-content {
     margin-block: 23px;
@@ -1222,12 +1106,6 @@ th {
   }
   .portfolio-stats span {
     font-size: 12px;
-  }
-  .market-card svg {
-    display: block;
-  }
-  .period-picker button {
-    min-width: 38px;
   }
   .allocation-content {
     margin-block: 17px;
@@ -1327,16 +1205,6 @@ th {
   .portfolio-gain strong {
     font-size: 15px;
   }
-  .period-picker {
-    width: 100%;
-  }
-  .period-picker button {
-    flex: 1;
-    min-width: 0;
-  }
-  .portfolio-chart {
-    margin-top: 40px;
-  }
   .portfolio-stats {
     grid-template-columns: 1fr 1fr;
     row-gap: 18px;
@@ -1352,12 +1220,6 @@ th {
   .portfolio-stats span {
     font-size: 10px;
   }
-  .market-cards {
-    grid-template-columns: 1fr;
-  }
-  .market-card svg {
-    width: 35%;
-  }
   .allocation-content {
     grid-template-columns: 45% 1fr;
   }
@@ -1370,13 +1232,6 @@ th {
   }
   .article-grid {
     grid-template-columns: 1fr;
-  }
-  .watchlist-item {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .watchlist-item > :last-child {
-    display: none;
   }
   .asset-class-list > div {
     grid-template-columns: 1fr auto;
@@ -1403,7 +1258,6 @@ th {
   .allocation-donut {
     width: 105px;
     height: 105px;
-    padding: 19px;
   }
   .allocation-donut strong {
     font-size: 12px;
@@ -1423,9 +1277,6 @@ th {
   }
   .watch-table td:last-child {
     padding-left: 8px;
-  }
-  .chart-x-axis {
-    font-size: 8px;
   }
 }
 
@@ -1490,3 +1341,26 @@ th {
   margin: 0;
   -webkit-appearance: none;
 }
+
+// Shown instead of a blank screen when balances cannot be read (PS-11).
+.service-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  border: 1px solid #8a3a3d;
+  border-radius: 8px;
+  background: #2a1517;
+  color: #f3d6d7;
+  font-size: 13px;
+}
+.service-banner button {
+  margin-left: auto;
+}
+.muted-note {
+  color: #87918f;
+  font-size: 12px;
+}
+

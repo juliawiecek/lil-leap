@@ -90,27 +90,29 @@
         </div>
         <div class="date-tools">
           <div class="freshness"><span></span>Data as of <b>22 Sep 2026</b></div>
-          <div class="date-range">
-            <app-dashboard-icon name="calendar" /><label
-              ><span class="sr-only">Start date</span
-              ><input
-                type="date"
-                aria-label="Start date"
-                [ngModel]="start()"
-                (ngModelChange)="start.set($event); selectedTrade.set(null)" /></label
-            ><span>—</span
-            ><label
-              ><span class="sr-only">End date</span
-              ><input
-                type="date"
-                aria-label="End date"
-                [ngModel]="end()"
-                (ngModelChange)="end.set($event); selectedTrade.set(null)"
-            /></label>
-          </div>
+          @if (page() !== 'Reports') {
+            <div class="date-range">
+              <app-dashboard-icon name="calendar" /><label
+                ><span class="sr-only">Start date</span
+                ><input
+                  type="date"
+                  aria-label="Start date"
+                  [ngModel]="start()"
+                  (ngModelChange)="start.set($event); selectedTrade.set(null)" /></label
+              ><span>—</span
+              ><label
+                ><span class="sr-only">End date</span
+                ><input
+                  type="date"
+                  aria-label="End date"
+                  [ngModel]="end()"
+                  (ngModelChange)="end.set($event); selectedTrade.set(null)"
+              /></label>
+            </div>
+          }
         </div>
       </div>
-      @if (dateError()) {
+      @if (dateError() && page() !== 'Reports') {
         <p class="error" role="alert">{{ dateError() }}</p>
       }
       @if (notice()) {
@@ -611,7 +613,7 @@
       }
       @if (page() === 'Reports') {
         <div class="tabs">
-          @for (tab of ['Standard Reports', 'Custom Reports', 'Scheduled Reports']; track tab) {
+          @for (tab of ['Standard Reports', 'Scheduled Reports']; track tab) {
             <button [class.active]="reportTab() === tab" (click)="reportTab.set(tab)">
               {{ tab }}
             </button>
@@ -627,66 +629,61 @@
         } @else {
           <section class="panel">
             <div class="panel-heading">
-              <h2>
-                {{
-                  reportTab() === 'Standard Reports' ? 'Standard reports' : 'Custom report builder'
-                }}
-              </h2>
+              <h2>Standard reports</h2>
               <span class="muted">CSV</span>
             </div>
-            @if (reportTab() === 'Standard Reports') {
-              <div class="report-grid">
-                @for (r of reportTypes; track r; let i = $index) {
-                  <article class="report-card">
-                    <span class="kpi-icon"
-                      ><app-dashboard-icon [name]="i === 0 ? 'file' : i === 1 ? 'chart' : 'users'"
-                    /></span>
-                    <h3>{{ r }}</h3>
-                    <p>
-                      {{
-                        i === 0
-                          ? 'A concise summary of trading volume and client participation.'
-                          : i === 1
-                            ? 'Order-level activity across instruments and markets.'
-                            : 'Registration, portfolio segments, and client engagement.'
-                      }}
-                    </p>
-                    <button [disabled]="!!dateError()" (click)="exportReport(r)">
-                      Generate CSV →
-                    </button>
-                  </article>
-                }
-              </div>
-            } @else {
-              <div class="filter-bar">
-                <label
-                  >Report type<select
-                    [ngModel]="reportType()"
-                    (ngModelChange)="reportType.set($event)"
-                  >
-                    @for (r of reportTypes; track r) {
-                      <option>{{ r }}</option>
-                    }
-                  </select></label
-                ><label
-                  >Client segment<select
-                    [ngModel]="segment()"
-                    (ngModelChange)="segment.set($event)"
-                  >
-                    <option value="All">All segments</option>
-                    @for (s of segments; track s) {
-                      <option>{{ s }}</option>
-                    }
-                  </select></label
-                ><button class="primary" [disabled]="!!dateError()" (click)="exportReport()">
-                  Generate CSV
-                </button>
-              </div>
+            <fieldset class="filter-bar report-period">
+              <legend>Reporting period (UTC, inclusive)</legend>
+              <label
+                >Start date<input
+                  type="date"
+                  name="reportStart"
+                  required
+                  data-testid="report-start"
+                  [max]="reportEnd() || today"
+                  [attr.aria-invalid]="!!reportDateError()"
+                  [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
+                  [ngModel]="reportStart()"
+                  (ngModelChange)="reportStart.set($event ?? '')" /></label
+              ><label
+                >End date<input
+                  type="date"
+                  name="reportEnd"
+                  required
+                  data-testid="report-end"
+                  [min]="reportStart()"
+                  [max]="today"
+                  [attr.aria-invalid]="!!reportDateError()"
+                  [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
+                  [ngModel]="reportEnd()"
+                  (ngModelChange)="reportEnd.set($event ?? '')"
+              /></label>
+            </fieldset>
+            @if (reportDateError()) {
+              <p id="report-date-error" class="error" role="alert" data-testid="report-date-error">
+                {{ reportDateError() }}
+              </p>
             }
+            <div class="report-grid">
+              @for (r of reportCatalog; track r.kind) {
+                <article class="report-card">
+                  <span class="kpi-icon"><app-dashboard-icon [name]="r.icon" /></span>
+                  <h3>{{ r.name }}</h3>
+                  <p>{{ r.description }}</p>
+                  <button
+                    [attr.data-testid]="'generate-' + r.kind"
+                    [disabled]="!!reportDateError() || !!generating()"
+                    [attr.aria-busy]="generating() === r.kind"
+                    (click)="generateReport(r)"
+                  >
+                    {{ generating() === r.kind ? 'Generating…' : 'Generate CSV →' }}
+                  </button>
+                </article>
+              }
+            </div>
             <p class="footnote">
-              Uses the date range above and current filters: {{ asset() }} instruments ·
-              {{ market() }} markets · {{ segment() }} segments.
-              <button class="text-button" (click)="reset()">Reset</button>
+              Generated by the insights service from executed trades whose fill time falls within
+              the selected UTC dates. Ranges can span up to 366 days.
             </p>
           </section>
         }
@@ -701,6 +698,7 @@
               <thead>
                 <tr>
                   <th>Report</th>
+                  <th>Period (UTC)</th>
                   <th>Generated</th>
                   <th class="numeric">Rows</th>
                   <th>Format</th>
@@ -711,6 +709,7 @@
                 @for (r of exports(); track $index) {
                   <tr>
                     <td>{{ r.name }}</td>
+                    <td>{{ r.period ?? '—' }}</td>
                     <td>{{ r.at | date: 'medium' }}</td>
                     <td class="numeric">{{ r.rows }}</td>
                     <td>CSV</td>
@@ -718,7 +717,7 @@
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="5" class="empty">Your generated reports will appear here.</td>
+                    <td colspan="6" class="empty">Your generated reports will appear here.</td>
                   </tr>
                 }
               </tbody>

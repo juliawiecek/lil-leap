@@ -56,6 +56,30 @@ class QuoteControllerTest {
     }
 
     @Test
+    void getLatestByInstruments_returnsEachQuotedInstrumentOnceAndSkipsUnquotedOnes() throws Exception {
+        UUID unquoted = UUID.randomUUID();
+        when(repository.findLatestByInstrumentId(instrumentId)).thenReturn(Optional.of(sampleQuote("AAPL", "NASDAQ", now)));
+        when(repository.findLatestByInstrumentId(unquoted)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/quotes/latest/by-instruments")
+                .param("ids", instrumentId + "," + unquoted + "," + instrumentId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].symbol").value("AAPL"));
+    }
+
+    @Test
+    void getLatestByInstruments_rejectsAnEmptyOrOversizedBatch() throws Exception {
+        mockMvc.perform(get("/quotes/latest/by-instruments").param("ids", ""))
+                .andExpect(status().isBadRequest());
+        String tooMany = String.join(",", java.util.stream.Stream.generate(() -> UUID.randomUUID().toString())
+                .limit(QuoteController.MAX_BATCH + 1L).toList());
+        mockMvc.perform(get("/quotes/latest/by-instruments").param("ids", tooMany))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     void getLatestByMarketSymbol_success() throws Exception {
         MarketQuote quote = sampleQuote("AAPL", "NASDAQ", now);
         when(repository.findLatestByMarketAndSymbol("NASDAQ", "AAPL")).thenReturn(Optional.of(quote));

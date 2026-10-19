@@ -36,7 +36,7 @@ async function fixture(t, role = 'TRADER', lifetime = 600, malformed = false) {
     setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
   } });
   const router = {
-    url: '/orders',
+    url: '/activity',
     navigate: async (parts, options) => { navigations.push({ parts, options }); router.url = '/login'; },
     createUrlTree: (parts, options) => ({ parts, options }), parseUrl: value => value,
   };
@@ -77,7 +77,7 @@ test('app configuration connects shared GET/POST auth and concurrent 401s to one
   assert.equal(f.session.running, false);
   assert.equal(f.navigations.length, 1);
   assert.deepEqual(f.navigations[0].parts, ['/login']);
-  assert.equal(f.navigations[0].options.queryParams.returnUrl, '/orders');
+  assert.equal(f.navigations[0].options.queryParams.returnUrl, '/activity');
   f.backend.expectNone('/api/v1/orders');
 });
 

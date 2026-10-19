@@ -3,11 +3,12 @@
   "/rules/**": { "target": "http://localhost:8081", "secure": false },
   "/api/v1/orders": { "target": "http://localhost:8082", "secure": false },
   "/api/v1/market/**": { "target": "http://localhost:8082", "secure": false },
-  "/api/v1/accounts": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/cash": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/holdings": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/instruments": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/clients/**": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/quotes/latest/**": { "target": "http://localhost:8085", "secure": false },
-  "/api/v1/quotes/history/**": { "target": "http://localhost:8085", "secure": false }
+  "/api/v1/accounts": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/cash": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/holdings": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/instruments": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/clients/**": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/quotes/latest/**": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/quotes/history/**": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/quotes/candles/**": { "target": "http://localhost:8080", "secure": false }
 }

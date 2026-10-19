@@ -27,6 +27,7 @@ public class KafkaOrderLifecycleEventPublisher implements OrderLifecycleEventPub
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final String topic;
+    private final boolean enabled;
 
     /**
      * Creates the publisher.
@@ -35,19 +36,25 @@ public class KafkaOrderLifecycleEventPublisher implements OrderLifecycleEventPub
      * @param kafkaTemplate Kafka client used to publish the JSON payload
      * @param objectMapper shared JSON mapper
      * @param topic Kafka topic used for order lifecycle events
+     * @param enabled whether to publish events (false for stacks without a broker)
      */
     public KafkaOrderLifecycleEventPublisher(JdbcTemplate jdbcTemplate,
                                             KafkaTemplate<String, String> kafkaTemplate,
                                             ObjectMapper objectMapper,
-                                            @Value("${orders.kafka.topic:order-events}") String topic) {
+                                            @Value("${orders.kafka.topic:order-events}") String topic,
+                                            @Value("${orders.kafka.enabled:true}") boolean enabled) {
         this.jdbcTemplate = jdbcTemplate;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.topic = topic;
+        this.enabled = enabled;
     }
 
     @Override
     public void publishTerminalEvent(UUID orderId) {
+        if (!enabled) {
+            return;
+        }
         OrderLifecycleEvent event = loadEvent(orderId);
         if (!isTerminal(event.status())) {
             log.debug("Skipping non-terminal order event {} with status {}", orderId, event.status());

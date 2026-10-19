@@ -47,9 +47,9 @@ import java.util.stream.IntStream;
 public class ReportingServiceImpl implements ReportingService {
 
     private static final String REPORTS_RESOURCE_PATH = "classpath:reports/trades.csv";
-    private static final String INSTRUMENT_REPORT_FILENAME = "instrument-report.csv";
-    private static final String CLIENT_SEGMENT_REPORT_FILENAME = "client-segment-report.csv";
-    private static final String TRADING_ACTIVITY_REPORT_FILENAME = "trading-activity-report.csv";
+    private static final String INSTRUMENT_REPORT_NAME = "instrument-report";
+    private static final String CLIENT_SEGMENT_REPORT_NAME = "client-segment-report";
+    private static final String TRADING_ACTIVITY_REPORT_NAME = "trading-activity-report";
     private static final String REPORTING_DATASET = "Reporting dataset";
     private static final String REPORTING_DATASET_ROW = REPORTING_DATASET + " row";
     private static final String HEADER_TRADE_COUNT = "trade_count";
@@ -169,30 +169,35 @@ public class ReportingServiceImpl implements ReportingService {
     }
 
     @Override
-    public ResponseEntity<Resource> generateInstrumentReport() {
-        List<TradeRow> trades = loadTrades();
+    public ResponseEntity<Resource> generateInstrumentReport(ReportDateRange range) {
+        List<TradeRow> trades = loadTrades(range);
         List<List<String>> rows = aggregateByInstrument(trades).stream()
                 .map(this::instrumentReportRow)
                 .toList();
-        return buildCsvAttachment(INSTRUMENT_REPORT_FILENAME, INSTRUMENT_REPORT_HEADERS, rows);
+        return buildCsvAttachment(reportFilename(INSTRUMENT_REPORT_NAME, range), INSTRUMENT_REPORT_HEADERS, rows);
     }
 
     @Override
-    public ResponseEntity<Resource> generateClientSegmentReport() {
-        List<TradeRow> trades = loadTrades();
+    public ResponseEntity<Resource> generateClientSegmentReport(ReportDateRange range) {
+        List<TradeRow> trades = loadTrades(range);
         List<List<String>> rows = aggregateByClientSegment(trades).stream()
                 .map(this::clientSegmentReportRow)
                 .toList();
-        return buildCsvAttachment(CLIENT_SEGMENT_REPORT_FILENAME, CLIENT_SEGMENT_REPORT_HEADERS, rows);
+        return buildCsvAttachment(reportFilename(CLIENT_SEGMENT_REPORT_NAME, range), CLIENT_SEGMENT_REPORT_HEADERS, rows);
     }
 
     @Override
-    public ResponseEntity<Resource> generateTradingActivityReport() {
-        List<TradeRow> trades = loadTrades();
+    public ResponseEntity<Resource> generateTradingActivityReport(ReportDateRange range) {
+        List<TradeRow> trades = loadTrades(range);
         List<List<String>> rows = aggregateByTradingActivity(trades).stream()
                 .map(this::tradingActivityReportRow)
                 .toList();
-        return buildCsvAttachment(TRADING_ACTIVITY_REPORT_FILENAME, TRADING_ACTIVITY_REPORT_HEADERS, rows);
+        return buildCsvAttachment(reportFilename(TRADING_ACTIVITY_REPORT_NAME, range), TRADING_ACTIVITY_REPORT_HEADERS, rows);
+    }
+
+    private String reportFilename(String reportName, ReportDateRange range) {
+        return reportName + "_" + DATE_FORMATTER.format(range.startDate())
+                + "_" + DATE_FORMATTER.format(range.endDate()) + ".csv";
     }
 
     private ReportDateRange currentUtcDayRange() {
@@ -227,6 +232,14 @@ public class ReportingServiceImpl implements ReportingService {
                         ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
                 .contentLength(resource.contentLength())
                 .body(resource);
+    }
+
+    private List<TradeRow> loadTrades(ReportDateRange range) {
+        Instant startInclusive = range.startInclusive();
+        Instant endExclusive = range.endExclusive();
+        return loadTrades().stream()
+                .filter(trade -> !trade.filledAt().isBefore(startInclusive) && trade.filledAt().isBefore(endExclusive))
+                .toList();
     }
 
     private List<TradeRow> loadTrades() {

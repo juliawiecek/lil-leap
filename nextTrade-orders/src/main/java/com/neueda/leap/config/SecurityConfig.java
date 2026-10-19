@@ -27,6 +27,9 @@ public class SecurityConfig {
     /** {@code /orders/{uuid}} and {@code /orders/{uuid}/status}, with no query string. */
     private static final String ORDER_READ_PATH =
             "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(/status)?$";
+    /** {@code /orders/{uuid}/cancel} (PS-14), with no query string. */
+    private static final String ORDER_CANCEL_PATH =
+            "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/cancel$";
 
     /** Creates the security configuration; Spring instantiates it. */
     public SecurityConfig() {
@@ -54,9 +57,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/settlements/recover", "/settlements/rollback").hasRole("OPERATIONS")
+                        .requestMatchers(HttpMethod.GET, "/settlements/status/**").hasRole("OPERATIONS")
                         .requestMatchers(HttpMethod.POST, "/orders").access(traderWithoutParameters())
                         // UUID ids only, so sibling routes such as /orders/quote-preview are matched separately.
                         .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, ORDER_READ_PATH))
+                            .access(traderWithoutParameters())
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.POST, ORDER_CANCEL_PATH))
                             .access(traderWithoutParameters())
                         .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
                         // Market open/closed is not account data: any signed-in user may read it.

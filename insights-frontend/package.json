@@ -4,8 +4,12 @@
   "type": "module",
   "scripts": {
     "ng": "ng",
+    "prestart": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
     "start": "ng serve",
+    "prebuild": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "pretest": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
+    "pretest:coverage": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
     "test:coverage": "c8 --reporter=text-summary --reporter=lcov --reporter=html --reports-dir=coverage node --enable-source-maps --test --test-concurrency=2 tests/*.test.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

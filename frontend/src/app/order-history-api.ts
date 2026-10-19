@@ -26,6 +26,23 @@ export const ORDER_TRACK_INTERVAL_MS = 2000;
 export const ORDER_TRACK_LIMIT_MS = 300000;
 
 /**
+ * Orders that are filled now but were not in the previous read, so balances can be reloaded after
+ * any fill (PS-10). The first read (no previous list) reports nothing.
+ */
+export function newlyFilled(previous: readonly OrderHistoryRow[] | null, next: readonly OrderHistoryRow[]): OrderHistoryRow[] {
+  if (!previous) {
+    return [];
+  }
+  const filledBefore = new Set(previous.filter((row) => row.status === 'FILLED').map((row) => row.orderId));
+  return next.filter((row) => row.status === 'FILLED' && !filledBefore.has(row.orderId));
+}
+
+/** Whether any order may still change, so it is worth re-reading on the polling interval. */
+export function hasOpenOrders(rows: readonly OrderHistoryRow[]): boolean {
+  return rows.some((row) => !FINAL_ORDER_STATUSES.has(row.status));
+}
+
+/**
  * Optional filters. Dates are ISO days (yyyy-mm-dd), both inclusive; status is one order status;
  * accountId narrows to one of the user's accounts (PS-05).
  */
@@ -88,6 +105,27 @@ export class OrderHistoryClient {
       fillPrice: row.fillPrice === null ? null : Number(row.fillPrice),
       filledQuantity: row.filledQuantity === null ? null : Number(row.filledQuantity),
     }));
+  }
+
+  /**
+   * Cancels one of the caller's orders while it is still waiting (PS-14). Resolves when the orders
+   * service has recorded it as CANCELLED; otherwise throws with a sentence the user can read, e.g.
+   * when the order already started executing.
+   */
+  async cancel(orderId: string): Promise<void> {
+    const token = this.#tokens.accessToken;
+    if (!token) {
+      throw new Error('Sign in to cancel an order.');
+    }
+    try {
+      await firstValueFrom(this.#http.post(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/cancel`, null));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        const message = typeof error.error?.message === 'string' ? error.error.message : null;
+        throw new Error(error.status === 404 ? 'That order was not found.' : message ?? 'Could not cancel the order. Please try again.');
+      }
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
   }
 }
 
