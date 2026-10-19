@@ -100,20 +100,14 @@ export class OrderHistoryClient {
     if (!token) {
       throw new Error('Sign in to cancel an order.');
     }
-    let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/cancel`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {
+      await firstValueFrom(this.#http.post(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/cancel`, null));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        const message = typeof error.error?.message === 'string' ? error.error.message : null;
+        throw new Error(error.status === 404 ? 'That order was not found.' : message ?? 'Could not cancel the order. Please try again.');
+      }
       throw new Error('Could not reach the server. Check your connection and try again.');
-    }
-    if (response.status === 401) { this.#tokens.unauthorized?.(token); }
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
-      const message = typeof body?.message === 'string' ? body.message : null;
-      throw new Error(response.status === 404 ? 'That order was not found.' : message ?? 'Could not cancel the order. Please try again.');
     }
   }
 }

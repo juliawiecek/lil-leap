@@ -167,18 +167,19 @@ test('status filters include the durable execution lifecycle', async t => {
     ['', 'SUBMITTED', 'ACCEPTED', 'PENDING', 'DELAYED', 'FILLED', 'REJECTED', 'CANCELLED']);
 });
 
-test('client cancels with a POST and the bearer token, and explains a refusal', async () => {
+test('client cancels with a POST through the shared transport, and explains a refusal', async () => {
   const ok = fakeFetch(json(200, { orderId: 'o 1', status: 'CANCELLED' }));
-  await new OrderHistoryClient({ accessToken: token }, ok.fetchImpl).cancel('o 1');
+  await new OrderHistoryClient({ accessToken: token }, apiHttp(ok.fetchImpl)).cancel('o 1');
   assert.equal(ok.calls[0].url, '/api/v1/orders/o%201/cancel');
   assert.equal(ok.calls[0].init.method, 'POST');
-  assert.equal(ok.calls[0].init.headers.Authorization, `Bearer ${token}`);
+  assert.equal(ok.calls[0].init.headers.Authorization, undefined);
 
-  const executing = fakeFetch(json(409, { error: 'ORDER_EXECUTING', message: 'Order is already executing.' }));
-  await assert.rejects(new OrderHistoryClient({ accessToken: token }, executing.fetchImpl).cancel('o-1'), /already executing/);
-  const missing = fakeFetch(json(404, { error: 'ORDER_NOT_FOUND', message: 'The order was not found.' }));
-  await assert.rejects(new OrderHistoryClient({ accessToken: token }, missing.fetchImpl).cancel('o-1'), /That order was not found/);
-  await assert.rejects(new OrderHistoryClient({ accessToken: null }).cancel('o-1'), /Sign in/);
+  const cancelWith = response => new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(response).fetchImpl)).cancel('o-1');
+  await assert.rejects(cancelWith(json(409, { error: 'ORDER_EXECUTING', message: 'Order is already executing.' })), /already executing/);
+  await assert.rejects(cancelWith(json(404, { error: 'ORDER_NOT_FOUND', message: 'The order was not found.' })), /That order was not found/);
+  await assert.rejects(cancelWith(new Response('oops', { status: 500 })), /Could not cancel the order/);
+  await assert.rejects(cancelWith(new TypeError('network')), /Could not reach the server/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }, apiHttp(ok.fetchImpl)).cancel('o-1'), /Sign in/);
 });
 
 /** A history whose service also records cancels; the orders it lists can change after one. */
