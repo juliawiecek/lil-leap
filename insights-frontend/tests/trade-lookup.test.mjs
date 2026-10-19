@@ -144,8 +144,10 @@ test('the rendered page shows the outcome, the record checks and every step in p
   const steps = [...host.querySelectorAll('tbody tr')].map((row) => row.children[2].textContent.trim());
   assert.deepEqual(steps, ['Submitted', 'Order accepted', 'Filled', 'Buy', 'Buy', 'Filled']);
   assert.equal(fixture.componentInstance.sourceLabel('CASH'), 'Cash movement');
+  assert.deepEqual([...host.querySelectorAll('thead th')].map((th) => th.textContent.trim()),
+    ['Recorded (UTC)', 'Record', 'Step', 'Details'], 'no "By" column');
   const cells = [...host.querySelectorAll('tbody tr')].map((row) =>
-    [...row.children[4].querySelectorAll('span')].map((span) => span.textContent.replace(/\s+/g, ' ').trim()));
+    [...row.children[3].querySelectorAll('span')].map((span) => span.textContent.replace(/\s+/g, ' ').trim()));
   assert.deepEqual(cells[1], ['Status Accepted'], 'audit payloads are opened into labelled fields');
   assert.deepEqual(cells[2], ['Shares 5', 'Price $225.3219']);
   assert.deepEqual(cells[4], ['Cash −$1,126.61']);
