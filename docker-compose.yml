@@ -83,8 +83,10 @@ services:
   insights:
     build: ./insights
     environment:
-      <<: *jwt
+      <<: [*primary-database, *jwt]
       PORT: 8084
+    depends_on:
+      db: {condition: service_healthy}
 
   db:
     image: postgres:16-alpine

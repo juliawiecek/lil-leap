@@ -3,12 +3,13 @@ package com.neueda.leap.reporting.service;
 import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
 import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
+import com.neueda.leap.reporting.model.ReportDateRange;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
-/** Read-only dashboard insights and placeholder report-generation use cases. */
+/** Read-only dashboard insights and date-bounded CSV report-generation use cases. */
 public interface ReportingService {
 
     /** Fixed number of instruments shown on the MVP dashboard. */
@@ -38,21 +39,24 @@ public interface ReportingService {
     /**
      * Returns the downloadable CSV report aggregated by instrument.
      *
+     * @param range UTC calendar days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
-    ResponseEntity<Resource> generateInstrumentReport();
+    ResponseEntity<Resource> generateInstrumentReport(ReportDateRange range);
 
     /**
      * Returns the downloadable CSV report aggregated by client segment.
      *
+     * @param range UTC calendar days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
-    ResponseEntity<Resource> generateClientSegmentReport();
+    ResponseEntity<Resource> generateClientSegmentReport(ReportDateRange range);
 
     /**
      * Returns the downloadable CSV report aggregated by trading activity.
      *
+     * @param range UTC calendar days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
-    ResponseEntity<Resource> generateTradingActivityReport();
+    ResponseEntity<Resource> generateTradingActivityReport(ReportDateRange range);
 }

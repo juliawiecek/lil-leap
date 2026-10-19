@@ -9,8 +9,14 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       missing-topics-fatal: false
-  # Datasource removed; reports are generated from local CSV data.
-  # If database connectivity is re-added, configure datasource here.
+  # Dashboard endpoints read fills from the DB; report downloads read reports/trades.csv.
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
+    username: ${DB_APP_USERNAME:app_user}
+    password: ${DB_APP_PASSWORD:my_app_password}
+    hikari:
+      read-only: true
+      maximum-pool-size: 5
 
 logging:
   level:
