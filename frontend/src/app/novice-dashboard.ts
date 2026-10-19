@@ -216,11 +216,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
   readonly headerChangeText = computed(() => {
     const { amount, percent } = this.headerChange();
-    let sign = '';
+    let sign: string;
     if (amount > 0) {
       sign = '+';
     } else if (amount < 0) {
       sign = '−';
+    } else {
+      sign = '';
     }
     return `${formatMoney(amount, true)} (${sign}${Math.abs(percent).toFixed(2)}%)`;
   });
