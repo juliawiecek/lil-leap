@@ -23,12 +23,18 @@ public enum CandleInterval {
         this.sqlInterval = sqlInterval;
     }
 
-    /** @return the code used in the API, e.g. {@code 5m} */
+    /**
+     * Returns the interval's API code.
+     * @return the code used in the API, e.g. {@code 5m}
+     */
     public String code() {
         return code;
     }
 
-    /** @return the PostgreSQL interval literal, e.g. {@code 5 minutes} */
+    /**
+     * Returns the interval's SQL representation.
+     * @return the PostgreSQL interval literal, e.g. {@code 5 minutes}
+     */
     public String sqlInterval() {
         return sqlInterval;
     }

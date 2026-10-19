@@ -97,7 +97,7 @@ for (const app of ['NextTrade', 'Insights']) {
       const response = await rejected;
       expect(response.status()).toBe(401);
       expect((await response.json()).error).toBe('INVALID_CREDENTIALS');
-      await expect(page.locator(insights ? '[role="alert"]' : '.form-status')).toContainText('Invalid email or password.');
+      await expect(page.locator(insights ? '[role="alert"]' : '.form-status')).toContainText('Invalid email or password, or sign-in is locked.');
       await expect(page).toHaveURL(url => url.pathname === '/login');
       await expect(page.locator('app-trading-workspace, app-insights-workspace')).toHaveCount(0);
     });
