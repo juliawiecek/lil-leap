@@ -24,7 +24,7 @@ test('open, closed-soon and closed-for-the-weekend each read naturally', () => {
   assert.equal(marketStatusText(status(true, '2026-10-15T13:30:00Z', '2026-10-14T20:00:00Z'), now), 'Market closes in 2h 14m');
   assert.equal(marketStatusText(status(false, '2026-10-14T20:51:00Z', '2026-10-14T21:00:00Z'), now), 'Market opens in 3h 5m');
   const weekend = marketStatusText(status(false, '2026-10-19T13:30:00Z', '2026-10-19T20:00:00Z'), new Date('2026-10-16T21:00:00Z'), 'en-US');
-  assert.match(weekend, /^Market closed · Opens Mon \d{1,2}:30 (AM|PM)$/);
+  assert.equal(weekend, 'Market closed · Opens Mon 8:30 AM CT', 'Central time, 12-hour clock');
   assert.equal(marketStatusText(null, now), 'Market status unavailable');
 });
 

@@ -32,13 +32,16 @@ import { tradingClients } from './trading-clients';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
 } from './portfolio-history';
+import { centralDay, centralTime } from './app-time';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
+/** Live values kept for the chart: a day of five-second updates. */
+const LIVE_POINTS = 17280;
 const PERIOD_LABELS: Record<ChartPeriod, string> = {
-  '1D': 'Past day', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
+  '1D': 'Today', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
 };
 
 /**
@@ -52,6 +55,11 @@ export function fundedAt(createdAt: string | undefined, cash: readonly CashEvent
   }
   const opened = createdAt ? Date.parse(createdAt) : Number.NaN;
   return Number.isFinite(opened) ? opened : null;
+}
+
+/** The last of the values in each bar of `width` ms, in time order. */
+export function lastPerBar(points: readonly ValuePoint[], width: number): ValuePoint[] {
+  return points.filter((p, i) => i === points.length - 1 || Math.floor(points[i + 1].at / width) !== Math.floor(p.at / width));
 }
 
 /** Company logos the template knows how to draw. */
@@ -125,6 +133,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Increments per chart load, so a slow earlier load never replaces a newer one. */
   #chartRequest = 0;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
+  /** Live values are added to the chart only once the shown account's balances have loaded. */
+  #liveRecording = false;
   /** Latest bid and today's % change per instrument, both from the shared feed (PS-10). */
   readonly #bids = new Map<string, number>();
   readonly #dayChanges = new Map<string, number>();
@@ -188,12 +198,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (points.length < 2) {
       return { amount: this.todayReturn(), percent: this.todayReturnPercent(), label: 'Today' };
     }
-    const start = points[0].value;
+    // Measured from when the account first held money, not from the $0 before it existed.
+    const start = startValue(points);
     const scrub = this.chartScrub();
     const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
-    let label = this.chartSpan()?.fromOpening ? 'Since opening' : PERIOD_LABELS[this.chartPeriod()];
+    const span = this.chartSpan();
+    let label = span?.fromOpening ? 'Since opening' : PERIOD_LABELS[this.chartPeriod()];
+    if (span?.session && centralDay(span.session.open) !== centralDay(this.marketClock())) {
+      // Before today's open: the last session's move, named by its day.
+      label = centralTime(span.session.open, { weekday: 'long' });
+    }
     if (scrub) {
-      label = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(scrub.at);
+      label = `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`;
     }
     return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
   });
@@ -225,13 +241,31 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const { total, stocksValue } = this.assetAllocation();
     return total > 0 ? Math.min(100, Math.max(0, (stocksValue / total) * 100)) : 0;
   });
-  /** The history, ending at the live value shown above it so the two always agree. */
+  /**
+   * The value at every live update since the page opened (one per price update, about every five
+   * seconds), so each rise and dip stays on the line instead of only its end moving.
+   */
+  readonly chartLive = signal<ValuePoint[]>([]);
+  /**
+   * The line: the recorded history up to the first live value, then every live value after it,
+   * ending at the value shown above the chart so the two always agree.
+   */
   readonly chartPoints = computed(() => {
     const history = this.chartHistory();
     if (history.length < 2 || !this.portfolioLoaded()) {
       return history;
     }
-    return [...history.slice(0, -1), { at: history.at(-1)!.at, value: this.portfolioValue() }];
+    const range = this.chartSpan();
+    const session = range?.session;
+    let live = this.chartLive().filter((p) => p.at >= history[0].at && (!session || p.at <= session.close));
+    if (range && !session) {
+      // Longer periods space points evenly, so live values are kept one per price bar, as the history is.
+      live = lastPerBar(live, barStep(range).ms);
+    }
+    if (!live.length) {
+      return [...history.slice(0, -1), { at: history.at(-1)!.at, value: this.portfolioValue() }];
+    }
+    return [...history.filter((p) => p.at < live[0].at), ...live];
   });
   /** Every tradable stock from the backend, at its live price (TS-14.7 AC1). */
   readonly quotes = signal<Quote[]>([]);
@@ -537,6 +571,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Shows a loaded portfolio, valued at the latest bids already known. */
   applyPortfolio(portfolio: Portfolio): void {
     this.#portfolio = portfolio;
+    this.#liveRecording = true;
     this.portfolioLoaded.set(true);
     this.#render();
   }
@@ -593,7 +628,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         ...movements.map((m) => ({ at: Date.parse(m.occurredAt), amount: m.amount })),
         ...fills.map((f) => ({ at: f.at, amount: -f.quantity * f.price })),
       ].filter((e) => Number.isFinite(e.at));
-      const range = chartRange(this.chartPeriod(), now, fundedAt(account?.created_at, cash));
+      const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
+      const range = chartRange(this.chartPeriod(), now, fundedAt(account?.created_at, cash), session);
       const prices = await this.#closes([...new Set(fills.map((f) => f.symbol))], range, now);
       if (request !== this.#chartRequest || this.destroyed) {
         return;
@@ -614,7 +650,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       }
     }
   }
-  /** Recorded prices of each stock over the range; a stock whose prices fail falls back to its fill price. */
+  /**
+   * Recorded prices of each stock over the range; a stock whose prices fail falls back to its fill
+   * price. Recorded prices are midpoints while live values use the bid, so each is moved by the
+   * stock's current bid-to-midpoint ratio, and the history meets the live line without a jump.
+   */
   async #closes(symbols: string[], range: ChartRange, now: number): Promise<Map<string, PricePoint[]>> {
     const { interval, limit } = barStep(range);
     const ids = new Map([
@@ -627,8 +667,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       if (!id) {
         return;
       }
+      const quote = this.feed.quotes().find((q) => q.symbol === symbol);
+      const toBid = quote && quote.bid > 0 && quote.price > 0 ? quote.bid / quote.price : 1;
       try {
-        prices.set(symbol, await this.feed.client.closes(id, interval, limit, now));
+        const closes = await this.feed.client.closes(id, interval, limit, now);
+        prices.set(symbol, closes.map((p) => ({ at: p.at, price: p.price * toBid })));
       } catch {
         // Valued at its last fill price instead.
       }
@@ -662,6 +705,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.portfolioValue.set(valuation.total);
     this.todayReturn.set(valuation.dayGain);
     this.todayReturnPercent.set(valuation.dayGainPercent);
+    if (this.#liveRecording) {
+      const at = Math.max(Date.now(), (this.chartLive().at(-1)?.at ?? 0) + 1);
+      this.chartLive.update((points) => [...points.slice(-(LIVE_POINTS - 1)), { at, value: valuation.total }]);
+    }
   }
   /** Loads the account and instrument ids an order needs; a failure surfaces when the user confirms. */
   ngOnInit(): void {
@@ -688,6 +735,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.reviewing.set(false);
     this.tradeMessage.set('');
     this.#lastOrderRows = null;
+    // The other account's live values start once its balances arrive.
+    this.#liveRecording = false;
+    this.chartLive.set([]);
     void this.refreshPortfolio();
     void this.watchOrders();
     void this.loadChart();
@@ -720,7 +770,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       }
       this.#dayChanges.set(q.instrumentId, q.change);
     }
-    if (this.#portfolio.holdings.length) {
+    if (this.portfolioLoaded()) {
       this.#render();
     }
     const symbol = this.tradeQuote().symbol || this.symbol();

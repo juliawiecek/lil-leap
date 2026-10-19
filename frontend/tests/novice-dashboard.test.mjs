@@ -111,12 +111,19 @@ test('the overview chart rebuilds the account’s value from its deposits, fills
     requests.push([id, interval]);
     return [{ at: now - 4 * 3600000, price: 110 }];
   } };
+  desk.chartPeriod.set('1W');
   await desk.loadChart();
   assert.equal(desk.chartError(), '');
-  assert.equal(desk.chartSpan().fromOpening, true, 'a ten-hour-old account: the day view starts at its first deposit');
+  assert.equal(desk.chartSpan().fromOpening, true, 'a ten-hour-old account: the week view starts at its first deposit');
   assert.equal(desk.chartSpan().start, Date.parse(at(10)));
   assert.deepEqual(requests, [['aapl-id', '5m']]);
-  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1050, 1050, 1050]);
+  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1000, 1050, 1050, 1050], 'a step at the fill');
+  // Recorded prices are midpoints; live values use the bid, so the history is moved onto the bid.
+  const aapl = feed.quotes().find((q) => q.symbol === 'AAPL');
+  feed.quotes.set(feed.quotes().map((q) => (q.symbol === 'AAPL' ? { ...q, bid: aapl.price * 0.99 } : q)));
+  await desk.loadChart();
+  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1000, 1044.5, 1044.5, 1044.5], '5 shares at 110 × 0.99');
+  feed.quotes.set(feed.quotes().map((q) => (q.symbol === 'AAPL' ? aapl : q)));
   desk.applyPortfolio({ cash: 500, holdings: [] });
   assert.equal(desk.chartPoints().at(-1).value, 500, 'the line ends at the live value shown above it');
   desk.setChartPeriod('ALL');
@@ -128,19 +135,64 @@ test('the overview chart rebuilds the account’s value from its deposits, fills
   desk.ngOnDestroy();
 });
 
+test('every live value is added to the line, so its dips and rises stay instead of only its end moving', async t => {
+  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 20000, holdings: [] }] });
+  const loaded = Date.now() - 60000;
+  desk.chartHistory.set([{ at: loaded - 3600000, value: 20000 }, { at: loaded, value: 20000 }]);
+  desk.chartLive.set([]);
+  desk.applyPortfolio({ cash: 19000, holdings: [] });
+  desk.applyPortfolio({ cash: 19100, holdings: [] });
+  assert.deepEqual(desk.chartPoints().map((p) => p.value), [20000, 20000, 19000, 19100], '20,000 → 19,000 → 19,100');
+  const times = desk.chartPoints().map((p) => p.at);
+  assert.ok(times.every((at, i) => !i || at > times[i - 1]), 'in time order');
+  desk.chartHistory.set([{ at: loaded - 3600000, value: 20000 }, { at: Date.now() + 1000, value: 19050 }]);
+  assert.deepEqual(desk.chartPoints().map((p) => p.value), [20000, 19000, 19100], 'a reload keeps the live values it covers');
+  feed.push(listed());
+  assert.equal(desk.chartPoints().length, 4, 'each price update adds a point, even with only cash');
+  // 1D: a live value after the session's close is left off; it shows above the chart.
+  const session = { open: loaded - 3600000, close: loaded + 500 };
+  desk.chartHistory.set([{ at: loaded - 3600000, value: 20000 }, { at: loaded, value: 20000 }]);
+  desk.chartSpan.set({ start: session.open, end: loaded, fromOpening: false, session });
+  assert.ok(desk.chartPoints().every((p) => p.at <= session.close));
+  // Longer periods keep one live value per price bar, as the history has.
+  desk.chartSpan.set({ start: loaded - 7 * 86400000, end: loaded, fromOpening: false });
+  assert.equal(desk.chartPoints().length, 3, 'the history, then only the latest of the live values in their hour');
+  assert.equal(desk.chartPoints().at(-1).value, desk.portfolioValue());
+  desk.ngOnDestroy();
+});
+
+test('one live value per bar: the last in each', async () => {
+  const { lastPerBar } = await import('../src/app/novice-dashboard.ts');
+  const points = [{ at: 0, value: 1 }, { at: 5, value: 2 }, { at: 10, value: 3 }, { at: 19, value: 4 }, { at: 20, value: 5 }];
+  assert.deepEqual(lastPerBar(points, 10).map((p) => p.value), [2, 4, 5]);
+  assert.deepEqual(lastPerBar([], 10), []);
+});
+
+test('1D names the session’s day when it is not today', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
+  const now = new Date();
+  desk.chartHistory.set([{ at: now - 2000, value: 1000 }, { at: now - 1000, value: 1000 }]);
+  desk.chartSpan.set({ start: now - 2000, end: now - 1000, fromOpening: false, session: { open: now - 2000, close: now } });
+  assert.equal(desk.headerChange().label, 'Today');
+  const lastWeek = now.getTime() - 7 * 86400000;
+  desk.chartSpan.set({ start: lastWeek, end: lastWeek + 1000, fromOpening: false, session: { open: lastWeek, close: lastWeek + 1000 } });
+  assert.equal(desk.headerChange().label, new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(lastWeek));
+  desk.ngOnDestroy();
+});
+
 test('the big number and its change line follow the period, the scrubbed point and its sign', async t => {
   const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
   assert.equal(desk.headerChange().label, 'Today', 'before the chart loads: today’s move');
   desk.chartSpan.set({ start: 0, end: 10, fromOpening: false });
   desk.chartHistory.set([{ at: 0, value: 1100 }, { at: 5, value: 1200 }, { at: 10, value: 1000 }]);
   assert.equal(desk.headerValue(), 1000);
-  assert.deepEqual(desk.headerChange(), { amount: -100, percent: -100 / 11, label: 'Past day' });
+  assert.deepEqual(desk.headerChange(), { amount: -100, percent: -100 / 11, label: 'Today' });
   assert.equal(desk.headerChangeText(), '−$100.00 (−9.09%)');
   desk.chartScrub.set({ at: 5, value: 1200 });
   assert.equal(desk.headerValue(), 1200, 'the value under the cursor');
   assert.equal(desk.headerChange().amount, 100);
   assert.equal(desk.headerChangeText(), '+$100.00 (+9.09%)');
-  assert.notEqual(desk.headerChange().label, 'Past day', 'the scrubbed time instead');
+  assert.notEqual(desk.headerChange().label, 'Today', 'the scrubbed time instead');
   desk.setChartPeriod('ALL');
   assert.equal(desk.chartScrub(), null, 'a new period drops the scrub');
   desk.chartSpan.set({ start: 0, end: 10, fromOpening: true });

@@ -1,30 +1,22 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { CHART_PERIODS, ChartPeriod, ChartRange, ValuePoint } from './portfolio-history';
+import { CurrencyPipe } from '@angular/common';
+import { CHART_PERIODS, ChartPeriod, ChartRange, ValuePoint, startValue, valueScale } from './portfolio-history';
+import { centralTime } from './app-time';
 
 const WIDTH = 800;
 const HEIGHT = 200;
-/**
- * Headroom above and below the line when the scale is built: a quarter of the line's own range,
- * and at least a hundredth of a percent of its value, so ordinary live ticks fit inside it and
- * only a real move outside it rescales the chart.
- */
-const MARGIN = 0.25;
-const MIN_MARGIN = 0.0001;
 
 /**
- * The novice overview's portfolio line, drawn the way retail brokerage apps do: one crisp line,
- * green when the period is up and red when it is down, a dotted baseline at the period's
- * starting value, and no axis numbers. Hovering (or arrow keys) scrubs along the line and
- * reports the point under the cursor, so the value above the chart can follow it.
- *
- * The vertical scale only changes when a value leaves it or the period changes, so live
- * updates move the end of the line without the whole chart jumping. Points are spaced evenly in
- * time order, so hours when the market is closed take up no room.
+ * The novice overview's portfolio-value line: green when the period is up and red when it is
+ * down, with a dotted baseline at the period's starting value and no axes. Every recorded value
+ * is its own point, so each rise and dip stays in the line as new values arrive; the scale refits
+ * to the values shown. 1D is today's trading session up to now.
+ * Hovering (or arrow keys) scrubs along the line and reports the point under the cursor, so the
+ * value above the chart can follow it; the time under the cursor is shown in Central time.
  */
 @Component({
   selector: 'app-portfolio-chart',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [CurrencyPipe],
   template: `
     @if (error()) {
       <p class="chart-note" role="alert">{{ error() }}</p>
@@ -49,13 +41,14 @@ const MIN_MARGIN = 0.0001;
           <path class="line" [attr.d]="path()" />
           @if (active(); as point) {
             <line class="cursor" [attr.x1]="point.x" [attr.x2]="point.x" y1="0" [attr.y2]="height" />
-            <circle class="dot" [attr.cx]="point.x" [attr.cy]="point.y" r="5" />
-          } @else {
-            <circle class="dot" [class.live]="!delayed()" [attr.cx]="end().x" [attr.cy]="end().y" r="4" />
           }
         </svg>
+        <!-- The dots sit over the drawing, placed by the share of its width and height. -->
         @if (active(); as point) {
-          <span class="cursor-time" [style.left.%]="labelLeft()">{{ point.at | date: timeFormat() }} · {{ point.value | currency }}</span>
+          <i class="dot" [style.left.%]="(point.x / width) * 100" [style.top.%]="(point.y / height) * 100"></i>
+          <span class="cursor-time" [style.left.%]="labelLeft()">{{ cursorTime() }} · {{ point.value | currency }}</span>
+        } @else {
+          <i class="dot" [class.live]="!delayed()" [style.left.%]="(end().x / width) * 100" [style.top.%]="(end().y / height) * 100"></i>
         }
       </div>
     }
@@ -70,7 +63,7 @@ const MIN_MARGIN = 0.0001;
       <p class="chart-note delayed" role="status">Live prices are delayed, so the line ends at the last known value.</p>
     }
     @if (range()?.fromOpening && points().length >= 2) {
-      <p class="chart-note">Your account opened {{ range()!.start | date: 'MMM d, HH:mm' }}, so this shows everything since then.</p>
+      <p class="chart-note">Your account opened {{ openedText() }}, so this shows everything since then.</p>
     }
   `,
   styles: [`
@@ -80,14 +73,13 @@ const MIN_MARGIN = 0.0001;
     svg { display: block; width: 100%; height: 200px; overflow: visible; cursor: crosshair; outline: none; touch-action: pan-y; }
     @media (max-width: 600px) { svg, .chart-empty { height: 150px; } }
     svg:focus-visible { outline: 2px solid var(--tone); outline-offset: 6px; border-radius: 4px; }
-    .line { fill: none; stroke: var(--tone); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; transition: stroke .2s, d .4s ease-out; }
-    .dot { transition: cy .4s ease-out; }
+    .line { fill: none; stroke: var(--tone); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; transition: stroke .2s; }
     .baseline { stroke: #5b6563; stroke-width: 1; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
     .cursor { stroke: #9aa5a2; stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .dot { fill: var(--tone); stroke: #0f1415; stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border: 2px solid #0f1415; border-radius: 50%; background: var(--tone); box-sizing: border-box; pointer-events: none; }
     .dot.live { animation: pulse 2s ease-out infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 70% { opacity: .35; } 100% { opacity: 1; } }
-    @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .line, .dot { transition: none; } }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--tone); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+    @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .line { transition: none; } }
     .chart-note.delayed { color: #d9a400; }
     .cursor-time { position: absolute; top: -20px; transform: translateX(-50%); color: #9aa5a2; font-size: 11px; white-space: nowrap; pointer-events: none; }
     .chart-empty { display: grid; place-items: center; height: 200px; color: #87918f; font-size: 13px; }
@@ -117,46 +109,32 @@ export class PortfolioChart {
   readonly height = HEIGHT;
   /** Index of the point under the cursor, or -1. */
   readonly #active = signal(-1);
-  #domain: { low: number; high: number; period: ChartPeriod; start: number } | null = null;
 
   /** Up or down over the shown period: the colour of the line, the dot and the selected period. */
   readonly tone = computed(() => {
     const points = this.points();
-    return points.length >= 2 && points.at(-1)!.value < points[0].value ? 'down' : 'up';
+    return points.length >= 2 && points.at(-1)!.value < startValue(points) ? 'down' : 'up';
   });
+  /** The value scale, fitted to the values shown, so each move up or down is visible. */
+  readonly scale = computed(() => valueScale(this.points().map((p) => p.value)));
   /**
-   * The vertical scale. It is kept while every value fits inside it, so a new live value moves
-   * the line's end rather than the whole chart, and is rebuilt when a value leaves it, when the
-   * period changes, or when the period is reloaded from a different start.
+   * Whether points sit at their times. 1D, 1M, 3M and 1Y do: the line fills the chart from the
+   * period's start to the newest value, and time before the account existed shows at $0. 1W and
+   * ALL space points evenly in order, as brokerage apps do, so nights and weekends take no room.
    */
-  readonly domain = computed(() => {
-    const points = this.points();
-    const period = this.period();
-    const start = this.range()?.start ?? 0;
-    const values = points.map((p) => p.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const kept = this.#domain;
-    const samePeriod = kept?.period === period && kept.start === start;
-    if (kept && samePeriod && min >= kept.low && max <= kept.high) {
-      return kept;
-    }
-    const pad = Math.max((max - min) * MARGIN, Math.max(Math.abs(max), 1) * MIN_MARGIN);
-    this.#domain = { low: min - pad, high: max + pad, period, start };
-    return this.#domain;
-  });
-  /**
-   * Each point placed on the chart. Points are spaced evenly in order, as brokerage charts do, so
-   * nights and weekends with no trading collapse instead of stretching into long flat stretches.
-   */
+  readonly timed = computed(() => TIMED_PERIODS.has(this.period()));
+  /** Each point placed on the chart. */
   readonly placed = computed(() => {
-    const { low, high } = this.domain();
-    const spread = high - low || 1;
-    const last = Math.max(this.points().length - 1, 1);
-    return this.points().map((p, i) => ({
+    const points = this.points();
+    const { low, high } = this.scale();
+    const start = points[0]?.at ?? 0;
+    const span = Math.max((points.at(-1)?.at ?? 0) - start, 1);
+    const timed = this.timed();
+    const last = Math.max(points.length - 1, 1);
+    return points.map((p, i) => ({
       ...p,
-      x: (i / last) * WIDTH,
-      y: ((high - p.value) / spread) * HEIGHT,
+      x: (timed ? (p.at - start) / span : i / last) * WIDTH,
+      y: ((high - p.value) / (high - low)) * HEIGHT,
     }));
   });
   /** Where the cursor's time label sits, kept far enough from the edges to stay readable. */
@@ -165,13 +143,30 @@ export class PortfolioChart {
     return point ? Math.min(92, Math.max(8, (point.x / WIDTH) * 100)) : 0;
   });
   readonly path = computed(() => this.placed().map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
-  readonly baselineY = computed(() => this.placed()[0]?.y ?? HEIGHT / 2);
+  /** The dotted line at the period's starting value (once the account held money). */
+  readonly baselineY = computed(() => {
+    const { low, high } = this.scale();
+    return this.points().length ? ((high - startValue(this.points())) / (high - low)) * HEIGHT : HEIGHT / 2;
+  });
   readonly end = computed(() => this.placed().at(-1) ?? { x: WIDTH, y: HEIGHT / 2, at: 0, value: 0 });
   readonly active = computed(() => this.placed()[this.#active()] ?? null);
-  /** Times within two days, otherwise dates. */
-  readonly timeFormat = computed(() => {
-    const range = this.range();
-    return range && range.end - range.start <= 2 * 24 * 3600 * 1000 ? 'MMM d, HH:mm' : 'MMM d, y';
+  /** The time under the cursor in Central time: to the second within two days, otherwise with the date's year. */
+  readonly cursorTime = computed(() => {
+    const point = this.active();
+    const points = this.points();
+    if (!point || !points.length) {
+      return '';
+    }
+    const short = points.at(-1)!.at - points[0].at <= 2 * 24 * 3600 * 1000;
+    const options: Intl.DateTimeFormatOptions = short
+      ? { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }
+      : { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' };
+    return `${centralTime(point.at, options)} CT`;
+  });
+  /** When the account opened, in Central time. */
+  readonly openedText = computed(() => {
+    const start = this.range()?.start;
+    return start === undefined ? '' : `${centralTime(start, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`;
   });
   /** What a screen reader hears instead of the drawing. */
   readonly summary = computed(() => {
@@ -179,7 +174,7 @@ export class PortfolioChart {
     if (points.length < 2) {
       return 'Portfolio value chart';
     }
-    const first = points[0].value;
+    const first = startValue(points);
     const last = points.at(-1)!.value;
     const percent = first > 0 ? Math.abs(((last - first) / first) * 100) : 0;
     let word = 'unchanged';
@@ -242,6 +237,9 @@ function nearest(points: readonly { x: number }[], x: number): number {
   return best;
 }
 
+/** Periods whose points sit at their times; the rest are spaced evenly. */
+const TIMED_PERIODS = new Set<ChartPeriod>(['1D', '1M', '3M', '1Y']);
+
 export const PERIOD_WORDS: Record<ChartPeriod, string> = {
-  '1D': 'past day', '1W': 'past week', '1M': 'past month', '3M': 'past 3 months', '1Y': 'past year', ALL: 'since opening',
+  '1D': 'today', '1W': 'past week', '1M': 'past month', '3M': 'past 3 months', '1Y': 'past year', ALL: 'since opening',
 };

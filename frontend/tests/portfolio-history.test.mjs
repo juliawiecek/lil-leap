@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 import { signal } from '@angular/core';
 const {
-  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt,
+  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt, valueScale, tradingSession, startValue,
 } = await import('../src/app/portfolio-history.ts');
 const { PortfolioChart } = await import('../src/app/portfolio-chart.ts');
 
@@ -11,7 +11,7 @@ const HOUR = 3600000;
 const DAY = 24 * HOUR;
 const NOW = Date.parse('2026-10-19T15:00:00Z');
 
-test('every period ends now and starts its own length back, but never before the account opened', () => {
+test('every period ends now and starts its own length back; 1W and ALL never before the account opened', () => {
   const longAgo = NOW - 400 * DAY;
   assert.deepEqual(chartRange('1D', NOW, longAgo), { start: NOW - DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1W', NOW, longAgo), { start: NOW - 7 * DAY, end: NOW, fromOpening: false });
@@ -19,25 +19,50 @@ test('every period ends now and starts its own length back, but never before the
   assert.deepEqual(chartRange('3M', NOW, longAgo), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1Y', NOW, longAgo), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('ALL', NOW, longAgo), { start: longAgo, end: NOW, fromOpening: true });
-  // An account opened three days ago: a day is a day, everything longer starts at the opening.
+  // An account opened three days ago: 1W and ALL start at the opening; a month or more keeps its
+  // full length, at $0 before the account existed.
   const opened = NOW - 3 * DAY;
   assert.deepEqual(chartRange('1D', NOW, opened), { start: NOW - DAY, end: NOW, fromOpening: false });
-  for (const period of ['1W', '1M', '3M', '1Y', 'ALL']) {
+  for (const period of ['1W', 'ALL']) {
     assert.deepEqual(chartRange(period, NOW, opened), { start: opened, end: NOW, fromOpening: true }, period);
   }
+  assert.deepEqual(chartRange('1M', NOW, opened), { start: NOW - 30 * DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('3M', NOW, opened), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('1Y', NOW, opened), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('ALL', NOW, null), { start: NOW - DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1W', NOW, NOW + HOUR), { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, 'a future opening is ignored');
   assert.deepEqual([...CHART_PERIODS], ['1D', '1W', '1M', '3M', '1Y', 'ALL']);
 });
 
+test('1D is the latest trading session: 9:30 to 16:00 New York time on a weekday', () => {
+  // NOW is Monday 19 October 2026, 11:00 in New York (UTC−4).
+  const monday = { open: Date.parse('2026-10-19T13:30:00Z'), close: Date.parse('2026-10-19T20:00:00Z') };
+  const friday = { open: Date.parse('2026-10-16T13:30:00Z'), close: Date.parse('2026-10-16T20:00:00Z') };
+  assert.deepEqual(tradingSession(NOW), monday, 'open now: today’s');
+  assert.deepEqual(tradingSession(Date.parse('2026-10-19T23:00:00Z')), monday, 'after the close: still today’s');
+  assert.deepEqual(tradingSession(Date.parse('2026-10-19T12:00:00Z')), friday, 'Monday before the open: Friday’s');
+  assert.deepEqual(tradingSession(Date.parse('2026-10-18T15:00:00Z')), friday, 'Sunday: Friday’s');
+  assert.deepEqual(
+    tradingSession(Date.parse('2026-11-02T15:00:00Z')),
+    { open: Date.parse('2026-11-02T14:30:00Z'), close: Date.parse('2026-11-02T21:00:00Z') },
+    'after the clocks change: UTC−5',
+  );
+  // The chart covers the session from its open up to now.
+  assert.deepEqual(chartRange('1D', NOW, NOW - 400 * DAY, monday), { start: monday.open, end: NOW, fromOpening: false, session: monday });
+  assert.deepEqual(chartRange('1D', monday.close + HOUR, NOW - DAY, monday).end, monday.close, 'after the close it ends at the close');
+  assert.deepEqual(chartRange('1D', NOW, NOW - HOUR, monday), { start: NOW - HOUR, end: NOW, fromOpening: true, session: monday }, 'opened mid-session');
+  assert.deepEqual(chartRange('1D', NOW + 9 * HOUR, NOW + 8 * HOUR, monday), { start: NOW + 8 * HOUR, end: NOW + 9 * HOUR, fromOpening: true }, 'opened after the session: since opening');
+  assert.equal(chartRange('1W', NOW, NOW - 400 * DAY, monday).session, undefined, 'only 1D is a session');
+});
+
 test('price bars are as narrow as the span allows, within what the service returns', () => {
   const span = (ms) => ({ start: NOW - ms, end: NOW, fromOpening: false });
-  assert.deepEqual(barStep(span(2 * HOUR)), { interval: '1m', limit: 121 });
-  assert.deepEqual(barStep(span(DAY)), { interval: '5m', limit: 289 });
-  assert.deepEqual(barStep(span(3 * DAY)), { interval: '15m', limit: 289 });
-  assert.deepEqual(barStep(span(7 * DAY)), { interval: '1h', limit: 169 });
-  assert.deepEqual(barStep(span(90 * DAY)), { interval: '1d', limit: 91 });
-  assert.deepEqual(barStep(span(400 * DAY)), { interval: '1d', limit: 401 });
+  assert.deepEqual(barStep(span(2 * HOUR)), { interval: '1m', limit: 121, ms: 60000 });
+  assert.deepEqual(barStep(span(DAY)), { interval: '5m', limit: 289, ms: 300000 });
+  assert.deepEqual(barStep(span(3 * DAY)), { interval: '15m', limit: 289, ms: 900000 });
+  assert.deepEqual(barStep(span(7 * DAY)), { interval: '1h', limit: 169, ms: 3600000 });
+  assert.deepEqual(barStep(span(90 * DAY)), { interval: '1d', limit: 91, ms: 86400000 });
+  assert.deepEqual(barStep(span(400 * DAY)), { interval: '1d', limit: 401, ms: 86400000 });
   assert.equal(barStep(span(800 * DAY)).limit, 500, 'never more than one request returns');
 });
 
@@ -57,13 +82,17 @@ test('the value at each moment is cash then plus each holding at its price then'
     { at: opened + 3 * HOUR, price: 104 }, { at: opened + 5 * HOUR, price: 108 }, { at: opened + 8 * HOUR, price: 90 },
   ]]]);
   const series = portfolioSeries(range, cash, shares, prices);
+  // A moment (1 ms) before each fill as well, so the line steps at it.
+  const before = (hours) => hours - 1 / HOUR;
   assert.deepEqual(series.map((p) => [(p.at - opened) / HOUR, p.value]), [
-    [0, 1000],    // only the deposit
-    [2, 1020],    // 500 cash + 5 shares, no bar closed yet: the next recorded price, 104
-    [3, 1020],    // 500 + 5 × 104
-    [5, 1040],    // 500 + 5 × 108
-    [6, 1044],    // 720 + 3 × 108
-    [8, 990],     // 720 + 3 × 90
+    [0, 1000],          // only the deposit
+    [before(2), 1000],  // just before the buy
+    [2, 1020],          // 500 cash + 5 shares, no bar closed yet: the next recorded price, 104
+    [3, 1020],          // 500 + 5 × 104
+    [5, 1040],          // 500 + 5 × 108
+    [before(6), 1040],  // just before the sell
+    [6, 1044],          // 720 + 3 × 108
+    [8, 990],           // 720 + 3 × 90
     [10, 990],
   ]);
   const live = portfolioSeries(range, cash, shares, prices, 1001.236);
@@ -83,6 +112,16 @@ test('a period that starts after earlier activity still counts it, and only draw
   assert.equal(portfolioSeries(range, cash, shares, new Map())[0].value, 1000, 'with no prices at all, the fill price');
 });
 
+test('a month view of a three-day-old account is $0 until the first deposit, then steps up', () => {
+  const opened = NOW - 3 * DAY;
+  const range = chartRange('1M', NOW, opened);
+  const series = portfolioSeries(range, [{ at: opened, amount: 25000 }], [], new Map());
+  assert.deepEqual(series.map((p) => [p.at, p.value]), [[range.start, 0], [opened - 1, 0], [opened, 25000], [NOW, 25000]]);
+  assert.equal(startValue(series), 25000, 'its change is measured from when it held money');
+  assert.equal(startValue([{ at: 0, value: 0 }, { at: 1, value: 0 }]), 0);
+  assert.equal(startValue([]), 0);
+});
+
 /** A chart whose inputs come from signals the test controls, as Angular's inputs would. */
 function chartWith(t, points, range, period = '1D') {
   const chart = component(t, PortfolioChart);
@@ -97,7 +136,7 @@ const day = { start: NOW - DAY, end: NOW, fromOpening: false };
 test('the line is green when the period is up and red when it is down, with a spoken summary', t => {
   const { chart } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 1050 }], day);
   assert.equal(chart.tone(), 'up');
-  assert.match(chart.summary(), /^Portfolio value past day: from \$1000\.00 to \$1050\.00, up 5\.00%\./);
+  assert.match(chart.summary(), /^Portfolio value today: from \$1000\.00 to \$1050\.00, up 5\.00%\./);
   assert.match(chart.path(), /^M0\.0,[\d.]+ L800\.0,[\d.]+$/);
   assert.equal(chart.baselineY(), chart.placed()[0].y, 'the dotted baseline sits at the starting value');
   const { chart: falling } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 990 }], { ...day, fromOpening: true }, 'ALL');
@@ -109,19 +148,41 @@ test('the line is green when the period is up and red when it is down, with a sp
   assert.equal(empty.active(), null);
 });
 
-test('the scale holds while new values fit, so live updates only move the end of the line', t => {
-  const { chart, inputs } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1050 }], day);
-  const first = chart.domain();
-  const startY = chart.placed()[0].y;
-  inputs.points.set([{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1060 }]);
-  assert.equal(chart.domain(), first, 'a value inside the scale keeps it');
-  assert.equal(chart.placed()[0].y, startY, 'so the rest of the line does not move');
-  inputs.points.set([{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1300 }]);
-  assert.notEqual(chart.domain(), first, 'a value outside it rescales');
-  assert.ok(chart.domain().high > 1300);
-  const rescaled = chart.domain();
-  inputs.period.set('1W');
-  assert.notEqual(chart.domain(), rescaled, 'a new period rescales');
+test('1D fills the chart from the open to now: each value sits at its time, with no axes', t => {
+  const session = { open: Date.parse('2026-10-19T13:30:00Z'), close: Date.parse('2026-10-19T20:00:00Z') };
+  const range = { start: session.open, end: NOW, fromOpening: false, session };
+  const { chart, inputs } = chartWith(t, [{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }], range);
+  // Live values keep arriving after the period loaded: 19,000 then 19,100, each kept on the line.
+  inputs.points.set([{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }, { at: NOW, value: 19100 }]);
+  const placed = chart.placed();
+  assert.deepEqual(placed.map((p) => p.value), [20000, 19000, 19100], 'the dip and the recovery both stay');
+  assert.ok(placed[1].y > placed[0].y && placed[2].y < placed[1].y, 'down to 19,000, then up to 19,100');
+  assert.equal(placed[0].x, 0, 'the open is the left edge');
+  assert.equal(placed.at(-1).x, 800, 'now is the right edge: no room for hours still to come');
+  assert.equal(Math.round(placed[1].x), 267, 'placed by its time: 10:00 is a third of the way from 9:30 to 11:00');
+  assert.equal(chart.times, undefined, 'no times along the bottom');
+  assert.equal(chart.valueTicks, undefined, 'no values down the side');
+});
+
+test('1M, 3M and 1Y place points by time, so the $0 before the account shows; 1W and ALL space them evenly', t => {
+  const points = [{ at: NOW - 30 * DAY, value: 0 }, { at: NOW - 3 * DAY - 1, value: 0 }, { at: NOW - 3 * DAY, value: 25000 }, { at: NOW, value: 25010 }];
+  const { chart } = chartWith(t, points, { start: NOW - 30 * DAY, end: NOW, fromOpening: false }, '1M');
+  assert.ok(chart.placed()[2].x > 700, 'the deposit three days ago is near the right edge');
+  assert.equal(chart.tone(), 'up', 'measured from the first deposit, not from $0');
+  assert.equal(chart.baselineY(), chart.placed()[2].y, 'the dotted line at the first funded value');
+  assert.ok(chart.summary().includes('from $25000.00 to $25010.00'));
+  // A week of three sessions' values, with nights in between.
+  const week = [0, 1, 2, 24, 25, 26, 48, 49, 50].map((h, i) => ({ at: NOW - 50 * HOUR + h * HOUR, value: 1000 + i }));
+  const { chart: even } = chartWith(t, week, { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, '1W');
+  assert.deepEqual(even.placed().map((p) => p.x), [0, 100, 200, 300, 400, 500, 600, 700, 800]);
+});
+
+test('the value scale leaves a little room around the line, and a band around a flat one', () => {
+  const wide = valueScale([1000, 1100]);
+  assert.ok(wide.low < 1000 && wide.high > 1100);
+  const flat = valueScale([500, 500]);
+  assert.ok(flat.low < 500 && flat.high > 500, 'a flat line still sits inside a band');
+  assert.ok(valueScale([]).high > valueScale([]).low);
 });
 
 test('hovering or arrow keys scrub along the line and report the point under the cursor', t => {
@@ -149,8 +210,10 @@ test('hovering or arrow keys scrub along the line and report the point under the
   assert.equal(seen.length, 5, 'leaving again, or another key, reports nothing new');
   chart.scrubAt({ currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 0 }) }, clientX: 5 });
   assert.equal(chart.active(), null);
-  assert.equal(chart.timeFormat(), 'MMM d, HH:mm');
-  assert.deepEqual(chart.placed().map((p) => p.x), [0, 400, 800], 'evenly spaced, so closed hours take no room');
+  chart.scrubKey(key('ArrowLeft'));
+  assert.match(chart.cursorTime(), /^Oct 18, 10:00:00 PM CT$/, 'Central time, 12-hour clock, to the second within two days');
+  chart.endScrub();
+  assert.deepEqual(chart.placed().map((p) => p.x), [0, 400, 800], 'evenly spaced');
   chart.scrubKey(key('Home'));
   assert.equal(chart.labelLeft(), 8, 'the time label stays inside the chart at the left edge');
   chart.scrubKey(key('End'));
