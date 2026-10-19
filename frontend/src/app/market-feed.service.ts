@@ -26,8 +26,6 @@ export class MarketFeed {
   #users = 0;
   #quoteTimer: ReturnType<typeof setTimeout> | undefined;
   #statusTimer: ReturnType<typeof setTimeout> | undefined;
-  #opens = new Map<string, number>();
-  #openDay = '';
   readonly #listeners = new Set<() => void>();
   readonly #onVisibility = (): void => {
     if (!this.hidden) {
@@ -86,7 +84,7 @@ export class MarketFeed {
       await this.#loadInstruments();
     }
     const listed = this.quotes();
-    await this.#loadOpens(listed);
+    const opens = await this.#loadOpens(listed);
     let ticks = new Map<string, PriceTick>();
     try {
       ticks = await this.client.latestMany(listed.map((q) => q.instrumentId));
@@ -101,7 +99,7 @@ export class MarketFeed {
       listed.map((quote) => {
         const latest = ticks.get(quote.instrumentId);
         if (!latest) {
-          return { ...quote, direction: null };
+          return { ...quote, change: changeFrom(opens.get(quote.instrumentId), quote.price), direction: null };
         }
         const { price, bid, ask, quotedAt } = latest;
         const direction = moveOf(quote.price, price);
@@ -111,7 +109,7 @@ export class MarketFeed {
           bid,
           ask,
           quotedAt,
-          change: changeFrom(this.#opens.get(quote.instrumentId), price),
+          change: changeFrom(opens.get(quote.instrumentId), price),
           direction,
           version: direction ? quote.version + 1 : quote.version,
         };
@@ -150,20 +148,16 @@ export class MarketFeed {
     }
   }
 
-  /** Reads each stock's first quote of the day once per day; a failure leaves its change at 0. */
-  async #loadOpens(listed: LiveQuote[]): Promise<void> {
-    const today = new Date().toDateString();
-    if (today !== this.#openDay) {
-      this.#opens.clear();
-      this.#openDay = today;
+  /**
+   * Re-read baselines in one batch so a tab left open crosses 09:30 correctly and
+   * retries until the first session quote arrives. A failure leaves change unknown (0).
+   */
+  async #loadOpens(listed: LiveQuote[]): Promise<Map<string, number>> {
+    try {
+      return await this.client.dayOpens(listed.map((q) => q.instrumentId));
+    } catch {
+      return new Map();
     }
-    const missing = listed.filter((q) => !this.#opens.has(q.instrumentId));
-    const opens = await Promise.allSettled(missing.map((q) => this.client.dayOpen(q.instrumentId)));
-    opens.forEach((result, i) => {
-      if (result.status === 'fulfilled' && result.value) {
-        this.#opens.set(missing[i].instrumentId, result.value);
-      }
-    });
   }
 
   #scheduleQuotes(): void {

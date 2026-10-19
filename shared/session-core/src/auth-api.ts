@@ -39,7 +39,7 @@ export class AuthApiError extends Error {
 
 const SIGNED_OUT_MESSAGE = 'Your session has ended. Please sign in again.';
 const MESSAGES: Record<string, string> = {
-  INVALID_CREDENTIALS: 'Invalid email or password.',
+  INVALID_CREDENTIALS: 'Invalid email or password, or sign-in is locked. After 3 failed attempts, wait 15 minutes and try again.',
   INVALID_REFRESH_TOKEN: SIGNED_OUT_MESSAGE,
   USER_ALREADY_EXISTS:
     'An account with this email already exists. Go back to sign up with a different email, or sign in.',

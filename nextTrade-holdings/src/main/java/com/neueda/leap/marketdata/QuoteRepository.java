@@ -3,6 +3,7 @@ package com.neueda.leap.marketdata;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
 
 /**
  * Read-only access to the latest stored market quotes and bounded history.
@@ -35,6 +36,16 @@ public interface QuoteRepository {
      * @return list of quotes, ordered by timestamp descending, or empty when no quote exists
      */
     List<MarketQuote> findHistoryByInstrumentId(UUID instrumentId, int limit);
+
+    /**
+     * Finds the first quote of the current New York regular session, or the previous
+     * available close before today's open and on weekends. History page limits do not apply.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param now current instant, excluding future quotes from the lookup
+     * @return baseline quote, or empty if the relevant session has no quote
+     */
+    Optional<MarketQuote> findDayOpen(UUID instrumentId, Instant now);
 
     /**
      * Groups an instrument's stored quotes into open/high/low/close midpoint candles.

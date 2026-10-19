@@ -465,10 +465,14 @@
   </div>
   @if (modal() === 'review') {
     <p class="review-summary" role="status">{{ reviewSummary() }}</p>
+    <p>Market order: final price and total may differ from this estimate.</p>
     @if (closedWarning()) {
       <p class="closed-warning" role="note">{{ closedWarning() }}</p>
     }
     <div class="review-details">
+      <div>
+        <span>Account</span><strong>{{ selectedAccount()?.account_name }} · {{ selectedAccount()?.account_number }}</strong>
+      </div>
       <div>
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
       </div>
@@ -477,6 +481,9 @@
       </div>
       <div>
         <span>Quantity</span><strong>{{ quantity() }}</strong>
+      </div>
+      <div>
+        <span>Price protection</span><strong>{{ tolerance() }}%</strong>
       </div>
       <div>
         <span>Live price</span><strong>{{ selected().price | currency }}</strong>

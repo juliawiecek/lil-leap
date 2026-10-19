@@ -71,10 +71,14 @@ export class AuthController {
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Sign in and get an access + refresh token pair' })
+  @ApiOperation({
+    summary: 'Sign in and get an access + refresh token pair',
+    description: 'Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. ' +
+      'Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy.',
+  })
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'INVALID_REQUEST: email or password missing.' })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email and a wrong password.' })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email, incorrect password or active 15-minute lock.' })
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await this.userService.login(request);
 

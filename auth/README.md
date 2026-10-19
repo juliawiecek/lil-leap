@@ -29,6 +29,15 @@ sequenceDiagram
 - **10-minute inactivity timeout (BR-03):** a session expires 10 minutes after
   its last refresh (`SESSION_INACTIVITY_MINUTES`). The frontend refreshes in the
   background while the user is active and signs them out after 10 idle minutes.
+  The BRS note proposes one minute; the reason for retaining ten minutes is
+  recorded in the [NEXT-253 authentication policy decision](../docs/architecture/ADR-NEXT-253-authentication-policy.md).
+- **Three-failure sign-in lockout (BR-03 / NEXT-253):** three consecutive wrong
+  passwords lock the account for 15 minutes. Attempts during the lock cannot
+  extend it. Once it expires, a new attempt is allowed; successful sign-in resets
+  the counter. Wrong passwords, unknown emails and locked accounts receive the
+  same `401 INVALID_CREDENTIALS` with a fixed message explaining the policy.
+  Counters persist across Identity restarts. The development seed resets both
+  `failed_login_attempts` and `locked_until` for the three demo accounts.
 - Browsers reach the service only through the shared gateway at `/auth/*`
   (same origin, so no CORS; no public port in docker-compose).
 
