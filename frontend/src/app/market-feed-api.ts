@@ -131,6 +131,10 @@ export class MarketFeedClient {
     const rows = await this.#get<{ time: string; close: number | string }[]>(
       `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
     );
+    if (!Array.isArray(rows)) {
+      // A misrouted request can come back as a web page rather than JSON.
+      throw new Error('Could not load prices.');
+    }
     const width = BAR_MS[interval] ?? 0;
     return rows
       // The service dates a bar by its start; its close was taken at its end (or now, for the open bar).

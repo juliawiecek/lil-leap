@@ -29,7 +29,7 @@ import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
 import { tradingClients } from './trading-clients';
-import { CashActivityClient } from './activity-api';
+import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
   CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries,
@@ -37,6 +37,9 @@ import {
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
+const PERIOD_LABELS: Record<ChartPeriod, string> = {
+  '1D': 'Past day', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
+};
 
 /**
  * When the account first held money: its first deposit, transfer or fill. Before that it was
@@ -172,6 +175,56 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartHistory = signal<ValuePoint[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
+  /** The chart point under the cursor; the value above the chart follows it while it is set. */
+  readonly chartScrub = signal<ValuePoint | null>(null);
+  /** The big number: the scrubbed point's value, otherwise the live total. */
+  readonly headerValue = computed(() => this.chartScrub()?.value ?? this.portfolioValue());
+  /**
+   * The line under the big number: how much the value moved over the chosen period (or up to the
+   * scrubbed point), as brokerage apps show it. Before the chart loads, today's move.
+   */
+  readonly headerChange = computed(() => {
+    const points = this.chartPoints();
+    if (points.length < 2) {
+      return { amount: this.todayReturn(), percent: this.todayReturnPercent(), label: 'Today' };
+    }
+    const start = points[0].value;
+    const scrub = this.chartScrub();
+    const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
+    let label = this.chartSpan()?.fromOpening ? 'Since opening' : PERIOD_LABELS[this.chartPeriod()];
+    if (scrub) {
+      label = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(scrub.at);
+    }
+    return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
+  });
+  /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
+  readonly headerChangeText = computed(() => {
+    const { amount, percent } = this.headerChange();
+    let sign = '';
+    if (amount > 0) {
+      sign = '+';
+    } else if (amount < 0) {
+      sign = '−';
+    }
+    return `${formatMoney(amount, true)} (${sign}${Math.abs(percent).toFixed(2)}%)`;
+  });
+  /**
+   * Live prices have stopped reaching the chart: the service is unreachable, or a held stock's
+   * latest quote is older than the orders service accepts.
+   */
+  readonly chartDelayed = computed(() => {
+    if (this.serviceDown()) {
+      return true;
+    }
+    const held = new Set(this.holdings().map((h) => h.symbol));
+    const now = this.feed.now();
+    return this.feed.quotes().some((q) => held.has(q.symbol) && isDelayed(q.quotedAt, now));
+  });
+  /** Stocks' share of the total, unrounded, for the allocation ring. */
+  readonly stocksShare = computed(() => {
+    const { total, stocksValue } = this.assetAllocation();
+    return total > 0 ? Math.min(100, Math.max(0, (stocksValue / total) * 100)) : 0;
+  });
   /** The history, ending at the live value shown above it so the two always agree. */
   readonly chartPoints = computed(() => {
     const history = this.chartHistory();
@@ -513,6 +566,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Shows another period of the portfolio-value chart. */
   setChartPeriod(period: ChartPeriod): void {
     this.chartPeriod.set(period);
+    this.chartScrub.set(null);
     void this.loadChart();
   }
   /**

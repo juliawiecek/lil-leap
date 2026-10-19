@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
+import { signal } from '@angular/core';
 const {
-  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt, valueAxis, timeAxis, valuePath,
+  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt,
 } = await import('../src/app/portfolio-history.ts');
 const { PortfolioChart } = await import('../src/app/portfolio-chart.ts');
 
@@ -82,46 +83,78 @@ test('a period that starts after earlier activity still counts it, and only draw
   assert.equal(portfolioSeries(range, cash, shares, new Map())[0].value, 1000, 'with no prices at all, the fill price');
 });
 
-test('axes fit the line, with cents when the range is small, and times worded for the span', () => {
-  const tight = valueAxis([{ at: 0, value: 25000 }, { at: 1, value: 25002 }]);
-  assert.equal(tight.cents, true);
-  assert.ok(tight.high > 25002 && tight.low < 25000 && tight.high - tight.low < 10);
-  const wide = valueAxis([{ at: 0, value: 1000 }, { at: 1, value: 2000 }]);
-  assert.equal(wide.cents, false);
-  assert.deepEqual(wide.labels, [2150, 1716.67, 1283.33, 850]);
-  assert.equal(valueAxis([]).labels.length, 4);
-  const day = timeAxis(chartRange('1D', NOW, null), 'en-GB', 'UTC');
-  assert.deepEqual(day, ['15:00', '21:00', '03:00', '09:00', '15:00']);
-  assert.match(timeAxis(chartRange('1W', NOW, null), 'en-GB', 'UTC')[0], /^Mon 15:00$/);
-  assert.deepEqual(timeAxis(chartRange('1M', NOW, null), 'en-GB', 'UTC').at(-1), '19 Oct');
-  const range = { start: 0, end: 100, fromOpening: false };
-  assert.equal(valuePath([{ at: 0, value: 10 }, { at: 100, value: 0 }], range, { high: 10, low: 0 }, 200, 50), 'M0.0,0.0 L200.0,50.0');
-});
-
-/** A chart whose inputs are fixed before anything reads them. */
-function chartWith(t, points, range) {
+/** A chart whose inputs come from signals the test controls, as Angular's inputs would. */
+function chartWith(t, points, range, period = '1D') {
   const chart = component(t, PortfolioChart);
-  t.mock.method(chart, 'points', () => points);
-  t.mock.method(chart, 'range', () => range);
-  return chart;
+  const inputs = { points: signal(points), range: signal(range), period: signal(period) };
+  for (const [name, value] of Object.entries(inputs)) {
+    t.mock.method(chart, name, () => value());
+  }
+  return { chart, inputs };
 }
+const day = { start: NOW - DAY, end: NOW, fromOpening: false };
 
-test('the chart reports its period change, the opening note and a spoken summary', t => {
-  const day = { start: NOW - DAY, end: NOW, fromOpening: false };
-  const chart = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 1050 }], day);
-  assert.deepEqual(chart.change(), { amount: 50, percent: 5 });
-  assert.equal(chart.periodLabel(), 'past day');
-  assert.equal(chart.summary(), 'Portfolio value past day: from $1000.00 to $1050.00, up 5.00%');
-  assert.ok(chart.path().startsWith('M0.0,'));
-  assert.equal(chart.times().length, 5);
-  const opening = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 990 }], { ...day, fromOpening: true });
-  assert.equal(opening.periodLabel(), 'since opening');
-  assert.match(opening.summary(), /down 1\.00%$/);
-  const empty = chartWith(t, [], null);
-  assert.equal(empty.change(), null);
+test('the line is green when the period is up and red when it is down, with a spoken summary', t => {
+  const { chart } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 1050 }], day);
+  assert.equal(chart.tone(), 'up');
+  assert.match(chart.summary(), /^Portfolio value past day: from \$1000\.00 to \$1050\.00, up 5\.00%\./);
+  assert.match(chart.path(), /^M0\.0,[\d.]+ L800\.0,[\d.]+$/);
+  assert.equal(chart.baselineY(), chart.placed()[0].y, 'the dotted baseline sits at the starting value');
+  const { chart: falling } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 990 }], { ...day, fromOpening: true }, 'ALL');
+  assert.equal(falling.tone(), 'down');
+  assert.match(falling.summary(), /since opening.*down 1\.00%/);
+  const { chart: empty } = chartWith(t, [], null);
   assert.equal(empty.summary(), 'Portfolio value chart');
   assert.equal(empty.path(), '');
-  assert.deepEqual(empty.times(), []);
+  assert.equal(empty.active(), null);
+});
+
+test('the scale holds while new values fit, so live updates only move the end of the line', t => {
+  const { chart, inputs } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1050 }], day);
+  const first = chart.domain();
+  const startY = chart.placed()[0].y;
+  inputs.points.set([{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1060 }]);
+  assert.equal(chart.domain(), first, 'a value inside the scale keeps it');
+  assert.equal(chart.placed()[0].y, startY, 'so the rest of the line does not move');
+  inputs.points.set([{ at: NOW - DAY, value: 1000 }, { at: NOW - HOUR, value: 1100 }, { at: NOW, value: 1300 }]);
+  assert.notEqual(chart.domain(), first, 'a value outside it rescales');
+  assert.ok(chart.domain().high > 1300);
+  const rescaled = chart.domain();
+  inputs.period.set('1W');
+  assert.notEqual(chart.domain(), rescaled, 'a new period rescales');
+});
+
+test('hovering or arrow keys scrub along the line and report the point under the cursor', t => {
+  const points = [{ at: NOW - DAY, value: 1000 }, { at: NOW - DAY / 2, value: 1020 }, { at: NOW, value: 1050 }];
+  const { chart } = chartWith(t, points, day);
+  const seen = [];
+  chart.scrub.subscribe((p) => seen.push(p && p.value));
+  const svg = { getBoundingClientRect: () => ({ left: 100, width: 400 }) };
+  // A finger dragged across reports pointer events the same way a mouse does.
+  chart.scrubAt({ currentTarget: svg, clientX: 290, pointerType: 'touch' });
+  assert.equal(chart.active().value, 1020, 'nearest to the middle');
+  chart.scrubAt({ currentTarget: svg, clientX: 295 });
+  assert.deepEqual(seen, [1020], 'the same point is reported once');
+  const key = (k) => ({ key: k, preventDefault: () => {} });
+  chart.scrubKey(key('ArrowLeft'));
+  chart.scrubKey(key('End'));
+  chart.scrubKey(key('ArrowRight'));
+  chart.scrubKey(key('Home'));
+  assert.deepEqual(seen, [1020, 1000, 1050, 1000]);
+  chart.scrubKey(key('Escape'));
+  assert.equal(chart.active(), null);
+  assert.equal(seen.at(-1), null);
+  chart.scrubKey(key('a'));
+  chart.endScrub();
+  assert.equal(seen.length, 5, 'leaving again, or another key, reports nothing new');
+  chart.scrubAt({ currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 0 }) }, clientX: 5 });
+  assert.equal(chart.active(), null);
+  assert.equal(chart.timeFormat(), 'MMM d, HH:mm');
+  assert.deepEqual(chart.placed().map((p) => p.x), [0, 400, 800], 'evenly spaced, so closed hours take no room');
+  chart.scrubKey(key('Home'));
+  assert.equal(chart.labelLeft(), 8, 'the time label stays inside the chart at the left edge');
+  chart.scrubKey(key('End'));
+  assert.equal(chart.labelLeft(), 92);
   let picked = null;
   chart.periodChange.subscribe((p) => { picked = p; });
   chart.periodChange.emit('1M');

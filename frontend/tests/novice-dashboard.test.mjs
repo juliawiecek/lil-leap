@@ -128,6 +128,49 @@ test('the overview chart rebuilds the account’s value from its deposits, fills
   desk.ngOnDestroy();
 });
 
+test('the big number and its change line follow the period, the scrubbed point and its sign', async t => {
+  const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
+  assert.equal(desk.headerChange().label, 'Today', 'before the chart loads: today’s move');
+  desk.chartSpan.set({ start: 0, end: 10, fromOpening: false });
+  desk.chartHistory.set([{ at: 0, value: 1100 }, { at: 5, value: 1200 }, { at: 10, value: 1000 }]);
+  assert.equal(desk.headerValue(), 1000);
+  assert.deepEqual(desk.headerChange(), { amount: -100, percent: -100 / 11, label: 'Past day' });
+  assert.equal(desk.headerChangeText(), '−$100.00 (−9.09%)');
+  desk.chartScrub.set({ at: 5, value: 1200 });
+  assert.equal(desk.headerValue(), 1200, 'the value under the cursor');
+  assert.equal(desk.headerChange().amount, 100);
+  assert.equal(desk.headerChangeText(), '+$100.00 (+9.09%)');
+  assert.notEqual(desk.headerChange().label, 'Past day', 'the scrubbed time instead');
+  desk.setChartPeriod('ALL');
+  assert.equal(desk.chartScrub(), null, 'a new period drops the scrub');
+  desk.chartSpan.set({ start: 0, end: 10, fromOpening: true });
+  assert.equal(desk.headerChange().label, 'Since opening');
+  desk.chartHistory.set([{ at: 0, value: 1000 }, { at: 10, value: 1000 }]);
+  assert.equal(desk.headerChangeText(), '$0.00 (0.00%)');
+  desk.ngOnDestroy();
+});
+
+test('the chart is marked delayed when a held stock’s price is stale or the service is unreachable', async t => {
+  const { desk, feed } = await tradingDesk(t);
+  assert.equal(desk.chartDelayed(), false);
+  const old = new Date(Date.now() - 120000).toISOString();
+  feed.push(listed().map((q) => (q.symbol === 'AAPL' ? { ...q, quotedAt: old } : q)));
+  assert.equal(desk.chartDelayed(), true, 'AAPL is held and its quote is two minutes old');
+  feed.push(listed().map((q) => (q.symbol === 'GOOGL' ? { ...q, quotedAt: old } : q)));
+  assert.equal(desk.chartDelayed(), false, 'a stale stock that is not held does not matter');
+  desk.serviceDown.set(true);
+  assert.equal(desk.chartDelayed(), true);
+});
+
+test('the allocation ring is the real share in stocks', async t => {
+  const { desk } = await tradingDesk(t);
+  assert.equal(desk.stocksShare().toFixed(2), ((13691.76 / 20111.94) * 100).toFixed(2));
+  desk.applyPortfolio({ cash: 100, holdings: [] });
+  assert.equal(desk.stocksShare(), 0);
+  desk.applyPortfolio({ cash: 0, holdings: [] });
+  assert.equal(desk.stocksShare(), 0, 'an empty account draws no arc');
+});
+
 test('the chart starts when money first arrived, else when the account opened', async () => {
   const { fundedAt } = await import('../src/app/novice-dashboard.ts');
   assert.equal(fundedAt('2026-10-16T19:00:00Z', [{ at: 5, amount: 1 }, { at: 3, amount: 1 }]), 3);

@@ -16,9 +16,6 @@
       }
     </nav>
     <div class="sidebar-account">
-      <span>Your account</span>
-      <button type="button" (click)="navigate('Settings')">Account settings</button>
-      <button type="button" (click)="openModal('help')">Help &amp; support</button>
       <button type="button" (click)="signOut.emit()">Sign out ↗</button>
     </div>
   </aside>
@@ -121,12 +118,12 @@
                     @if (!portfolioLoaded()) {
                       <span aria-live="polite">Loading…</span>
                     } @else {
-                      {{ showBalance() ? (portfolioValue() | currency) : '••••••••' }}
+                      {{ showBalance() ? (headerValue() | currency) : '••••••••' }}
                     }
                   </div>
-                  <div class="portfolio-gain">
-                    <strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">{{ showBalance() ? ((todayReturn() > 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••' }}</strong
-                    ><span>Today</span>
+                  <div class="portfolio-gain" [class.up]="headerChange().amount > 0" [class.down]="headerChange().amount < 0">
+                    <strong>{{ showBalance() ? headerChangeText() : '••••••' }}</strong
+                    ><span>{{ headerChange().label }}</span>
                   </div>
                 </div>
               </div>
@@ -137,7 +134,9 @@
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"
                   [error]="chartError()"
+                  [delayed]="chartDelayed()"
                   (periodChange)="setChartPeriod($event)"
+                  (scrub)="chartScrub.set($event)"
                 />
               }
               <div class="portfolio-stats">
@@ -329,11 +328,20 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <svg class="allocation-donut" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
-                  <foreignObject width="100%" height="100%">
-                    <div xmlns="http://www.w3.org/1999/xhtml"><strong>{{ assetAllocation().total | currency }}</strong><span>Total</span></div>
-                  </foreignObject>
-                </svg>
+                <div class="allocation-donut" role="img" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
+                  <!-- A circle of circumference 100, so each arc's length is its percentage. -->
+                  <svg viewBox="0 0 42 42" aria-hidden="true">
+                    <circle class="ring cash" cx="21" cy="21" r="15.9155" />
+                    <circle
+                      class="ring stocks"
+                      cx="21"
+                      cy="21"
+                      r="15.9155"
+                      [attr.stroke-dasharray]="stocksShare() + ' ' + (100 - stocksShare())"
+                    />
+                  </svg>
+                  <div class="donut-center"><strong>{{ assetAllocation().total | currency }}</strong><span>Total</span></div>
+                </div>
                 <div class="allocation-legend">
                   <div>
                     <i class="asset-dot stocks"></i><span>Stocks<small>{{ assetAllocation().stocksValue | currency }}</small></span

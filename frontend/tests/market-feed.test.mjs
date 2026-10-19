@@ -239,6 +239,8 @@ test('the client lists only tradable stocks and reads the first quote of the day
     { at: Date.parse('2026-10-14T14:10:00Z'), price: 202 },
     { at: now, price: 203 },
   ]);
+  const misrouted = new MarketFeedClient({ accessToken: 'tok' }, apiHttp(async () => new Response('"<!doctype html>"', { status: 200 })));
+  await assert.rejects(misrouted.closes('a', '5m', 3), /Could not load prices/, 'a web page instead of JSON is an error, not an empty chart');
   assert.equal(await client.dayOpen('a', new Date('2026-10-14T16:00:00')), 198);
   assert.equal(await client.dayOpen('a', new Date('2026-10-16T16:00:00')), undefined);
   assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');

@@ -137,47 +137,6 @@ export function priceAt(series: readonly PricePoint[], at: number): number | nul
   return found;
 }
 
-/**
- * Four value labels from high to low, fitted to the line with a little room above and below, so
- * small moves stay visible. `cents` says whether the labels need cents to tell apart.
- */
-export function valueAxis(points: readonly ValuePoint[]): { high: number; low: number; labels: number[]; cents: boolean } {
-  const values = points.map((p) => p.value);
-  const max = values.length ? Math.max(...values) : 0;
-  const min = values.length ? Math.min(...values) : 0;
-  const pad = Math.max((max - min) * 0.15, 1);
-  const high = max + pad;
-  const low = Math.max(0, min - pad);
-  const step = (high - low) / 3;
-  return { high, low, labels: [0, 1, 2, 3].map((i) => round(high - step * i)), cents: high - low < 30 };
-}
-
-/** Five time labels across the range, worded for its length: times within a day, then dates. */
-export function timeAxis(range: ChartRange, locale?: string, timeZone?: string): string[] {
-  const span = range.end - range.start;
-  let options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
-  if (span <= 2 * DAY) {
-    options = { hour: '2-digit', minute: '2-digit', hour12: false };
-  } else if (span <= 14 * DAY) {
-    options = { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
-  }
-  const format = new Intl.DateTimeFormat(locale, { ...options, timeZone });
-  return [0, 1, 2, 3, 4].map((i) => format.format(range.start + (span * i) / 4));
-}
-
-/** The line as SVG path data on a width × height chart. */
-export function valuePath(points: readonly ValuePoint[], range: ChartRange, axis: { high: number; low: number }, width: number, height: number): string {
-  const span = Math.max(range.end - range.start, 1);
-  const spread = axis.high - axis.low || 1;
-  return points
-    .map((p, i) => {
-      const x = ((p.at - range.start) / span) * width;
-      const y = ((axis.high - p.value) / spread) * height;
-      return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-}
-
 function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
