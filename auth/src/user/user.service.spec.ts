@@ -17,9 +17,6 @@ describe('UserService', () => {
   let committed: boolean;
 
   beforeEach(() => {
-    query = { where: jest.fn().mockReturnThis(), getOne: jest.fn() };
-    manager = { createQueryBuilder: jest.fn().mockReturnValue(query) };
-    passwordEncoder = { matches: jest.fn() };
     customerProfileRepository = { findOne: jest.fn() };
     jest.useFakeTimers().setSystemTime(new Date('2026-10-19T12:00:00Z'));
     user = { userId: 'u1', email: 'trader@example.com', passwordHash: '{bcrypt}hash',
