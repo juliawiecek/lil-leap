@@ -9,6 +9,8 @@ import type { AccessTokenSource } from './order-history-api';
 
 /** A quote older than this is shown as "Price delayed", matching the orders service's freshness rule. */
 export const QUOTE_STALE_MS = 60000;
+/** Width of each price-bar interval the holdings service offers. */
+const BAR_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
 /** Rows of history read to find the day's first quote; the server caps history at 1000. */
 const HISTORY_ROWS = 1000;
 
@@ -61,6 +63,12 @@ interface QuoteRow {
   quotedAt: string;
 }
 
+/** One price at a moment, in epoch milliseconds. */
+export interface PricePoint {
+  at: number;
+  price: number;
+}
+
 export interface PriceTick {
   price: number;
   bid: number;
@@ -102,6 +110,46 @@ export class MarketFeedClient {
   /** The stock's latest quote. */
   async latest(instrumentId: string): Promise<PriceTick> {
     return tick(await this.#get<QuoteRow>(`/quotes/latest/by-instrument/${encodeURIComponent(instrumentId)}`));
+  }
+
+  /** Latest quote of each listed stock in one request (PS-10); stocks with no quote yet are absent. */
+  async latestMany(instrumentIds: readonly string[]): Promise<Map<string, PriceTick>> {
+    if (!instrumentIds.length) {
+      return new Map();
+    }
+    const rows = await this.#get<(QuoteRow & { instrumentId: string })[]>(
+      `/quotes/latest/by-instruments?ids=${instrumentIds.map(encodeURIComponent).join(',')}`,
+    );
+    return new Map(rows.map((row) => [row.instrumentId, tick(row)]));
+  }
+
+  /**
+   * One stock's closing price per bar over the last `limit` bars of `interval` (1m, 5m, 15m, 1h,
+   * 1d), oldest first, for the portfolio-value chart. A bar is dated by when it ends.
+   */
+  async closes(instrumentId: string, interval: string, limit: number, now = Date.now()): Promise<PricePoint[]> {
+    const rows = await this.#get<{ time: string; close: number | string }[]>(
+      `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
+    );
+    if (!Array.isArray(rows)) {
+      // A misrouted request can come back as a web page rather than JSON.
+      throw new Error('Could not load prices.');
+    }
+    const width = BAR_MS[interval] ?? 0;
+    return rows
+      // The service dates a bar by its start; its close was taken at its end (or now, for the open bar).
+      .map((row) => ({ at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) }))
+      .filter((point) => Number.isFinite(point.at) && point.price > 0)
+      .sort((a, b) => a.at - b.at);
+  }
+
+  /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */
+  async history(instrumentId: string, limit = HISTORY_ROWS): Promise<PricePoint[]> {
+    const rows = await this.#get<QuoteRow[]>(`/quotes/history/${encodeURIComponent(instrumentId)}?limit=${limit}`);
+    return rows
+      .map((row) => ({ at: Date.parse(row.quotedAt), price: Number(row.midpoint) }))
+      .filter((point) => Number.isFinite(point.at) && point.price > 0)
+      .sort((a, b) => a.at - b.at);
   }
 
   /**

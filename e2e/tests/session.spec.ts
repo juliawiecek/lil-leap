@@ -41,7 +41,7 @@ for (const app of ['NextTrade', 'Insights']) {
     await waitForServerExpiry(tokens.accessToken);
     const rejected = page.waitForResponse(r => r.url().includes('/api/v1/') && r.status() === 401);
     if (insights) await page.getByRole('button', { name: 'Refresh summary', exact: true }).click();
-    else await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Orders', exact: true }).click();
+    else await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Activity', exact: true }).click();
     const response = await rejected;
     expect(response.request().headers().authorization).toBe(`Bearer ${tokens.accessToken}`);
     await expect(page).toHaveURL(url => url.pathname === '/login');

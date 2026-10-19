@@ -9,5 +9,6 @@
   "/api/v1/instruments": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/clients/**": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/quotes/latest/**": { "target": "http://localhost:8080", "secure": false },
-  "/api/v1/quotes/history/**": { "target": "http://localhost:8080", "secure": false }
+  "/api/v1/quotes/history/**": { "target": "http://localhost:8080", "secure": false },
+  "/api/v1/quotes/candles/**": { "target": "http://localhost:8080", "secure": false }
 }

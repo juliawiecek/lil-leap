@@ -16,6 +16,15 @@ test('all trading route loaders resolve to their public or protected component',
   }
 });
 
+test('merged pages redirect, and an unknown address gets a friendly 404 instead of a silent redirect (PS-11)', async () => {
+  const redirects = Object.fromEntries(routes.filter((route) => route.redirectTo).map((route) => [route.path, route.redirectTo]));
+  assert.deepEqual(redirects, { orders: 'activity', history: 'activity', watchlist: 'markets', screeners: 'markets', '': 'dashboard' });
+  const fallback = routes.at(-1);
+  assert.equal(fallback.path, '**');
+  assert.equal(fallback.component.name, 'NotFound');
+  assert.ok(routes.some((route) => route.path === 'activity' && route.loadComponent));
+});
+
 test('tier guards restrict guided and advanced pages after session readiness', async (t) => {
   let tier = 'NOVICE';
   const injector = createEnvironmentInjector(

@@ -3,7 +3,7 @@ import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
 import { QUOTE_REFRESH_MS } from './portfolio-api';
 import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient } from './market-status-api';
-import { LiveQuote, MarketFeedClient, changeFrom, unpriced } from './market-feed-api';
+import { LiveQuote, MarketFeedClient, PriceTick, changeFrom, unpriced } from './market-feed-api';
 
 /**
  * One shared feed of live prices and market status for every view (TS-14.7, PS-02).
@@ -74,7 +74,10 @@ export class MarketFeed {
     return globalThis.document?.hidden === true;
   }
 
-  /** Loads the stock list if needed, then every stock's latest price. A failed stock keeps its last price. */
+  /**
+   * Loads the stock list if needed, then every stock's latest price in one request (PS-10).
+   * A stock without a new quote, or a failed request, keeps the last price shown.
+   */
   async refreshQuotes(): Promise<void> {
     if (!this.#canPoll()) {
       return;
@@ -84,18 +87,23 @@ export class MarketFeed {
     }
     const listed = this.quotes();
     await this.#loadOpens(listed);
-    const ticks = await Promise.allSettled(listed.map((q) => this.client.latest(q.instrumentId)));
+    let ticks = new Map<string, PriceTick>();
+    try {
+      ticks = await this.client.latestMany(listed.map((q) => q.instrumentId));
+    } catch {
+      // Keep the last prices; the next tick retries.
+    }
     if (!this.running) {
       return;
     }
     this.now.set(Date.now());
     this.quotes.set(
-      listed.map((quote, i) => {
-        const result = ticks[i];
-        if (result.status === 'rejected') {
+      listed.map((quote) => {
+        const latest = ticks.get(quote.instrumentId);
+        if (!latest) {
           return { ...quote, direction: null };
         }
-        const { price, bid, ask, quotedAt } = result.value;
+        const { price, bid, ask, quotedAt } = latest;
         const direction = moveOf(quote.price, price);
         return {
           ...quote,

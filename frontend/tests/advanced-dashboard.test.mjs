@@ -57,7 +57,7 @@ class MockOrderSubmissionClient extends OrderSubmissionClient {
 }
 
 // The portfolio the sell and submit tests trade against: $48,230.12 cash and 250 AAPL.
-const samplePortfolio = { cash: 48230.12, holdings: [{ symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 250, averageCost: 142.2 }] };
+const samplePortfolio = { cash: 48230.12, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 250, averageCost: 142.2 }] };
 // Timers are mocked so order tracking never waits in real time.
 function tradingDesk(t) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
@@ -82,49 +82,53 @@ test('screeners separate gainers and decliners and restore all quotes', t => {
   assert.equal(desk.screened().length, desk.quotes().length);
 });
 
-test('choosing a symbol updates ticket prices and clears stale search and errors', t => {
+test('choosing a symbol moves the ticket to it and clears stale search and errors', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   desk.query.set('nvda'); desk.message.set('old error'); desk.page.set('Watchlist');
   desk.choose(desk.quote('NVDA'));
   assert.equal(desk.selected().symbol, 'NVDA');
-  assert.equal(desk.limitPrice(), '893.12');
-  assert.equal(desk.profitPrice(), '937.78');
-  assert.equal(desk.stopPrice(), '848.46');
-  assert.equal(desk.alertPrice(), '910.98');
+  desk.quantity.set('2');
+  assert.equal(desk.total(), 1786.24, 'the estimate is the live price times the shares, with no invented fee');
   assert.equal(desk.query(), ''); assert.equal(desk.message(), '');
   assert.equal(desk.page(), 'Overview');
 });
 
-for (const [field, value, message] of [
-  ['quantity', '1.5', /whole number/], ['quantity', '-1', /whole number/],
-  ['limitPrice', '0', /valid order price/], ['limitPrice', 'Infinity', /valid order price/],
-  ['limitPrice', 'oops', /valid order price/], ['quantity', '100000', /buying power/],
-]) {
-  test(`advanced ticket rejects ${field}=${value} without placing an order`, t => {
+test('the ticket starts at one share and offers market orders only (PS-06)', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
+  assert.equal(desk.quantity(), '1');
+  for (const removed of ['orderType', 'limitPrice', 'tif', 'takeProfit', 'stopLoss', 'fees', 'alerts', 'markets', 'news']) {
+    assert.equal(desk[removed], undefined, `${removed} has no backend and is gone`);
+  }
+});
+
+for (const [value, message] of [['1.5', /whole number/], ['-1', /whole number/], ['100000', /buying power/]]) {
+  test(`advanced ticket rejects quantity=${value} without placing an order`, t => {
     const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
     const orders = desk.orders(); const cash = desk.buyingPower();
-    desk[field].set(value); desk.confirmOrder();
+    desk.quantity.set(value); desk.confirmOrder();
     assert.match(desk.message(), message);
     assert.deepEqual(desk.orders(), orders); assert.equal(desk.buyingPower(), cash);
   });
 }
 
-test('sell quantities and optional bracket prices are validated', t => {
+test('a stock with no live price yet cannot be ordered', t => {
   const desk = tradingDesk(t);
-  desk.side.set('Sell'); desk.quantity.set('251'); desk.limitPrice.set('176.50');
+  desk.selected.set({ ...desk.selected(), price: 0 });
+  assert.match(desk.validate(), /no live price/);
+});
+
+test('selling more shares than held is refused', t => {
+  const desk = tradingDesk(t);
+  desk.side.set('Sell'); desk.quantity.set('251');
   assert.match(desk.validate(), /only sell/);
-  desk.quantity.set('1'); desk.takeProfit.set(true); desk.profitPrice.set('176.50');
-  assert.match(desk.validate(), /Take profit/);
-  desk.profitPrice.set('185'); desk.stopLoss.set(true); desk.stopPrice.set('176.50');
-  assert.match(desk.validate(), /Stop loss/);
-  desk.stopPrice.set('0'); assert.match(desk.validate(), /Stop loss/);
-  desk.stopPrice.set('170'); assert.equal(desk.validate(), '');
+  desk.quantity.set('250');
+  assert.equal(desk.validate(), '');
 });
 
 test('market buy submits order with PENDING status to backend, does not mutate local cash or positions', async t => {
   const desk = tradingDesk(t);
   await desk.loadTradingData(); // Load accounts/instruments
-  desk.orderType.set('Market'); desk.quantity.set('2');
+  desk.quantity.set('2');
   const cashBefore = desk.buyingPower();
   const positionsBefore = JSON.stringify(desk.positions());
   await desk.confirmOrder();
@@ -134,22 +138,10 @@ test('market buy submits order with PENDING status to backend, does not mutate l
   assert.deepEqual(JSON.stringify(desk.positions()), positionsBefore);
 });
 
-test('nonmarketable limit submits with PENDING status and does not change holdings or cash', async t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
-  desk.orderSubmissionClient = new MockOrderSubmissionClient();
+test('market sell submits with PENDING status, does not mutate positions or cash immediately', async t => {
+  const desk = tradingDesk(t);
   await desk.loadTradingData();
-  const cash = desk.buyingPower(); const positions = desk.positions();
-  desk.quantity.set('2'); desk.limitPrice.set('170');
-  await desk.confirmOrder();
-  // Order submitted but remains PENDING, not immediately filled or Open
-  assert.equal(desk.buyingPower(), cash); assert.deepEqual(desk.positions(), positions);
-});
-
-test('limit sell submits with PENDING status, does not mutate positions or cash immediately', async t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
-  desk.orderSubmissionClient = new MockOrderSubmissionClient();
-  await desk.loadTradingData();
-  desk.side.set('Sell'); desk.quantity.set('250'); desk.limitPrice.set('170');
+  desk.side.set('Sell'); desk.quantity.set('250');
   const cashBefore = desk.buyingPower();
   const posBefore = desk.positions().length;
   await desk.confirmOrder();
@@ -169,13 +161,28 @@ const historyRow = (status, fillPrice = null) => ({
 });
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-test('orders and executions tabs show the backend order history, not sample data', async t => {
+test('orders come from the backend order history, not sample data', async t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   assert.deepEqual(desk.orders(), []);
   desk.orderHistoryClient = new ScriptedOrderHistory([historyRow('FILLED', 225.1), { ...historyRow('ACCEPTED'), orderId: 'o2' }]);
   assert.equal(await desk.refreshOrders(), true);
   assert.deepEqual(desk.orders().map(o => [o.id, o.side, o.status, o.price]), [['o1', 'Buy', 'Filled', 225.1], ['o2', 'Buy', 'Accepted', null]]);
-  assert.deepEqual(desk.executions().map(o => o.id), ['o1']);
+});
+
+test('the advanced workspace has five pages, with orders and history merged into Activity (PS-11)', t => {
+  const desk = tradingDesk(t);
+  assert.deepEqual(desk.nav.map(n => n.name), ['Overview', 'Portfolio', 'Activity', 'Markets', 'Settings']);
+  assert.deepEqual(desk.bottomTabs, ['Positions', 'Balances', 'Performance']);
+});
+
+test('balances that cannot be read raise the service-unavailable banner until a retry succeeds (PS-11)', async t => {
+  const desk = tradingDesk(t);
+  desk.portfolioClient = { load: async () => { throw new Error('Could not reach the server. Check your connection and try again.'); } };
+  await desk.refreshPortfolio();
+  assert.equal(desk.serviceDown(), true);
+  desk.portfolioClient = { load: async () => samplePortfolio };
+  await desk.refreshPortfolio();
+  assert.equal(desk.serviceDown(), false);
 });
 
 test('a submitted order is re-read until it fills, then tracking stops', async t => {
@@ -190,17 +197,49 @@ test('a submitted order is re-read until it fills, then tracking stops', async t
   assert.match(desk.message(), /Order o1 filled/);
 });
 
-test('positions are re-priced at the latest bid every 5 seconds and returns follow the market', async t => {
+test('positions are re-priced from the shared feed on every tick, with no request of their own (PS-10)', async t => {
   const desk = tradingDesk(t);
   const portfolio = { cash: 1000, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple Inc.', quantity: 10, averageCost: 200 }] };
-  const bids = [210, 190];
-  desk.portfolioClient = { load: async () => portfolio, latestBids: async ids => new Map(ids.map(id => [id, bids[0]])) };
+  desk.portfolioClient = { load: async () => portfolio };
   await desk.refreshPortfolio();
+  desk.feed.push([{ symbol: 'AAPL', price: 210, change: 5 }]);
   assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [3100, 100, 5]);
-  assert.deepEqual(desk.positions().map(p => [p.price, p.value, p.total]), [[210, 2100, 100]]);
-  bids.shift();
-  t.mock.timers.tick(5000); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(desk.positions().map(p => [p.price, p.value, p.total, p.day]), [[210, 2100, 100, 100]]);
+  assert.deepEqual([desk.dayGain(), desk.dayGainPercent()], [100, 5], 'today is its own figure, not the total return');
+  desk.feed.push([{ symbol: 'AAPL', price: 190, change: -5 }]);
   assert.deepEqual([desk.portfolio(), desk.totalReturn(), desk.totalReturnPercent()], [2900, -100, -5]);
+});
+
+test('a fill seen by the order poll reloads balances, so the overview follows every fill (PS-10)', async t => {
+  const desk = tradingDesk(t);
+  let loads = 0;
+  desk.portfolioClient = { load: async () => { loads++; return samplePortfolio; } };
+  desk.orderHistoryClient = new ScriptedOrderHistory([historyRow('ACCEPTED')], [historyRow('FILLED', 225)]);
+  await desk.ngOnInit();
+  await flush(); await flush();
+  const afterStart = loads;
+  t.mock.timers.tick(5000); await flush(); await flush();
+  assert.equal(loads, afterStart + 1, 'the queued order filled, so cash and positions were re-read');
+  t.mock.timers.tick(5000); await flush(); await flush();
+  assert.equal(loads, afterStart + 1, 'an order already seen filled does not reload again');
+  desk.ngOnDestroy();
+});
+
+test('the summary shows real cash and invested shares, sectors come from listed stocks, and the chart uses recorded prices (PS-06)', t => {
+  const desk = tradingDesk(t);
+  desk.feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change, sector: symbol === 'AMZN' ? 'Consumer' : 'Technology' })));
+  assert.equal(desk.portfolioLoaded(), true);
+  assert.deepEqual(desk.exposure(), { total: 92370.12, equities: 44140, cash: 48230.12, equitiesPercent: 47.8, cashPercent: 52.2 });
+  assert.equal(desk.exposureLabel(), '$92.4K', 'short enough to fit inside the ring');
+  assert.deepEqual(desk.sectors().map(s => [s.name, s.change]), [['Technology', 1.39], ['Consumer', 1.21]]);
+  assert.equal(desk.sectors()[0].width, 100);
+  const now = Date.now();
+  desk.currentTime.set(new Date(now));
+  desk.priceHistory.set([{ at: now - 60000, price: 170 }, { at: now - 30000, price: 175 }]);
+  assert.match(desk.priceLine(), /^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/);
+  assert.equal(desk.historyStart(), now - 60000);
+  desk.priceHistory.set([]);
+  assert.equal(desk.priceLine(), '', 'no invented candles while prices are still being collected');
 });
 
 test('cash, positions and portfolio value come from the backend and reload after a fill', async t => {
@@ -243,21 +282,10 @@ test('a listed stock with no backend instrument is not submitted', async t => {
   desk.orderSubmissionClient = client;
   desk.orderHistoryClient = new ScriptedOrderHistory([]);
   await desk.loadTradingData();
-  desk.choose(desk.quote('NVDA')); desk.orderType.set('Market'); desk.quantity.set('1');
+  desk.choose(desk.quote('NVDA')); desk.quantity.set('1');
   await desk.confirmOrder();
   assert.equal(submitted, 0);
   assert.match(desk.message(), /NVDA is not available to trade yet/);
-});
-
-test('price alerts reject invalid prices and retain the selected symbol', t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
-  for (const value of ['0', '-1', 'NaN', 'Infinity']) {
-    desk.alertPrice.set(value); desk.createAlert();
-    assert.match(desk.message(), /positive alert price/);
-    assert.deepEqual(desk.alerts(), []);
-  }
-  desk.choose(desk.quote('NVDA')); desk.alertPrice.set('150'); desk.createAlert();
-  assert.deepEqual(desk.alerts(), [{ symbol: 'NVDA', price: 150 }]);
 });
 
 test('portfolio and order load failures retain values and show safe fallback messages', async t => {
@@ -275,18 +303,17 @@ test('portfolio and order load failures retain values and show safe fallback mes
   assert.equal(desk.message(), 'Could not load your orders.');
 });
 
-test('destroying dashboard cancels order and price polling', async t => {
+test('destroying dashboard cancels order polling and releases the price feed', async t => {
   const desk = tradingDesk(t);
-  let orders = 0, quotes = 0;
+  let orders = 0;
   desk.orderHistoryClient = { list: async () => { orders++; return []; } };
-  desk.portfolioClient.latestBids = async () => { quotes++; return new Map(); };
   await desk.refreshPortfolio();
   await desk.trackOrder('pending');
   desk.ngOnDestroy();
   t.mock.timers.tick(10000);
   await flush();
   assert.equal(orders, 1);
-  assert.equal(quotes, 1);
+  assert.equal(desk.feed.stops, 1);
 });
 
 test('zero-value positions have zero portfolio weights', t => {
@@ -343,7 +370,7 @@ test('a filled order pops a toast, and the review line and market badge come fro
   desk.orderStatusClient = { status: async () => { throw new Error('down'); } };
   desk.orderHistoryClient = new ScriptedOrderHistory([{ ...historyRow('REJECTED'), orderId: 'o2' }]);
   await desk.trackOrder('o2');
-  assert.match(desk.toasts.toasts().at(-1).detail, /Check Orders/);
+  assert.match(desk.toasts.toasts().at(-1).detail, /Check Activity/);
   desk.quantity.set('2'); desk.orderTolerance.set(1.7);
   assert.equal(desk.reviewSummary(), 'Buy 2 AAPL · about $353.12 · fills at up to $359.12');
   desk.feed.status.set({ open: true, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-15T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
@@ -353,7 +380,7 @@ test('a filled order pops a toast, and the review line and market badge come fro
   assert.deepEqual(desk.topMovers().map(q => q.symbol), ['NVDA', 'AAPL', 'AMZN', 'MSFT', 'GOOGL']);
   assert.equal(desk.priceDelayed(), false);
   desk.viewOrders();
-  assert.equal(desk.page(), 'Orders');
+  assert.equal(desk.page(), 'Activity');
 });
 
 test('tracking stops when its deadline has elapsed', async t => {
@@ -365,15 +392,10 @@ test('tracking stops when its deadline has elapsed', async t => {
   assert.equal(history.calls, 1);
 });
 
-test('search, order filters and chart periods update the displayed data', t => {
+test('search and chart periods update the displayed data', t => {
   const desk = tradingDesk(t);
   desk.query.set('  apple  ');
   assert.deepEqual(desk.results().map(q => q.symbol), ['AAPL']);
-  desk.orders.set([{ id: 'one', status: 'Filled' }, { id: 'two', status: 'Rejected' }]);
-  desk.orderStatus.set('All');
-  assert.equal(desk.filteredOrders().length, 2);
-  desk.orderStatus.set('Rejected');
-  assert.deepEqual(desk.filteredOrders().map(o => o.id), ['two']);
   desk.period.set('1M');
   assert.equal(desk.chartTimes().length, 7);
   assert.equal(desk.quote('unknown'), desk.quotes()[0]);

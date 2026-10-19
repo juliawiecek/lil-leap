@@ -18,7 +18,7 @@ const REJECTION_REASONS: Record<string, string> = {
   MARKET_CLOSED: 'The market was closed.',
   EXECUTION_FAILED: 'It could not be executed. Please try again.',
 };
-const UNKNOWN_REJECTION = 'It could not be completed. Check Orders for details.';
+const UNKNOWN_REJECTION = 'It could not be completed. Check Activity for details.';
 
 /** Plain-English reason for a rejection code; a generic sentence for codes not yet mapped. */
 export function rejectionReason(code: string | null | undefined): string {

@@ -38,6 +38,9 @@ class SettlementRecoveryServiceTest {
     @Test
     void buyWithOnlyAFillIsReportedOnceAndRecoveredFromTheFill() {
         UUID fill = fill("BUY", 10, "25.005", "ACCEPTED");
+        UUID trade = tradeFor(fill);
+
+        assertThat(service.status(trade).status()).isEqualTo("NOT_SETTLED");
 
         var firstCheck = service.reportIncomplete();
         var secondCheck = service.reportIncomplete();
@@ -62,6 +65,7 @@ class SettlementRecoveryServiceTest {
         assertThat(events(SettlementRecoveryService.COMPLETED)).isEqualTo(1);
         assertThat(events(SettlementRecoveryService.RECOVERED)).isEqualTo(1);
         assertThat(service.reportIncomplete()).isEmpty();
+        assertThat(service.status(trade)).isEqualTo(new SettlementStatusResponse(trade, "SETTLED", fill));
     }
 
     @Test
@@ -146,6 +150,24 @@ class SettlementRecoveryServiceTest {
         assertThatThrownBy(() -> service.rollback(unknown)).isInstanceOf(SettlementException.class);
     }
 
+    @Test
+    void unknownTradeStatusIsNotFound() {
+        assertThatThrownBy(() -> service.status(UUID.randomUUID()))
+                .isInstanceOfSatisfying(SettlementException.class,
+                        failure -> assertThat(failure.status()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void ledgerMismatchIsInconsistentEvenWhenTheCacheWouldLookComplete() {
+        UUID fill = fill("BUY", 1, "10", "FILLED");
+        UUID trade = tradeFor(fill);
+        jdbc.update("INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at) "
+                        + "VALUES (?, ?, 'BUY', -10, 'USD', 'SETTLED', CURRENT_TIMESTAMP)", account, fill);
+        completionAudit(fill);
+
+        assertThat(service.status(trade).status()).isEqualTo("INCONSISTENT");
+    }
+
     private UUID fill(String side, long quantity, String price, String orderStatus) {
         UUID order = UUID.randomUUID();
         UUID fill = UUID.randomUUID();
@@ -154,6 +176,10 @@ class SettlementRecoveryServiceTest {
         jdbc.update("INSERT INTO fills(fill_id, order_id, filled_quantity, execution_price) VALUES (?, ?, ?, ?)",
                 fill, order, quantity, new BigDecimal(price));
         return fill;
+    }
+
+    private UUID tradeFor(UUID fill) {
+        return jdbc.queryForObject("SELECT order_id FROM fills WHERE fill_id = ?", UUID.class, fill);
     }
 
     private void completionAudit(UUID fill) {

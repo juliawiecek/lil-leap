@@ -95,6 +95,27 @@ export function plotMarks(
     .map((mark) => ({ ...mark, x: ((mark.at - window.start) / span) * width, y: priceY(mark.price, range, height) }));
 }
 
+/**
+ * The recorded prices inside the window as one SVG line on a width × height chart (PS-06);
+ * empty when fewer than two prices fall inside it.
+ */
+export function pricePath(
+  points: readonly { at: number; price: number }[],
+  window: ChartWindow,
+  range: PriceRange,
+  width: number,
+  height: number,
+): string {
+  const span = window.end - window.start;
+  const inside = points.filter((p) => p.at >= window.start && p.at <= window.end);
+  if (inside.length < 2 || span <= 0) {
+    return '';
+  }
+  return inside
+    .map((p, i) => `${i ? 'L' : 'M'}${(((p.at - window.start) / span) * width).toFixed(1)},${priceY(p.price, range, height).toFixed(1)}`)
+    .join(' ');
+}
+
 /** Evenly spaced time labels across the window, formatted for the period. */
 export function timeLabels(period: string, window: ChartWindow, locale?: string): string[] {
   const format = new Intl.DateTimeFormat(locale, LABEL_FORMATS[period] ?? { day: 'numeric', month: 'short' });
