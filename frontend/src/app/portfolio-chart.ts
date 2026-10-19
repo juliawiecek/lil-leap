@@ -177,11 +177,13 @@ export class PortfolioChart {
     const first = startValue(points);
     const last = points.at(-1)!.value;
     const percent = first > 0 ? Math.abs(((last - first) / first) * 100) : 0;
-    let word = 'unchanged';
+    let word: string;
     if (last > first) {
       word = 'up';
     } else if (last < first) {
       word = 'down';
+    } else {
+      word = 'unchanged';
     }
     return `Portfolio value ${PERIOD_WORDS[this.period()]}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${word} ${percent.toFixed(2)}%. Use the left and right arrow keys to move along the line.`;
   });
@@ -205,7 +207,9 @@ export class PortfolioChart {
     if (event.key in moves) {
       event.preventDefault();
       this.#select(Math.max(0, Math.min(last, moves[event.key])));
-    } else if (event.key === 'Escape') {
+      return;
+    }
+    if (event.key === 'Escape') {
       this.endScrub();
     }
   }
