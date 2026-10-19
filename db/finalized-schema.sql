@@ -774,6 +774,13 @@ CREATE OR REPLACE VIEW v_latest_quotes AS
     FROM quotes
     ORDER BY instrument_id, quoted_at DESC;
 
+-- BR-15 (TS-16.1b): An order's audit trail for trade investigation in Insights. Leaves out who
+-- and which account, so the reporting role can read it without access to user data.
+CREATE OR REPLACE VIEW v_trade_audit_events AS
+    SELECT audit_id, related_order_id AS order_id, actor_type, event_type, payload, created_at
+    FROM audit_log
+    WHERE related_order_id IS NOT NULL;
+
 -- BR-03: Active sessions per user
 CREATE OR REPLACE VIEW v_active_sessions AS
     SELECT
