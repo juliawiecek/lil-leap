@@ -3,14 +3,18 @@ package com.neueda.leap.reporting.controller;
 import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
 import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
+import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.service.ReportingService;
 import org.springframework.core.io.Resource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /** Read-only dashboard and report-generation API for internal analyst users. */
@@ -61,32 +65,44 @@ public class ReportingController {
     }
 
     /**
-     * Returns the downloadable CSV report aggregated by instrument. “Hourly trade activity trend: number of executed trades per hour.”
+     * Returns the downloadable CSV report aggregated by instrument.
      *
+     * @param startDate first UTC day included (ISO date, required)
+     * @param endDate last UTC day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/instrument-report", produces = "text/csv")
-    public ResponseEntity<Resource> generateInstrumentReport() {
-        return reportingService.generateInstrumentReport();
+    public ResponseEntity<Resource> generateInstrumentReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return reportingService.generateInstrumentReport(new ReportDateRange(startDate, endDate));
     }
 
     /**
      * Returns the downloadable CSV report aggregated by client segment.
      *
+     * @param startDate first UTC day included (ISO date, required)
+     * @param endDate last UTC day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/client-segment-report", produces = "text/csv")
-    public ResponseEntity<Resource> generateClientSegmentReport() {
-        return reportingService.generateClientSegmentReport();
+    public ResponseEntity<Resource> generateClientSegmentReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return reportingService.generateClientSegmentReport(new ReportDateRange(startDate, endDate));
     }
 
     /**
      * Returns the downloadable CSV report aggregated by trading activity.
      *
+     * @param startDate first UTC day included (ISO date, required)
+     * @param endDate last UTC day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/trading-activity-report", produces = "text/csv")
-    public ResponseEntity<Resource> generateTradingActivityReport() {
-        return reportingService.generateTradingActivityReport();
+    public ResponseEntity<Resource> generateTradingActivityReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return reportingService.generateTradingActivityReport(new ReportDateRange(startDate, endDate));
     }
 }

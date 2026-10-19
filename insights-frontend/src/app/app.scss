@@ -346,6 +346,13 @@ main {
 .filter-bar input {
   font-size: 12px;
 }
+.report-period {
+  gap: 16px;
+  margin: 0 0 16px;
+}
+.report-period legend {
+  color: var(--muted);
+}
 .grow {
   flex: 1;
 }

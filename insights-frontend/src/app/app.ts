@@ -1,4 +1,12 @@
-import { LIVE_REPORTS, type ReportSummary } from './live-reports';
+import {
+  LIVE_REPORTS,
+  REPORT_FILES,
+  reportFailureMessage,
+  reportRangeError,
+  utcDate,
+  type ReportKind,
+  type ReportSummary,
+} from './live-reports';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { AuthService } from './auth.service';
 import { AppSessionService } from './app-session.service';
@@ -59,6 +67,86 @@ export class App implements OnDestroy {
   }
 
   signOut(): void { void this.liveReports?.logout(); }
+
+  readonly reportFiles = inject(REPORT_FILES, { optional: true });
+  /** Reports generated server-side from the insights trade dataset (BR-16). */
+  readonly reportCatalog: readonly {
+    kind: ReportKind;
+    name: string;
+    icon: string;
+    description: string;
+  }[] = [
+    {
+      kind: 'instrument-report',
+      name: 'Instrument Report',
+      icon: 'chart',
+      description: 'Trade count, quantity, notional and average execution price for each instrument.',
+    },
+    {
+      kind: 'client-segment-report',
+      name: 'Client Segment Report',
+      icon: 'users',
+      description: 'Trades, unique clients, quantity and notional by client segment.',
+    },
+    {
+      kind: 'trading-activity-report',
+      name: 'Trading Activity Report',
+      icon: 'file',
+      description: 'Executed trades, active clients, quantity and notional per UTC day and hour.',
+    },
+  ];
+  readonly today = utcDate();
+  /** Reports always carry a date range; it starts as the last 30 UTC days, ending today. */
+  readonly reportStart = signal(utcDate(new Date(), 29));
+  readonly reportEnd = signal(this.today);
+  readonly reportDateError = computed(() => reportRangeError(this.reportStart(), this.reportEnd()));
+  readonly generating = signal<ReportKind | null>(null);
+
+  async generateReport(report: { kind: ReportKind; name: string }): Promise<void> {
+    const dateError = this.reportDateError();
+    if (dateError) {
+      this.notice.set(dateError);
+      return;
+    }
+    if (!this.reportFiles) {
+      this.notice.set('Report generation is unavailable.');
+      return;
+    }
+    if (this.generating()) {
+      return;
+    }
+    const range = { startDate: this.reportStart(), endDate: this.reportEnd() };
+    this.generating.set(report.kind);
+    this.notice.set('');
+    try {
+      const file = await this.reportFiles.generate(report.kind, range);
+      if (this.destroyed) {
+        return;
+      }
+      const rows = Math.max(file.csv.split(/\r?\n/).filter((line) => line.trim()).length - 1, 0);
+      const generated = {
+        name: report.name,
+        at: new Date(),
+        rows,
+        csv: file.csv,
+        filename: file.filename,
+        period: `${range.startDate} – ${range.endDate}`,
+      };
+      this.exports.update((list) => [generated, ...list]);
+      this.download(generated);
+      this.notice.set(
+        rows
+          ? `${report.name} generated for ${generated.period} (UTC).`
+          : `${report.name} generated, but no trades were executed between ${generated.period}.`,
+      );
+    } catch (error) {
+      if (!this.destroyed) {
+        this.notice.set(reportFailureMessage(error));
+      }
+    } finally {
+      this.generating.set(null);
+    }
+  }
   readonly auth = inject(AuthService, { optional: true });
   readonly session = inject(AppSessionService, { optional: true });
   private routing?: PageBinding;
@@ -94,7 +182,9 @@ export class App implements OnDestroy {
   readonly detailTab = signal('Overview');
   readonly reportType = signal('Monthly Executive Report');
   readonly reportTab = signal('Standard Reports');
-  readonly exports = signal<{ name: string; at: Date; rows: number; csv: string }[]>([]);
+  readonly exports = signal<
+    { name: string; at: Date; rows: number; csv: string; filename?: string; period?: string }[]
+  >([]);
   readonly definitions = signal(false);
   readonly compact = signal(false);
   readonly segments = ['Under $10K', '$10K–$100K', 'Over $100K'];
@@ -226,7 +316,8 @@ export class App implements OnDestroy {
       { key: 'cadence', value: this.cadence, allowed: ['Daily','Weekly','Monthly','Yearly'] },
       { key: 'detailTab', value: this.detailTab, allowed: ['Overview','Orders','Documents','Lifecycle','Audit Trail'] },
       { key: 'reportType', value: this.reportType, allowed: this.reportTypes },
-      { key: 'reportTab', value: this.reportTab, allowed: ['Standard Reports','Custom Reports','Scheduled Reports'] },
+      { key: 'reportTab', value: this.reportTab, allowed: ['Standard Reports','Scheduled Reports'] },
+      { key: 'reportStart', value: this.reportStart, date: true }, { key: 'reportEnd', value: this.reportEnd, date: true },
       { key: 'definitions', value: this.definitions }, { key: 'compact', value: this.compact },
     ], parts => {
       const tabs = parts[0] === 'clients' ? ['Overview','Orders','Documents'] : parts[0] === 'orders' ? ['Overview','Lifecycle','Audit Trail'] : ['Overview'];
@@ -374,13 +465,13 @@ export class App implements OnDestroy {
     this.download(report);
     this.notice.set('CSV generated using the current filters.');
   }
-  download(report: { name: string; csv: string }) {
+  download(report: { name: string; csv: string; filename?: string }) {
     const url = URL.createObjectURL(
       new Blob(['\ufeff' + report.csv], { type: 'text/csv;charset=utf-8' }),
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = report.name.toLowerCase().replaceAll(' ', '-') + '.csv';
+    a.download = report.filename ?? report.name.toLowerCase().replaceAll(' ', '-') + '.csv';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

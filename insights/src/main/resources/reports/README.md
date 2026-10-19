@@ -35,7 +35,13 @@
 
 ## Notes
 
-- The file is a mock dataset only.
+- The file is generated, do not edit it by hand: `python db/seeds/generate_demo_trades.py` writes it together with
+  `db/seeds/001_us_equity_instruments.sql` and `db/seeds/003_demo_trading_activity.sql` from one trade book.
+- It holds every fill the dev seeds put in the database (the `003` demo book plus the `002` test-user fills) with the
+  same fill, order, user, account and instrument ids, quantities, prices and UTC times of day. The CSV is anchored at
+  2026-10-16; the database places the same book relative to the day it was seeded, so only the dates shift.
+  Instrument ids match on a database created after fixed instrument ids were introduced.
+- `python db/seeds/generate_demo_trades.py --check` fails if this file is out of date with the seeds.
 - No live database access is required for BR-16 report generation.
 - The CSV parser and writer in the reporting service are responsible for reading this file and producing downloadable CSV attachments.
 

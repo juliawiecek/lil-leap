@@ -13,6 +13,7 @@ import pandas as pd
 
 from src.generate_quotes import generate_quotes, load_quotes
 from src.database import connect, DatabaseUnavailableError
+from src.instrument_catalog import INSTRUMENTS_BY_SYMBOL
 from src.quote_repository import QuoteRepository
 
 
@@ -51,15 +52,18 @@ class PostgresQuoteProvider:
 
     def get_quote(self, symbol: str) -> Quote:
         ticker = symbol.strip().upper()
+        # Catalog symbols are quoted on their own listing market (NASDAQ or NYSE).
+        spec = INSTRUMENTS_BY_SYMBOL.get(ticker)
+        market = spec.market_code if spec else self.market_code
         try:
             with self.connection_factory() as connection:
-                stored = QuoteRepository(connection).latest_by_market_symbol(self.market_code, ticker)
+                stored = QuoteRepository(connection).latest_by_market_symbol(market, ticker)
         except DatabaseUnavailableError as exc:
             raise QuoteSourceError("PostgreSQL quote source is unavailable") from exc
         except Exception as exc:
             raise QuoteSourceError("Unable to read PostgreSQL quote source") from exc
         if stored is None:
-            raise QuoteNotFoundError(f"Quote not found for {self.market_code}:{ticker}")
+            raise QuoteNotFoundError(f"Quote not found for {market}:{ticker}")
         return Quote(symbol=stored.symbol, quote_timestamp=stored.quoted_at.isoformat(),
                      price=float(stored.midpoint), bid=float(stored.bid), ask=float(stored.ask),
                      currency=stored.currency.strip(), source=stored.source, synthetic=stored.is_synthetic)

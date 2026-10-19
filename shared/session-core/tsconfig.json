@@ -3,6 +3,42 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@angular/core": [
+        "../../frontend/node_modules/@angular/core",
+        "../../insights-frontend/node_modules/@angular/core"
+      ],
+      "@angular/common": [
+        "../../frontend/node_modules/@angular/common",
+        "../../insights-frontend/node_modules/@angular/common"
+      ],
+      "@angular/common/*": [
+        "../../frontend/node_modules/@angular/common/*",
+        "../../insights-frontend/node_modules/@angular/common/*"
+      ],
+      "@angular/common/http": [
+        "../../frontend/node_modules/@angular/common/types/http.d.ts",
+        "../../insights-frontend/node_modules/@angular/common/types/http.d.ts"
+      ],
+      "@angular/router": [
+        "../../frontend/node_modules/@angular/router",
+        "../../insights-frontend/node_modules/@angular/router"
+      ],
+      "rxjs": [
+        "../../frontend/node_modules/rxjs",
+        "../../insights-frontend/node_modules/rxjs"
+      ],
+      "rxjs/*": [
+        "../../frontend/node_modules/rxjs/*",
+        "../../insights-frontend/node_modules/rxjs/*"
+      ],
+      "tslib": [
+        "../../frontend/node_modules/tslib",
+        "../../insights-frontend/node_modules/tslib"
+      ]
+    },
     "declaration": true,
     "sourceMap": true,
     "inlineSources": true,
