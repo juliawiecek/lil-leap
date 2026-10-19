@@ -77,7 +77,7 @@ All service ports are internal to Compose. The client URLs remain
 | NextTrade | `GET /api/v1/orders` | Holdings |
 | NextTrade | `/api/v1/accounts`, `/holdings`, `/cash`, `/instruments` | Holdings (all use `/api/v1`) |
 | NextTrade | `/api/v1/quotes/{symbol}` | Quotes |
-| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*` | Holdings display reads |
+| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*`, `/api/v1/quotes/candles/*`, `/api/v1/quotes/day-opens` | Holdings display reads |
 | NextTrade | `/api/v1/clients/{id}/holdings`, `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Holdings (caller-scoped) |
 | NextTrade | `/api/v1/clients/{id}/orders?from=YYYY-MM-DD&to=YYYY-MM-DD&status=FILLED` | Holdings (TRADER-only, caller-scoped history and fills) |
 | Insights | `/api/v1/reports/*` | Insights |

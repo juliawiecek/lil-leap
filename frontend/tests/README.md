@@ -19,6 +19,8 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
   order submission, live portfolio values, execution tracking, and price protection.
 - `advanced-ticket.test.mjs`: NEXT-251 market-only controls, fee-free buying-power
   boundaries, live estimates, and rendered buy/sell reviews matched to request bodies.
+- `market-feed.test.mjs`: shared quote polling, batched server session baselines,
+  opening transitions and retries, stale prices, and market status.
 - `novice-learn.test.mjs`: quiz completion, stored progress, topic selection,
   unavailable storage, and compound-growth calculations.
 - `investor-profile.test.mjs`: conditional fields, review masking, and emitted answers.

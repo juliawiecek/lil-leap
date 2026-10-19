@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
 
 /**
  * Read-only REST API for market quotes.
@@ -77,6 +78,26 @@ public class QuoteController {
         }
         return ids.stream().distinct()
                 .flatMap(id -> repository.findLatestByInstrumentId(id).stream())
+                .map(QuoteResponse::from)
+                .toList();
+    }
+
+    /**
+     * Reads session baselines independently of the recent-history page limit. The server
+     * captures one instant for the batch; browser time zones cannot change the result.
+     *
+     * @param ids instrument identifiers, comma-separated, at most {@value #MAX_BATCH}
+     * @return baseline quotes in request order, omitting instruments without a baseline
+     * @throws IllegalArgumentException if no ids or too many ids are given
+     */
+    @GetMapping("/day-opens")
+    public List<QuoteResponse> getDayOpens(@RequestParam("ids") List<UUID> ids) {
+        if (ids.isEmpty() || ids.size() > MAX_BATCH) {
+            throw new IllegalArgumentException("Between 1 and " + MAX_BATCH + " instrument ids are required");
+        }
+        Instant now = Instant.now();
+        return ids.stream().distinct()
+                .flatMap(id -> repository.findDayOpen(id, now).stream())
                 .map(QuoteResponse::from)
                 .toList();
     }

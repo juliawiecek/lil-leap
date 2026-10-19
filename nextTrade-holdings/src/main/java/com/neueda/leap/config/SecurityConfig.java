@@ -42,7 +42,7 @@ public class SecurityConfig {
             "/clients/*/portfolio-summary", "/accounts", "/holdings", "/holdings/**", "/cash", "/orders",
             "/instruments", "/instruments/*", "/clients/*/holdings", "/clients/*/cash", "/cash/balance/*",
             "/quotes/latest/by-instrument/*", "/quotes/latest/by-instruments", "/quotes/latest/by-market-symbol",
-            "/quotes/history/*", "/quotes/candles/*", API_PREFIX + "/quotes/latest/by-instruments",
+            "/quotes/history/*", "/quotes/candles/*", "/quotes/day-opens", API_PREFIX + "/quotes/day-opens", API_PREFIX + "/quotes/latest/by-instruments",
             API_PREFIX + "/quotes/candles/*",
             API_PREFIX + "/clients/*/portfolio-summary", API_PREFIX + "/accounts", API_PREFIX + "/holdings",
             API_PREFIX + "/holdings/**", API_PREFIX + "/cash", API_PREFIX + "/orders", API_PREFIX + "/instruments",

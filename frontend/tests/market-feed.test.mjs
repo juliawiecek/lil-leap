@@ -48,7 +48,7 @@ function feedWith(t, { prices = { MSFT: [400, 401], AAPL: [200, 199] }, fail = (
   feed.client = {
     get signedIn() { return signedIn(); },
     instruments: async () => STOCKS,
-    dayOpen: async () => open,
+    dayOpens: async (ids) => new Map(ids.map(id => [id, open])),
     // One request per refresh carries every stock; a stock that "fails" is simply absent from it.
     latestMany: async (ids) => {
       calls.latest += 1;
@@ -197,7 +197,7 @@ test('the ticker shows the market badge and flags a stale price', t => {
   assert.equal(ticker.delayed('2026-10-14T21:29:30Z'), false);
 });
 
-test('the client lists only tradable stocks and reads the first quote of the day', async () => {
+test('the client lists tradable stocks and reads server session baselines separately from chart history', async () => {
   const requests = [];
   const rows = {
     '/api/v1/instruments': [
@@ -213,6 +213,9 @@ test('the client lists only tradable stocks and reads the first quote of the day
     ],
     '/api/v1/quotes/latest/by-instruments?ids=a,b': [
       { instrumentId: 'a', bid: '199.9', ask: '200.1', midpoint: '200', quotedAt: '2026-10-14T15:00:00Z' },
+    ],
+    '/api/v1/quotes/day-opens?ids=a,b': [
+      { instrumentId: 'a', midpoint: '198', quotedAt: '2026-10-14T13:30:03Z' },
     ],
     '/api/v1/quotes/history/a?limit=1000': [
       { midpoint: '201', bid: 0, ask: 0, quotedAt: '2026-10-14T14:00:00' },
@@ -241,11 +244,48 @@ test('the client lists only tradable stocks and reads the first quote of the day
   ]);
   const misrouted = new MarketFeedClient({ accessToken: 'tok' }, apiHttp(async () => new Response('"<!doctype html>"', { status: 200 })));
   await assert.rejects(misrouted.closes('a', '5m', 3), /Could not load prices/, 'a web page instead of JSON is an error, not an empty chart');
-  assert.equal(await client.dayOpen('a', new Date('2026-10-14T16:00:00')), 198);
-  assert.equal(await client.dayOpen('a', new Date('2026-10-16T16:00:00')), undefined);
+  assert.deepEqual([...await client.dayOpens(['a', 'b'])], [['a', 198]]);
+  assert.equal((await client.dayOpens([])).size, 0);
   assert.ok(requests.every(([, auth]) => auth === undefined), 'the interceptor attaches the bearer token');
   await assert.rejects(client.latest('missing'), /Could not load prices/);
   await assert.rejects(new MarketFeedClient({ accessToken: null }).instruments(), /Sign in/);
+});
+
+test('NEXT-254: a running feed replaces the previous close at open and retries missing opening quotes', async t => {
+  page(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { feed } = feedWith(t, { prices: { MSFT: [110], AAPL: [110] } });
+  let opens = new Map([['msft', 100], ['aapl', 100]]);
+  const requests = [];
+  feed.client.dayOpens = async ids => { requests.push(ids); return opens; };
+  const stop = feed.start(); await flush();
+  assert.equal(feed.quote('AAPL').change, 10, 'before open, use the previous close');
+  opens = new Map();
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(feed.quote('AAPL').change, 0, 'at open, no stale previous close while the first tick is pending');
+  opens = new Map([['msft', 110], ['aapl', 110]]);
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(feed.quote('AAPL').change, 0, 'the first opening quote is the new baseline');
+  opens = new Map([['msft', 100], ['aapl', 100]]);
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(feed.quote('AAPL').change, 10, 'a new session baseline is re-read without waiting for browser midnight');
+  assert.deepEqual(requests, Array.from({ length: 4 }, () => ['msft', 'aapl']), 'one baseline request per refresh');
+  stop();
+});
+
+test('NEXT-254: a baseline read failure clears the prior session and recovers on the next poll', async t => {
+  page(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { feed } = feedWith(t);
+  const stop = feed.start(); await flush();
+  assert.equal(feed.quote('AAPL').change, 100);
+  feed.client.dayOpens = async () => { throw new Error('offline'); };
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(feed.quote('AAPL').change, 0);
+  feed.client.dayOpens = async () => new Map([['aapl', 199]]);
+  t.mock.timers.tick(QUOTE_REFRESH_MS); await flush();
+  assert.equal(feed.quote('AAPL').change, 0);
+  stop();
 });
 
 test('unexpected transport failures propagate from the market feed client', async () => {
