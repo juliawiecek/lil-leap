@@ -12,14 +12,17 @@ Reports are generated locally and ignored by Git. Each file must reach at least
 1% in every metric so completely untested files fail the coverage command. This
 is a guard against zero coverage, not a claim that 1% is adequate coverage.
 
-- `dashboard.test.mjs`: navigation, dates, intersecting filters, metrics,
-  investigation search, client details, role-based navigation, reset, and all
-  three CSV report types. Downloads are mocked so tests do not open a browser.
-- `insights-chart.test.mjs`: empty/zero series, coordinates, labels, reactive
-  scaling, and compact units. Writable signals supply chart input values.
-- `insights-data.test.mjs`: existing data aggregation and CSV escaping tests.
-- `rendered-components.test.mjs`: icon bindings, rendered chart empty states,
-  focus/hover readouts, navigation, and CSV blob creation/download cleanup.
+- `routes.test.mjs`: one component per page behind the sign-in and role guards; retired paths redirect.
+- `roles.test.mjs`: pages per role, the role guard, safe return URLs and the Clients empty state.
+- `rendered-components.test.mjs`: icon and chart rendering, the shell's nav for each role, sign-out,
+  and CSV blob creation/download cleanup.
+- `live-summary.test.mjs`: the Insights page's totals, hourly chart, top stocks, partial failures and
+  the configured API provider.
+- `report-generation.test.mjs`: report date ranges, the three CSV reports and their provider.
+- `trade-lookup.test.mjs`: order ID checks, loading by URL, readable audit fields, and the record
+  checks (exact cents, missing or mismatched settlement parts).
+- `insights-chart.test.mjs`: empty/zero series, coordinates, labels, reactive scaling, and compact units.
+- `login.test.mjs`, `http-auth.test.mjs`: sign-in, role checks, return URLs and 401 handling.
 - `startup.test.mjs`: real entry-point bootstrap and startup failure reporting.
 
 `component-helper.mjs` compiles Angular components in memory with Angular's JIT

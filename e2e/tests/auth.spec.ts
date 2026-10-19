@@ -82,7 +82,7 @@ for (const app of ['NextTrade', 'Insights']) {
     expect(rotated.accessToken).toEqual(expect.any(String));
     expect(rotated.refreshToken).toEqual(expect.any(String));
     expect(rotated.refreshToken).not.toBe(tokens.refreshToken);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/(dashboard|insights)$/);
     await expect(page.locator(insights ? 'app-insights-workspace' : 'app-trading-workspace')).toBeVisible();
   });
 
@@ -93,7 +93,7 @@ for (const app of ['NextTrade', 'Insights']) {
       await page.locator('#email').fill(credentials.email);
       await page.locator('#password').fill('Incorrect-password-9!');
       const rejected = page.waitForResponse(r => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
-      await page.getByRole('button', { name: insights ? 'Sign in' : 'Continue securely', exact: true }).click();
+      await page.getByRole('button', { name: 'Continue securely', exact: true }).click();
       const response = await rejected;
       expect(response.status()).toBe(401);
       expect((await response.json()).error).toBe('INVALID_CREDENTIALS');

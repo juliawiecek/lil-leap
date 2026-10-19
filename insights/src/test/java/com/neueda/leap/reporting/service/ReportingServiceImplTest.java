@@ -5,6 +5,7 @@ import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
 import com.neueda.leap.reporting.entity.TradeFillEntity;
 import com.neueda.leap.reporting.model.InvalidReportDateRangeException;
+import com.neueda.leap.reporting.model.MarketDay;
 import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import org.junit.jupiter.api.Test;
@@ -34,8 +35,8 @@ class ReportingServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-10-01T15:30:00Z");
     private static final Clock UTC_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
-    private static final ReportDateRange TODAY_RANGE =
-            new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
+    /** 15:30 UTC is 11:30 in New York, so today is October 1 there too. */
+    private static final MarketDay TODAY_RANGE = new MarketDay(LocalDate.of(2026, 10, 1));
     private static final ReportDateRange FULL_RANGE =
             new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 31));
 
@@ -43,7 +44,7 @@ class ReportingServiceImplTest {
     private final ReportingServiceImpl service = new ReportingServiceImpl(repository, UTC_CLOCK, new DefaultResourceLoader());
 
     @Test
-    void overviewUsesCurrentUtcDay() {
+    void overviewUsesTodaysNewYorkTradingDay() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.OverviewProjection projection = mock(TradeReportingRepository.OverviewProjection.class);
@@ -58,7 +59,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void topInstrumentsUseCurrentUtcDayAndDefaultLimit() {
+    void topInstrumentsUseTodaysNewYorkTradingDayAndDefaultLimit() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.TopInstrumentProjection row = mock(TradeReportingRepository.TopInstrumentProjection.class);
@@ -80,7 +81,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void trendFillsHoursWithoutTradesWithZero() {
+    void trendCountsNewYorkHoursAndFillsHoursWithoutTradesWithZero() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeFillEntity morningOne = mock(TradeFillEntity.class);
@@ -99,11 +100,13 @@ class ReportingServiceImplTest {
 
         List<ClientActivityTrendDto> trend = service.getClientActivityTrend();
 
+        // 09:15 and 09:59 UTC are 05:00 in New York (EDT); 13:01 UTC is 09:00.
         assertThat(trend)
                 .hasSize(24)
                 .contains(new ClientActivityTrendDto("00:00", 0), atIndex(0))
-                .contains(new ClientActivityTrendDto("09:00", 2), atIndex(9))
-                .contains(new ClientActivityTrendDto("13:00", 1), atIndex(13))
+                .contains(new ClientActivityTrendDto("05:00", 2), atIndex(5))
+                .contains(new ClientActivityTrendDto("09:00", 1), atIndex(9))
+                .contains(new ClientActivityTrendDto("13:00", 0), atIndex(13))
                 .contains(new ClientActivityTrendDto("23:00", 0), atIndex(23));
         verify(repository).findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
                 startInclusive,

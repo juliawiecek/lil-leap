@@ -1,6 +1,6 @@
-ï»¿# NextTrade Internal Insights
+# NextTrade Internal Insights
 
-Internal reporting and operations UI for Priya and David. Reporting layouts follow the supplied renderings. Branding matches the main dashboard: the NextTrade wordmark with green Trade and the NT symbol, Inter headings and UI text, charcoal backgrounds, 8px panels, neutral borders and the same green primary buttons. A small Insights / Internal label and reporting-specific layout distinguish the internal workspace. IBM Plex Mono is reserved for identifiers and compact metadata.
+Internal reporting and operations UI for Priya (commercial analyst) and David (head of trading operations). Branding matches the main dashboard: the NextTrade wordmark with green Trade and the NT symbol, Inter headings and UI text, charcoal backgrounds, 8px panels, neutral borders and the same green primary buttons. A small Insights / Internal label and reporting-specific layout distinguish the internal workspace. IBM Plex Mono is reserved for identifiers and compact metadata.
 
 ## Run
 
@@ -13,33 +13,40 @@ npm ci
 npm start
 ```
 
-Open http://localhost:4301. Start `docker compose up --build -d gateway` from the repository root first for API access. The development proxy forwards `/auth/` and reporting API requests to the gateway on port 4201. The Docker client remains at http://localhost:4201; its container serves static files only. Production: `npm run build`. Data checks: `node --test tests/insights-data.test.mjs`.
+Open http://localhost:4301. Start `docker compose up --build -d gateway` from the repository root first for API access. The development proxy forwards `/auth/` and reporting API requests to the gateway on port 4201. The Docker client remains at http://localhost:4201; its container serves static files only. Production: `npm run build`. Tests: `npm test`.
 
-## Implemented preview
+## Pages and who can see them
 
-- Overview: reconciled sample volume, orders, active clients, asset mix and instrument ranking.
-- Trading Activity: date, asset, market and portfolio-segment filters, daily/weekly/monthly/yearly chart grouping and status counts.
-- Client Activity: segment comparisons, new clients, active/occasional/dormant counts and definitions.
-- Clients: searchable fictional directory, profile snapshot and order history.
-- Reports: real client-side sample CSV generation/download and session export history.
-- Trade Investigation: operations persona preview, search, status filtering and order detail. Missing audit events are explicitly identified rather than invented.
-- Compliance: read-only source requirements and unconnected case-service state.
-- Settings: preview persona and compact-table preference.
+| Page | Route | Analyst | Operations | Data |
+| --- | --- | --- | --- | --- |
+| Insights | `/insights` | ✓ | ✓ | Today only, as the New York trading day (midnight to midnight, America/New_York): active accounts, orders, fills and traded value (`/reports/summary`), trades by hour and top traded stocks (`/reports/insights/*`) |
+| Clients | `/clients` | ✓ | ✓ | Empty state until TS-18.5 builds the account list and detail. Names and emails are never shown |
+| Reports | `/reports` | ✓ | ✓ | Instrument, client segment and trading activity CSVs for a UTC date range (`/reports/generate/*`, TS-18.6) |
+| Trade lookup | `/trades`, `/trades/:orderId` | | ✓ | Every recorded step of one trade, its outcome and record checks (`/trades/{id}/events`, BR-15) |
+
+Operations staff see everything analysts see, plus the trade lookup. Signing in lands both roles on
+Insights; opening a page your role cannot see sends you there too. Traders and any other role get
+"Please use an analyst or operations account" and keep no session. Pages cut in TS-18.4
+(`/dashboard`, `/history`, `/trading-activity`, `/client-activity`, `/orders`, `/trade-investigation`,
+`/compliance`, `/settings`) redirect to `/insights`.
+
+Nothing is sample data: every figure comes from the insights service. Report CSVs are still built from
+`insights/src/main/resources/reports/trades.csv` until NEXT-252 moves them to the database.
+
+## Structure
+
+- `shell/`: sidebar, top bar and sign-out around every page; the nav comes from `roles.ts`.
+- `pages/<page>/`: one standalone component, template and stylesheet per route.
+- `shared/`: the icon, chart, KPI tile, page heading and `workspace.scss` (panels, tables, badges and
+  tabs used by every page, loaded from `styles.scss` and scoped to the shell).
+- `roles.ts`: which pages each role sees and the route guard; `page-state.ts`: safe return URLs after sign-in.
 
 ## Boundaries
 
-Sign-in uses the existing Identity service and requires an ANALYST account.
-Access tokens stay in memory; the rotated refresh token and last activity time
-use a separate `sessionStorage` key for this app. Reload restores the session
-before rendering a protected page, without extending its ten-minute idle deadline.
-The Analyst/Operations selector previews sample-data views; it does not change
-the authenticated role or grant backend permissions.
-
-Fixtures in `src/app/insights-data.ts` contain August/September 2026 sample orders and a September 22 snapshot. Reports and volume charts derive from those orders. Client balance snapshots are separate illustrative values, not reconstructed from that limited order sample. Volume is filled notional in USD. Activity definitions and USD segment thresholds are provisional; the current definitions are displayed in the UI.
-
-Backend integration is still needed for reporting snapshots/freshness, record-level permissions, authoritative client balances, complete audit events, compliance cases, scheduled jobs and durable report history. No PDF export, emails, document uploads, case edits, trade mutations or live surveillance is simulated as complete. Static persona selection does not provide authorization. Report CSV files include the report name and period; their data still comes from local fixtures. Exports reset on reload.
-
-The copied investor-profile, stock-dashboard, standalone login prototype and their obsolete notes have been removed. Only internal workspace components remain. Angular Router provides guarded navigation; RxJS remains an Angular peer dependency. Local browser previews and npm caches are excluded from both Git and Docker builds.
+Sign-in uses the existing Identity service and admits ANALYST and OPERATIONS accounts. The role comes
+from the token; the page never chooses it. Access tokens stay in memory; the rotated refresh token and
+last activity time use a separate `sessionStorage` key for this app. Reload restores the session before
+rendering a protected page, without extending its ten-minute idle deadline.
 
 ## Visual consistency
 
@@ -47,9 +54,8 @@ Core palette and panel tokens are in `src/styles.scss`, matched to `frontend/src
 
 ## Validation
 
-The data tests check aggregate reconciliation across chart groupings and asset classes, intersecting/inclusive filters, empty results, fixture chronology and CSV escaping/formula protection. A production build checks Angular template and type integration. Daily refresh and report-generation service performance require later integration tests.
-
-Historical UI-preview verification (before NEXT-193): production build passed; all four data tests passed. Headless Chrome checks covered all eight sections at desktop and 390px widths, client/order selection, asset filtering, invalid dates and the report-generation UI. No application runtime exceptions were observed. Production authentication, backend APIs and scheduled jobs were not tested because they are not connected.
+`npm run test:coverage` runs the unit tests in `tests/` (see `tests/README.md`) and fails any file
+with no coverage. A production build (`npm run build`) checks templates and types.
 
 ## Local development files
 
@@ -57,12 +63,9 @@ Generated JavaScript belongs in `out-tsc/`, not `src/`. For a check without emit
 
 ## Session and URL restoration (NEXT-220)
 
-Protected routes are `/dashboard`, `/history` (Trading Activity), `/orders`
-(Trade Investigation), `/client-activity`, `/clients`, `/reports`, `/compliance`,
-and `/settings`. Existing client/trade details use `/clients/:id` and `/orders/:id`.
-Dates, search, filters, grouping, tabs, preview workspace and compact display are
-URL parameters. Missing record IDs show an unavailable-record notice rather than
-opening another record. Report export history still resets on reload.
+Protected routes are `/insights`, `/clients`, `/reports`, `/trades` and `/trades/:orderId`. After
+signing in, a user returns to the page they asked for if it is one of those; anything else opens
+Insights. Report export history resets on reload.
 
 Both apps' browser checks live in `../frontend/e2e`; build both apps and run
 `npm run test:e2e` from `frontend`. Shared-package tests own the auth/session

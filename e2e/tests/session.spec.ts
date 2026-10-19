@@ -8,8 +8,9 @@ for (const [name, url] of [['NextTrade', tradingUrl], ['Insights', insightsUrl]]
     const insights = name === 'Insights';
     await page.locator('#email').fill('unknown-e2e@example.com');
     await page.locator('#password').fill('Incorrect-password-9!');
-    await page.getByRole('button', { name: insights ? 'Sign in' : 'Continue securely', exact: true }).click();
-    await expect(page.locator(insights ? '[role="alert"]' : '.form-status')).toContainText('Invalid email or password, or sign-in is locked.');
+    await page.getByRole('button', { name: 'Continue securely', exact: true }).click();
+    await expect(page.locator(insights ? '[role="alert"]' : '.form-status'))
+      .toContainText('Invalid email or password, or sign-in is locked.');
     await expect(page).toHaveURL(url => url.pathname === '/login');
   });
 }

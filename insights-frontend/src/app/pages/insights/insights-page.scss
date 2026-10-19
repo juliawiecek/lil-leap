@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+.bar-cell {
+  width: 40%;
+}
+.bar {
+  display: block;
+  height: 6px;
+  min-width: 4px;
+  border-radius: 10px;
+  background: var(--accent);
+}

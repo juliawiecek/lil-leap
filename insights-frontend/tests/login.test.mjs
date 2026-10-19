@@ -48,18 +48,18 @@ function setup(t, options = {}) {
   ]);
   return { login, navigations, starts: () => starts, logouts: () => logouts };
 }
-test('Analyst sign-in starts the idle keeper and restores a client detail URL', async (t) => {
-  const f = setup(t, { returnUrl: '/clients/CLIENT-001?detailTab=Orders' });
+test('Analyst sign-in starts the idle keeper and restores a trade lookup URL', async (t) => {
+  const f = setup(t, { returnUrl: '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f' });
   await f.login.signIn('analyst@example.test', 'test-password');
   assert.equal(f.starts(), 1);
   assert.equal(f.login.pending(), false);
-  assert.equal(f.navigations[0], '/clients/CLIENT-001?detailTab=Orders');
+  assert.equal(f.navigations[0], '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f');
 });
-test('unsafe and missing destinations use the dashboard', async (t) => {
-  for (const returnUrl of [undefined, '//external.test']) {
+test('unsafe, retired and missing destinations use the home page', async (t) => {
+  for (const returnUrl of [undefined, '//external.test', '/compliance', '/clients/CLIENT-001']) {
     const f = setup(t, { returnUrl });
     await f.login.signIn('a', 'b');
-    assert.equal(f.navigations[0], '/dashboard');
+    assert.equal(f.navigations[0], '/insights');
   }
 });
 test('wrong-role sign-in revokes the session and displays the role requirement', async (t) => {
@@ -75,7 +75,7 @@ test('operations staff sign in to Insights like analysts (TS-03.5)', async (t) =
   await f.login.signIn('a', 'b');
   assert.equal(f.logouts(), 0);
   assert.equal(f.starts(), 1);
-  assert.equal(f.navigations[0], '/dashboard');
+  assert.equal(f.navigations[0], '/insights');
 });
 test('login failures show fixed messages and always release the pending state', async (t) => {
   for (const error of [

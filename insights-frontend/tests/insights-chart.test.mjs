@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { signal } from '@angular/core';
 import { component } from './component-helper.mjs';
-const { InsightsChart } = await import('../src/app/insights-chart.ts');
+const { InsightsChart } = await import('../src/app/shared/insights-chart.ts');
 
 function chartWith(t, values) {
   const chart = component(t, InsightsChart);

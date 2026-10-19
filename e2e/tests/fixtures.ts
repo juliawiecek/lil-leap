@@ -44,10 +44,10 @@ export async function login(page: Page, credentials: Credentials, insights = fal
   const response = page.waitForResponse(r => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
   await page.locator('#email').fill(credentials.email);
   await page.locator('#password').fill(credentials.password);
-  await page.getByRole('button', { name: insights ? 'Sign in' : 'Continue securely', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue securely', exact: true }).click();
   const loggedIn = await response;
   expect(loggedIn.status()).toBe(200);
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/(dashboard|insights)$/);
   return loggedIn.json();
 }
 export async function openRegistration(page: Page) {
@@ -97,7 +97,7 @@ export async function registerThroughBrowser(page: Page, credentials: Credential
   await page.getByRole('button', { name: /^Explore my workspace/ }).click();
   expect((await registration).status()).toBe(201);
   expect((await automaticLogin).status()).toBe(200);
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/(dashboard|insights)$/);
 }
 
 /** Registration owns activation and the opening deposit; fixtures only read the result. */

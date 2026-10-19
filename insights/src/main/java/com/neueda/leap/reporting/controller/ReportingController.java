@@ -20,7 +20,7 @@ import java.util.List;
 /** Read-only dashboard and report-generation API for internal analyst users. */
 @RestController
 @RequestMapping("/reports")
-@PreAuthorize("hasRole('ANALYST')")
+@PreAuthorize("hasAnyRole('ANALYST', 'OPERATIONS')")
 public class ReportingController {
 
     private final ReportingService reportingService;
