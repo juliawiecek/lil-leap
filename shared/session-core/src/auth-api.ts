@@ -15,6 +15,15 @@ export interface AuthUser {
   userRole: string;
 }
 
+export interface UserProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  address: string;
+  email: string;
+  phone: string;
+}
+
 type RegisterRequest = Record<string, string | boolean>;
 
 /** A failure with a fixed, user-safe message. Server bodies and raw errors are never surfaced or logged. */
@@ -38,6 +47,8 @@ const MESSAGES: Record<string, string> = {
     'A minimum of $5,000 in investable assets is required to open an account. Please review your net worth and income.',
   INVALID_REQUEST: 'Some details were not accepted. Please review your information and try again.',
   INVALID_RESET_TOKEN: 'This reset link is invalid, expired or already used. Please request a new one.',
+  PROFILE_ACCESS_DENIED: 'You can only view your own profile.',
+  PROFILE_NOT_FOUND: 'Your profile could not be found. Please try again.',
 };
 const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
@@ -68,6 +79,7 @@ export class AuthClient {
   #riskProfile: RiskProfile | null = null;
   #userRole: string | null = null;
   #email: string | null = null;
+  #userId: string | null = null;
   #lastActivityAt: number | null = null;
   #generation = 0;
   #refreshing: Promise<void> | null = null;
@@ -113,6 +125,9 @@ export class AuthClient {
   }
   get email(): string | null {
     return this.#email;
+  }
+  get userId(): string | null {
+    return this.#userId;
   }
   get riskProfile(): RiskProfile | null {
     return this.#riskProfile;
@@ -239,9 +254,17 @@ export class AuthClient {
     }
     this.#lastActivityAt = this.#now();
     this.#setTokens(body.accessToken, body.refreshToken);
+    this.#userId = body.user?.id ?? this.#userId;
     this.#userRole ??= body.user?.userRole ?? null;
     this.#email ??= body.user?.email ?? null;
     return body.user;
+  }
+
+  async getProfile(): Promise<UserProfile> {
+    if (!this.#accessToken || !this.#userId) {
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
+    return (await this.#get(`/users/${encodeURIComponent(this.#userId)}`)) as UserProfile;
   }
 
   /**
@@ -327,14 +350,14 @@ export class AuthClient {
     this.#refreshToken = refreshToken;
     this.#accessTokenExpiresAt = null;
     this.#traderLevel = null;
-    this.#riskProfile = this.#userRole = this.#email = null;
+    this.#riskProfile = this.#userRole = this.#email = this.#userId = null;
     this.#persist();
     const payload = accessToken?.split('.')[1];
     if (!payload) {
       return;
     }
     try {
-      const { exp, iat, trader_level, risk_profile, user_role, email } = JSON.parse(
+      const { exp, iat, sub, trader_level, risk_profile, user_role, email } = JSON.parse(
         atob(payload.replaceAll('-', '+').replaceAll('_', '/')),
       ) as {
         exp?: unknown;
@@ -343,12 +366,14 @@ export class AuthClient {
         risk_profile?: unknown;
         user_role?: unknown;
         email?: unknown;
+        sub?: unknown;
       };
       if (typeof exp === 'number' && typeof iat === 'number') {
         this.#accessTokenExpiresAt = this.#now() + (exp - iat) * 1000;
       }
       this.#userRole = typeof user_role === 'string' ? user_role : null;
       this.#email = typeof email === 'string' ? email : null;
+      this.#userId = typeof sub === 'string' ? sub : null;
       this.#riskProfile =
         risk_profile === 'CONSERVATIVE' ||
         risk_profile === 'MODERATE' ||
@@ -373,20 +398,36 @@ export class AuthClient {
       }, this.#timeoutMs);
     });
     try {
-      return await Promise.race([this.#request(path, body, controller.signal), timeout]);
+      return await Promise.race([this.#request(path, body, controller.signal, 'POST'), timeout]);
     } finally {
       clearTimeout(timer!);
     }
   }
 
-  async #request(path: string, body: object, signal: AbortSignal): Promise<unknown> {
+  async #get(path: string): Promise<unknown> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AuthApiError(NETWORK_MESSAGE));
+      }, this.#timeoutMs);
+    });
+    try {
+      return await Promise.race([this.#request(path, undefined, controller.signal, 'GET'), timeout]);
+    } finally {
+      clearTimeout(timer!);
+    }
+  }
+
+  async #request(path: string, body: object | undefined, signal: AbortSignal, method: 'GET' | 'POST'): Promise<unknown> {
     let response: Response;
     try {
       response = await this.#fetch(this.#baseUrl + path, {
-        method: 'POST',
+        method,
         signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: method === 'GET' ? { Authorization: `Bearer ${this.#accessToken}` } : { 'Content-Type': 'application/json' },
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
     } catch {
       throw new AuthApiError(NETWORK_MESSAGE);

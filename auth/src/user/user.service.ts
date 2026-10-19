@@ -5,6 +5,7 @@ import { User } from './entities/user.entity';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { PasswordEncoderService } from '../security/password-encoder.service';
+import { CustomerProfile } from '../onboarding/entities/customer-profile.entity';
 import { LOGIN_LOCK_MINUTES, LOGIN_MAX_FAILURES } from '../security/login-policy';
 
 // A valid, cost-10 bcrypt hash to perform equivalent password work for unknown emails.
@@ -21,6 +22,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(CustomerProfile)
+    private readonly customerProfileRepository: Repository<CustomerProfile>,
     private readonly passwordEncoder: PasswordEncoderService,
   ) {}
 
@@ -69,5 +72,10 @@ export class UserService {
       throw new InvalidCredentialsException();
     }
     return authenticated;
+  }
+
+  /** Loads the identity/contact profile for one user; callers must enforce authorization before calling this method. */
+  findProfileByUserId(userId: string): Promise<CustomerProfile | null> {
+    return this.customerProfileRepository.findOne({ where: { user: { userId } }, relations: { user: true } });
   }
 }

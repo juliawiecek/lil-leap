@@ -29,6 +29,7 @@ import { PriceProtectionStore, protectionText, validProtection } from './price-p
 import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
+import type { UserProfile } from './auth-api';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -101,6 +102,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Which stock's price history is loaded or loading, so a switch drops a stale response. */
   #historySymbol = '';
   readonly name = input('');
+  readonly profile = input<UserProfile | null>(null);
+  readonly profileLoading = input(false);
+  readonly profileError = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('ADVANCED');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('detailDialog');
