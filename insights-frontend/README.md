@@ -21,7 +21,7 @@ Open http://localhost:4301. Start `docker compose up --build -d gateway` from th
 | --- | --- | --- | --- | --- |
 | Insights | `/insights` | ✓ | ✓ | Today only, as the New York trading day (midnight to midnight, America/New_York): active accounts, orders, fills and traded value (`/reports/summary`), trades by hour and top traded stocks (`/reports/insights/*`) |
 | Clients | `/clients` | ✓ | ✓ | Empty state until TS-18.5 builds the account list and detail. Names and emails are never shown |
-| Reports | `/reports` | ✓ | ✓ | Instrument, client segment and trading activity CSVs for a UTC date range (`/reports/generate/*`, TS-18.6) |
+| Reports | `/reports` | ✓ | ✓ | Instrument, client segment and trading activity CSVs for a New York date range (`/reports/generate/*`, TS-18.6) |
 | Trade lookup | `/trades`, `/trades/:orderId` | | ✓ | Every recorded step of one trade, its outcome and record checks (`/trades/{id}/events`, BR-15) |
 
 Operations staff see everything analysts see, plus the trade lookup. Signing in lands both roles on

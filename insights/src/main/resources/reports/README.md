@@ -31,7 +31,7 @@
 - `GET /reports/generate/client-segment-report`
   - Aggregates by `trader_level`.
 - `GET /reports/generate/trading-activity-report`
-  - Aggregates by UTC `filled_at` date and hour.
+  - Aggregates by `filled_at` date and hour in New York time (`America/New_York`).
 
 ## Notes
 

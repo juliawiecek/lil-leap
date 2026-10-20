@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -118,7 +118,6 @@ public class ReportingServiceImpl implements ReportingService {
             "sell_notional",
             "net_notional");
 
-    private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final BigDecimal ZERO_MONEY = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     private static final MediaType TEXT_CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
@@ -142,9 +141,9 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public OverviewDto getOverview() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay today = MarketDay.today(clock);
         TradeReportingRepository.OverviewProjection overview =
-                repository.summarize(range.startInclusive(), range.endExclusive());
+                repository.summarize(today.startInclusive(), today.endExclusive());
 
         return new OverviewDto(
                 defaultLong(overview == null ? null : overview.getTradeVolumeToday()),
@@ -154,10 +153,10 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public List<TopInstrumentDto> getTopInstruments() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay today = MarketDay.today(clock);
         return repository.findTopInstrumentsByTradeCount(
-                        range.startInclusive(),
-                        range.endExclusive(),
+                        today.startInclusive(),
+                        today.endExclusive(),
                         PageRequest.of(0, TOP_INSTRUMENTS_LIMIT))
                 .stream()
                 .map(item -> new TopInstrumentDto(item.getInstrument(), defaultLong(item.getTradeCount())))
@@ -166,14 +165,14 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public List<ClientActivityTrendDto> getClientActivityTrend() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay today = MarketDay.today(clock);
         Map<String, Long> countsByHour = repository
                 .findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
-                        range.startInclusive(),
-                        range.endExclusive())
+                        today.startInclusive(),
+                        today.endExclusive())
                 .stream()
                 .map(TradeFillEntity::getFilledAt)
-                .map(this::toUtcHourLabel)
+                .map(MarketDay::hourLabel)
                 .collect(Collectors.toMap(
                         label -> label,
                         ignored -> 1L,
@@ -540,9 +539,8 @@ public class ReportingServiceImpl implements ReportingService {
         }
 
         private ActivityKey activityKey() {
-            LocalDate tradeDate = filledAt.atOffset(ZoneOffset.UTC).toLocalDate();
-            int hour = filledAt.atOffset(ZoneOffset.UTC).getHour();
-            return new ActivityKey(tradeDate, hour);
+            ZonedDateTime newYorkTime = filledAt.atZone(MarketDay.ZONE);
+            return new ActivityKey(newYorkTime.toLocalDate(), newYorkTime.getHour());
         }
 
         private BigDecimal notional() {

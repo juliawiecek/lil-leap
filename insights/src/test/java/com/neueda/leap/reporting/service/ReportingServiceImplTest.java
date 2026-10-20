@@ -132,7 +132,8 @@ class ReportingServiceImplTest {
 
         assertThat(activityCsv)
                 .startsWith("trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("2026-10-16,14:00,8,8,286,68966.56")
+                // 14:00 UTC is 10:00 in New York (EDT).
+                .contains("2026-10-16,10:00,8,8,286,68966.56")
                 .hasLineCount(68);
     }
 
@@ -184,7 +185,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void reportsOnlyIncludeTradesInsideTheUtcDateRange() {
+    void reportsOnlyIncludeTradesInsideTheNewYorkDateRange() {
         ReportDateRange anchorDay = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
 
         List<String> activityRows = csvBody(service.generateTradingActivityReport(anchorDay)).lines().skip(1).toList();
@@ -207,11 +208,11 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void dateRangeIsInclusiveAndUtcBounded() {
+    void dateRangeIsInclusiveAndBoundedByNewYorkMidnight() {
         ReportDateRange range = new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
-        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T00:00:00Z"));
-        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T00:00:00Z"));
+        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T04:00:00Z"));
+        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T04:00:00Z"));
     }
 
     @Test

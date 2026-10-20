@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, input } from './dom-helper.mjs';
 import { component } from './component-helper.mjs';
-const { App } = await import('../src/app/app.ts');
-const { AuthService } = await import('../src/app/auth.service.ts');
+const { ReportsPage } = await import('../src/app/pages/reports/reports-page.ts');
 const {
-  LIVE_REPORTS, REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, utcDate,
+  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, newYorkDate,
 } = await import('../src/app/live-reports.ts');
 
 const csv = 'instrument_symbol,trade_count\nAAPL,7\nJPM,4\n';
@@ -41,16 +40,19 @@ test('report ranges must have both dates, be ordered, real, and at most a year l
   assert.match(reportRangeError('2025-01-01', '2026-01-02'), /at most 366 days/);
 });
 
-test('UTC dates do not shift with the local time zone', () => {
-  const lateEvening = new Date('2026-10-19T23:30:00-05:00');
-  assert.equal(utcDate(lateEvening), '2026-10-20');
-  assert.equal(utcDate(lateEvening, 29), '2026-09-21');
+test('report dates follow the New York calendar, not UTC or the local time zone', () => {
+  // 22:30 in Chicago is 23:30 in New York, but already October 20 in UTC.
+  const lateEvening = new Date('2026-10-19T22:30:00-05:00');
+  assert.equal(newYorkDate(lateEvening), '2026-10-19');
+  assert.equal(newYorkDate(lateEvening, 29), '2026-09-20');
+  // Just after New York midnight the date moves on.
+  assert.equal(newYorkDate(new Date('2026-10-20T04:05:00Z')), '2026-10-20');
 });
 
 test('the reports page always starts with a valid 30-day range ending today', t => {
   const { instance } = app(t);
-  assert.equal(instance.reportEnd(), utcDate());
-  assert.equal(instance.reportStart(), utcDate(new Date(), 29));
+  assert.equal(instance.reportEnd(), newYorkDate());
+  assert.equal(instance.reportStart(), newYorkDate(new Date(), 29));
   assert.equal(instance.reportDateError(), '');
 });
 
@@ -138,26 +140,17 @@ test('without a report service the page explains that generation is unavailable'
 
 test('the rendered reports page requires both dates before any report can be generated', async t => {
   const reports = fakeReports();
-  const fixture = await render(t, ReportsPage, {}, [
-    { provide: REPORT_FILES, useValue: reports.service },
-    { provide: LIVE_REPORTS, useValue: { load: async () => ({ accounts: 1, orders: 1, fills: 1, gross_executed_value: 1 }), logout: async () => {} } },
-  ]);
+  const fixture = await render(t, ReportsPage, {}, [{ provide: REPORT_FILES, useValue: reports.service }]);
   const instance = fixture.componentInstance;
   t.mock.method(instance, 'download', () => {});
   const host = fixture.nativeElement;
-  assert.ok(host.querySelector('.live-summary'), 'other pages keep the live trading summary');
-  instance.navigate('Reports'); fixture.detectChanges();
   await fixture.whenStable(); fixture.detectChanges();
   const buttons = () => kinds.map(kind => host.querySelector(`[data-testid="generate-${kind}"]`));
 
   assert.equal(host.querySelectorAll('.report-card').length, 4);
   assert.doesNotMatch(host.textContent, /Scheduled Reports|No scheduled reports/, 'there is no scheduled reports placeholder');
   assert.match(host.textContent, /Buy\/Sell Balance Report/);
-  assert.equal(host.querySelector('.live-summary'), null, 'the reports page has no live trading summary');
-  const ranges = host.querySelectorAll('.date-tools .date-range');
-  assert.equal(ranges.length, 1, 'the report period replaces the dashboard date filter in the header');
-  assert.equal(ranges[0].getAttribute('data-testid'), 'report-period');
-  assert.ok(ranges[0].querySelector('[data-testid="report-start"]') && ranges[0].querySelector('[data-testid="report-end"]'));
+  assert.match(host.textContent, /Reporting period \(New York time, inclusive\)/);
   for (const id of ['report-start', 'report-end']) {
     const field = host.querySelector(`[data-testid="${id}"]`);
     assert.equal(field.required, true);
