@@ -10,6 +10,15 @@ export interface TradeAccount {
   traderLevel: 'NOVICE' | 'ADVANCED';
   status: string;
 }
+/** One recorded step of a trade (`reports/trade-events.csv`). */
+export interface TradeEvent {
+  /** STATUS, AUDIT, FILL, CASH or HOLDING: which record it came from. */
+  source: string;
+  type: string;
+  actor: string | null;
+  occurredAt: string;
+  details: Record<string, unknown> | null;
+}
 /** One trade as the reporting dataset (`reports/trades.csv`) records it; the dataset holds filled orders only. */
 export interface TradeRecord {
   orderId: string;
@@ -23,6 +32,8 @@ export interface TradeRecord {
   /** Quantity times price, USD. */
   value: number;
   account: TradeAccount;
+  /** Every recorded step, oldest first. */
+  events: TradeEvent[];
 }
 export interface TradeRecords {
   load(orderId: string): Promise<TradeRecord>;

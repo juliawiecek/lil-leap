@@ -1,7 +1,7 @@
 @if (fromAccount()) {
   <button type="button" class="text-button back-link" (click)="backToAccount()">← Back to client account</button>
 }
-<app-page-heading title="Trade lookup" subtitle="One trade's fill and the client behind it, for audits and client disputes." />
+<app-page-heading title="Trade lookup" subtitle="One trade, the client behind it and every recorded step, oldest first, for audits and client disputes." />
 <form class="filter-bar" method="get" (submit)="$event.preventDefault(); submit()">
   <label class="grow"
     >Order ID<input
@@ -59,10 +59,66 @@
       </dl>
     </section>
   </div>
+  @if (summary(); as c) {
+    <section class="panel" aria-labelledby="checks-title">
+      <div class="panel-heading">
+        <h2 id="checks-title">Record checks</h2>
+        <span class="badge" [class.rejected]="problems() > 0">{{ problems() ? problems() + ' to review' : 'All consistent' }}</span>
+      </div>
+      <ul class="checks">
+        @for (check of c.checks; track check.label) {
+          <li [class.failed]="!check.ok">
+            <span class="mark" aria-hidden="true">{{ check.ok ? '✓' : '!' }}</span>
+            <span class="sr-only">{{ check.ok ? 'Passed: ' : 'Needs review: ' }}</span>
+            <strong>{{ check.label }}</strong><span>{{ check.detail }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  <section class="panel" aria-labelledby="trail-title">
+    <div class="panel-heading">
+      <h2 id="trail-title">Recorded steps</h2>
+      <span class="badge neutral">{{ trade.events.length }} steps, oldest first</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
+        <thead>
+          <tr>
+            <th>Recorded</th>
+            <th>Record</th>
+            <th>Step</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (event of trade.events; track $index) {
+            <tr>
+              <td>{{ dateTime(event.occurredAt) }}</td>
+              <td>{{ sourceLabel(event.source) }}</td>
+              <td>{{ label(event.type) }}</td>
+              <td class="details-cell">
+                @for (item of fields(event); track $index) {
+                  <span><b>{{ item.label }}</b> {{ item.value }}</span>
+                } @empty {
+                  –
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">No steps are recorded for this trade.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
 } @else if (!loading() && !error()) {
   <section class="panel empty">
     <app-dashboard-icon name="search" />
     <h2>Look up a trade</h2>
-    <p>Enter an order ID to see what was traded, at what price and when, and which client placed it.</p>
+    <p>Enter an order ID to see what was traded and by which client, and every recorded step from submission to settlement.</p>
   </section>
 }
