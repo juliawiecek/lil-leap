@@ -1,6 +1,9 @@
 :host {
   display: block;
 }
+.back-link {
+  margin-bottom: 14px;
+}
 .filter-bar input {
   width: 100%;
   min-height: 40px;
@@ -9,6 +12,17 @@
 .order-id {
   font-size: 14px;
   overflow-wrap: anywhere;
+}
+.account-link {
+  color: #a6e4ac;
+  font-weight: 600;
+  text-decoration: none;
+}
+.account-link:hover {
+  text-decoration: underline;
+}
+.panel + .panel {
+  margin-top: 20px;
 }
 .checks {
   list-style: none;

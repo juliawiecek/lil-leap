@@ -5,7 +5,8 @@ import { DashboardIcon } from './dashboard-icon';
 @Component({
   selector: 'app-kpi-tile',
   imports: [DashboardIcon],
-  host: { class: 'kpi' },
+  // The value's length lets the stylesheet shrink long figures to fit while short ones stay large.
+  host: { class: 'kpi', '[style.--kpi-chars]': 'value().length' },
   template: `<span class="kpi-icon"><app-dashboard-icon [name]="icon()" /></span>
     <div>
       <p>{{ label() }}</p>

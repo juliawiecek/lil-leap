@@ -56,7 +56,7 @@ test('Analyst sign-in starts the idle keeper and restores a trade lookup URL', a
   assert.equal(f.navigations[0], '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f');
 });
 test('unsafe, retired and missing destinations use the home page', async (t) => {
-  for (const returnUrl of [undefined, '//external.test', '/compliance', '/clients/CLIENT-001']) {
+  for (const returnUrl of [undefined, '//external.test', '/compliance', '/clients/CLIENT-001/orders']) {
     const f = setup(t, { returnUrl });
     await f.login.signIn('a', 'b');
     assert.equal(f.navigations[0], '/insights');

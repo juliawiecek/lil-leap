@@ -1,4 +1,4 @@
-import type { TradeEvent, TradeTrailResponse } from '../../trade-trail';
+import type { TradeEvent, TradeRecord } from '../../trade-records';
 
 /** One reconciliation check on a trade's permanent records. */
 export interface TradeCheck {
@@ -63,7 +63,7 @@ function formatCents(value: bigint): string {
  * repairs (TS-10.3): a filled trade needs one fill, one cash movement and one holding movement,
  * and the cash and shares they moved must match the fill exactly.
  */
-export function tradeCase(trail: TradeTrailResponse): TradeCase {
+export function tradeCase(trail: Pick<TradeRecord, 'events'>): TradeCase {
   const of = (source: string) => trail.events.filter((event) => event.source === source);
   const statuses = of('STATUS');
   const fills = of('FILL');
@@ -78,7 +78,7 @@ export function tradeCase(trail: TradeTrailResponse): TradeCase {
   const status = latest?.type ?? null;
   const checks: TradeCheck[] = [];
 
-  checks.push(trail.auditRecorded
+  checks.push(of('AUDIT').length
     ? { label: 'Audit trail', ok: true, detail: `${of('AUDIT').length} audit entries recorded.` }
     : { label: 'Audit trail', ok: false, detail: 'No audit entries are recorded for this trade.' });
   checks.push(status && FINAL.has(status)

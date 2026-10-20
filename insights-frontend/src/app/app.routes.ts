@@ -19,7 +19,7 @@ export const routes: Routes = [
     children: [
       { path: 'insights', canActivate: [requireRole('ANALYST', 'OPERATIONS')], loadComponent: () => import('./pages/insights/insights-page').then((m) => m.InsightsPage) },
       { path: 'clients', canActivate: [requireRole('ANALYST', 'OPERATIONS')], loadComponent: () => import('./pages/clients/clients-page').then((m) => m.ClientsPage) },
-      { path: 'clients/:id', redirectTo: 'clients' },
+      { path: 'clients/:id', canActivate: [requireRole('ANALYST', 'OPERATIONS')], loadComponent: () => import('./pages/client-detail/client-detail-page').then((m) => m.ClientDetailPage) },
       { path: 'reports', canActivate: [requireRole('ANALYST', 'OPERATIONS')], loadComponent: () => import('./pages/reports/reports-page').then((m) => m.ReportsPage) },
       { path: 'trades', canActivate: [requireRole('OPERATIONS')], loadComponent: () => import('./pages/trade-lookup/trade-lookup-page').then((m) => m.TradeLookupPage) },
       { path: 'trades/:id', canActivate: [requireRole('OPERATIONS')], loadComponent: () => import('./pages/trade-lookup/trade-lookup-page').then((m) => m.TradeLookupPage) },

@@ -127,6 +127,12 @@
     gap: 14px;
     min-width: 0;
   }
+  .kpi > div {
+    flex: 1;
+    min-width: 0;
+    // Figures scale with the space beside the icon, so long amounts fit any column width.
+    container-type: inline-size;
+  }
   .kpi-icon {
     display: inline-flex;
     align-items: center;
@@ -139,9 +145,13 @@
   }
   .kpi strong {
     display: block;
-    font: 600 clamp(23px, 2.2vw, 32px)/1.35 var(--font-ui);
+    // A digit is about 0.6em wide: full size while the value fits, smaller only when it would not.
+    font: 600 clamp(18px, calc(160cqi / var(--kpi-chars, 8)), 32px)/1.35 var(--font-ui);
     letter-spacing: -0.7px;
     margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .kpi small {
     display: block;
@@ -314,6 +324,31 @@
     background: #202a30;
     border-color: #34414a;
   }
+  .segmented {
+    display: inline-flex;
+    border: 1px solid #2b343b;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .segmented button {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--muted);
+    padding: 7px 13px;
+    font-size: 12px;
+  }
+  .segmented button + button {
+    border-left: 1px solid #2b343b;
+  }
+  .segmented button.active {
+    background: #192b21;
+    color: var(--accent);
+  }
+  .segmented.small button {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
   .details {
     display: grid;
     grid-template-columns: 1fr 1.6fr;
@@ -420,7 +455,7 @@
       font-size: 12px;
     }
     .kpi strong {
-      font-size: clamp(26px, 2.5vw, 36px);
+      font-size: clamp(20px, calc(160cqi / var(--kpi-chars, 8)), 36px);
       font-variant-numeric: tabular-nums;
       margin: 8px 0;
       line-height: 1.1;

@@ -7,6 +7,7 @@ import com.neueda.leap.reporting.entity.TradeFillEntity;
 import com.neueda.leap.reporting.model.MarketDay;
 import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.repository.TradeReportingRepository;
+import com.neueda.leap.reporting.service.TradeDataset.Trade;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -17,9 +18,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +26,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,37 +44,16 @@ import java.util.stream.IntStream;
 @Service
 public class ReportingServiceImpl implements ReportingService {
 
-    private static final String REPORTS_RESOURCE_PATH = "classpath:reports/trades.csv";
     private static final String INSTRUMENT_REPORT_NAME = "instrument-report";
     private static final String CLIENT_SEGMENT_REPORT_NAME = "client-segment-report";
     private static final String TRADING_ACTIVITY_REPORT_NAME = "trading-activity-report";
     private static final String BUY_SELL_BALANCE_REPORT_NAME = "buy-sell-balance-report";
     private static final String BUY_SIDE = "BUY";
     private static final String SELL_SIDE = "SELL";
-    private static final String REPORTING_DATASET = "Reporting dataset";
-    private static final String REPORTING_DATASET_ROW = REPORTING_DATASET + " row";
+    private static final String REPORTING_DATASET_ROW = "Reporting dataset row";
     private static final String HEADER_TRADE_COUNT = "trade_count";
     private static final String HEADER_TOTAL_QUANTITY = "total_quantity";
     private static final String HEADER_TOTAL_NOTIONAL = "total_notional";
-
-    private static final List<String> INPUT_HEADERS = List.of(
-            "fill_id",
-            "order_id",
-            "filled_at",
-            "instrument_id",
-            "instrument_symbol",
-            "instrument_name",
-            "asset_class",
-            "market_code",
-            "user_id",
-            "client_email",
-            "account_id",
-            "account_number",
-            "account_status",
-            "trader_level",
-            "side",
-            "filled_quantity",
-            "execution_price");
 
     private static final List<String> INSTRUMENT_REPORT_HEADERS = List.of(
             "instrument_symbol",
@@ -124,7 +100,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     private final TradeReportingRepository repository;
     private final Clock clock;
-    private final ResourceLoader resourceLoader;
+    private final TradeDataset dataset;
 
     /**
      * Creates the reporting service.
@@ -136,7 +112,7 @@ public class ReportingServiceImpl implements ReportingService {
     public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {
         this.repository = repository;
         this.clock = clock;
-        this.resourceLoader = resourceLoader;
+        this.dataset = new TradeDataset(resourceLoader);
     }
 
     @Override
@@ -187,7 +163,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public ResponseEntity<Resource> generateInstrumentReport(ReportDateRange range) {
-        List<TradeRow> trades = loadTrades(range);
+        List<Trade> trades = loadTrades(range);
         List<List<String>> rows = aggregateByInstrument(trades).stream()
                 .map(this::instrumentReportRow)
                 .toList();
@@ -196,7 +172,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public ResponseEntity<Resource> generateClientSegmentReport(ReportDateRange range) {
-        List<TradeRow> trades = loadTrades(range);
+        List<Trade> trades = loadTrades(range);
         List<List<String>> rows = aggregateByClientSegment(trades).stream()
                 .map(this::clientSegmentReportRow)
                 .toList();
@@ -205,7 +181,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public ResponseEntity<Resource> generateTradingActivityReport(ReportDateRange range) {
-        List<TradeRow> trades = loadTrades(range);
+        List<Trade> trades = loadTrades(range);
         List<List<String>> rows = aggregateByTradingActivity(trades).stream()
                 .map(this::tradingActivityReportRow)
                 .toList();
@@ -214,7 +190,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public ResponseEntity<Resource> generateBuySellBalanceReport(ReportDateRange range) {
-        List<TradeRow> trades = loadTrades(range);
+        List<Trade> trades = loadTrades(range);
         List<List<String>> rows = aggregateBuySellBalance(trades).stream()
                 .map(this::buySellBalanceReportRow)
                 .toList();
@@ -246,77 +222,18 @@ public class ReportingServiceImpl implements ReportingService {
                 .body(resource);
     }
 
-    private List<TradeRow> loadTrades(ReportDateRange range) {
+    private List<Trade> loadTrades(ReportDateRange range) {
         Instant startInclusive = range.startInclusive();
         Instant endExclusive = range.endExclusive();
-        return loadTrades().stream()
+        return dataset.trades().stream()
                 .filter(trade -> !trade.filledAt().isBefore(startInclusive) && trade.filledAt().isBefore(endExclusive))
                 .toList();
     }
 
-    private List<TradeRow> loadTrades() {
-        Resource resource = resourceLoader.getResource(REPORTS_RESOURCE_PATH);
-        if (!resource.exists()) {
-            throw new IllegalStateException(REPORTING_DATASET + " not found: " + REPORTS_RESOURCE_PATH);
-        }
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                throw new IllegalStateException(REPORTING_DATASET + " is empty: " + REPORTS_RESOURCE_PATH);
-            }
-
-            List<String> actualHeaders = parseCsvLine(headerLine);
-            if (!INPUT_HEADERS.equals(actualHeaders)) {
-                throw new IllegalStateException("Unexpected " + REPORTING_DATASET.toLowerCase(Locale.ROOT) + " header: " + actualHeaders);
-            }
-
-            List<TradeRow> trades = new ArrayList<>();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) {
-                    continue;
-                }
-
-                List<String> columns = parseCsvLine(line);
-                if (columns.size() != INPUT_HEADERS.size()) {
-                    throw new IllegalStateException("Unexpected column count in " + REPORTING_DATASET_ROW.toLowerCase(Locale.ROOT) + ": " + columns);
-                }
-
-                trades.add(mapTradeRow(columns));
-            }
-
-            return trades;
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read " + REPORTING_DATASET.toLowerCase(Locale.ROOT) + " from " + REPORTS_RESOURCE_PATH, ex);
-        }
-    }
-
-    private TradeRow mapTradeRow(List<String> columns) {
-        return new TradeRow(
-                columns.get(0),
-                columns.get(1),
-                Instant.parse(columns.get(2)),
-                columns.get(3),
-                columns.get(4),
-                columns.get(5),
-                columns.get(6),
-                columns.get(7),
-                columns.get(8),
-                columns.get(9),
-                columns.get(10),
-                columns.get(11),
-                columns.get(12),
-                columns.get(13),
-                columns.get(14),
-                Long.parseLong(columns.get(15)),
-                new BigDecimal(columns.get(16)));
-    }
-
-    private List<InstrumentAggregateRow> aggregateByInstrument(List<TradeRow> trades) {
+    private List<InstrumentAggregateRow> aggregateByInstrument(List<Trade> trades) {
         Map<InstrumentKey, AggregateBucket> aggregated = new HashMap<>();
-        for (TradeRow trade : trades) {
-            aggregated.computeIfAbsent(trade.instrumentKey(), ignored -> new AggregateBucket()).accept(trade);
+        for (Trade trade : trades) {
+            aggregated.computeIfAbsent(instrumentKey(trade), ignored -> new AggregateBucket()).accept(trade);
         }
 
         return aggregated.entrySet().stream()
@@ -335,9 +252,9 @@ public class ReportingServiceImpl implements ReportingService {
                 .toList();
     }
 
-    private List<ClientSegmentAggregateRow> aggregateByClientSegment(List<TradeRow> trades) {
+    private List<ClientSegmentAggregateRow> aggregateByClientSegment(List<Trade> trades) {
         Map<String, AggregateBucket> aggregated = new HashMap<>();
-        for (TradeRow trade : trades) {
+        for (Trade trade : trades) {
             aggregated.computeIfAbsent(trade.traderLevel(), ignored -> new AggregateBucket()).accept(trade);
         }
 
@@ -355,10 +272,10 @@ public class ReportingServiceImpl implements ReportingService {
                 .toList();
     }
 
-    private List<TradingActivityAggregateRow> aggregateByTradingActivity(List<TradeRow> trades) {
+    private List<TradingActivityAggregateRow> aggregateByTradingActivity(List<Trade> trades) {
         Map<ActivityKey, AggregateBucket> aggregated = new HashMap<>();
-        for (TradeRow trade : trades) {
-            aggregated.computeIfAbsent(trade.activityKey(), ignored -> new AggregateBucket()).accept(trade);
+        for (Trade trade : trades) {
+            aggregated.computeIfAbsent(activityKey(trade), ignored -> new AggregateBucket()).accept(trade);
         }
 
         return aggregated.entrySet().stream()
@@ -376,10 +293,10 @@ public class ReportingServiceImpl implements ReportingService {
     }
 
     /** Net buyers first (largest net quantity bought), net sellers last; ties by symbol. */
-    private List<BuySellBalanceRow> aggregateBuySellBalance(List<TradeRow> trades) {
+    private List<BuySellBalanceRow> aggregateBuySellBalance(List<Trade> trades) {
         Map<InstrumentKey, BalanceBucket> aggregated = new HashMap<>();
-        for (TradeRow trade : trades) {
-            aggregated.computeIfAbsent(trade.instrumentKey(), ignored -> new BalanceBucket()).accept(trade);
+        for (Trade trade : trades) {
+            aggregated.computeIfAbsent(instrumentKey(trade), ignored -> new BalanceBucket()).accept(trade);
         }
 
         return aggregated.entrySet().stream()
@@ -469,83 +386,13 @@ public class ReportingServiceImpl implements ReportingService {
         return value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r");
     }
 
-    private List<String> parseCsvLine(String line) {
-        List<String> values = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean[] inQuotes = {false};
-
-        int index = 0;
-        while (index < line.length()) {
-            index = consumeCsvCharacter(line, index, values, current, inQuotes);
-        }
-
-        values.add(current.toString());
-        return values;
+    private static InstrumentKey instrumentKey(Trade trade) {
+        return new InstrumentKey(trade.instrumentSymbol(), trade.instrumentName(), trade.assetClass(), trade.marketCode());
     }
 
-    private boolean isEscapedQuote(String line, int index) {
-        return line.charAt(index) == '"' && index + 1 < line.length() && line.charAt(index + 1) == '"';
-    }
-
-    private int consumeCsvCharacter(String line, int index, List<String> values, StringBuilder current, boolean[] inQuotes) {
-        char character = line.charAt(index);
-        if (inQuotes[0]) {
-            if (isEscapedQuote(line, index)) {
-                current.append('"');
-                return index + 2;
-            }
-            if (character == '"') {
-                inQuotes[0] = false;
-            } else {
-                current.append(character);
-            }
-            return index + 1;
-        }
-
-        if (character == ',') {
-            values.add(current.toString());
-            current.setLength(0);
-            return index + 1;
-        }
-        if (character == '"') {
-            inQuotes[0] = true;
-            return index + 1;
-        }
-        current.append(character);
-        return index + 1;
-    }
-
-    private record TradeRow(
-            String fillId,
-            String orderId,
-            Instant filledAt,
-            String instrumentId,
-            String instrumentSymbol,
-            String instrumentName,
-            String assetClass,
-            String marketCode,
-            String userId,
-            String clientEmail,
-            String accountId,
-            String accountNumber,
-            String accountStatus,
-            String traderLevel,
-            String side,
-            long filledQuantity,
-            BigDecimal executionPrice) {
-
-        private InstrumentKey instrumentKey() {
-            return new InstrumentKey(instrumentSymbol, instrumentName, assetClass, marketCode);
-        }
-
-        private ActivityKey activityKey() {
-            ZonedDateTime newYorkTime = filledAt.atZone(MarketDay.ZONE);
-            return new ActivityKey(newYorkTime.toLocalDate(), newYorkTime.getHour());
-        }
-
-        private BigDecimal notional() {
-            return executionPrice.multiply(BigDecimal.valueOf(filledQuantity));
-        }
+    private static ActivityKey activityKey(Trade trade) {
+        ZonedDateTime newYorkTime = trade.filledAt().atZone(MarketDay.ZONE);
+        return new ActivityKey(newYorkTime.toLocalDate(), newYorkTime.getHour());
     }
 
     private record InstrumentKey(String instrumentSymbol, String instrumentName, String assetClass, String marketCode) {
@@ -608,7 +455,7 @@ public class ReportingServiceImpl implements ReportingService {
         private final AggregateBucket buys = new AggregateBucket();
         private final AggregateBucket sells = new AggregateBucket();
 
-        private void accept(TradeRow trade) {
+        private void accept(Trade trade) {
             if (BUY_SIDE.equals(trade.side())) {
                 buys.accept(trade);
             } else if (SELL_SIDE.equals(trade.side())) {
@@ -626,7 +473,7 @@ public class ReportingServiceImpl implements ReportingService {
         private BigDecimal totalNotional = ZERO_MONEY;
         private final Set<String> uniqueClients = new HashSet<>();
 
-        private void accept(TradeRow trade) {
+        private void accept(Trade trade) {
             tradeCount++;
             totalQuantity += trade.filledQuantity();
             totalNotional = totalNotional.add(trade.notional());

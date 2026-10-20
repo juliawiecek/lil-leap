@@ -15,6 +15,7 @@ test('every page has its own component behind the sign-in guard and a role guard
   assert.deepEqual(pages, {
     insights: 'InsightsPage',
     clients: 'ClientsPage',
+    'clients/:id': 'ClientDetailPage',
     reports: 'ReportsPage',
     trades: 'TradeLookupPage',
     'trades/:id': 'TradeLookupPage',
