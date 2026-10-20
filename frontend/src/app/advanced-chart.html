@@ -1,3 +1,7 @@
+<div class="live-stock-panel">
+<app-retail-stock-dashboard [selectedAsset]="asset()" />
+<details class="historical-chart">
+<summary>Trade history and long-range chart</summary>
 <section class="panel chart-panel" aria-label="Stock price chart">
   <div class="chart-toolbar">
     <span class="chart-company"><b>{{ desk().selected().symbol }}</b>{{ desk().selected().name }}</span
@@ -87,3 +91,5 @@
     }
   </div>
 </section>
+</details>
+</div>

@@ -1,6 +1,13 @@
 :host {
-  display: contents;
+  display: block;
+  min-width: 0;
+  grid-column: 1 / 9;
+  grid-row: 2;
 }
+.live-stock-panel { min-width: 0; }
+.historical-chart { margin-top: 12px; }
+.historical-chart summary { cursor: pointer; padding: 10px 4px; color: #aeb9c8; font-size: 12px; }
+.historical-chart summary:focus-visible { outline: 2px solid #7ede8b; outline-offset: 2px; }
 * {
   box-sizing: border-box;
 }
@@ -422,3 +429,8 @@ select:focus-visible {
 @keyframes nt-tick-up { from { background-color: rgba(148, 201, 115, 0.28); } to { background-color: rgba(148, 201, 115, 0); } }
 @keyframes nt-tick-down { from { background-color: rgba(255, 122, 110, 0.28); } to { background-color: rgba(255, 122, 110, 0); } }
 @media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }
+
+/* The chart component, rather than its nested historical panel, is the grid item. */
+@media (max-width: 1200px) { :host { grid-column: 1 / 8; } }
+@media (max-width: 950px) { :host { grid-column: 1 / -1; } }
+@media (max-width: 760px) { :host { width: 100%; order: 2; } }

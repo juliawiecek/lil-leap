@@ -26,17 +26,21 @@
     "@angular/core": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
-    "tslib": "^2.3.0",
-    "@lilleap/session-core": "file:../shared/session-core"
+    "@lilleap/session-core": "file:../shared/session-core",
+    "rxjs": "7.8.2",
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
     "@playwright/test": "^1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
     "c8": "^12.0.0",
     "happy-dom": "^20.14.5",
+    "postcss": "8.5.31",
     "prettier": "^3.8.1",
+    "tailwindcss": "4.3.3",
     "typescript": "~6.0.2"
   },
   "allowScripts": {

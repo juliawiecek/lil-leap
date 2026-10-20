@@ -323,7 +323,7 @@ h2 {
 .pro-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px 315px;
-  grid-template-rows: 104px 352px 219px 147px;
+  grid-template-rows: 104px minmax(352px, auto) 219px 147px;
   gap: 9px 10px;
 }
 .panel {
@@ -1058,7 +1058,7 @@ kbd {
   }
   .pro-grid {
     grid-template-columns: minmax(0, 1fr) 215px;
-    grid-template-rows: auto 352px 219px auto auto;
+    grid-template-rows: auto minmax(352px, auto) 219px auto auto;
   }
   .summary-panel {
     grid-column: 1 / -1;

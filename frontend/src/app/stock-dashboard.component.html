@@ -1,0 +1,125 @@
+<section
+  class="dashboard-shell"
+  aria-label="Stock overview"
+  [attr.aria-busy]="state().connection === 'connecting'"
+>
+  <header class="hero-header">
+    <div class="eyebrow-row">
+      <span class="eyebrow">Your market, at a glance</span>
+      <span
+        class="feed-status"
+        role="status"
+        [ngClass]="{
+          'text-market-up': state().connection === 'live',
+          'text-amber-300': state().connection === 'delayed' || state().connection === 'offline',
+          'text-slate-400': state().connection === 'connecting',
+        }"
+      >
+        <span class="status-dot" aria-hidden="true"></span>
+        {{
+          state().connection === 'live'
+            ? 'Updating every ' + sampleMs() / 1000 + 's'
+            : state().connection === 'connecting'
+              ? 'Connecting'
+              : 'Prices delayed'
+        }}
+      </span>
+    </div>
+
+    @if (asset(); as a) {
+      <div class="asset-heading">
+        <div class="asset-monogram" aria-hidden="true">{{ a.symbol.slice(0, 2) }}</div>
+        <div class="asset-identity">
+          <h1>{{ a.symbol }}</h1>
+          <p>{{ a.name }} <span aria-hidden="true">·</span> {{ a.market }}</p>
+        </div>
+        <span class="currency-label">{{ a.currency }}</span>
+      </div>
+
+      <div class="hero-metrics" aria-live="off">
+        <div>
+          <span class="sr-only">Current price</span>
+          <p
+            class="current-price"
+            [ngClass]="
+              a.hasPerformance
+                ? a.isMarketUp
+                  ? 'text-market-up'
+                  : 'text-market-down'
+                : 'text-slate-100'
+            "
+          >
+            {{ a.price | currency: a.currency : 'symbol' }}
+          </p>
+          <div class="performance-row">
+            @if (a.hasPerformance) {
+              <span
+                class="performance-badge"
+                [ngClass]="
+                  a.isMarketUp
+                    ? 'bg-market-up/10 text-market-up ring-market-up/20'
+                    : 'bg-market-down/10 text-market-down ring-market-down/20'
+                "
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                  class="performance-arrow"
+                  [class.arrow-down]="!a.isMarketUp"
+                >
+                  <path d="M4 13l5-5 3 3 4-6M11 5h5v5" />
+                </svg>
+                {{ a.change! >= 0 ? '+' : '' }}{{ a.change | currency: a.currency : 'symbol' }} ({{
+                  a.changePercent! >= 0 ? '+' : ''
+                }}{{ a.changePercent | number: '1.2-2' }}%)
+              </span>
+              <span class="comparison-label">vs. session open</span>
+            } @else {
+              <span class="comparison-label">Session change unavailable</span>
+            }
+          </div>
+        </div>
+        <dl class="open-metric">
+          <dt>Session open</dt>
+          <dd>{{ a.hasPerformance ? (a.openPrice | currency: a.currency : 'symbol') : '—' }}</dd>
+        </dl>
+      </div>
+    } @else {
+      <div class="loading-state" role="status">
+        <div class="skeleton skeleton-symbol"></div>
+        <div class="skeleton skeleton-price"></div>
+        <p>Waiting for the first price snapshot…</p>
+      </div>
+    }
+  </header>
+
+  <div class="chart-heading">
+    <div>
+      <span class="chart-title">Price movement</span
+      ><span class="chart-window">{{
+        windowSeconds() === 86400
+          ? '1D'
+          : 'Last ' + (windowSeconds() / 60 | number: '1.0-1') + ' min'
+      }}</span>
+    </div>
+    <span class="chart-hint">Move over the chart to explore</span>
+  </div>
+  <app-stock-svg-chart
+    class="chart-canvas"
+    [windowSeconds]="windowSeconds()"
+    [label]="(asset()?.symbol || 'Stock') + ' one-day stock price'"
+    [emptyLabel]="
+      state().connection === 'connecting' ? 'Loading price history?' : 'No price history available'
+    "
+  />
+
+  <footer class="dashboard-footer">
+    <span>{{
+      asset() ? 'As of ' + asset()!.asOfLabel : 'A live connection is being established'
+    }}</span>
+    <span>{{ asset()?.synthetic ? 'Simulated market data' : 'Indicative mid-market price' }}</span>
+  </footer>
+  @if (state().message) {
+    <p class="feed-notice" role="status">{{ state().message }}</p>
+  }
+</section>
