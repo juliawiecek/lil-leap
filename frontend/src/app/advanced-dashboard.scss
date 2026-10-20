@@ -56,10 +56,10 @@ h2 {
   font-weight: 600;
 }
 .gain {
-  color: var(--green);
+  color: var(--gain, var(--green));
 }
 .loss {
-  color: #ff5e66;
+  color: var(--loss, #ff5e66);
 }
 .muted {
   color: var(--muted);
@@ -415,9 +415,13 @@ h2 {
 }
 .summary-metrics .main-value > span {
   font-size: 13px;
-  color: var(--green);
+  color: var(--gain, var(--green));
   margin-top: 4px;
   font-weight: 600;
+}
+/* This rule outranks .loss, so a losing day needs its own color or it shows green. */
+.summary-metrics .main-value > span.loss {
+  color: var(--loss, #ff5e66);
 }
 .main-value small {
   display: inline;
@@ -705,12 +709,12 @@ td .icon-button app-dashboard-icon {
 .sector-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #38ae75, #54c389);
-  border-right: 2px solid #78d8a1;
+  background: var(--gain, linear-gradient(90deg, #38ae75, #54c389));
+  border-right: 2px solid var(--gain, #78d8a1);
 }
 .sector-bar i.negative-bar {
-  background: #e95560;
-  border-right-color: #ff7276;
+  background: var(--loss, #e95560);
+  border-right-color: var(--loss, #ff7276);
 }
 .mover-row {
   display: flex;

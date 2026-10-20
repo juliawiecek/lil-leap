@@ -20,10 +20,10 @@ select:focus-visible {
   outline-offset: 2px;
 }
 .gain {
-  color: var(--green);
+  color: var(--gain, var(--green));
 }
 .loss {
-  color: #ff5e66;
+  color: var(--loss, #ff5e66);
 }
 .panel {
   min-width: 0;
@@ -319,10 +319,10 @@ select:focus-visible {
   stroke-width: 0.8;
 }
 .trade-mark.buy path {
-  fill: #27b779;
+  fill: var(--gain, #27b779);
 }
 .trade-mark.sell path {
-  fill: #ef5660;
+  fill: var(--loss, #ef5660);
 }
 
 .chart-note {

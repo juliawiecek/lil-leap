@@ -29,10 +29,10 @@ h2 {
   font: 600 12px var(--font-ui);
 }
 .gain {
-  color: var(--green);
+  color: var(--gain, var(--green));
 }
 .loss {
-  color: #ff5e66;
+  color: var(--loss, #ff5e66);
 }
 .panel {
   min-width: 0;

@@ -59,14 +59,14 @@ import { marketBadgeText } from './market-status-api';
         color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
       button:hover { background: #172630; }
       .price { font-variant-numeric: tabular-nums; }
-      .change.up { color: var(--green, #51d88c); }
-      .change.down { color: #f08a8a; }
+      .change.up { color: var(--gain, var(--green, #51d88c)); }
+      .change.down { color: var(--loss, #f08a8a); }
       .muted, .change { color: var(--muted, #aebaca); }
       .delayed { padding: 0 5px; border-radius: 4px; background: #3a3220; color: #f0c86a; font-style: normal; font-size: 10px; }
       .flash-up { animation: flash-up 1.2s ease-out; }
       .flash-down { animation: flash-down 1.2s ease-out; }
-      @keyframes flash-up { from { background: #1f5a37; } to { background: transparent; } }
-      @keyframes flash-down { from { background: #5a1f24; } to { background: transparent; } }
+      @keyframes flash-up { from { background: var(--gain-flash, #1f5a37); } to { background: transparent; } }
+      @keyframes flash-down { from { background: var(--loss-flash, #5a1f24); } to { background: transparent; } }
       @media (prefers-reduced-motion: reduce) { .flash-up, .flash-down { animation: none; } }
     `,
   ],

@@ -65,10 +65,10 @@ h2 {
   letter-spacing: -0.25px;
 }
 .positive {
-  color: var(--green);
+  color: var(--gain, var(--green));
 }
 .negative {
-  color: #f45159;
+  color: var(--loss, #f45159);
 }
 .novice-shell {
   display: grid;
@@ -428,10 +428,10 @@ h2 {
   color: var(--muted);
 }
 .portfolio-gain.up strong {
-  color: var(--green);
+  color: var(--gain, var(--green));
 }
 .portfolio-gain.down strong {
-  color: #f45159;
+  color: var(--loss, #f45159);
 }
 .period-picker button.selected,
 .green-button {

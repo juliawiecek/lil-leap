@@ -92,12 +92,19 @@ export function spokenDuration(ms: number): string {
   return rest ? `${part(hours, 'hour')} and ${part(rest, 'minute')}` : part(hours, 'hour');
 }
 
-/** A company name as people say it: "Apple Inc." becomes "Apple". Falls back to the symbol. */
+/**
+ * A company name as people say it: "Apple Inc." becomes "Apple" and "The Boeing Company" becomes
+ * "Boeing". Falls back to the symbol.
+ */
 export function spokenCompany(name: string, symbol: string): string {
-  const short = name
+  let short = name
     .replace(/[,.]?\s+(Inc|Corp|Corporation|Company|Co|Ltd|Limited|plc|Holdings|Group|Class [A-Z])\.?$/i, '')
     .replace(/[,.]?\s+(Inc|Corp|Corporation|Company|Co|Ltd|Limited|plc)\.?$/i, '')
     .trim();
+  // "The" reads naturally only with the full legal name ("The Boeing Company", but "Boeing").
+  if (short !== name.trim()) {
+    short = short.replace(/^The\s+(?=\S)/i, '');
+  }
   return short || symbol;
 }
 

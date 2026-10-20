@@ -84,6 +84,8 @@ test('company names drop legal suffixes', () => {
   assert.equal(spokenCompany('Amazon.com, Inc.', 'AMZN'), 'Amazon.com');
   assert.equal(spokenCompany('Alphabet Inc. Class A', 'GOOGL'), 'Alphabet');
   assert.equal(spokenCompany('', 'XYZ'), 'XYZ');
+  assert.equal(spokenCompany('The Boeing Company', 'BA'), 'Boeing');
+  assert.equal(spokenCompany('The Trade Desk', 'TTD'), 'The Trade Desk', '"The" stays when it is part of the name');
 });
 
 test('the market sentence says when it closes or opens', () => {

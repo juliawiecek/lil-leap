@@ -35,6 +35,7 @@ import { PortfolioChart } from './portfolio-chart';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { SwitchScanService } from './switch-scan';
 import { SwitchScanSettings } from './switch-scan-settings';
+import { ColorModeSettings } from './color-mode-settings';
 import {
   CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
 } from './portfolio-history';
@@ -95,7 +96,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   selector: 'app-novice-dashboard',
   imports: [
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings,
-    PortfolioChart, BriefingButton, SwitchScanSettings,
+    PortfolioChart, BriefingButton, SwitchScanSettings, ColorModeSettings,
   ],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',

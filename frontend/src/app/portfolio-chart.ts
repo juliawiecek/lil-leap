@@ -67,7 +67,7 @@ const HEIGHT = 200;
     }
   `,
   styles: [`
-    :host { display: block; margin-top: 14px; --up: #7ede8b; --down: #f45159; }
+    :host { display: block; margin-top: 14px; --up: var(--gain, #7ede8b); --down: var(--loss, #f45159); }
     .chart { position: relative; --tone: var(--up); }
     .chart.down { --tone: var(--down); }
     svg { display: block; width: 100%; height: 200px; overflow: visible; cursor: crosshair; outline: none; touch-action: pan-y; }

@@ -132,12 +132,12 @@
 // Green and red only for money gained or lost, and for how an order ended.
 .gain,
 .status.filled {
-  color: #25b675;
+  color: var(--gain, #25b675);
 }
 
 .loss,
 .status.rejected {
-  color: #e5484d;
+  color: var(--loss, #e5484d);
 }
 
 .status.cancelled {

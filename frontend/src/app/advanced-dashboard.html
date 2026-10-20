@@ -118,7 +118,7 @@
             <div class="summary-metrics">
               <div class="main-value">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '▲ ' : dayGain() < 0 ? '▼ ' : '' }}{{ dayGain() | currency }} ({{ dayGainPercent() | number: '1.2-2' }}%) <small>Today</small></span>
+                ><span class="has-arrow" [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '▲ ': dayGain() < 0 ? '▼ ' : '' }}{{ dayGain() | currency }} ({{ dayGainPercent() | number: '1.2-2' }}%) <small>Today</small></span>
               </div>
               <div>
                 <span>Buying Power</span
@@ -438,6 +438,7 @@
               </button>
             </div>
             <app-price-protection-settings [symbols]="listedSymbols()" />
+            <app-color-mode-settings />
             <app-switch-scan-settings />
             <button type="button" class="secondary-button" (click)="signOut.emit()">
               Sign out ↗

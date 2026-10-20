@@ -11,7 +11,8 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
           <h3 id="scan-settings-title">Switch control</h3>
           <p>
             Use the whole dashboard with one button. A ring moves through the page; press your switch to choose
-            what it is on. Number and text fields open an on-screen keypad.
+            what it is on. Number and text fields open an on-screen keypad. Turn on reading aloud to hear each
+            item as the ring reaches it, without needing to see the screen.
           </p>
         </div>
         <button
@@ -40,6 +41,10 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
             }
           </select></label
         >
+        <label class="check"
+          ><input type="checkbox" [checked]="scan.settings().speak" (change)="scan.update({ speak: $any($event.target).checked })" />
+          Read each item aloud</label
+        >
       </div>
     </section>
   `,
@@ -54,6 +59,9 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
       .scan-toggle[aria-pressed='true'] { border-color: #51d88c; background: #12301f; color: #8ee6a8; }
       .scan-options { display: flex; flex-wrap: wrap; gap: 14px; }
       label { display: grid; gap: 4px; color: #aebaca; font-size: 12px; }
+      label.check { display: flex; align-items: center; gap: 8px; align-self: end; min-height: 32px; color: #e9f3ee; }
+      label.check input { width: 18px; height: 18px; margin: 0; accent-color: #51d88c; }
+      label.check input:focus-visible { outline: 2px solid #8ee6a8; outline-offset: 2px; }
       select { min-height: 32px; padding: 0 8px; border: 1px solid #2c3d45; border-radius: 6px; background: #13232a; color: #e9f3ee; font: inherit; }
       .scan-toggle:focus-visible, select:focus-visible { outline: 2px solid #8ee6a8; outline-offset: 2px; }
     `,

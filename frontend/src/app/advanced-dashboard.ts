@@ -33,6 +33,7 @@ import type { UserProfile } from './auth-api';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { SwitchScanService } from './switch-scan';
 import { SwitchScanSettings } from './switch-scan-settings';
+import { ColorModeSettings } from './color-mode-settings';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -85,7 +86,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, MarketTicker, Toasts,
-    PriceProtectionSettings, BriefingButton, SwitchScanSettings,
+    PriceProtectionSettings, BriefingButton, SwitchScanSettings, ColorModeSettings,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrl: './advanced-dashboard.scss',

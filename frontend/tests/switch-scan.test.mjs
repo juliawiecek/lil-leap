@@ -50,10 +50,75 @@ function choose(engine, ...path) {
 }
 
 test('settings fall back to safe defaults', () => {
-  assert.deepEqual(parseScanSettings(null), { enabled: false, intervalMs: 1200, key: 'Space' });
-  assert.deepEqual(parseScanSettings('{oops'), { enabled: false, intervalMs: 1200, key: 'Space' });
-  assert.deepEqual(parseScanSettings('{"enabled":true,"intervalMs":2000,"key":"Enter"}'), { enabled: true, intervalMs: 2000, key: 'Enter' });
-  assert.deepEqual(parseScanSettings('{"enabled":"yes","intervalMs":5,"key":"Tab"}'), { enabled: false, intervalMs: 1200, key: 'Space' });
+  const defaults = { enabled: false, intervalMs: 1200, key: 'Space', speak: false };
+  assert.deepEqual(parseScanSettings(null), defaults);
+  assert.deepEqual(parseScanSettings('{oops'), defaults);
+  assert.deepEqual(
+    parseScanSettings('{"enabled":true,"intervalMs":2000,"key":"Enter","speak":true}'),
+    { enabled: true, intervalMs: 2000, key: 'Enter', speak: true },
+  );
+  assert.deepEqual(parseScanSettings('{"enabled":"yes","intervalMs":5,"key":"Tab","speak":"yes"}'), defaults);
+});
+
+/** A speech engine stand-in that records what the ring says; nothing finishes until the test says so. */
+function withSpeech(t, speaking = false) {
+  const spoken = [];
+  const synth = { speaking, speak: (u) => spoken.push(u), cancel: () => { synth.cancelled += 1; }, cancelled: 0 };
+  class Utterance { constructor(text) { this.text = text; } }
+  const before = { synth: globalThis.speechSynthesis, utterance: globalThis.SpeechSynthesisUtterance };
+  globalThis.speechSynthesis = synth;
+  globalThis.SpeechSynthesisUtterance = Utterance;
+  t.after(() => {
+    globalThis.speechSynthesis = before.synth;
+    globalThis.SpeechSynthesisUtterance = before.utterance;
+  });
+  return { said: () => spoken.map((u) => u.text), spoken, synth };
+}
+
+test('reading aloud says each item as the ring reaches it, once, with its state or value', (t) => {
+  const { said, synth } = withSpeech(t);
+  doc.body.innerHTML = '';
+  const engine = setup(t, { speak: true });
+  assert.deepEqual(said(), ['Switch control on. Press the space bar to choose.', 'Menu group']);
+  engine.next();
+  assert.equal(said().at(-1), 'Trade group');
+  assert.equal(synth.cancelled, 1, 'moving on cuts off the item before');
+  doc.getElementById('buy').setAttribute('aria-pressed', 'true');
+  doc.getElementById('qty').value = '5';
+  engine.press();
+  assert.deepEqual(said().slice(-2), ['Trade, 4 items.', 'Buy, selected']);
+  assert.equal(synth.cancelled, 2, 'the first item waits for the announcement instead of cutting it off');
+  engine.next();
+  assert.equal(said().at(-1), 'Number of shares, 5');
+  const count = said().length;
+  engine.press();
+  engine.next();
+  assert.ok(said().length > count, 'the keypad is read out too');
+});
+
+test('with reading aloud off, or while the briefing talks, the ring stays quiet', (t) => {
+  const quiet = withSpeech(t);
+  setup(t).next();
+  assert.deepEqual(quiet.said(), []);
+  doc.body.innerHTML = '';
+  const busy = withSpeech(t, true);
+  const engine = setup(t, { speak: true });
+  engine.next();
+  assert.deepEqual(busy.said(), [], 'another voice is speaking, so the ring does not cut it off');
+});
+
+test('the timer waits for the ring to finish reading, but never stalls on a stuck speech engine', (t) => {
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] });
+  t.after(() => t.mock.timers.reset());
+  const { spoken } = withSpeech(t);
+  const engine = setup(t, { autoAdvance: true, intervalMs: 700, speak: true });
+  t.mock.timers.tick(700);
+  assert.equal(describe(engine.current()), 'group:Menu', 'still reading');
+  spoken.at(-1).onend();
+  t.mock.timers.tick(700);
+  assert.equal(describe(engine.current()), 'group:Trade');
+  t.mock.timers.tick(5600);
+  assert.notEqual(describe(engine.current()), 'group:Trade', 'moves on after the speech wait runs out');
 });
 
 test('the switch key is Space or Enter', () => {
@@ -243,7 +308,9 @@ test('the service saves settings and starts or stops the engine', (t) => {
   service.update({ enabled: true, intervalMs: 2000 });
   assert.equal(service.engine.running, true);
   assert.equal(service.engine.intervalMs, 2000);
-  assert.deepEqual(JSON.parse(values.get(SCAN_STORAGE_KEY)), { enabled: true, intervalMs: 2000, key: 'Space' });
+  assert.deepEqual(JSON.parse(values.get(SCAN_STORAGE_KEY)), { enabled: true, intervalMs: 2000, key: 'Space', speak: false });
+  service.update({ speak: true });
+  assert.equal(service.engine.speak, true, 'reading aloud turns on without restarting');
   const first = service.engine;
   service.update({ key: 'Enter' });
   assert.notEqual(service.engine, first, 'a new key restarts the engine');
@@ -259,7 +326,7 @@ test('the service saves settings and starts or stops the engine', (t) => {
 
 test('the settings card toggles switch control and its options', async (t) => {
   const calls = [];
-  const fake = { settings: () => ({ enabled: false, intervalMs: 1200, key: 'Space' }), update: (c) => calls.push(c) };
+  const fake = { settings: () => ({ enabled: false, intervalMs: 1200, key: 'Space', speak: false }), update: (c) => calls.push(c) };
   const fixture = await render(t, SwitchScanSettings, {}, [{ provide: SwitchScanService, useValue: fake }]);
   const root = fixture.nativeElement;
   const toggle = root.querySelector('.scan-toggle');
@@ -268,7 +335,10 @@ test('the settings card toggles switch control and its options', async (t) => {
   const [speed, key] = root.querySelectorAll('select');
   speed.value = '2000'; speed.dispatchEvent(new browser.Event('change'));
   key.value = 'Enter'; key.dispatchEvent(new browser.Event('change'));
-  assert.deepEqual(calls, [{ enabled: true }, { intervalMs: 2000 }, { key: 'Enter' }]);
+  const speak = root.querySelector('input[type="checkbox"]');
+  assert.equal(speak.checked, false);
+  speak.checked = true; speak.dispatchEvent(new browser.Event('change'));
+  assert.deepEqual(calls, [{ enabled: true }, { intervalMs: 2000 }, { key: 'Enter' }, { speak: true }]);
 });
 
 test('a component host drawn with display: contents counts as visible through its children', (t) => {

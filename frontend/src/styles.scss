@@ -34,6 +34,27 @@
 body { font-family: var(--font-ui); }
 
 /*
+ * Color-blind friendly colors (Settings, color-mode.ts). Every gain and loss reads --gain and
+ * --loss; they are unset by default, so each view keeps its own green and red. Blue and orange
+ * (Okabe-Ito) stay distinct for red-green and blue-yellow color blindness on the dark surface.
+ */
+:root[data-color-mode='colorblind'] {
+  --gain: #56b4e9;
+  --loss: #e69f00;
+  --gain-flash: #163f57;
+  --loss-flash: #4d3600;
+}
+/* Color is never the only clue: an arrow marks every rise and fall. Screen readers skip it. */
+:root[data-color-mode='colorblind'] :is(.gain, .positive, .portfolio-gain.up strong, .change.up):not(.has-arrow)::before {
+  content: '▲ ';
+  content: '▲ ' / '';
+}
+:root[data-color-mode='colorblind'] :is(.loss, .negative, .portfolio-gain.down strong, .change.down):not(.has-arrow)::before {
+  content: '▼ ';
+  content: '▼ ' / '';
+}
+
+/*
  * A dropdown's open list is drawn by the browser from the options' own colours, not the select's
  * gradient or transparent background, so on Windows it would open white. Every list uses the
  * app's dark surface instead.

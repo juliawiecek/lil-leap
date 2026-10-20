@@ -16,6 +16,8 @@ export interface ScanSettings {
   intervalMs: number;
   /** Which key acts as the switch. Most USB accessibility switches send Space or Enter. */
   key: ScanKey;
+  /** Read each item aloud as the ring reaches it, for people who cannot see the ring (auditory scanning). */
+  speak: boolean;
 }
 export type ScanKey = 'Space' | 'Enter';
 
@@ -30,9 +32,13 @@ export const SCAN_KEYS: { value: ScanKey; label: string }[] = [
   { value: 'Space', label: 'Space bar' },
   { value: 'Enter', label: 'Enter' },
 ];
-const DEFAULT_SCAN: ScanSettings = { enabled: false, intervalMs: 1200, key: 'Space' };
+const DEFAULT_SCAN: ScanSettings = { enabled: false, intervalMs: 1200, key: 'Space', speak: false };
 /** Unanswered passes through a group before scanning steps back out of it. */
 const CYCLES_BEFORE_BACK = 2;
+/** Spoken items are read a little faster than the briefing, since they are short. */
+const SPEECH_RATE = 1.1;
+/** The ring waits for an item to be read out, but never longer than this if the speech engine stalls. */
+const MAX_SPEECH_WAIT_MS = 5000;
 
 /** Saved settings, or the defaults when nothing valid is stored. */
 export function parseScanSettings(raw: string | null): ScanSettings {
@@ -42,6 +48,7 @@ export function parseScanSettings(raw: string | null): ScanSettings {
       enabled: saved.enabled === true,
       intervalMs: SCAN_SPEEDS.some((s) => s.value === saved.intervalMs) ? saved.intervalMs! : DEFAULT_SCAN.intervalMs,
       key: SCAN_KEYS.some((k) => k.value === saved.key) ? saved.key! : DEFAULT_SCAN.key,
+      speak: saved.speak === true,
     };
   } catch {
     return { ...DEFAULT_SCAN };
@@ -62,6 +69,8 @@ export type ScanItem =
 export interface ScanEngineOptions {
   intervalMs?: number;
   key?: ScanKey;
+  /** Read each item aloud as the ring reaches it. */
+  speak?: boolean;
   /** Whether an element is on screen. Tests replace it; browsers use layout. */
   isVisible?: (el: HTMLElement) => boolean;
   /** Called by the "Turn off" button on the status bar. */
@@ -128,6 +137,22 @@ export function scanLabel(el: HTMLElement): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Control';
 }
 
+/** What the ring says on a control: its name, plus its state or value when it has one. */
+export function spokenItem(el: HTMLElement): string {
+  const label = scanLabel(el);
+  const field = el as HTMLInputElement;
+  if (el.tagName === 'INPUT' && field.type === 'checkbox') {
+    return `${label}, ${field.checked ? 'on' : 'off'}`;
+  }
+  if (el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-current') === 'page') {
+    return `${label}, selected`;
+  }
+  if ((el.tagName === 'INPUT' || el.tagName === 'SELECT') && field.value && field.value !== label) {
+    return `${label}, ${field.value}`;
+  }
+  return label;
+}
+
 /**
  * The scanning itself, independent of Angular so it can be tested with a plain DOM. It draws its
  * own ring, status bar and pads, and puts them inside an open modal dialog when there is one,
@@ -136,6 +161,7 @@ export function scanLabel(el: HTMLElement): string {
 export class ScanEngine {
   intervalMs: number;
   key: ScanKey;
+  speak: boolean;
   readonly #doc: Document;
   readonly #isVisible: (el: HTMLElement) => boolean;
   readonly #onTurnOff: () => void;
@@ -153,11 +179,19 @@ export class ScanEngine {
   #chip: HTMLElement | null = null;
   #live: HTMLElement | null = null;
   #bar: HTMLElement | null = null;
+  /** The ring's own sentence being read, so the ring knows when it is talking and never cuts off the briefing. */
+  #utterance: SpeechSynthesisUtterance | null = null;
+  #spokeAt = 0;
+  /** The item last read out, so a redraw does not read it again. */
+  #spokenKey: unknown = null;
+  /** An announcement was just read; the next item waits for it instead of cutting it off. */
+  #queueNext = false;
 
   constructor(doc: Document, options: ScanEngineOptions = {}) {
     this.#doc = doc;
     this.intervalMs = options.intervalMs ?? DEFAULT_SCAN.intervalMs;
     this.key = options.key ?? DEFAULT_SCAN.key;
+    this.speak = options.speak ?? DEFAULT_SCAN.speak;
     this.#isVisible = options.isVisible ?? defaultVisible;
     this.#onTurnOff = options.onTurnOff ?? (() => this.stop());
     this.#autoAdvance = options.autoAdvance ?? true;
@@ -192,6 +226,7 @@ export class ScanEngine {
     this.#stack = [];
     this.#index = 0;
     this.#cycles = 0;
+    this.#spokenKey = null;
     this.#announce(`Switch control on. Press ${this.key === 'Space' ? 'the space bar' : 'Enter'} to choose.`);
     this.#render();
     this.#restartTimer();
@@ -203,6 +238,10 @@ export class ScanEngine {
     }
     this.#running = false;
     clearInterval(this.#timer);
+    if (this.#utterance) {
+      globalThis.speechSynthesis?.cancel();
+      this.#utterance = null;
+    }
     this.#doc.removeEventListener('keydown', this.#onKeyDown, true);
     this.#doc.removeEventListener('keyup', this.#onKeyUp, true);
     this.#doc.removeEventListener('visibilitychange', this.#onVisibility);
@@ -287,6 +326,7 @@ export class ScanEngine {
       this.#paused = false;
       this.#index = 0;
       this.#cycles = 0;
+      this.#spokenKey = null;
       this.#announce('Scanning resumed.');
       this.#render();
       this.#restartTimer();
@@ -609,14 +649,18 @@ export class ScanEngine {
       return;
     }
     if (item.kind === 'back' || item.kind === 'pause') {
+      const name = item.kind === 'back' ? 'Back' : 'Pause scanning';
       this.#chip.textContent = item.kind === 'back' ? '◀ Back' : '⏸ Pause scanning';
       this.#placeChip(item.kind === 'back' ? this.#stack.at(-1)! : null);
-      this.#announce(item.kind === 'back' ? 'Back' : 'Pause scanning');
+      this.#announce(name, false);
+      this.#sayItem(`${item.kind}:${this.#stack.length}`, name);
     } else {
       if (item.kind === 'control') {
         item.el.focus({ preventScroll: true });
+        this.#sayItem(item.el, spokenItem(item.el));
       } else {
-        this.#announce(`${scanLabel(item.el)} group`);
+        this.#announce(`${scanLabel(item.el)} group`, false);
+        this.#sayItem(item.el, `${scanLabel(item.el)} group`);
       }
       const scrollTarget = isContents(item.el) ? (item.el.firstElementChild as HTMLElement | null) : item.el;
       scrollTarget?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
@@ -654,16 +698,68 @@ export class ScanEngine {
     });
   }
 
-  #announce(text: string): void {
+  /** Tells screen readers what happened and, when speaking is on, says it aloud too. */
+  #announce(text: string, speak = true): void {
     if (this.#live) {
       this.#live.textContent = text;
     }
+    if (speak && text) {
+      this.#say(text, false);
+      this.#queueNext = true;
+    } else if (speak) {
+      this.#queueNext = false;
+    }
+  }
+
+  /** Reads the item the ring landed on, once, waiting for an announcement just made. */
+  #sayItem(key: unknown, text: string): void {
+    if (key === this.#spokenKey) {
+      return;
+    }
+    this.#spokenKey = key;
+    this.#say(text, this.#queueNext);
+    this.#queueNext = false;
+  }
+
+  #say(text: string, queue: boolean): void {
+    const synth = globalThis.speechSynthesis;
+    if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
+      return;
+    }
+    // Another voice, such as the market briefing, is talking; the ring stays quiet rather than cut it off.
+    if (synth.speaking && !this.#utterance) {
+      return;
+    }
+    if (!queue && this.#utterance) {
+      synth.cancel();
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = SPEECH_RATE;
+    const done = () => {
+      if (this.#utterance === utterance) {
+        this.#utterance = null;
+      }
+    };
+    utterance.onend = done;
+    utterance.onerror = done;
+    this.#utterance = utterance;
+    this.#spokeAt = Date.now();
+    synth.speak(utterance);
+  }
+
+  /** The ring is still reading an item out, so it should not move on yet. */
+  #talking(): boolean {
+    return !!this.#utterance && Date.now() - this.#spokeAt < MAX_SPEECH_WAIT_MS;
   }
 
   #restartTimer(): void {
     clearInterval(this.#timer);
     if (this.#autoAdvance && this.#running) {
-      this.#timer = setInterval(() => this.next(), this.intervalMs);
+      this.#timer = setInterval(() => {
+        if (!this.#talking()) {
+          this.next();
+        }
+      }, this.intervalMs);
     }
   }
 
@@ -731,6 +827,7 @@ export class SwitchScanService {
     } else if (this.#engine) {
       this.#engine.intervalMs = next.intervalMs;
       this.#engine.key = next.key;
+      this.#engine.speak = next.speak;
       this.#engine.restart();
     }
   }
@@ -739,8 +836,8 @@ export class SwitchScanService {
     if (typeof document === 'undefined') {
       return;
     }
-    const { intervalMs, key } = this.settings();
-    this.#engine = new ScanEngine(document, { intervalMs, key, onTurnOff: () => this.update({ enabled: false }) });
+    const { intervalMs, key, speak } = this.settings();
+    this.#engine = new ScanEngine(document, { intervalMs, key, speak, onTurnOff: () => this.update({ enabled: false }) });
     this.#engine.start();
   }
 }
