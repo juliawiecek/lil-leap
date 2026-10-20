@@ -1,0 +1,145 @@
+<a class="back-link" routerLink="/clients" queryParamsHandling="preserve">← All clients</a>
+@if (detail(); as d) {
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">NEXTTRADE / CLIENTS</p>
+      <h1>{{ d.account.accountNumber }}</h1>
+      <p class="subtitle">{{ owner(d.account) }}</p>
+    </div>
+    <div class="badges">
+      <span class="badge neutral">{{ label(d.account.traderLevel) }}</span>
+      <span class="badge" [class.rejected]="d.account.status === 'BLOCKED' || d.account.status === 'CLOSED'" [class.neutral]="d.account.status === 'PENDING'">{{ label(d.account.status) }}</span>
+    </div>
+  </header>
+  <div class="tabs" role="tablist" aria-label="Account sections">
+    <button type="button" role="tab" id="tab-overview" aria-controls="panel-overview" [class.active]="tab() === 'overview'" [attr.aria-selected]="tab() === 'overview'" (click)="show('overview')">Overview</button>
+    <button type="button" role="tab" id="tab-orders" aria-controls="panel-orders" [class.active]="tab() === 'orders'" [attr.aria-selected]="tab() === 'orders'" (click)="show('orders')">
+      Orders{{ orders() ? ' (' + count(orders()!.totalElements) + ')' : '' }}
+    </button>
+  </div>
+  @if (tab() === 'overview') {
+    <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <section class="kpi-grid" aria-label="Account summary">
+        <app-kpi-tile label="Traded value" icon="coins" testId="client-value" [value]="money(d.account.tradedValue)" note="Filled orders · USD" />
+        <app-kpi-tile label="Trades" icon="chart" testId="client-trades" [value]="count(d.account.tradeCount)" note="Executed fills" />
+        <app-kpi-tile label="Last trade" icon="orders" testId="client-last-trade"
+          [value]="day(d.account.lastTradeAt)" [note]="time(d.account.lastTradeAt)" />
+        <app-kpi-tile label="Stocks held" icon="user" testId="client-positions" [value]="count(d.holdings.length)" note="Open positions" />
+      </section>
+      <section class="panel" aria-labelledby="holdings-title">
+        <div class="panel-heading">
+          <h2 id="holdings-title">Holdings</h2>
+          <span class="muted">{{ d.holdings.length ? money(costBasis()) + ' at cost' : '' }}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Stocks this account holds</caption>
+            <thead>
+              <tr>
+                <th>Stock</th>
+                <th class="numeric">Shares</th>
+                <th class="numeric">Average cost</th>
+                <th class="numeric">Cost basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (holding of d.holdings; track holding.symbol) {
+                <tr>
+                  <td><strong>{{ holding.symbol }}</strong><small>{{ holding.instrumentName }}</small></td>
+                  <td class="numeric">{{ count(holding.quantity) }}</td>
+                  <td class="numeric">{{ price(holding.averageCost) }}</td>
+                  <td class="numeric">{{ money(holding.costBasis) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty">This account holds no stocks.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  } @else {
+    <div id="panel-orders" role="tabpanel" aria-labelledby="tab-orders">
+      <form class="filter-bar" role="search" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
+        <label class="grow"
+          >Find an order<input
+            #orderSearch
+            name="orderSearch"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Symbol, e.g. AAPL, or a full order ID"
+            [value]="orderFilters().search"
+            (input)="searchOrders($any($event.target).value)"
+        /></label>
+      </form>
+      @if (operations()) {
+        <p class="hint muted">Select an order ID to open its full trail in Trade lookup.</p>
+      }
+      @if (ordersError()) {
+        <p class="error" role="alert">{{ ordersError() }}</p>
+      }
+      <section class="panel" aria-labelledby="orders-title" [attr.aria-busy]="ordersLoading()">
+        <div class="panel-heading">
+          <h2 id="orders-title">Filled orders</h2>
+          <span class="muted" aria-live="polite">{{ ordersLoading() ? 'Loading…' : orders() ? count(orders()!.totalElements) + ' filled orders, newest first' : '' }}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Orders for account {{ d.account.accountNumber }}, newest first</caption>
+            <thead>
+              <tr>
+                <th>Filled</th>
+                <th>Order ID</th>
+                <th>Stock</th>
+                <th>Side</th>
+                <th class="numeric">Shares</th>
+                <th class="numeric">Fill price</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (order of orders()?.content ?? []; track order.orderId) {
+                <tr>
+                  <td>{{ dateTime(order.filledAt) }}</td>
+                  <td>
+                    @if (operations()) {
+                      <a class="order-link mono" [routerLink]="['/trades', order.orderId]" [queryParams]="{ account: accountId() }" [title]="order.orderId" [attr.aria-label]="'Open order ' + order.orderId + ' in Trade lookup'">{{ shortId(order.orderId) }}…</a>
+                    } @else {
+                      <span class="mono" [title]="order.orderId">{{ shortId(order.orderId) }}…</span>
+                    }
+                  </td>
+                  <td><strong>{{ order.symbol }}</strong></td>
+                  <td>{{ label(order.side) }}</td>
+                  <td class="numeric">{{ count(order.quantity) }}</td>
+                  <td class="numeric">{{ price(order.fillPrice) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="empty">{{ ordersLoading() ? 'Loading orders…' : orderFilters().search ? 'No orders match this search.' : 'This account has no filled orders.' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (orders(); as page) {
+          @if (page.totalPages > 1) {
+            <nav class="pager" aria-label="Pages of orders">
+              <button type="button" [disabled]="page.page === 0" (click)="ordersPage(page.page - 1)">Previous</button>
+              <span>Page {{ page.page + 1 }} of {{ page.totalPages }}</span>
+              <button type="button" [disabled]="page.page + 1 >= page.totalPages" (click)="ordersPage(page.page + 1)">Next</button>
+            </nav>
+          }
+        }
+      </section>
+    </div>
+  }
+} @else if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+} @else {
+  <section class="panel empty" aria-busy="true">
+    <app-dashboard-icon name="user" />
+    <h2>Loading account…</h2>
+  </section>
+}

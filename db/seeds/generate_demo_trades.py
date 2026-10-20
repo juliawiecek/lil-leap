@@ -301,11 +301,12 @@ TEST_USER_FILLS = (
     ("000000000105", 2, "NVDA", "SELL", 50, "176.40", 10, time(18, 30)),
     ("000000000106", 2, "GOOGL", "BUY", 70, "203.75", 6, time(19, 5)),
 )
+# Names and account labels match 002_test_users.sql.
 TEST_ACCOUNTS = {
-    1: ("a0000000-0000-4000-8000-000000000001", "novice@nexttrade.local",
-        "b0000000-0000-4000-8000-000000000001", "NT-DEV-0001", "NOVICE"),
-    2: ("a0000000-0000-4000-8000-000000000002", "advanced@nexttrade.local",
-        "b0000000-0000-4000-8000-000000000002", "NT-DEV-0002", "ADVANCED"),
+    1: ("a0000000-0000-4000-8000-000000000001", "novice@nexttrade.local", "Nova Tester",
+        "b0000000-0000-4000-8000-000000000001", "NT-DEV-0001", "Novice Test Account", "NOVICE"),
+    2: ("a0000000-0000-4000-8000-000000000002", "advanced@nexttrade.local", "Ada Vance",
+        "b0000000-0000-4000-8000-000000000002", "NT-DEV-0002", "Advanced Test Account", "ADVANCED"),
 }
 
 
@@ -555,8 +556,8 @@ COMMIT;
 
 
 CSV_HEADER = ("fill_id,order_id,filled_at,instrument_id,instrument_symbol,instrument_name,asset_class,market_code,"
-              "user_id,client_email,account_id,account_number,account_status,trader_level,side,filled_quantity,"
-              "execution_price")
+              "user_id,client_email,client_name,account_id,account_number,account_name,account_status,trader_level,"
+              "side,filled_quantity,execution_price")
 
 
 def csv_value(value: str) -> str:
@@ -567,26 +568,27 @@ def render_csv(trades: list[Trade]) -> str:
     markets = {s.symbol: s.market_code for s in COMMON_STOCKS}
     rows = []
 
-    def add(order_id, fill_id, at, symbol, user_id, email, account_id, account_number, status, tier, side, qty, price):
+    def add(order_id, fill_id, at, symbol, user_id, email, name, account_id, account_number, account_name, status, tier,
+            side, qty, price):
         market = markets[symbol]
         filled_at = at + timedelta(seconds=2)
         rows.append((filled_at, [
             fill_id, order_id, filled_at.strftime("%Y-%m-%dT%H:%M:%SZ"), instrument_id(market, symbol), symbol,
-            INSTRUMENT_INFO[symbol][0], "COMMON_STOCK", market, user_id, email, account_id, account_number,
-            status, tier, side, str(qty), f"{Decimal(price):.2f}"]))
+            INSTRUMENT_INFO[symbol][0], "COMMON_STOCK", market, user_id, email, name, account_id, account_number,
+            account_name, status, tier, side, str(qty), f"{Decimal(price):.2f}"]))
 
     for suffix, n, symbol, side, qty, price, days_ago, at in TEST_USER_FILLS:
         order_id = f"c0000000-0000-4000-8000-{suffix}"
-        user_id, email, account_id, account_number, tier = TEST_ACCOUNTS[n]
+        user_id, email, name, account_id, account_number, account_name, tier = TEST_ACCOUNTS[n]
         when = datetime.combine(ANCHOR_DATE - timedelta(days=days_ago), at, timezone.utc)
-        add(order_id, md5_uuid("seed-fill-" + order_id), when, symbol, user_id, email, account_id,
-            account_number, "ACTIVE", tier, side, qty, price)
+        add(order_id, md5_uuid("seed-fill-" + order_id), when, symbol, user_id, email, name, account_id,
+            account_number, account_name, "ACTIVE", tier, side, qty, price)
     for t in trades:
         if t.reason is None:
             c = t.client
             when = datetime.combine(ANCHOR_DATE + timedelta(days=t.day_offset), t.at, timezone.utc)
-            add(t.order_id, t.fill_id, when, t.symbol, c.user_id, c.email, c.account_id, c.account_number,
-                c.status, c.tier, t.side, t.quantity, t.price)
+            add(t.order_id, t.fill_id, when, t.symbol, c.user_id, c.email, f"{c.first} {c.last}", c.account_id,
+                c.account_number, f"{c.first} {c.last} Individual", c.status, c.tier, t.side, t.quantity, t.price)
     rows.sort(key=lambda row: (row[0], row[1][0]))
     return CSV_HEADER + "\n" + "".join(",".join(csv_value(v) for v in row) + "\n" for _, row in rows)
 

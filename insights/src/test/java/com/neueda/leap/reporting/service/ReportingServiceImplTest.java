@@ -162,10 +162,10 @@ class ReportingServiceImplTest {
     @Test
     void buySellBalanceShowsNetSellersLastWithNegativeNets() throws Exception {
         String csv = csvHeader() + "\n"
-                + "f1,o1,2026-10-01T14:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u1,e,a1,001,ACTIVE,NOVICE,BUY,10,5.00\n"
-                + "f2,o2,2026-10-01T15:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u2,e,a2,002,ACTIVE,NOVICE,SELL,25,6.00\n"
-                + "f3,o3,2026-10-01T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,a1,001,ACTIVE,NOVICE,BUY,3,2.50\n"
-                + "f4,o4,2026-10-02T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,a1,001,ACTIVE,NOVICE,BUY,99,2.50\n";
+                + "f1,o1,2026-10-01T14:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,10,5.00\n"
+                + "f2,o2,2026-10-01T15:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u2,e,name,a2,002,account,ACTIVE,NOVICE,SELL,25,6.00\n"
+                + "f3,o3,2026-10-01T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,3,2.50\n"
+                + "f4,o4,2026-10-02T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,99,2.50\n";
         ReportDateRange octoberFirst = new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
 
         assertThat(csvBody(csvService(csv).generateBuySellBalanceReport(octoberFirst)).lines().skip(1).toList())
@@ -177,7 +177,7 @@ class ReportingServiceImplTest {
     @Test
     void buySellBalanceRejectsUnknownSides() throws Exception {
         var unknownSide = csvService(csvHeader()
-                + "\nf,o,2026-10-01T12:00:00Z,i,AAPL,Apple,COMMON_STOCK,NASDAQ,u,e,a,001,ACTIVE,NOVICE,SHORT,1,1.00");
+                + "\nf,o,2026-10-01T12:00:00Z,i,AAPL,Apple,COMMON_STOCK,NASDAQ,u,e,name,a,001,account,ACTIVE,NOVICE,SHORT,1,1.00");
 
         assertThatThrownBy(() -> unknownSide.generateBuySellBalanceReport(FULL_RANGE))
                 .isInstanceOf(IllegalStateException.class)
@@ -265,7 +265,7 @@ class ReportingServiceImplTest {
 
     @Test
     void quotedInstrumentNamesRoundTripThroughReport() throws Exception {
-        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,2,10.25";
+        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,u,email,name,a,001,account,ACTIVE,ADVANCED,BUY,2,10.25";
         var report = csvService(csvHeader() + "\n\n" + row + "\n").generateInstrumentReport(FULL_RANGE);
         assertThat(csvBody(report)).contains("AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,1,2,20.50,10.25");
         assertThat(report.getHeaders().getContentLength()).isEqualTo(report.getBody().contentLength());
@@ -273,7 +273,7 @@ class ReportingServiceImplTest {
 
     @Test
     void quoteAtEndOfLastColumnAndZeroQuantityAreHandled() throws Exception {
-        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,Apple,EQUITY,NASDAQ,u,email,a,001,ACTIVE,ADVANCED,BUY,0,\"10.25\"";
+        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,Apple,EQUITY,NASDAQ,u,email,name,a,001,account,ACTIVE,ADVANCED,BUY,0,\"10.25\"";
         assertThat(csvBody(csvService(csvHeader() + "\n" + row).generateInstrumentReport(FULL_RANGE)))
                 .contains("AAPL,Apple,EQUITY,NASDAQ,1,0,0.00,0.00");
     }

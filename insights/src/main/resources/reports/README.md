@@ -1,6 +1,6 @@
 # Reporting dataset
 
-`trades.csv` is the standalone mock source used by BR-16 report generation. It is intentionally separate from the live database so report generation never competes with trading workloads.
+`trades.csv` is the standalone mock source used by BR-16 report generation and the Clients page. It is intentionally separate from the live database so neither competes with trading workloads.
 
 ## Columns
 
@@ -15,9 +15,11 @@
 | `asset_class` | Lets reports distinguish equities, FX, and crypto | `instruments.asset_class` | Instrument report |
 | `market_code` | Distinguishes venue or market source for the instrument | `instruments.market_code` | Instrument report |
 | `user_id` | Identifies the client behind the trade | `users.user_id` | Client segment and activity reports |
-| `client_email` | Human-readable client identifier | `users.email` | Client segment and activity reports |
+| `client_email` | Human-readable client identifier | `users.email` | Client segment and activity reports, Clients page |
+| `client_name` | Client's first and last name | `customer_profiles.first_name`, `last_name` | Clients page |
 | `account_id` | Trading account identifier | `accounts.account_id` | Client segment and activity reports |
-| `account_number` | Human-readable trading account number | `accounts.account_number` | Client segment and activity reports |
+| `account_number` | Human-readable trading account number | `accounts.account_number` | Client segment and activity reports, Clients page |
+| `account_name` | Account label | `accounts.account_name` | Clients page |
 | `account_status` | Shows whether the account is active, blocked, etc. | `accounts.account_status` | Client segment report |
 | `trader_level` | Business segment used for client grouping | `accounts.trader_level` | Client segment report |
 | `side` | Indicates buy or sell activity for context | `orders.side` | All report generators |

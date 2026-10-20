@@ -11,9 +11,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,53 +28,43 @@ class TradeControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired JwtServiceImpl jwtService;
-    @MockBean TradeTrailRepository trails;
+    @MockBean TradeLookup trades;
 
     private final UUID orderId = UUID.randomUUID();
+    private final UUID accountId = UUID.randomUUID();
 
     @Test
     void onlyOperationsStaffCanReadATrade() throws Exception {
-        mvc.perform(get("/trades/{id}/events", orderId)).andExpect(status().isUnauthorized());
-        mvc.perform(asRole("ANALYST", get("/trades/{id}/events", orderId))).andExpect(status().isForbidden());
-        mvc.perform(asRole("TRADER", get("/trades/{id}/events", orderId))).andExpect(status().isForbidden());
-        verifyNoInteractions(trails);
+        mvc.perform(get("/trades/{id}", orderId)).andExpect(status().isUnauthorized());
+        mvc.perform(asRole("ANALYST", get("/trades/{id}", orderId))).andExpect(status().isForbidden());
+        mvc.perform(asRole("TRADER", get("/trades/{id}", orderId))).andExpect(status().isForbidden());
+        verifyNoInteractions(trades);
     }
 
     @Test
-    void returnsTheTradesEventsOldestFirst() throws Exception {
-        Instant submitted = Instant.parse("2026-10-14T14:30:00Z");
-        when(trails.trail(orderId)).thenReturn(Optional.of(List.of(
-                new TradeEvent("STATUS", "SUBMITTED", null, submitted, Map.of()),
-                new TradeEvent("AUDIT", "ORDER_ACCEPTED", "SYSTEM", submitted.plusSeconds(1), Map.of("payload", "{}")),
-                new TradeEvent("FILL", "FILLED", null, submitted.plusSeconds(2), Map.of("quantity", 2, "price", "225.1")))));
+    void returnsTheFillAndTheClientBehindIt() throws Exception {
+        when(trades.find(orderId)).thenReturn(Optional.of(new TradeRecord(orderId, Instant.parse("2026-10-14T14:30:02Z"),
+                "AAPL", "Apple Inc.", "BUY", 2, new BigDecimal("225.10"), new BigDecimal("450.20"),
+                new TradeRecord.Account(accountId, "NT-DEMO-0001", "Maya Chen Individual", "Maya Chen",
+                        "maya.chen@demo.nexttrade.local", "NOVICE", "ACTIVE"))));
 
-        mvc.perform(asRole("OPERATIONS", get("/trades/{id}/events", orderId)))
+        mvc.perform(asRole("OPERATIONS", get("/trades/{id}", orderId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(orderId.toString()))
-                .andExpect(jsonPath("$.auditRecorded").value(true))
-                .andExpect(jsonPath("$.events.length()").value(3))
-                .andExpect(jsonPath("$.events[0].type").value("SUBMITTED"))
-                .andExpect(jsonPath("$.events[1].actor").value("SYSTEM"))
-                .andExpect(jsonPath("$.events[2].details.price").value("225.1"))
-                .andExpect(jsonPath("$.events[0].occurredAt").value("2026-10-14T14:30:00Z"));
+                .andExpect(jsonPath("$.filledAt").value("2026-10-14T14:30:02Z"))
+                .andExpect(jsonPath("$.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.value").value(450.20))
+                .andExpect(jsonPath("$.account.accountId").value(accountId.toString()))
+                .andExpect(jsonPath("$.account.clientName").value("Maya Chen"))
+                .andExpect(jsonPath("$.account.email").value("maya.chen@demo.nexttrade.local"));
     }
 
     @Test
-    void aTradeWithNoAuditRowsIsMarkedIncomplete() throws Exception {
-        when(trails.trail(orderId)).thenReturn(Optional.of(List.of(
-                new TradeEvent("STATUS", "SUBMITTED", null, Instant.now(), Map.of()))));
+    void anUnknownTradeIsNotFoundAndABadIdIsRejected() throws Exception {
+        when(trades.find(orderId)).thenReturn(Optional.empty());
 
-        mvc.perform(asRole("OPERATIONS", get("/trades/{id}/events", orderId)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.auditRecorded").value(false));
-    }
-
-    @Test
-    void anUnknownTradeIsNotFound() throws Exception {
-        when(trails.trail(orderId)).thenReturn(Optional.empty());
-
-        mvc.perform(asRole("OPERATIONS", get("/trades/{id}/events", orderId)))
-                .andExpect(status().isNotFound());
+        mvc.perform(asRole("OPERATIONS", get("/trades/{id}", orderId))).andExpect(status().isNotFound());
+        mvc.perform(asRole("OPERATIONS", get("/trades/not-an-id"))).andExpect(status().isBadRequest());
     }
 
     private MockHttpServletRequestBuilder asRole(String role, MockHttpServletRequestBuilder request) {

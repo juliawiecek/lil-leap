@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, browser } from './dom-helper.mjs';
 import { createEnvironmentInjector, Injector, runInInjectionContext } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 const { NAV_BY_ROLE, homePath, roleOf, requireRole } = await import('../src/app/roles.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { safeReturnUrl } = await import('../src/app/page-state.ts');
@@ -40,15 +40,17 @@ test('a page guard admits its roles and sends anyone else to their own home page
 test('sign-in only returns to current pages; retired pages and record IDs elsewhere are dropped', () => {
   assert.equal(safeReturnUrl('/reports'), '/reports');
   assert.equal(safeReturnUrl('/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f'), '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f');
-  for (const unsafe of ['/dashboard', '/compliance', '/clients/C-1', 'https://evil.test/insights', '//evil.test']) {
+  assert.equal(safeReturnUrl('/clients/e0000000-0000-4000-8000-000000000001?search=demo'),
+    '/clients/e0000000-0000-4000-8000-000000000001?search=demo');
+  for (const unsafe of ['/dashboard', '/compliance', '/clients/a/orders', '/reports/x', 'https://evil.test/insights', '//evil.test']) {
     assert.equal(safeReturnUrl(unsafe), null, unsafe);
   }
 });
 
-test('the clients page shows an honest empty state and promises no names or emails', async (t) => {
-  const fixture = await render(t, ClientsPage);
+test('without the accounts API the clients page shows an empty state', async (t) => {
+  const fixture = await render(t, ClientsPage, {}, [provideRouter([])]);
   const text = fixture.nativeElement.textContent;
-  assert.match(text, /No client accounts to show yet/);
-  assert.match(text, /names and emails are never shown/);
+  assert.match(text, /No client accounts to show/);
+  assert.match(text, /who owns it/);
   assert.ok(browser);
 });

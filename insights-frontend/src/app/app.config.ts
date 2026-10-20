@@ -8,7 +8,11 @@ import {
   LIVE_REPORTS, REPORT_FILES, attachmentFilename,
   type ActivityPoint, type LiveReports, type ReportFiles, type ReportSummary, type TopInstrument,
 } from './live-reports';
-import { TRADE_TRAIL, type TradeTrail, type TradeTrailResponse } from './trade-trail';
+import {
+  CLIENT_ACCOUNTS, queryParams,
+  type ClientAccounts, type ClientDetail, type ClientOrder, type ClientSummary, type Page,
+} from './client-accounts';
+import { TRADE_RECORDS, type TradeRecord, type TradeRecords } from './trade-records';
 import { routes } from './app.routes';
 import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
@@ -24,11 +28,20 @@ export const appConfig: ApplicationConfig = {
         activityTrend: () => firstValueFrom(http.get<ActivityPoint[]>('/api/v1/reports/insights/client-activity-trend')),
       };
     } },
-    { provide: TRADE_TRAIL, useFactory: (): TradeTrail => {
+    { provide: CLIENT_ACCOUNTS, useFactory: (): ClientAccounts => {
+      const http = inject(ApiHttpClient);
+      const clients = '/api/v1/reports/clients';
+      return {
+        list: (filters) => firstValueFrom(http.get<Page<ClientSummary>>(clients, { params: queryParams({ ...filters }) })),
+        detail: (id) => firstValueFrom(http.get<ClientDetail>(`${clients}/${encodeURIComponent(id)}`)),
+        orders: (id, filters) => firstValueFrom(
+          http.get<Page<ClientOrder>>(`${clients}/${encodeURIComponent(id)}/orders`, { params: queryParams({ ...filters }) })),
+      };
+    } },
+    { provide: TRADE_RECORDS, useFactory: (): TradeRecords => {
       const http = inject(ApiHttpClient);
       return {
-        load: (orderId) => firstValueFrom(
-          http.get<TradeTrailResponse>(`/api/v1/trades/${encodeURIComponent(orderId)}/events`)),
+        load: (orderId) => firstValueFrom(http.get<TradeRecord>(`/api/v1/trades/${encodeURIComponent(orderId)}`)),
       };
     } },
     { provide: REPORT_FILES, useFactory: (): ReportFiles => {
