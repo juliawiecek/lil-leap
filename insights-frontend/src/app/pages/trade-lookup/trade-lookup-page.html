@@ -1,5 +1,5 @@
 <app-page-heading title="Trade lookup" subtitle="Every recorded step of one trade, oldest first, for audits and client disputes." />
-<form class="filter-bar" (submit)="$event.preventDefault(); submit()">
+<form class="filter-bar" method="get" (submit)="$event.preventDefault(); submit()">
   <label class="grow"
     >Order ID<input
       name="orderId"

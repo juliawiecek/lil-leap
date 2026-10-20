@@ -57,7 +57,9 @@ export class RealtimeStockChart implements AfterViewInit, OnChanges, OnDestroy {
   #subscription: Subscription | undefined;
   #latest: StockPriceTick | undefined;
   ngAfterViewInit(): void {
-    if (!isPlatformBrowser(this.#platform)) return;
+    if (!isPlatformBrowser(this.#platform)) {
+      return;
+    }
     this.#zone.runOutsideAngular(() => {
       this.chart()!.setHistory(this.history());
       const last = normalizeHistory(this.history()).at(-1);
@@ -74,7 +76,9 @@ export class RealtimeStockChart implements AfterViewInit, OnChanges, OnDestroy {
         .subscribe({
           next: (tick) =>
             this.#zone.runOutsideAngular(() => {
-              if (this.#latest && tick.time < this.#latest.time) return;
+              if (this.#latest && tick.time < this.#latest.time) {
+                return;
+              }
               this.#latest = tick;
               this.chart()!.setPerformance(tick.price, this.openingPrice());
               this.chart()!.append(tick);
@@ -86,13 +90,16 @@ export class RealtimeStockChart implements AfterViewInit, OnChanges, OnDestroy {
   ngOnChanges(changes: import('@angular/core').SimpleChanges): void {
     this.#zone.runOutsideAngular(() => {
       const ms = samplingInterval(this.sampleMs());
-      if (ms !== this.#clock.value) this.#clock.next(ms);
+      if (ms !== this.#clock.value) {
+        this.#clock.next(ms);
+      }
       if (changes['history'] && this.chart()) {
         this.chart()!.setHistory(this.history());
         this.#latest = normalizeHistory(this.history()).at(-1);
       }
-      if (this.#latest && this.chart())
+      if (this.#latest && this.chart()) {
         this.chart()!.setPerformance(this.#latest.price, this.openingPrice());
+      }
     });
   }
   ngOnDestroy(): void {

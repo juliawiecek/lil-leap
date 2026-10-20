@@ -43,6 +43,7 @@ import { QuoteService } from './quote.service';
 import { StockSvgChart } from './stock-svg-chart';
 import { samplingInterval, type ChartSampleMs } from './stock-chart-stream';
 import type { StockPriceTick } from './stock-price-ticks';
+import { validPrice } from './stock-chart-math';
 
 export interface StockAsset {
   readonly symbol: string;
@@ -135,7 +136,9 @@ function createStockDashboardFeed(
                 ),
           }).pipe(
             map((result) => {
-              if (result.history.length) history = result.history;
+              if (result.history.length) {
+                history = result.history;
+              }
               const open = result.opens.find((row) => row.instrumentId === quote.instrumentId);
               // The backend may return a previous close before the session opens.
               // Keep that distinct from the requested current-session opening price.
@@ -160,6 +163,15 @@ function createStockDashboardFeed(
 }
 
 const STALE_MS = 60000; // Matches the existing quote freshness policy.
+const QUOTE_FIELDS = [
+  'time',
+  'price',
+  'openPrice',
+  'symbol',
+  'market',
+  'currency',
+  'history',
+] as const;
 const EXCHANGE_TIME = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   hour: 'numeric',
@@ -177,7 +189,9 @@ const EXCHANGE_DATE = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 function sessionDay(time: number): string {
-  if (!Number.isFinite(time)) return '';
+  if (!Number.isFinite(time)) {
+    return '';
+  }
   return EXCHANGE_DATE.formatToParts(time)
     .filter((part) => ['year', 'month', 'day'].includes(part.type))
     .map((part) => part.value)
@@ -188,7 +202,9 @@ function currentSessionOpen(
   open: { midpoint: number | string; quotedAt: string } | undefined,
 ): number | null {
   const time = Date.parse(open?.quotedAt ?? '');
-  if (!Number.isFinite(time)) return null;
+  if (!Number.isFinite(time)) {
+    return null;
+  }
   const parts = EXCHANGE_DATE.formatToParts(time);
   const day = (values: Intl.DateTimeFormatPart[]) =>
     values
@@ -199,12 +215,10 @@ function currentSessionOpen(
     Number(parts.find((part) => part.type === 'hour')?.value) * 60 +
     Number(parts.find((part) => part.type === 'minute')?.value);
   const price = Number(open!.midpoint);
-  return day(parts) === day(EXCHANGE_DATE.formatToParts(Date.now())) &&
-    minute >= 570 &&
-    Number.isFinite(price) &&
-    price > 0
-    ? price
-    : null;
+  if (day(parts) !== day(EXCHANGE_DATE.formatToParts(Date.now())) || minute < 570) {
+    return null;
+  }
+  return Number.isFinite(price) && price > 0 ? price : null;
 }
 
 @Component({
@@ -238,7 +252,9 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   #feedKey = '';
 
   ngAfterViewInit(): void {
-    if (!isPlatformBrowser(this.#platform)) return;
+    if (!isPlatformBrowser(this.#platform)) {
+      return;
+    }
     this.#zone.runOutsideAngular(() => {
       this.#subscribeFeed();
     });
@@ -251,7 +267,9 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
       : selection
         ? `${selection.market}:${selection.symbol}`
         : '';
-    if (key === this.#feedKey && this.#subscription && !this.#subscription.closed) return;
+    if (key === this.#feedKey && this.#subscription && !this.#subscription.closed) {
+      return;
+    }
     this.#subscription?.unsubscribe();
     this.chart()!.setHistory([]);
     this.#assetKey = '';
@@ -260,7 +278,9 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
     if (this.state().asset || this.state().connection !== 'connecting') {
       this.#zone.run(() => this.#state.set({ asset: null, connection: 'connecting', message: '' }));
     }
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     const source =
       this.#feed ??
       createStockDashboardFeed(
@@ -292,16 +312,7 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
             ),
           { connector: () => new ReplaySubject<StockDashboardTick>(1) },
         ),
-        distinctUntilChanged(
-          (a, b) =>
-            a.time === b.time &&
-            a.price === b.price &&
-            a.openPrice === b.openPrice &&
-            a.symbol === b.symbol &&
-            a.market === b.market &&
-            a.currency === b.currency &&
-            a.history === b.history,
-        ),
+        distinctUntilChanged((a, b) => QUOTE_FIELDS.every((field) => a[field] === b[field])),
       )
       .subscribe({
         next: (tick) => this.#zone.runOutsideAngular(() => this.#commit(tick)),
@@ -315,8 +326,12 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   ngOnChanges(): void {
     this.#zone.runOutsideAngular(() => {
       const milliseconds = samplingInterval(this.sampleMs());
-      if (this.#sampleClock.value !== milliseconds) this.#sampleClock.next(milliseconds);
-      if (this.chart()) this.#subscribeFeed();
+      if (this.#sampleClock.value !== milliseconds) {
+        this.#sampleClock.next(milliseconds);
+      }
+      if (this.chart()) {
+        this.#subscribeFeed();
+      }
     });
   }
 
@@ -330,7 +345,9 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   #commit(tick: StockDashboardTick): void {
     const key = `${tick.market}:${tick.symbol}:${tick.currency}:${sessionDay(tick.time * 1000)}`;
     const previous = this.state().asset;
-    if (key === this.#assetKey && previous && tick.time < previous.time) return;
+    if (key === this.#assetKey && previous && tick.time < previous.time) {
+      return;
+    }
     if (key !== this.#assetKey) {
       this.chart()!.setHistory([]);
       this.#assetKey = key;
@@ -383,17 +400,18 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   }
 
   #validTick(tick: StockDashboardTick): boolean {
-    return (
-      !!tick &&
+    if (!tick) {
+      return false;
+    }
+    const hasAsset =
       typeof tick.symbol === 'string' &&
       !!tick.symbol &&
       typeof tick.name === 'string' &&
-      typeof tick.market === 'string' &&
+      typeof tick.market === 'string';
+    return (
+      hasAsset &&
       /^[A-Z]{3}$/.test(tick.currency) &&
-      Number.isFinite(tick.price) &&
-      tick.price > 0 &&
-      Number.isFinite(tick.time) &&
-      tick.time >= 0 &&
+      validPrice(tick) &&
       tick.time <= Math.floor(Date.now() / 1000) + 60
     );
   }

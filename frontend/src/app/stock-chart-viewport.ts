@@ -27,15 +27,22 @@ export class StockChartViewport {
     this.setWindowSeconds(seconds);
   }
   setWindowSeconds(seconds: number): void {
-    if (!Number.isInteger(seconds) || seconds < 2 || seconds > 86400)
+    if (!Number.isInteger(seconds) || seconds < 2 || seconds > 86400) {
       throw new RangeError('windowSeconds must be between 2 and 86400.');
-    if (seconds === this.#seconds) return;
+    }
+    if (seconds === this.#seconds) {
+      return;
+    }
     this.#seconds = seconds;
     this.#fittedSpan = undefined;
-    if (!this.#paused) this.#move(false);
+    if (!this.#paused) {
+      this.#move(false);
+    }
   }
   setHistory(points: readonly StockPriceTick[]): void {
-    if (this.#destroyed) return;
+    if (this.#destroyed) {
+      return;
+    }
     this.#paused = false;
     this.#points = normalizeHistory(points);
     this.#fittedSpan = undefined;
@@ -46,29 +53,45 @@ export class StockChartViewport {
     this.#move(false);
   }
   append(point: StockPriceTick): void {
-    if (this.#destroyed || !validPrice(point)) return;
+    if (this.#destroyed || !validPrice(point)) {
+      return;
+    }
     const last = this.#points.at(-1);
-    if (last && point.time < last.time) return;
+    if (last && point.time < last.time) {
+      return;
+    }
     if (last?.time === point.time) {
-      if (last.price === point.price) return;
+      if (last.price === point.price) {
+        return;
+      }
       this.#points[this.#points.length - 1] = { ...point };
-    } else this.#points.push({ ...point });
-    if (!this.#paused) this.#move(!!last);
+    } else {
+      this.#points.push({ ...point });
+    }
+    if (!this.#paused) {
+      this.#move(!!last);
+    }
   }
   pause(): void {
     this.#paused = true;
     this.#cancel();
   }
   resume(): void {
-    if (!this.#paused) return;
+    if (!this.#paused) {
+      return;
+    }
     this.#paused = false;
     this.#move(true);
   }
   refresh(): void {
-    if (this.#range && !this.#destroyed) this.#render(this.#points, this.#range);
+    if (this.#range && !this.#destroyed) {
+      this.#render(this.#points, this.#range);
+    }
   }
   finishAnimation(): void {
-    if (!this.#paused) this.#move(false);
+    if (!this.#paused) {
+      this.#move(false);
+    }
   }
   destroy(): void {
     this.#destroyed = true;
@@ -78,7 +101,9 @@ export class StockChartViewport {
   #move(animate: boolean): void {
     this.#cancel();
     const latest = this.#points.at(-1);
-    if (!latest || this.#destroyed) return;
+    if (!latest || this.#destroyed) {
+      return;
+    }
     const span =
       this.#seconds === 86400
         ? (this.#fittedSpan ??= Math.min(
@@ -116,7 +141,9 @@ export class StockChartViewport {
     this.#render(this.#points, range);
   }
   #cancel(): void {
-    if (this.#frame !== undefined) cancelAnimationFrame(this.#frame);
+    if (this.#frame !== undefined) {
+      cancelAnimationFrame(this.#frame);
+    }
     this.#frame = undefined;
   }
 }

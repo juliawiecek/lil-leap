@@ -189,11 +189,14 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   #resizeFrame: number | undefined;
 
   ngAfterViewInit(): void {
-    if (!isPlatformBrowser(this.#platform)) return;
+    if (!isPlatformBrowser(this.#platform)) {
+      return;
+    }
     this.#zone.runOutsideAngular(() => {
       const svg = this.svg().nativeElement;
-      for (const name of ['area', 'line', 'clip', 'latest', 'selection', 'crosshair', 'marker'])
+      for (const name of ['area', 'line', 'clip', 'latest', 'selection', 'crosshair', 'marker']) {
         this.#nodes.set(name, svg.querySelector(`[data-${name}]`)!);
+      }
       this.#motion = window.matchMedia('(prefers-reduced-motion: reduce)');
       this.#viewport = new StockChartViewport(
         (points, range) => this.#draw(points, range),
@@ -205,7 +208,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       this.#motion.addEventListener(
         'change',
         () => {
-          if (this.#motion?.matches) this.#viewport?.finishAnimation();
+          if (this.#motion?.matches) {
+            this.#viewport?.finishAnimation();
+          }
         },
         { signal },
       );
@@ -213,16 +218,21 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       svg.addEventListener(
         'pointerdown',
         (event) => {
-          if (event.pointerType !== 'mouse') svg.setPointerCapture?.(event.pointerId);
+          if (event.pointerType !== 'mouse') {
+            svg.setPointerCapture?.(event.pointerId);
+          }
           this.#selectAt(event.clientX);
         },
         { signal },
       );
-      for (const type of ['pointerleave', 'pointercancel', 'pointerup', 'blur'])
+      for (const type of ['pointerleave', 'pointercancel', 'pointerup', 'blur']) {
         svg.addEventListener(type, () => this.#clearSelection(), { signal });
+      }
       svg.addEventListener('keydown', (event) => this.#keyboard(event), { signal });
       this.#observer = new window.ResizeObserver(() => {
-        if (this.#resizeFrame !== undefined) return;
+        if (this.#resizeFrame !== undefined) {
+          return;
+        }
         this.#resizeFrame = requestAnimationFrame(() => {
           this.#resizeFrame = undefined;
           this.#viewport?.refresh();
@@ -264,20 +274,28 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     this.#viewport?.destroy();
     this.#observer?.disconnect();
     this.#events?.abort();
-    if (this.#resizeFrame !== undefined) cancelAnimationFrame(this.#resizeFrame);
+    if (this.#resizeFrame !== undefined) {
+      cancelAnimationFrame(this.#resizeFrame);
+    }
   }
   #attr(name: string, attrs: Record<string, string | number>): void {
     const node = this.#nodes.get(name)!;
-    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+    for (const [key, value] of Object.entries(attrs)) {
+      node.setAttribute(key, String(value));
+    }
   }
   #draw(points: readonly StockPriceTick[], range: ChartRange): void {
     // Freeze the inspection copy as well as the viewport; live updates remain buffered.
     this.#points = [...points];
     this.#range = range;
-    if (this.empty()) this.empty.set(false);
+    if (this.empty()) {
+      this.empty.set(false);
+    }
     const svg = this.svg().nativeElement,
       { width, height } = svg.getBoundingClientRect();
-    if (width < 1 || height < 1) return;
+    if (width < 1 || height < 1) {
+      return;
+    }
     const box = (this.#box = chartBox(width, height));
     const visible = visiblePoints(points, range.from, range.to);
     const paths = chartPaths(reducePoints(visible, range, (box.right - box.left) / 2), range, box);
@@ -293,12 +311,13 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     gradient.setAttribute('y1', String(box.top));
     gradient.setAttribute('y2', String(box.bottom));
     const last = points.at(-1);
-    if (last)
+    if (last) {
       this.#attr('latest', {
         cx: mapX(last.time, range, box),
         cy: mapY(last.price, range, box),
         visibility: last.time <= range.reveal ? 'visible' : 'hidden',
       });
+    }
     svg.querySelectorAll<SVGTextElement>('[data-time]').forEach((node, index) => {
       const time = range.from + ((range.to - range.from) * index) / 2;
       node.setAttribute('x', String(mapX(time, range, box)));
@@ -312,7 +331,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       node.setAttribute('text-anchor', 'end');
       node.textContent = this.#format.format(index ? range.min : range.max);
     });
-    if (this.#selection) this.#showSelection(this.#selection);
+    if (this.#selection) {
+      this.#showSelection(this.#selection);
+    }
   }
   #inspectable(): readonly StockPriceTick[] {
     const range = this.#range;
@@ -324,7 +345,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       : [];
   }
   #selectAt(clientX: number): void {
-    if (!this.#range) return;
+    if (!this.#range) {
+      return;
+    }
     const box = this.#box;
     const x = Math.max(
       box.left,
@@ -334,12 +357,16 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       this.#range.from +
       ((x - box.left) / (box.right - box.left)) * (this.#range.to - this.#range.from);
     const point = nearestPoint(this.#inspectable(), time);
-    if (!point) return;
+    if (!point) {
+      return;
+    }
     this.#viewport?.pause();
     this.#showSelection(point);
   }
   #showSelection(point: StockPriceTick): void {
-    if (!this.#range) return;
+    if (!this.#range) {
+      return;
+    }
     this.#selection = point;
     const box = this.#box,
       x = mapX(point.time, this.#range, box),
@@ -363,9 +390,13 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       this.#clearSelection();
       return;
     }
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      return;
+    }
     const points = this.#inspectable();
-    if (!points.length) return;
+    if (!points.length) {
+      return;
+    }
     event.preventDefault();
     this.#viewport?.pause();
     let index = this.#selection ? lowerBound(points, this.#selection.time) : points.length - 1;

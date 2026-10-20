@@ -124,6 +124,39 @@ test('missing baseline stays unknown and older/invalid quotes cannot replace the
   assert.equal(d.fixture.componentInstance.asset().change, null);
   assert.equal(d.line.getAttribute('stroke'), '#22c55e');
 });
+test('duplicate quotes stay quiet while changes to quote metadata still render', async (t) => {
+  const d = await dashboard(t);
+  let quote = tick(101);
+  d.feed.next(quote);
+  d.sample();
+  const original = d.fixture.componentInstance.asset();
+  const entries = d.zoneEntries;
+  d.feed.next({ ...quote });
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset(), original);
+  assert.equal(d.zoneEntries, entries);
+
+  const changes = [
+    { openPrice: 99 },
+    { currency: 'EUR' },
+    { symbol: 'MSFT' },
+    { market: 'NYSE' },
+    { price: 102 },
+    { time: NOW / 1000 + 1 },
+    { history: [{ time: NOW / 1000 - 10, price: 100 }] },
+  ];
+  for (const change of changes) {
+    const previous = d.fixture.componentInstance.asset();
+    quote = { ...quote, ...change };
+    d.feed.next(quote);
+    d.sample();
+    assert.notEqual(d.fixture.componentInstance.asset(), previous);
+    assert.equal(d.fixture.componentInstance.asset().price, quote.price);
+    assert.equal(d.fixture.componentInstance.asset().currency, quote.currency);
+    assert.equal(d.fixture.componentInstance.asset().openPrice, quote.openPrice);
+  }
+});
+
 test('ten-second chart sampling leaves a raw stream subscriber live', async (t) => {
   const d = await dashboard(t, 10000),
     raw = [];

@@ -367,7 +367,9 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   #baseline = 0;
 
   ngAfterViewInit(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      return;
+    }
     this.#motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.#animation = new SvgRangeAnimation(
       (range) => this.#drawRange(range),
@@ -377,7 +379,9 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     this.#motion.addEventListener(
       'change',
       () => {
-        if (this.#motion?.matches) this.#animation?.finish();
+        if (this.#motion?.matches) {
+          this.#animation?.finish();
+        }
       },
       { signal: this.#events.signal },
     );
@@ -410,8 +414,11 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
             { from, to: Math.max(from + 1, to), min: scale.low, max: scale.high, reveal: to },
             animate,
           );
-        if (this.#zone) this.#zone.runOutsideAngular(draw);
-        else draw();
+        if (this.#zone) {
+          this.#zone.runOutsideAngular(draw);
+        } else {
+          draw();
+        }
         previousSvg = svg;
         previousKey = key;
       },
@@ -425,7 +432,9 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   }
   #drawRange(range: SvgRange): void {
     const svg = this.svg()?.nativeElement;
-    if (!svg) return;
+    if (!svg) {
+      return;
+    }
     const box = { left: 0, right: WIDTH, top: 0, bottom: HEIGHT };
     const paths = chartPaths(visiblePoints(this.#drawPoints, range.from, range.to), range, box);
     svg.querySelector('.line')?.setAttribute('d', paths.line);

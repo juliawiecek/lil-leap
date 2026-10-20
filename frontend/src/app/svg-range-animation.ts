@@ -13,7 +13,9 @@ export class SvgRangeAnimation {
     this.#reducedMotion = reducedMotion;
   }
   move(target: ChartRange, animate = true): void {
-    if (this.#destroyed) return;
+    if (this.#destroyed) {
+      return;
+    }
     this.cancel();
     this.#target = target;
     const origin = this.#current;
@@ -40,10 +42,14 @@ export class SvgRangeAnimation {
   }
   finish(): void {
     this.cancel();
-    if (this.#target && !this.#destroyed) this.#show(this.#target);
+    if (this.#target && !this.#destroyed) {
+      this.#show(this.#target);
+    }
   }
   cancel(): void {
-    if (this.#frame !== undefined) cancelAnimationFrame(this.#frame);
+    if (this.#frame !== undefined) {
+      cancelAnimationFrame(this.#frame);
+    }
     this.#frame = undefined;
   }
   destroy(): void {

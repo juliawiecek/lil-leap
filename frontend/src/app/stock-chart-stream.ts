@@ -9,7 +9,9 @@ import type { StockPriceTick } from './stock-price-ticks';
 import { validPrice } from './stock-chart-math';
 export type ChartSampleMs = 5000 | 10000;
 export function samplingInterval(value: number): ChartSampleMs {
-  if (value !== 5000 && value !== 10000) throw new RangeError('sampleMs must be 5000 or 10000.');
+  if (value !== 5000 && value !== 10000) {
+    throw new RangeError('sampleMs must be 5000 or 10000.');
+  }
   return value;
 }
 /** Apply only on the chart branch: the supplied source and other subscribers stay live. */

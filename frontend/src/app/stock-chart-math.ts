@@ -27,7 +27,10 @@ export const UP: ChartPalette = { line: '#22c55e', top: 'rgba(34, 197, 94, 0.3)'
 export const DOWN: ChartPalette = { line: '#ef4444', top: 'rgba(239, 68, 68, 0.3)' };
 export const UNKNOWN: ChartPalette = { line: '#94a3b8', top: 'rgba(148, 163, 184, 0.12)' };
 export function performancePalette(price: number, open: number | null): ChartPalette {
-  return open === null || !Number.isFinite(open) || open <= 0 ? UNKNOWN : price >= open ? UP : DOWN;
+  if (open === null || !Number.isFinite(open) || open <= 0) {
+    return UNKNOWN;
+  }
+  return price >= open ? UP : DOWN;
 }
 export function validPrice(point: StockPriceTick): boolean {
   return (
@@ -59,7 +62,9 @@ export function priceDomain(points: readonly StockPriceTick[]): { min: number; m
     min = Math.min(min, point.price);
     max = Math.max(max, point.price);
   }
-  if (!points.length) return { min: 0, max: 1 };
+  if (!points.length) {
+    return { min: 0, max: 1 };
+  }
   const padding = Math.max((max - min) * 0.16, max * 0.0005, 0.01);
   return { min: min - padding, max: max + padding };
 }
@@ -69,7 +74,9 @@ export function visiblePoints(
   from: number,
   to: number,
 ): readonly StockPriceTick[] {
-  if (!points.length) return [];
+  if (!points.length) {
+    return [];
+  }
   const start = lowerBound(points, from),
     end = lowerBound(points, to);
   return points.slice(Math.max(0, start - 1), Math.min(points.length, end + 1));
@@ -79,8 +86,11 @@ export function lowerBound(points: readonly StockPriceTick[], time: number): num
     high = points.length;
   while (low < high) {
     const mid = (low + high) >>> 1;
-    if (points[mid].time < time) low = mid + 1;
-    else high = mid;
+    if (points[mid].time < time) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
   }
   return low;
 }
@@ -104,17 +114,25 @@ export function reducePoints(
   columns: number,
 ): readonly StockPriceTick[] {
   const buckets = Math.max(1, Math.floor(columns));
-  if (points.length <= buckets * 4) return points;
+  if (points.length <= buckets * 4) {
+    return points;
+  }
   const result: StockPriceTick[] = [];
   let group: StockPriceTick[] = [],
     previous = -Infinity;
   const flush = () => {
-    if (!group.length) return;
+    if (!group.length) {
+      return;
+    }
     let low = group[0],
       high = group[0];
     for (const point of group) {
-      if (point.price < low.price) low = point;
-      if (point.price > high.price) high = point;
+      if (point.price < low.price) {
+        low = point;
+      }
+      if (point.price > high.price) {
+        high = point;
+      }
     }
     result.push(
       ...[...new Set([group[0], low, high, group[group.length - 1]])].sort(
@@ -139,7 +157,9 @@ export function chartPaths(
   range: ChartRange,
   box: ChartBox,
 ): { line: string; area: string } {
-  if (!points.length) return { line: '', area: '' };
+  if (!points.length) {
+    return { line: '', area: '' };
+  }
   const coord = (value: number) => Number(value.toFixed(3));
   const line = smoothPricePath(
     points.map((point) => ({ x: mapX(point.time, range, box), y: mapY(point.price, range, box) })),
@@ -152,14 +172,20 @@ export function chartPaths(
 
 /** Monotone cubics pass through real observations. Every control stays inside its segment's price bounds. */
 export function smoothPricePath(points: readonly { x: number; y: number }[]): string {
-  if (!points.length) return '';
+  if (!points.length) {
+    return '';
+  }
   const coord = (value: number) => Number(value.toFixed(3));
   const slopes = points
     .slice(1)
     .map((point, index) => (point.y - points[index].y) / (point.x - points[index].x));
   const tangent = (index: number): number => {
-    if (index === 0) return slopes[0] ?? 0;
-    if (index === points.length - 1) return slopes[index - 1];
+    if (index === 0) {
+      return slopes[0] ?? 0;
+    }
+    if (index === points.length - 1) {
+      return slopes[index - 1];
+    }
     const a = slopes[index - 1],
       b = slopes[index];
     return a * b <= 0 ? 0 : (2 * a * b) / (a + b);
