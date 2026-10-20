@@ -32,6 +32,9 @@ import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
+import { BriefingButton, BriefingSource } from './briefing-button';
+import { SwitchScanService } from './switch-scan';
+import { SwitchScanSettings } from './switch-scan-settings';
 import {
   CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
 } from './portfolio-history';
@@ -90,7 +93,10 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart],
+  imports: [
+    CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings,
+    PortfolioChart, BriefingButton, SwitchScanSettings,
+  ],
   templateUrl: './novice-dashboard.html',
   styleUrl: './novice-dashboard.scss',
 })
@@ -106,6 +112,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketClock = signal(new Date());
   readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
+  /** Open or closed for the briefing; null until the status first loads. */
+  readonly marketKnownOpen = computed(() => this.marketStatus()?.open ?? null);
+  /** Switch control runs app-wide once turned on; injecting it here starts it after a reload. */
+  readonly switchScan = inject(SwitchScanService, { optional: true }) ?? new SwitchScanService();
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.marketStatus(), this.marketClock()));
   /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
@@ -757,6 +767,37 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return rejectionReason(null);
     }
   }
+
+  /**
+   * What the spoken briefing reads: the portfolio as shown, today's move of each holding from the
+   * live feed, and this account's orders. A failed order load leaves orders out rather than failing.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.holdings();
+    return {
+      now,
+      market: this.marketStatus(),
+      balanceHidden: !this.showBalance(),
+      total: this.portfolioValue(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((h) => ({ symbol: h.symbol, name: h.name, dayChangePercent: live.get(h.symbol)?.change ?? null })),
+      orders,
+      pricesDelayed: held.some((h) => {
+        const quote = live.get(h.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
 
   /** Opens the orders list from a toast. */
   viewOrders(): void {
