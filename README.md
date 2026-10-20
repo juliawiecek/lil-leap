@@ -429,6 +429,10 @@ cd auth
 npm test
 ```
 
+Identity locks sign-in for 15 minutes after three consecutive failed passwords.
+The retained ten-minute inactivity timeout and its difference from the one-minute
+BRS note are documented in the [authentication policy decision](docs/architecture/ADR-NEXT-253-authentication-policy.md).
+
 ### Auth integration test (Docker)
 
 [scripts/auth-integration-test.sh](scripts/auth-integration-test.sh) starts the real

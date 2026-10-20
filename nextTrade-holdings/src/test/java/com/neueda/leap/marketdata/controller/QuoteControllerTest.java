@@ -9,12 +9,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,6 +34,30 @@ class QuoteControllerTest {
     void setUp() {
         repository = mock(QuoteRepository.class);
         mockMvc = standaloneSetup(new QuoteController(repository)).build();
+    }
+
+    @Test
+    void dayOpensReturnsOneBaselinePerInstrumentAndSkipsMissingQuotes() throws Exception {
+        UUID missing = UUID.randomUUID();
+        MarketQuote quote = new MarketQuote(UUID.randomUUID(), instrumentId, "AAPL", "NYSE",
+                new BigDecimal("100.50"), new BigDecimal("100.75"), new BigDecimal("100.625"),
+                now, "TEST", false);
+        when(repository.findDayOpen(eq(instrumentId), any(Instant.class)))
+                .thenReturn(Optional.of(quote));
+        mockMvc.perform(get("/quotes/day-opens").param("ids", instrumentId + "," + missing + "," + instrumentId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].instrumentId").value(instrumentId.toString()))
+                .andExpect(jsonPath("$[0].midpoint").value(100.625));
+        verify(repository).findDayOpen(eq(instrumentId), any(Instant.class));
+    }
+
+    @Test
+    void dayOpensRejectsInvalidBatches() throws Exception {
+        mockMvc.perform(get("/quotes/day-opens").param("ids", "")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/quotes/day-opens").param("ids", "not-a-uuid")).andExpect(status().isBadRequest());
+        String oversized = String.join(",", java.util.Collections.nCopies(101, instrumentId.toString()));
+        mockMvc.perform(get("/quotes/day-opens").param("ids", oversized)).andExpect(status().isBadRequest());
     }
 
     @Test

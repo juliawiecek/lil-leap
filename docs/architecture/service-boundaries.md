@@ -81,6 +81,8 @@ All service ports are internal to Compose. The client URLs remain
 | NextTrade | `GET /api/v1/orders` | Holdings |
 | NextTrade | `/api/v1/accounts`, `/holdings`, `/cash`, `/instruments` | Holdings (all use `/api/v1`) |
 | NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*`, `/api/v1/quotes/candles/*` | Holdings display reads |
+| NextTrade | `/api/v1/quotes/{symbol}` | Quotes |
+| NextTrade | `/api/v1/quotes/latest/*`, `/api/v1/quotes/history/*`, `/api/v1/quotes/candles/*`, `/api/v1/quotes/day-opens` | Holdings display reads |
 | NextTrade | `/api/v1/clients/{id}/holdings`, `/api/v1/clients/{id}/cash`, `/api/v1/cash/balance/{id}` | Holdings (caller-scoped) |
 | NextTrade | `/api/v1/clients/{id}/orders?from=YYYY-MM-DD&to=YYYY-MM-DD&status=FILLED` | Holdings (TRADER-only, caller-scoped history and fills) |
 | Insights | `/api/v1/reports/*` | Insights |
@@ -159,9 +161,9 @@ ports through the gateway. No backend ports are published.
 
 These are separate product requirements; moving folders does not implement them:
 
-- The Insights dashboard still uses sample data from `insights-data.ts`; it needs
-  an authenticated data-loading flow and agreed reporting contracts. The aggregate
-  summary endpoint is real, but it is not wired into the demo charts.
+- Insights pages read only from the insights service (TS-18.4); the range-based
+  insights and the client pages are TS-18.5, and report CSVs still come from the
+  bundled `trades.csv` until NEXT-252.
 - NextTrade's trading screens also simulate trading locally; their live network
   integration covers authentication and order history through Holdings. Connect order tickets, quotes and
   portfolio views to the gateway APIs in a dedicated frontend integration change.

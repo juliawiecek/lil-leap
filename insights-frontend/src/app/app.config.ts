@@ -1,13 +1,14 @@
 import { ApiHttpClient, SESSION_AUTH } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
 import { inject, provideAppInitializer } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   LIVE_REPORTS, REPORT_FILES, attachmentFilename,
-  type LiveReports, type ReportFiles, type ReportSummary,
+  type ActivityPoint, type LiveReports, type ReportFiles, type ReportSummary, type TopInstrument,
 } from './live-reports';
+import { TRADE_TRAIL, type TradeTrail, type TradeTrailResponse } from './trade-trail';
 import { routes } from './app.routes';
 import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
@@ -17,14 +18,17 @@ export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LIVE_REPORTS, useFactory: (): LiveReports => {
       const http = inject(ApiHttpClient);
-      const session = inject(AppSessionService);
-      const router = inject(Router);
       return {
         load: () => firstValueFrom(http.get<ReportSummary>('/api/v1/reports/summary')),
-        logout: async () => {
-          await session.logout();
-          await router.navigate(['/login'], { replaceUrl: true });
-        },
+        topInstruments: () => firstValueFrom(http.get<TopInstrument[]>('/api/v1/reports/insights/top-instruments')),
+        activityTrend: () => firstValueFrom(http.get<ActivityPoint[]>('/api/v1/reports/insights/client-activity-trend')),
+      };
+    } },
+    { provide: TRADE_TRAIL, useFactory: (): TradeTrail => {
+      const http = inject(ApiHttpClient);
+      return {
+        load: (orderId) => firstValueFrom(
+          http.get<TradeTrailResponse>(`/api/v1/trades/${encodeURIComponent(orderId)}/events`)),
       };
     } },
     { provide: REPORT_FILES, useFactory: (): ReportFiles => {

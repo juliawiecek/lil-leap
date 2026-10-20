@@ -4,6 +4,7 @@ import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
 import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
 import com.neueda.leap.reporting.entity.TradeFillEntity;
+import com.neueda.leap.reporting.model.MarketDay;
 import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import org.springframework.core.io.ByteArrayResource;
@@ -100,7 +101,6 @@ public class ReportingServiceImpl implements ReportingService {
             HEADER_TOTAL_QUANTITY,
             HEADER_TOTAL_NOTIONAL);
 
-    private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final BigDecimal ZERO_MONEY = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     private static final MediaType TEXT_CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
@@ -113,7 +113,7 @@ public class ReportingServiceImpl implements ReportingService {
      * Creates the reporting service.
      *
      * @param repository existing read-only reporting repository used by the dashboard insights endpoints
-     * @param clock UTC-aware clock used to derive the current day window
+     * @param clock source of the current instant, used to find today's New York trading day
      * @param resourceLoader classpath resource loader used to read the BR-16 CSV dataset
      */
     public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {
@@ -124,7 +124,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public OverviewDto getOverview() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay range = MarketDay.today(clock);
         TradeReportingRepository.OverviewProjection overview =
                 repository.summarize(range.startInclusive(), range.endExclusive());
 
@@ -136,7 +136,7 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public List<TopInstrumentDto> getTopInstruments() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay range = MarketDay.today(clock);
         return repository.findTopInstrumentsByTradeCount(
                         range.startInclusive(),
                         range.endExclusive(),
@@ -148,14 +148,14 @@ public class ReportingServiceImpl implements ReportingService {
 
     @Override
     public List<ClientActivityTrendDto> getClientActivityTrend() {
-        ReportDateRange range = currentUtcDayRange();
+        MarketDay range = MarketDay.today(clock);
         Map<String, Long> countsByHour = repository
                 .findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
                         range.startInclusive(),
                         range.endExclusive())
                 .stream()
                 .map(TradeFillEntity::getFilledAt)
-                .map(this::toUtcHourLabel)
+                .map(MarketDay::hourLabel)
                 .collect(Collectors.toMap(
                         label -> label,
                         ignored -> 1L,
@@ -198,20 +198,6 @@ public class ReportingServiceImpl implements ReportingService {
     private String reportFilename(String reportName, ReportDateRange range) {
         return reportName + "_" + DATE_FORMATTER.format(range.startDate())
                 + "_" + DATE_FORMATTER.format(range.endDate()) + ".csv";
-    }
-
-    private ReportDateRange currentUtcDayRange() {
-        LocalDate todayUtc = LocalDate.now(clock);
-        return new ReportDateRange(todayUtc, todayUtc);
-    }
-
-    private String toUtcHourLabel(Instant executionTime) {
-        return executionTime.atOffset(ZoneOffset.UTC)
-                .withMinute(0)
-                .withSecond(0)
-                .withNano(0)
-                .toLocalTime()
-                .format(HOUR_FORMATTER);
     }
 
     private long defaultLong(Long value) {

@@ -65,7 +65,7 @@ echo ""
 echo "=========================================="
 echo "Test 4: SELECT on all helper views"
 echo "=========================================="
-VIEWS=(v_account_cash v_account_holdings v_latest_quotes v_active_sessions v_trader_tier_eligibility)
+VIEWS=(v_account_cash v_account_holdings v_latest_quotes v_active_sessions v_trader_tier_eligibility v_trade_audit_events)
 for VIEW in "${VIEWS[@]}"; do
     SELECT_OK=$(psql_admin_query "SELECT has_table_privilege(:'app_user', '$VIEW', 'SELECT');")
     if [ "$SELECT_OK" = "t" ]; then

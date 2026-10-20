@@ -80,13 +80,15 @@ export function orderItem(row: OrderHistoryRow): ActivityItem {
   const filled = row.status === 'FILLED' && row.fillPrice !== null;
   const shares = filled ? (row.filledQuantity ?? row.quantity) : row.quantity;
   const title = filled ? `${buy ? 'Bought' : 'Sold'} ${shares} ${row.symbol}` : `${buy ? 'Buy' : 'Sell'} ${shares} ${row.symbol}`;
-  let detail = titleCase(row.status);
+  let detail: string;
   if (filled) {
     detail = `Filled at ${formatMoney(row.fillPrice!)}`;
   } else if (row.status === 'REJECTED') {
     detail = 'Rejected, nothing was charged';
   } else if (row.status === 'CANCELLED') {
     detail = 'Cancelled, nothing was charged';
+  } else {
+    detail = titleCase(row.status);
   }
   return {
     id: `order-${row.orderId}`,

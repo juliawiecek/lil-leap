@@ -144,6 +144,54 @@ public class SettlementRecoveryService {
         });
     }
 
+    /**
+     * Derives the settlement state from one primary database snapshot. The trade id is the order
+     * id; the fill and both append-only ledger legs are required before a trade is settled.
+     *
+     * @param tradeId the permanent order/trade identifier
+     * @return the current ledger-derived state
+     * @throws SettlementException 404 when the order does not exist
+     */
+    public SettlementStatusResponse status(UUID tradeId) {
+        return transactions.execute(status -> {
+            SettlementSnapshot snapshot = jdbc.query("""
+                    SELECT o.order_id, o.status AS order_status, f.fill_id,
+                           f.fill_id IS NOT NULL AS has_fill,
+                                                     (SELECT COUNT(*) FROM holding_movements m WHERE m.fill_id = f.fill_id) = 1
+                                                             AND EXISTS (SELECT 1 FROM holding_movements m
+                                                                                     WHERE m.fill_id = f.fill_id
+                                                                                         AND m.account_id = o.account_id
+                                                                                         AND m.instrument_id = o.instrument_id
+                                                                                         AND m.quantity_change = CASE WHEN o.side = 'BUY' THEN f.filled_quantity ELSE -f.filled_quantity END
+                                                                                         AND m.cost_basis = f.execution_price
+                                                                                         AND m.movement_type = o.side) AS has_movement,
+                                                     (SELECT COUNT(*) FROM cash_transactions c WHERE c.fill_id = f.fill_id) = 1
+                                                             AND EXISTS (SELECT 1 FROM cash_transactions c
+                                                                                     WHERE c.fill_id = f.fill_id
+                                                                                         AND c.account_id = o.account_id
+                                                                                         AND c.transaction_type = o.side
+                                                                                         AND c.amount = CASE WHEN o.side = 'BUY'
+                                                                                                                                 THEN -ROUND(f.execution_price * f.filled_quantity, 2)
+                                                                                                                                 ELSE ROUND(f.execution_price * f.filled_quantity, 2) END
+                                                                                         AND c.settlement_status = 'SETTLED'
+                                                                                         AND c.settled_at IS NOT NULL) AS has_cash,
+                           EXISTS (SELECT 1 FROM audit_log a WHERE a.related_order_id = o.order_id
+                                   AND a.event_type = 'SETTLEMENT_COMPLETED') AS has_completion
+                    FROM orders o LEFT JOIN fills f ON f.order_id = o.order_id
+                    WHERE o.order_id = ?
+                    """, rs -> rs.next() ? new SettlementSnapshot(
+                    rs.getObject("order_id", UUID.class), rs.getString("order_status"),
+                    rs.getObject("fill_id", UUID.class), rs.getBoolean("has_fill"),
+                    rs.getBoolean("has_movement"), rs.getBoolean("has_cash"),
+                    rs.getBoolean("has_completion")) : null, tradeId);
+            if (snapshot == null) {
+                throw new SettlementException(HttpStatus.NOT_FOUND, "TRADE_NOT_FOUND",
+                        "No trade exists with this tradeId.");
+            }
+            return new SettlementStatusResponse(tradeId, snapshot.state(), snapshot.fillId());
+        });
+    }
+
     /** Serializes with execution, which locks the account row before settling. */
     private Settlement lockAndLoad(UUID settlementId) {
         List<UUID> account = jdbc.queryForList("""
@@ -218,6 +266,25 @@ public class SettlementRecoveryService {
     private static String partsPayload(UUID settlementId, String field, List<SettlementPart> parts) {
         String names = parts.stream().map(part -> "\"" + part.name() + "\"").collect(Collectors.joining(","));
         return fillPayload(settlementId) + ",\"" + field + "\":[" + names + "]}";
+    }
+
+    private record SettlementSnapshot(UUID tradeId, String orderStatus, UUID fillId, boolean hasFill,
+                                      boolean hasMovement, boolean hasCash, boolean hasCompletion) {
+        String state() {
+            if (!hasFill) {
+                return "REJECTED".equals(orderStatus) ? "REJECTED" : "NOT_SETTLED";
+            }
+            if (!hasMovement && !hasCash && !hasCompletion && !"FILLED".equals(orderStatus)) {
+                return "NOT_SETTLED";
+            }
+            if ("FILLED".equals(orderStatus) && hasMovement && hasCash && hasCompletion) {
+                return "SETTLED";
+            }
+            if ("REJECTED".equals(orderStatus) && !hasMovement && !hasCash) {
+                return "REJECTED";
+            }
+            return "INCONSISTENT";
+        }
     }
 
     /** One fill with what its settlement currently has. */

@@ -7,6 +7,7 @@ import { RefreshTokenService } from '../security/refresh-token.service';
 import { TierService } from '../onboarding/tier.service';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { UserRole } from './user-role.enum';
+import { ProfileAccessDeniedException } from './exceptions/profile-access-denied.exception';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -29,7 +30,7 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        { provide: UserService, useValue: { login: jest.fn() } },
+        { provide: UserService, useValue: { login: jest.fn(), findProfileByUserId: jest.fn() } },
         { provide: RegistrationService, useValue: { register: jest.fn() } },
         { provide: JwtService, useValue: { issueToken: jest.fn() } },
         { provide: RefreshTokenService, useValue: { issue: jest.fn(), rotate: jest.fn(), revoke: jest.fn() } },
@@ -124,5 +125,39 @@ describe('AuthController', () => {
     await expect(controller.logout({ refreshToken: 'raw-refresh-token' } as any)).resolves.toBeUndefined();
 
     expect(refreshTokenService.revoke).toHaveBeenCalledWith('raw-refresh-token');
+  });
+
+  it('returns only the authenticated user profile fields', async () => {
+    userService.findProfileByUserId.mockResolvedValue({
+      user: user as any,
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      address: '1 Main St',
+      phone: '555-0100',
+      ssnEncrypted: Buffer.from('sensitive'),
+      dateOfBirth: '1815-12-10',
+    } as any);
+
+    const result = await controller.profile(user.userId, { userId: user.userId } as any);
+
+    expect(result).toEqual({
+      id: user.userId,
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      address: '1 Main St',
+      email: user.email,
+      phone: '555-0100',
+    });
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result).not.toHaveProperty('ssnEncrypted');
+    expect(result).not.toHaveProperty('dateOfBirth');
+  });
+
+  it('denies a request for another user profile before reading the database', async () => {
+    await expect(controller.profile('22222222-2222-2222-2222-222222222222', { userId: user.userId } as any)).rejects.toThrow(
+      ProfileAccessDeniedException,
+    );
+
+    expect(userService.findProfileByUserId).not.toHaveBeenCalled();
   });
 });

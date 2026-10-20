@@ -29,6 +29,7 @@ import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { MarketTicker } from './market-ticker';
 import { tradingClients } from './trading-clients';
+import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
@@ -145,6 +146,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   private destroyed = false;
   readonly symbol = signal('AAPL');
   readonly name = input('');
+  readonly profile = input<UserProfile | null>(null);
+  readonly profileLoading = input(false);
+  readonly profileError = input('');
   readonly mode = input<'NOVICE' | 'ADVANCED'>('NOVICE');
   readonly signOut = output<void>();
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
@@ -216,11 +220,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
   readonly headerChangeText = computed(() => {
     const { amount, percent } = this.headerChange();
-    let sign = '';
+    let sign: string;
     if (amount > 0) {
       sign = '+';
     } else if (amount < 0) {
       sign = '−';
+    } else {
+      sign = '';
     }
     return `${formatMoney(amount, true)} (${sign}${Math.abs(percent).toFixed(2)}%)`;
   });

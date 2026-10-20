@@ -1,0 +1,100 @@
+<div class="login-screen">
+  <div class="market-tape" aria-hidden="true">
+    <div class="tape-track">
+      @for (copy of [0, 1]; track copy) {
+        <div class="tape-group">
+          @for (word of tape; track word) {
+            <span>{{ word }}</span><span class="divider">/</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+  <div class="signin-stock-background" aria-hidden="true">
+    <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
+      <defs>
+        <pattern id="signin-chart-grid" width="52" height="26" patternUnits="userSpaceOnUse">
+          <path d="M52 0H0V26" fill="none" stroke="#ffffff" stroke-opacity="0.035" />
+        </pattern>
+      </defs>
+      <rect width="420" height="500" fill="url(#signin-chart-grid)" />
+      <g class="login-candles">
+        @for (candle of candles; track $index) {
+          <g [attr.opacity]="candle.opacity" [class.falling]="candle.falling">
+            <path [attr.d]="'M' + candle.x + ' ' + candle.high + 'V' + candle.low" />
+            <rect [attr.x]="candle.x - 1.8" [attr.y]="candle.top" width="3.6" [attr.height]="candle.height" />
+          </g>
+        }
+      </g>
+    </svg>
+  </div>
+
+  <div class="brand-lockup" role="img" aria-label="NextTrade Insights">
+    <svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+      <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
+      <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
+    </svg>
+    <span class="brand-copy" aria-hidden="true">
+      <span class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></span>
+      <span class="brand-name brand-product">Insights</span>
+    </span>
+  </div>
+
+  <section class="auth-shell">
+    <header class="auth-header">
+      <div class="secure-status">Secure connection</div>
+    </header>
+
+    <div class="auth-content">
+      <section class="auth-copy" aria-labelledby="landing-title">
+        <div class="auth-eyebrow">Insights · Internal workspace</div>
+        <h1 id="landing-title">See what’s <em>next<span>.</span></em></h1>
+        <p>Trading activity, client accounts and the full record of every trade, for NextTrade analysts and operations staff.</p>
+      </section>
+
+      <main class="auth-panel" aria-labelledby="login-title">
+        <h2 id="login-title">Welcome back</h2>
+        <p class="auth-subtitle">Sign in with your analyst or operations account.</p>
+        <form method="post" novalidate (submit)="$event.preventDefault(); signIn(email.value, password.value)">
+          <div class="field-group">
+            <label for="email">Email address</label>
+            <input #email id="email" name="email" type="email" autocomplete="username" placeholder="you@nexttrade.local" required />
+          </div>
+          <div class="field-group">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                #password
+                id="password"
+                name="password"
+                [type]="passwordVisible() ? 'text' : 'password'"
+                autocomplete="current-password"
+                placeholder="Enter your password"
+                required
+              />
+              <button
+                class="password-toggle"
+                type="button"
+                [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+                (click)="passwordVisible.set(!passwordVisible())"
+              >
+                {{ passwordVisible() ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+          </div>
+          @if (message()) {
+            <p class="form-status" role="alert">{{ message() }}</p>
+          }
+          <button class="primary-action" type="submit" [disabled]="pending()">
+            {{ pending() ? 'Signing in…' : 'Continue securely' }}
+          </button>
+        </form>
+      </main>
+    </div>
+
+    <footer class="auth-footer">
+      <span>© 2026 NextTrade. Internal use only.</span>
+      <span>Access is limited to each role’s responsibilities.</span>
+    </footer>
+  </section>
+</div>

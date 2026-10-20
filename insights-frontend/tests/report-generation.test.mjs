@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, input } from './dom-helper.mjs';
 import { component } from './component-helper.mjs';
-const { App } = await import('../src/app/app.ts');
-const { AuthService } = await import('../src/app/auth.service.ts');
+const { ReportsPage } = await import('../src/app/pages/reports/reports-page.ts');
 const {
   REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, utcDate,
 } = await import('../src/app/live-reports.ts');
@@ -25,7 +24,7 @@ function fakeReports(result = csv) {
 }
 
 function app(t, reports) {
-  const instance = component(t, App, reports ? [{ provide: REPORT_FILES, useValue: reports.service }] : []);
+  const instance = component(t, ReportsPage, reports ? [{ provide: REPORT_FILES, useValue: reports.service }] : []);
   const download = t.mock.method(instance, 'download', () => {});
   return { instance, download };
 }
@@ -138,19 +137,16 @@ test('without a report service the page explains that generation is unavailable'
 
 test('the rendered reports page requires both dates before any report can be generated', async t => {
   const reports = fakeReports();
-  const fixture = await render(t, App, {}, [
-    { provide: AuthService, useValue: { userRole: 'ANALYST', email: 'analyst@nexttrade.local' } },
+  const fixture = await render(t, ReportsPage, {}, [
     { provide: REPORT_FILES, useValue: reports.service },
   ]);
   const instance = fixture.componentInstance;
   t.mock.method(instance, 'download', () => {});
-  instance.navigate('Reports'); fixture.detectChanges();
   await fixture.whenStable(); fixture.detectChanges();
   const host = fixture.nativeElement;
   const buttons = () => kinds.map(kind => host.querySelector(`[data-testid="generate-${kind}"]`));
 
   assert.equal(host.querySelectorAll('.report-card').length, 3);
-  assert.equal(host.querySelector('.date-range'), null, 'the dashboard date filter is replaced by the report period');
   for (const id of ['report-start', 'report-end']) {
     const field = host.querySelector(`[data-testid="${id}"]`);
     assert.equal(field.required, true);

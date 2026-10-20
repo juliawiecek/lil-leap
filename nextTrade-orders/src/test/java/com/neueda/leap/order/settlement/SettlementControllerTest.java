@@ -18,6 +18,7 @@ import java.util.UUID;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SettlementControllerTest {
     private static final String RECOVER = "/settlements/recover";
     private static final String ROLLBACK = "/settlements/rollback";
+        private static final String STATUS = "/settlements/status/";
     private static final String AUTHORIZATION = "Authorization";
     private static final String SETTLEMENT_ID = "settlementId";
 
@@ -55,6 +57,33 @@ class SettlementControllerTest {
         mvc.perform(post(ROLLBACK).header(AUTHORIZATION, bearer("OPERATIONS")).param(SETTLEMENT_ID, fill.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.action").value("ROLLED_BACK"));
+    }
+
+    @Test
+    void operationsCanReadSettlementStatus() throws Exception {
+        when(settlements.status(fill)).thenReturn(new SettlementStatusResponse(fill, "SETTLED", UUID.randomUUID()));
+
+        mvc.perform(get(STATUS + fill).header(AUTHORIZATION, bearer("OPERATIONS")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tradeId").value(fill.toString()))
+                .andExpect(jsonPath("$.status").value("SETTLED"));
+    }
+
+    @Test
+    void tradersCannotReadSettlementStatus() throws Exception {
+        mvc.perform(get(STATUS + fill).header(AUTHORIZATION, bearer("TRADER")))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(settlements);
+    }
+
+    @Test
+    void unknownTradeStatusIsNotFound() throws Exception {
+        when(settlements.status(fill)).thenThrow(new SettlementException(HttpStatus.NOT_FOUND,
+                "TRADE_NOT_FOUND", "No trade exists with this tradeId."));
+
+        mvc.perform(get(STATUS + fill).header(AUTHORIZATION, bearer("OPERATIONS")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("TRADE_NOT_FOUND"));
     }
 
     @Test

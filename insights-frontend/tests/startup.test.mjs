@@ -4,7 +4,7 @@ import { resolveTemplates } from './dom-helper.mjs';
 import { Router } from '@angular/router';
 import { APP_BOOTSTRAP_LISTENER, destroyPlatform } from '@angular/core';
 const { appConfig } = await import('../src/app/app.config.ts');
-await import('../src/app/app.ts');
+await import('../src/app/shell/shell.ts');
 
 test('real insights entry point starts at login without a stored session', { timeout: 15000 }, async t => {
   await resolveTemplates();

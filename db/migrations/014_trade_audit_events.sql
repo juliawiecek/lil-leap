@@ -10,5 +10,9 @@ BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'reporting_user') THEN
         GRANT SELECT ON v_trade_audit_events TO reporting_user;
     END IF;
+    -- Insights connects as app_user outside the replica setup (compose, local).
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
+        GRANT SELECT ON v_trade_audit_events TO app_user;
+    END IF;
 END $$;
 COMMIT;

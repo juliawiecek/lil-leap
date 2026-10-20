@@ -29,13 +29,14 @@ class ReportingBoundaryTest {
     private String token(String role) { return "Bearer " + tokens.issueToken(UUID.randomUUID(), "test@example.test", role); }
 
     @Test
-    void onlyAnalystsCanReadReports() throws Exception {
+    void analystsAndOperationsStaffCanReadReports() throws Exception {
         when(reports.summary()).thenReturn(Map.of("fills", 2));
         mvc.perform(get("/reports/summary")).andExpect(status().isUnauthorized());
         mvc.perform(get("/reports/summary").header("Authorization", token("TRADER"))).andExpect(status().isForbidden());
-        mvc.perform(get("/reports/summary").header("Authorization", token("OPERATIONS"))).andExpect(status().isForbidden());
-        mvc.perform(get("/reports/summary").header("Authorization", token("ANALYST")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.fills").value(2));
+        for (String role : new String[]{"ANALYST", "OPERATIONS"}) {
+            mvc.perform(get("/reports/summary").header("Authorization", token(role)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.fills").value(2));
+        }
     }
 
     @Test

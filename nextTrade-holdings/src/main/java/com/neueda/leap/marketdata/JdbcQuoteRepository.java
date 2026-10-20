@@ -4,6 +4,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -92,6 +97,41 @@ public class JdbcQuoteRepository implements QuoteRepository {
                 + " ORDER BY q.quoted_at DESC,q.created_at DESC,q.quote_id DESC"
                 + " LIMIT ?";
         return jdbc.query(query, mapper, instrumentId, clampedLimit);
+    }
+
+    /**
+     * Selects a regular-session baseline using the instrument/time index, not a history page.
+     * Before 09:30 New York time (and on weekends), the last quote at or before the
+     * previous weekday's 16:00 close is used, excluding overnight and premarket ticks.
+     *
+     * @param instrumentId persistent instrument identifier
+     * @param now current instant
+     * @return first session quote or previous available close; empty when none exists
+     */
+    @Override
+    public Optional<MarketQuote> findDayOpen(UUID instrumentId, Instant now) {
+        ZoneId exchange = ZoneId.of("America/New_York");
+        LocalDate day = now.atZone(exchange).toLocalDate();
+        Instant open = day.atTime(9, 30).atZone(exchange).toInstant();
+        if (weekday(day) && !now.isBefore(open)) {
+            Instant close = day.atTime(16, 0).atZone(exchange).toInstant();
+            Instant through = now.isBefore(close) ? now : close;
+            return jdbc.query(SELECT + "WHERE i.instrument_id=? AND q.quoted_at>=? AND q.quoted_at<=?"
+                            + " ORDER BY q.quoted_at ASC,q.created_at ASC,q.quote_id ASC LIMIT 1",
+                    mapper, instrumentId, open.atOffset(java.time.ZoneOffset.UTC),
+                    through.atOffset(java.time.ZoneOffset.UTC)).stream().findFirst();
+        }
+        LocalDate previous = day.minusDays(1);
+        while (!weekday(previous)) {
+            previous = previous.minusDays(1);
+        }
+        return jdbc.query(SELECT + "WHERE i.instrument_id=? AND q.quoted_at<=?" + ORDER,
+                mapper, instrumentId, previous.atTime(LocalTime.of(16, 0)).atZone(exchange).toOffsetDateTime())
+                .stream().findFirst();
+    }
+
+    private static boolean weekday(LocalDate day) {
+        return day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY;
     }
 
     /** Most candles one request may cover. */
