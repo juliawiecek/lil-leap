@@ -32,7 +32,14 @@
               (click)="choose(account)"
             >
               <span class="row-name">
-                <strong>{{ label(account) }}</strong>
+                <span class="row-title">
+                  <strong>{{ label(account) }}</strong>
+                  @if (account.account_id === selected()?.account_id) {
+                    <svg class="selected-check" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="m3 8 3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  }
+                </span>
                 <small>
                   Individual cash · USD
                   @if (statusLabel(account); as status) {

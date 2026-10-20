@@ -41,7 +41,7 @@ test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Portfolio', exact: true }).click();
   const row = page.locator('.holdings-table tbody tr').filter({ hasText: 'AAPL' });
   await expect(row).toHaveCount(1);
-  await expect(row.locator('td').nth(3)).toHaveText('1.000');
+  await expect(row.getByText('1.000 shares', { exact: true })).toBeVisible();
   const holdings = await authedGet(request, '/api/v1/holdings', tokens.accessToken);
   const holding = holdings.find(row => row.accountId === accountId && row.symbol === 'AAPL');
   expect(Number(holding.quantity)).toBe(1);

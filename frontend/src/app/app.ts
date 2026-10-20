@@ -57,7 +57,7 @@ interface VolumeBar {
   selector: 'app-login',
   imports: [InvestorProfile],
   templateUrl: './app.html',
-  styleUrl: './app.scss',
+  styleUrls: ['./app.scss', './app.refresh.scss'],
   encapsulation: ViewEncapsulation.None,
 })
 export class App implements AfterViewInit, OnDestroy {
@@ -74,8 +74,8 @@ export class App implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router, { optional: true });
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private readonly riseColor = '#87bb66';
-  private readonly neutralColor = '#c4cbbf';
+  private readonly riseColor = '#94c973';
+  private readonly neutralColor = '#d6d4cc';
 
   /** Set when the app was opened from an emailed reset link; cleared once the password is changed. */
   private resetToken = this.resetTokenFromRoute();
@@ -579,12 +579,12 @@ export class App implements AfterViewInit, OnDestroy {
     context.stroke();
     const rising = animatedClose >= candle.open;
     const highlighted = rising && Math.floor(x / this.candleStep) % 6 === 2;
-    context.shadowColor = rising ? 'rgba(125, 180, 90, 0.3)' : 'transparent';
+    context.shadowColor = rising ? 'rgba(148, 201, 115, 0.3)' : 'transparent';
     context.shadowBlur = highlighted ? 5 : 0;
     context.fillStyle = color;
     context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
     if (highlighted) {
-      context.fillStyle = '#aed08e';
+      context.fillStyle = '#94c973';
       context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.min(3, bodyHeight));
     }
     context.shadowBlur = 0;

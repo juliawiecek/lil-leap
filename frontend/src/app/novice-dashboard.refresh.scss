@@ -1,0 +1,292 @@
+/* ==========================================================================
+   Visual refresh (Oct 2026): look and feel only. Same markup hooks, same
+   behaviour. One palette (see styles.scss --nt-*), Plus Jakarta Sans,
+   off-white accent for actions, green/red only for gains and losses.
+   ========================================================================== */
+@keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes nt-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+}
+:host {
+  --allocation-stocks: #5e9ed4;
+  --allocation-cash: #68645e;
+  background-color: #070707;
+  background-image: radial-gradient(ellipse at center, rgba(7, 7, 7, 0.65), transparent 75%),
+    radial-gradient(60% 40% at 70% 0%, rgba(242, 239, 230, 0.045), transparent 70%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+  font-size: 13px;
+  --line: #1f231f;
+}
+button:hover { filter: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline-color: #f2efe6; }
+h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; }
+h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.negative { color: #ff7a6e; }
+
+/* Shell, sidebar, frosted header */
+.novice-shell { grid-template-columns: 224px minmax(0, 1fr); background: none; }
+.novice-sidebar { padding: 22px 14px 18px; border-right-color: #1a1d1a; background: rgba(7, 7, 7, 0.94); }
+.wordmark { margin: 0 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.novice-sidebar nav { gap: 2px; margin-top: 32px; }
+.novice-sidebar nav button { gap: 12px; border-radius: 10px; color: #a4a79e; font-size: 14px; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
+.novice-sidebar nav button:hover { background: #151515; color: #f2f0e9; }
+.novice-sidebar nav button.active { background: #161616; color: #f2f0e9; font-weight: 700; }
+.novice-sidebar nav app-dashboard-icon { width: 18px; height: 18px; }
+.sidebar-account { margin-inline: 0; border-top-color: #1a1d1a; }
+.sidebar-account button { min-height: 42px; padding: 0 12px; border-radius: 10px; color: #a4a79e; font-size: 14px; font-weight: 500; }
+.sidebar-account button:hover { background: #151515; color: #f2f0e9; }
+.novice-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  height: 66px;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(7, 7, 7, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+app-market-ticker {
+  position: sticky;
+  top: 66px;
+  z-index: 5;
+  margin: 0;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(7, 7, 7, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+.company-search { height: 42px; width: 480px; padding: 0 14px; border-radius: 12px; border-color: #1f231f; background: rgba(15, 15, 15, 0.8); }
+.company-search input { font-size: 14px; }
+.company-search input::placeholder { color: #7e8279; }
+.company-search app-dashboard-icon { width: 16px; height: 16px; color: #7e8279; }
+.company-results { top: 48px; border-radius: 14px; background: #111111; overflow: hidden; }
+.company-results button { padding: 12px 14px; transition: background-color 0.15s ease; }
+.company-results button:hover { background: #161616; }
+.topbar-actions { gap: 10px; }
+.workspace-choice .tier-badge { width: auto; height: 30px; padding: 0 12px; border-color: #2c312b; border-radius: 999px; background: #131313; color: #d6d4cc; font-size: 12px; font-weight: 700; }
+.notification-button { width: 42px; height: 42px; padding: 0; align-items: center; justify-content: center; border: 1px solid #1f231f; border-radius: 12px; background: rgba(15, 15, 15, 0.8); }
+.notification-button app-dashboard-icon { width: 17px; height: 17px; }
+.notification-button i { top: 9px; right: 10px; width: 7px; height: 7px; border: 0; background: #f2efe6; box-shadow: 0 0 0 2px #0f0f0f; }
+.notification-popover { top: 50px; border-radius: 14px; background: #111111; }
+.profile-avatar { width: 42px; height: 42px; background: #f2efe6; color: #0b0c0b; font-size: 15px; font-weight: 800; }
+
+/* Page */
+.novice-content { max-width: 1360px; padding: 32px 32px 64px; }
+.page-heading { margin-bottom: 28px; align-items: flex-end; }
+.greeting { margin-bottom: 4px; font-size: 14px; font-weight: 500; letter-spacing: 0; }
+.market-status { gap: 14px; font-size: 13px; }
+.market-status > span:first-child { padding: 6px 12px; border-radius: 999px; background: rgba(148, 201, 115, 0.09); color: #94c973; font-weight: 700; }
+.market-status > span:first-child.open { background: rgba(148, 201, 115, 0.09); color: #94c973; }
+.market-status > span:first-child.closing-soon { background: rgba(79, 143, 207, 0.12); color: #79b8e8; }
+.market-status > span:first-child.closed { background: rgba(226, 182, 90, 0.1); color: #e2b65a; }
+.market-status > span + span { padding-left: 0; border-left: 0; }
+.market-status i { width: 7px; height: 7px; animation: nt-pulse 2.4s ease-out infinite; }
+.market-status .open i { background: #94c973; animation: nt-pulse 2.4s ease-out infinite; }
+.market-status .closing-soon i { background: #79b8e8; animation: none; }
+.market-status .closed i { background: #e2b65a; animation: none; }
+.overview-grid { gap: 28px; grid-template-columns: minmax(0, 1.84fr) minmax(330px, 1fr); }
+.overview-grid.single-column { grid-template-columns: minmax(0, 1fr); }
+.primary-column { gap: 28px; }
+.secondary-column { gap: 20px; }
+.panel { border-color: #1a1d1a; border-radius: 20px; background: #0c0c0c; animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; transition: border-color 0.2s ease; }
+.panel:hover { border-color: #2c312b; }
+.panel-heading h2, .investments-panel .panel-heading h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.025em; }
+.text-link { gap: 4px; color: #d6d4cc; font-size: 13px; font-weight: 700; transition: color 0.15s ease; }
+.text-link:hover { color: #ffffff; }
+
+/* Portfolio hero */
+.portfolio-panel {
+  padding: 30px 32px 24px;
+  border-color: #2c312b;
+  border-radius: 26px;
+  background: radial-gradient(70% 90% at 92% 0%, rgba(255, 255, 255, 0.04), transparent 60%),
+    radial-gradient(50% 60% at 0% 100%, rgba(242, 239, 230, 0.035), transparent 70%), #0c0c0c;
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(242, 239, 230, 0.08);
+}
+.value-label { font-size: 13px; font-weight: 600; }
+.portfolio-value { margin-top: 6px; font-size: 64px; font-weight: 800; line-height: 1.05; letter-spacing: -0.045em; }
+.portfolio-gain { margin-top: 12px; gap: 10px; font-size: 14px; }
+.portfolio-gain strong { padding: 5px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); font-size: 14px; font-weight: 700; }
+.portfolio-gain.up strong { background: rgba(148, 201, 115, 0.1); }
+.portfolio-gain.down strong { background: rgba(255, 122, 110, 0.1); }
+.portfolio-stats { margin-top: 14px; padding-top: 22px; border-top-color: rgba(255, 255, 255, 0.06); }
+.portfolio-stats > div { border-left-color: rgba(255, 255, 255, 0.06); }
+.portfolio-stats span { margin-bottom: 6px; color: #7e8279; font-size: 12.5px; font-weight: 600; }
+.portfolio-stats strong { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Holdings */
+.investments-panel { padding: 22px 0 0; }
+.investments-panel .panel-heading { padding: 0 24px; }
+.investment-tabs { margin: 12px 0 0; padding: 0 24px; border-bottom-color: #1a1d1a; }
+.investment-tabs button { padding: 10px 12px; font-size: 13px; font-weight: 700; }
+.investment-tabs button.selected { border-color: #f2efe6; }
+th { color: #7e8279; font-weight: 600; }
+.holdings-table th { height: 42px; padding: 0 12px; }
+.holdings-table th:first-child { width: 34%; padding-left: 24px; }
+.holdings-table th:nth-child(2) { width: auto; }
+.holdings-table th:last-child { width: 96px; }
+.holdings-table td { height: 68px; padding: 10px 12px; border-top-color: #171a17; font-size: 14px; }
+.holdings-table td:first-child { padding-left: 24px; }
+.holdings-table tbody tr { transition: background-color 0.15s ease; }
+.holdings-table tbody tr:hover { background: #161616; }
+.holdings-table th:nth-child(n + 2), .holdings-table td:nth-child(n + 2) { text-align: right; }
+.holding-symbol { gap: 14px; text-align: left; }
+.holding-id b { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.holding-id .company-name { margin-top: 3px; overflow: hidden; color: #a4a79e; font-size: 12.5px; font-weight: 500; text-overflow: ellipsis; }
+.cell-main { font-weight: 700; }
+.cell-sub { margin-top: 3px; color: #a4a79e; font-size: 12.5px; }
+.holdings-table td.positive span, .holdings-table td.negative span { margin-top: 3px; font-size: 12.5px; }
+.company-logo { width: 40px; height: 40px; border-radius: 12px; background: #161616; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.company-logo.vanguard { border-radius: 12px; background: #161616; color: #f2f0e9; font: 800 15px var(--font-ui); }
+.company-logo.microsoft { width: 40px; height: 40px; margin: 0; padding: 10px; gap: 2px; }
+.holding-actions {
+  width: 64px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #343434;
+  border-radius: 6px;
+  background: transparent;
+  color: #d6d4cc;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.holding-actions:hover, .holding-actions:focus-visible { background: #242424; border-color: #626262; color: #f2f0e9; }
+.empty-row { height: 88px; color: #a4a79e; text-align: center !important; }
+
+/* Right column */
+.allocation-panel { height: auto; padding: 22px; }
+.allocation-content { grid-template-columns: 148px minmax(0, 1fr); margin: 18px 0; gap: 12px; }
+.allocation-donut { width: 148px; height: 148px; }
+.allocation-donut .ring { stroke-width: 7; }
+.allocation-donut .ring.cash { stroke: var(--allocation-cash); }
+.allocation-donut .ring.stocks { stroke: url(#allocation-stocks-gradient); }
+.allocation-donut strong { font-size: 14px; font-weight: 800; }
+.allocation-legend > div { border-bottom-color: #1a1d1a; font-size: 14px; font-weight: 600; }
+.allocation-legend b { margin-left: auto; font-size: 15px; font-weight: 800; }
+.asset-dot { width: 10px; height: 10px; border-radius: 3px; }
+.stocks { background: #f2efe6; }
+.cash { background: #6f746b; }
+.diversification { gap: 12px; padding: 12px 14px; border-color: #262a25; border-radius: 14px; background: #131313; font-size: 14px; font-weight: 700; transition: border-color 0.15s ease; }
+.diversification:hover { border-color: #3a4038; }
+.diversification small { font-size: 12.5px; font-weight: 500; }
+.shield-icon { border-radius: 10px; background: #1b1e1b; color: #d6d4cc; }
+.shield-icon app-dashboard-icon { width: 16px; height: 16px; }
+.trade-panel {
+  padding: 24px;
+  border-color: #2c312b;
+  border-radius: 22px;
+  background: radial-gradient(90% 80% at 100% 0%, rgba(242, 239, 230, 0.1), transparent 60%), #131313;
+}
+.trade-panel h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.trade-panel p { font-size: 14px; line-height: 1.55; }
+.trade-actions { gap: 8px; margin-top: 20px; }
+.trade-actions > :last-child { grid-column: auto; }
+.trade-actions button { min-height: 46px; font-size: 14.5px; font-weight: 800; }
+.green-button, .secondary-button, .outline-button { border-radius: 12px; font-weight: 700; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
+.period-picker button.selected, .green-button { background: #f2efe6; color: #0b0c0b; border: 1px solid #f2efe6; box-shadow: none; }
+.green-button:hover { background: #ffffff; box-shadow: 0 10px 30px rgba(242, 239, 230, 0.14); }
+.green-button:active, .secondary-button:active { transform: scale(0.98); }
+.secondary-button { border-color: #3a4038; background: transparent; color: #f2f0e9; }
+.secondary-button:hover, .outline-button:hover { border-color: #4a5048; color: #ffffff; }
+.watchlist-panel { padding: 22px 22px 12px; }
+.watch-table td { height: 46px; border-top-color: #171a17; font-size: 14px; font-weight: 600; }
+.watch-table td button { font-weight: 800; }
+.watch-table tbody tr { transition: background-color 0.15s ease; }
+.watch-table tbody tr:hover { background: #161616; }
+.watch-table td:last-child { font-weight: 700; }
+.expanded-list { padding: 24px; }
+.settings-panel { padding: 28px; }
+.settings-panel > div { border-bottom-color: #1a1d1a; }
+
+/* Trade dialog */
+.detail-dialog { border-color: #2c312b; border-radius: 22px; padding: 28px; background: #0c0c0c; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.75); }
+.dialog-heading h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.trade-quote strong { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.side-picker { gap: 3px; padding: 4px; border: 1px solid #1f231f; border-radius: 13px; background: rgba(7, 7, 7, 0.6); }
+.side-picker button { min-height: 40px; border: 0; border-radius: 10px; color: #a4a79e; font-weight: 800; }
+.side-picker .selected { background: #f2efe6; color: #0b0c0b; }
+.detail-dialog label { font-size: 13px; font-weight: 600; color: #d6d4cc; }
+.detail-dialog input, .detail-dialog select { min-height: 48px; border-color: #1f231f; border-radius: 12px; background: #0b0b0b; color: #f2f0e9; font-size: 15px; }
+.detail-dialog input:focus, .detail-dialog select:focus { border-color: #4a5048; box-shadow: 0 0 0 4px rgba(242, 239, 230, 0.06); outline: none; }
+.trade-total { padding: 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); font-size: 14px; }
+.trade-total strong { font-size: 20px; font-weight: 800; }
+.submit-trade { min-height: 50px; font-size: 15px; font-weight: 800; }
+.review-confirmation { border-radius: 12px; }
+.protection-row { border-radius: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .market-status i { animation: none; }
+}
+/* Re-applied so the smaller layouts above still win over this refresh. */
+@media (max-width: 1350px) {
+  .novice-shell { grid-template-columns: 200px minmax(0, 1fr); }
+  .novice-content { padding-inline: 24px; }
+  .novice-topbar, app-market-ticker { padding-inline: 24px; }
+  .overview-grid { grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr); gap: 20px; }
+  .portfolio-panel { padding-inline: 24px; }
+  .portfolio-value { font-size: 52px; }
+  .portfolio-stats strong { font-size: 16px; }
+}
+@media (max-width: 1100px) {
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .novice-shell { grid-template-columns: 64px minmax(0, 1fr); }
+  .novice-sidebar { padding: 20px 8px; }
+  .wordmark { margin: 0; font-size: 0; }
+  .novice-topbar { position: static; height: auto; padding: 10px 14px; }
+  app-market-ticker { position: static; padding-inline: 14px; }
+  .company-search { width: 100%; }
+  .novice-content { padding: 18px 14px 40px; }
+  h1 { font-size: 28px; }
+  .portfolio-panel { padding: 20px 16px; border-radius: 20px; }
+  .portfolio-value { font-size: 40px; }
+  .portfolio-stats strong { font-size: 15px; }
+  .holdings-table th:first-child, .holdings-table td:first-child { padding-left: 16px; }
+}
+
+/* Price protection: one compact field, so the ticket's input styling doesn't swallow it. */
+.protection-row { gap: 14px; margin: 12px 0; padding: 12px 14px; border-color: #1f231f; border-radius: 12px; }
+.protection-copy span { font-size: 13px; font-weight: 600; }
+.protection-copy b { color: #f2f0e9; font-weight: 800; }
+.protection-row .text-link { color: #d6d4cc; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #4a5048; }
+.protection-row .text-link:hover { color: #ffffff; }
+.tolerance-field { gap: 4px; height: 38px; padding: 0 12px; border: 1px solid #2c312b; border-radius: 10px; background: #0b0b0b; color: #a4a79e; font-size: 14px; font-weight: 700; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.tolerance-field:focus-within { border-color: #4a5048; box-shadow: 0 0 0 4px rgba(242, 239, 230, 0.06); }
+.detail-dialog .tolerance-field input { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: #f2f0e9; font: inherit; text-align: right; outline: none; }
+
+/* Buy is blue, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
+   and on its Review / Confirm button. Sell on the card is outlined so it doesn't shout. */
+.trade-actions .green-button { border-color: #5e9ed4; background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
+.trade-actions .green-button:hover { border-color: #79b8e8; background: linear-gradient(135deg, #4a88c6, #8bc7f2); box-shadow: 0 10px 30px rgba(79, 143, 207, 0.2); }
+.trade-actions > button:last-child { border: 1px solid #ff7a6e; background: transparent; color: #ff7a6e; }
+.trade-actions > button:last-child:hover { border-color: #ff7a6e; background: rgba(255, 122, 110, 0.1); color: #ff8f85; }
+.side-picker button:first-child.selected { background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
+.side-picker button:last-child.selected { background: linear-gradient(135deg, #c94f55, #ff8a7d); color: #21090b; }
+.green-button.submit-trade { border-color: #5e9ed4; background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
+.green-button.submit-trade:hover { border-color: #79b8e8; background: linear-gradient(135deg, #4a88c6, #8bc7f2); box-shadow: 0 10px 30px rgba(79, 143, 207, 0.2); }
+.green-button.submit-trade.sell { border-color: #ff7a6e; background: linear-gradient(135deg, #c94f55, #ff8a7d); color: #21090b; }
+.green-button.submit-trade.sell:hover { border-color: #ff9b91; background: linear-gradient(135deg, #da5b60, #ff9b91); box-shadow: 0 10px 30px rgba(255, 122, 110, 0.2); }
+
+/* Category colours match the donut and asset-class legends. */
+.asset-dot.stocks, .stocks { background: linear-gradient(135deg, #3d78b5, #79b8e8); }
+.asset-dot.cash, .cash { background: var(--allocation-cash); }
+
+/* Overview greeting with today's summary sentence. */
+.greeting-title { margin: 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; }
+.day-summary { margin: 4px 0 0; color: #a4a79e; font-size: 15px; font-weight: 500; }
+.day-summary b { color: #f2f0e9; font-weight: 700; }
+.day-summary .positive { color: #94c973; }
+.day-summary .negative { color: #ff7a6e; }
+@media (max-width: 900px) {
+  .greeting-title { font-size: 24px; }
+  .day-summary { font-size: 14px; }
+}

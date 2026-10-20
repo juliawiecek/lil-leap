@@ -74,12 +74,12 @@
   opacity: 0.8;
 
   &.error {
-    color: #e5484d;
+    color: #ff7a6e;
     opacity: 1;
   }
 
   &.warning {
-    color: #d9a400;
+    color: #e2b65a;
     opacity: 1;
   }
 }
@@ -132,12 +132,12 @@
 // Green and red only for money gained or lost, and for how an order ended.
 .gain,
 .status.filled {
-  color: #25b675;
+  color: #94c973;
 }
 
 .loss,
 .status.rejected {
-  color: #e5484d;
+  color: #ff7a6e;
 }
 
 .status.cancelled {
@@ -161,8 +161,8 @@
   }
 
   button.danger {
-    color: #e5484d;
-    border-color: color-mix(in srgb, #e5484d 50%, transparent);
+    color: #ff7a6e;
+    border-color: color-mix(in srgb, #ff7a6e 50%, transparent);
   }
 
   button:disabled {
@@ -206,3 +206,47 @@
     }
   }
 }
+
+/* Visual refresh (Oct 2026): look and feel only. */
+.kind-switch {
+  gap: 2px;
+  padding: 3px;
+  border-color: #1f231f;
+  border-radius: 10px;
+  background: rgba(7, 7, 7, 0.6);
+  button {
+    min-height: 28px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: #a4a79e;
+    font-size: 12.5px;
+    font-weight: 700;
+    opacity: 1;
+    &.active { background: #f2efe6; color: #0b0c0b; font-weight: 700; }
+  }
+}
+.activity-filters input, .clear-filters, .view-all { border-radius: 10px; }
+.view-all { font-weight: 700; }
+.activity-item {
+  padding: 12px 4px;
+  border-bottom-color: #171a17;
+  font-size: 13.5px;
+  transition: background-color 0.15s ease;
+  &:hover { background: #161616; }
+  time { color: #7e8279; opacity: 1; font-size: 12.5px; font-weight: 500; }
+  .what b { font-weight: 700; }
+  .what small { margin-top: 2px; color: #a4a79e; opacity: 1; font-size: 12.5px; }
+  .amount { font-weight: 700; }
+}
+.status {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(242, 239, 230, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+}
+.status.filled { background: rgba(242, 239, 230, 0.08); color: #f2f0e9; }
+.status.rejected { background: rgba(255, 122, 110, 0.1); }
+.activity-item .actions button { border-radius: 8px; }
+:host(.compact) .activity-item time { font-size: 12px; }

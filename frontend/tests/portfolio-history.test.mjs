@@ -137,7 +137,7 @@ test('the line is green when the period is up and red when it is down, with a sp
   const { chart } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 1050 }], day);
   assert.equal(chart.tone(), 'up');
   assert.match(chart.summary(), /^Portfolio value today: from \$1000\.00 to \$1050\.00, up 5\.00%\./);
-  assert.match(chart.path(), /^M0\.0,[\d.]+ L800\.0,[\d.]+$/);
+  assert.match(chart.path(), /^M0,[\d.]+ C.+800,[\d.]+$/);
   assert.equal(chart.baselineY(), chart.placed()[0].y, 'the dotted baseline sits at the starting value');
   const { chart: falling } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 990 }], { ...day, fromOpening: true }, 'ALL');
   assert.equal(falling.tone(), 'down');
@@ -152,6 +152,7 @@ test('1D fills the chart from the open to now: each value sits at its time, with
   const session = { open: Date.parse('2026-10-19T13:30:00Z'), close: Date.parse('2026-10-19T20:00:00Z') };
   const range = { start: session.open, end: NOW, fromOpening: false, session };
   const { chart, inputs } = chartWith(t, [{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }], range);
+  chart.setDayView('full');
   // Live values keep arriving after the period loaded: 19,000 then 19,100, each kept on the line.
   inputs.points.set([{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }, { at: NOW, value: 19100 }]);
   const placed = chart.placed();
@@ -222,4 +223,63 @@ test('hovering or arrow keys scrub along the line and report the point under the
   chart.periodChange.subscribe((p) => { picked = p; });
   chart.periodChange.emit('1M');
   assert.equal(picked, '1M');
+});
+
+test('the default day detail spreads recent activity across the chart without changing full-day performance', (t) => {
+  const points = Array.from({ length: 241 }, (_, i) => ({
+    at: NOW - 4 * HOUR + i * 60000,
+    value: 5000 - i / 10,
+  }));
+  const original = structuredClone(points);
+  const { chart } = chartWith(t, points, day);
+  assert.equal(chart.focused(), true);
+  assert.equal(chart.displayPoints().length, 61);
+  assert.equal(chart.placed()[0].x, 0);
+  assert.equal(chart.end().x, 800);
+  assert.equal(chart.tone(), 'down');
+  assert.match(chart.summary(), /from \$5000\.00/);
+  chart.scrubKey({ key: 'Home', preventDefault() {} });
+  assert.equal(chart.active().at, NOW - HOUR);
+  const picked = [];
+  chart.scrub.subscribe((p) => picked.push(p));
+  chart.setDayView('full');
+  assert.equal(chart.active(), null);
+  assert.equal(picked.at(-1), null);
+  assert.equal(chart.displayPoints().length, 241);
+  assert.deepEqual(points, original);
+  chart.setDayView('recent');
+  assert.equal(chart.displayPoints().length, 61);
+});
+
+test('invalid observations cannot break the path before its endpoint; duplicate timestamps use the newest record', (t) => {
+  const { chart } = chartWith(
+    t,
+    [
+      { at: NOW, value: 5002 },
+      { at: NOW - 60000, value: 5000 },
+      { at: NOW - 50000, value: NaN },
+      { at: NOW - 30000, value: Infinity },
+      { at: NOW, value: 5001 },
+      { at: NaN, value: 5003 },
+    ],
+    day,
+  );
+  assert.deepEqual(
+    chart.history().map((p) => p.value),
+    [5000, 5001],
+  );
+  assert.doesNotMatch(chart.path(), /NaN|Infinity/);
+  assert.ok(chart.path().endsWith(`${chart.end().x},${Number(chart.end().y.toFixed(3))}`));
+});
+
+
+test('recent-hour updates shift existing timestamps left at a fixed scale',t=>{
+  const points=Array.from({length:241},(_,i)=>({at:NOW-4*HOUR+i*60000,value:5000+i/10}));
+  const {chart,inputs}=chartWith(t,points,day);
+  const before=chart.placed().find(point=>point.at===NOW-HOUR/2).x;
+  inputs.points.set([...points,{at:NOW+5000,value:5025}]);
+  const after=chart.placed().find(point=>point.at===NOW-HOUR/2).x;
+  assert.ok(Math.abs(before-after-800*5000/HOUR)<1e-9);
+  assert.equal(chart.end().x,800);
+  assert.equal(chart.history().length,242);
 });

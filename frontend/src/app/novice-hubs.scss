@@ -1,12 +1,12 @@
 :host {
   display: block;
   font-family: var(--font-ui);
-  background: #0c1011;
-  color: #f1f3f5;
+  background: #0c0c0c;
+  color: #f2f0e9;
   color-scheme: dark;
-  --muted: #b1bac8;
-  --green: #7ede8b;
-  --line: #20282c;
+  --muted: #a4a79e;
+  --green: #94c973;
+  --line: #1a1d1a;
 }
 :host([hidden]) {
   display: none !important;
@@ -73,7 +73,7 @@ a:hover {
   text-decoration: underline;
 }
 .eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1.3px;
   font-weight: 600;
   color: var(--muted);
@@ -135,12 +135,12 @@ a:hover {
   flex-wrap: wrap;
 }
 .subtle {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 14px;
 }
 .badge {
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   padding: 5px 9px;
   border-radius: 5px;
@@ -160,7 +160,7 @@ a:hover {
   padding: 9px 14px;
   border: 1px solid var(--green);
   border-radius: 6px;
-  color: #0c1011;
+  color: #0c0c0c;
   background: var(--green);
   font-size: 12px;
   font-weight: 600;
@@ -179,7 +179,7 @@ a:hover {
 .learning-progress span {
   display: block;
   margin-top: 5px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 progress {
@@ -212,7 +212,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--line);
   border-radius: 7px;
   text-align: left;
-  color: #f1f3f5;
+  color: #f2f0e9;
 }
 .lesson-list > button.active {
   border-color: var(--green);
@@ -235,7 +235,7 @@ progress::-webkit-progress-value {
 }
 .lesson-list small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -296,7 +296,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: none;
-  color: #f1f3f5;
+  color: #f2f0e9;
   text-align: left;
   font-size: 12px;
 }
@@ -335,7 +335,7 @@ progress::-webkit-progress-value {
 .glossary summary {
   cursor: pointer;
   font-size: 13px;
-  color: #f1f3f5;
+  color: #f2f0e9;
 }
 .glossary p {
   margin-top: 10px;
@@ -353,7 +353,7 @@ progress::-webkit-progress-value {
   margin-top: 16px;
 }
 .calculator-inputs label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   display: grid;
   gap: 8px;

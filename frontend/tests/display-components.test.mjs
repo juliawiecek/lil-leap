@@ -10,6 +10,7 @@ const { StockDashboard } = await import('../src/app/stock-dashboard.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 const { AdvancedChart } = await import('../src/app/advanced-chart.ts');
+const { StockDashboardComponent } = await import('../src/app/stock-dashboard.component.ts');
 
 test('icons render requested paths and fall back for unknown names', async t => {
   const fixture = await render(t, DashboardIcon, { name: 'apple' });
@@ -23,6 +24,7 @@ test('icons render requested paths and fall back for unknown names', async t => 
 });
 
 test('server tier selects the visible dashboard and child sign-out reaches the parent', async t => {
+  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
   const fixture = await render(t, StockDashboard, { name: 'Ada', level: 'NOVICE' });
   const root = fixture.nativeElement;
   assert.ok(root.querySelector('app-novice-dashboard'));
@@ -60,6 +62,7 @@ test('trade ticket binds order inputs and submits a review with validation', asy
 });
 
 test('chart period buttons update accessible labels; the chart shows recorded prices, not made-up indicators', async t => {
+  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
   const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
   const fixture = await render(t, AdvancedChart, { desk });
   assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D price chart"]'));

@@ -5,13 +5,13 @@
   z-index: 31;
   overflow: auto;
   scrollbar-width: none;
-  font: 10px/1.4 var(--font-ui);
-  color: #e9edf1;
-  background: #0b1215;
+  font: 12px/1.4 var(--font-ui);
+  color: #ededed;
+  background: #111111;
   color-scheme: dark;
-  --line: #202e35;
-  --muted: #aebaca;
-  --green: #51d88c;
+  --line: #1e1e1e;
+  --muted: #a1a1a1;
+  --green: #94c973;
 }
 :host([hidden]) {
   display: none !important;
@@ -37,7 +37,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #69d999;
+  outline: 2px solid #94c973;
   outline-offset: 2px;
 }
 h1,
@@ -59,7 +59,7 @@ h2 {
   color: var(--green);
 }
 .loss {
-  color: #ff5e66;
+  color: #ff7a6e;
 }
 .muted {
   color: var(--muted);
@@ -68,17 +68,17 @@ h2 {
   display: grid;
   grid-template-columns: 165px minmax(0, 1fr);
   min-height: 100dvh;
-  background: radial-gradient(ellipse at 55% 20%, #17222a44, transparent 70%);
+  background: radial-gradient(ellipse at 55% 20%, #16161644, transparent 70%);
 }
 .pro-sidebar {
   position: sticky;
   top: 0;
   height: 100dvh;
-  border-right: 1px solid #1c2930;
+  border-right: 1px solid #1e1e1e;
   display: flex;
   flex-direction: column;
   padding: 16px 11px 23px;
-  background: linear-gradient(110deg, #0e1518, #0b1215);
+  background: linear-gradient(110deg, #111111, #111111);
 }
 .pro-logo {
   display: flex;
@@ -86,18 +86,18 @@ h2 {
   font-size: 22px;
   letter-spacing: -1px;
   font-weight: 650;
-  color: #f3f6f8;
+  color: #ededed;
   text-decoration: none;
   white-space: nowrap;
   margin: 0 9px;
 }
 .pro-logo > span {
-  color: #65d895;
+  color: #94c973;
 }
 .pro-logo app-dashboard-icon {
   width: 18px;
   height: 18px;
-  color: #83daa3;
+  color: #94c973;
   margin-left: 5px;
 }
 .pro-sidebar nav {
@@ -112,13 +112,13 @@ h2 {
   height: 41px;
   padding: 0 15px;
   text-align: left;
-  color: #bec9d9;
+  color: #d4d4d4;
   font-size: 12px;
   border-radius: 5px;
 }
 .pro-sidebar nav button.active {
-  color: #80e2aa;
-  background: #10251e;
+  color: #94c973;
+  background: #121a0f;
   font-weight: 600;
 }
 .pro-sidebar nav app-dashboard-icon {
@@ -129,19 +129,19 @@ h2 {
   display: grid;
   margin: auto 15px 0;
   padding-top: 16px;
-  border-top: 1px solid #29343b;
+  border-top: 1px solid #262626;
   gap: 12px;
   color: var(--muted);
 }
 .sidebar-help > span {
-  font-size: 10px;
+  font-size: 12px;
 }
 .sidebar-help button {
   display: flex;
   gap: 12px;
   padding: 0;
   align-items: center;
-  font-size: 9px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .sidebar-help app-dashboard-icon {
@@ -157,21 +157,21 @@ h2 {
 .pro-topbar {
   height: 55px;
   padding: 0 17px 0 19px;
-  border-bottom: 1px solid #1e2a31;
+  border-bottom: 1px solid #1e1e1e;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  background: #101a2090;
+  background: #11111190;
 }
 .pro-search {
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
-  border: 1px solid #263640;
+  border: 1px solid #262626;
   border-radius: 6px;
-  background: #17222995;
+  background: #16161695;
   width: 733px;
   max-width: 65%;
   height: 35px;
@@ -188,11 +188,11 @@ h2 {
   border: 0;
   outline-offset: 0;
   background: none;
-  color: #e1e9f0;
+  color: #ededed;
   font-size: 12px;
 }
 .pro-search input::placeholder {
-  color: #a5b4c4;
+  color: #a1a1a1;
   opacity: 1;
 }
 .search-results {
@@ -200,8 +200,8 @@ h2 {
   top: 41px;
   left: 0;
   right: 0;
-  background: #15222a;
-  border: 1px solid #354951;
+  background: #1a1a1a;
+  border: 1px solid #303030;
   border-radius: 6px;
   z-index: 10;
   box-shadow: 0 10px 40px #0008;
@@ -233,11 +233,11 @@ h2 {
   width: 143px;
   height: 33px;
   padding: 0 11px;
-  border: 1px solid #24333b;
+  border: 1px solid #262626;
   border-radius: 6px;
-  background: #111c21;
-  color: #eef1f5;
-  font-size: 11px;
+  background: #111111;
+  color: #ededed;
+  font-size: 12px;
 }
 .icon-button {
   display: inline-flex;
@@ -267,8 +267,8 @@ h2 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #61d590;
-  border: 1px solid #13261c;
+  background: #94c973;
+  border: 1px solid #121a0f;
 }
 .notification-popover {
   position: absolute;
@@ -277,8 +277,8 @@ h2 {
   width: 220px;
   padding: 18px;
   z-index: 10;
-  border: 1px solid #354951;
-  background: #142026;
+  border: 1px solid #303030;
+  background: #1a1a1a;
   border-radius: 7px;
 }
 .notification-popover p {
@@ -290,8 +290,8 @@ h2 {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #394955;
-  font-size: 11px;
+  background: #303030;
+  font-size: 12px;
 }
 .pro-content {
   padding: 0 14px 15px;
@@ -302,8 +302,8 @@ h2 {
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  color: #b7c4d3;
-  font-size: 9px;
+  color: #d4d4d4;
+  font-size: 12px;
 }
 .session-line > span {
   display: flex;
@@ -318,19 +318,19 @@ h2 {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #4ed888;
+  background: #94c973;
 }
 .pro-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px 315px;
-  grid-template-rows: 104px 352px 219px 147px;
+  grid-template-rows: 104px minmax(352px, auto) 219px 147px;
   gap: 9px 10px;
 }
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: linear-gradient(130deg, #0f191e80, #101a20a0);
+  background: linear-gradient(130deg, #11111180, #111111a0);
 }
 .panel-heading {
   display: flex;
@@ -345,8 +345,8 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #becbdd;
-  font-size: 9px;
+  color: #d4d4d4;
+  font-size: 12px;
   padding: 0;
   white-space: nowrap;
 }
@@ -374,7 +374,7 @@ h2 {
 }
 .summary-metrics > div {
   padding: 0 10px;
-  border-left: 1px solid #2a3840;
+  border-left: 1px solid #262626;
   white-space: nowrap;
 }
 .summary-metrics > div:first-child {
@@ -387,8 +387,8 @@ h2 {
 }
 .summary-metrics > div > span {
   display: block;
-  font-size: 9px;
-  color: #c1cad6;
+  font-size: 12px;
+  color: #d4d4d4;
   margin-bottom: 2px;
 }
 .summary-metrics strong {
@@ -398,14 +398,14 @@ h2 {
 }
 .summary-metrics b {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 2px;
   font-weight: 600;
 }
 .summary-metrics small {
   display: block;
-  font-size: 9px;
-  color: #bfcbd8;
+  font-size: 12px;
+  color: #d4d4d4;
   margin-top: 3px;
 }
 .summary-metrics .main-value strong {
@@ -422,9 +422,9 @@ h2 {
 .main-value small {
   display: inline;
   margin-left: 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  color: #e5eaf0;
+  color: #ededed;
 }
 .index-panel {
   grid-column: 3;
@@ -437,7 +437,7 @@ h2 {
 .index-panel button {
   padding: 0 8px;
   text-align: left;
-  border-right: 1px solid #203039;
+  border-right: 1px solid #262626;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -447,9 +447,9 @@ h2 {
   border: 0;
 }
 .index-panel span {
-  color: #b5c0ce;
+  color: #a1a1a1;
   display: block;
-  font-size: 9px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -465,25 +465,25 @@ h2 {
 }
 .index-panel b {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 1px;
 }
 .primary-button {
   min-height: 32px;
   padding: 7px 14px;
   border-radius: 5px;
-  background: linear-gradient(#7cdf9d, #56ca86);
-  color: #0b2a18;
-  font-size: 11px;
+  background: linear-gradient(#94c973, #94c973);
+  color: #121a0f;
+  font-size: 12px;
   font-weight: 600;
-  border: 1px solid #63c48b;
+  border: 1px solid #94c973;
 }
 .secondary-button {
   padding: 8px 12px;
-  border: 1px solid #3d505d;
-  background: #1a2931;
+  border: 1px solid #3a3a3a;
+  background: #1e1e1e;
   border-radius: 5px;
-  color: #d5e0eb;
+  color: #d4d4d4;
 }
 .positions-panel {
   grid-column: 1;
@@ -500,12 +500,12 @@ h2 {
 .panel-tabs button {
   padding: 8px 2px;
   border-bottom: 2px solid transparent;
-  font-size: 11px;
-  color: #becbda;
+  font-size: 12px;
+  color: #d4d4d4;
 }
 .panel-tabs .active {
-  border-color: #54d992;
-  color: #f1f4f6;
+  border-color: #94c973;
+  color: #ededed;
   font-weight: 600;
 }
 .table-scroll {
@@ -519,16 +519,16 @@ table {
   font-variant-numeric: tabular-nums;
 }
 th {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 400;
-  color: #afbed0;
+  color: #a1a1a1;
   text-align: left;
   height: 27px;
   white-space: nowrap;
 }
 td {
-  font-size: 9px;
-  border-top: 1px solid #1e2c34;
+  font-size: 12px;
+  border-top: 1px solid #1e1e1e;
   height: 22px;
   white-space: nowrap;
 }
@@ -605,7 +605,7 @@ td .icon-button app-dashboard-icon {
 .watch-table td {
   height: 29px;
   padding: 2px 6px;
-  font-size: 10px;
+  font-size: 12px;
 }
 .watch-table td:first-child,
 .watch-table th:first-child {
@@ -621,7 +621,7 @@ td .icon-button app-dashboard-icon {
   display: block;
 }
 .watch-table td:nth-child(4) {
-  font-size: 9px;
+  font-size: 12px;
 }
 .watch-table svg {
   width: 66px;
@@ -629,15 +629,15 @@ td .icon-button app-dashboard-icon {
   display: block;
 }
 .watch-table tr.selected {
-  background: #15242c35;
+  background: #16161635;
 }
 .watch-panel > select {
   margin: 12px;
   padding: 7px 12px;
-  background: #15232b;
-  border: 1px solid #3a4e5d;
+  background: #1a1a1a;
+  border: 1px solid #303030;
   border-radius: 5px;
-  color: #e6edf4;
+  color: #ededed;
 }
 .market-panel {
   grid-column: 3;
@@ -658,24 +658,24 @@ td .icon-button app-dashboard-icon {
 .market-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border: 1px solid #2b3c45;
+  border: 1px solid #262626;
   border-radius: 4px;
   height: 27px;
 }
 .market-tabs button {
-  font-size: 9px;
+  font-size: 12px;
   padding: 4px 0;
-  border-right: 1px solid #263740;
+  border-right: 1px solid #262626;
   border-bottom: 2px solid transparent;
-  color: #c2cedd;
+  color: #d4d4d4;
   white-space: nowrap;
 }
 .market-tabs button:last-child {
   border-right: 0;
 }
 .market-tabs .active {
-  color: #eef5f4;
-  border-bottom-color: #50da94;
+  color: #ededed;
+  border-bottom-color: #94c973;
 }
 .sector-list {
   margin-top: 7px;
@@ -685,9 +685,9 @@ td .icon-button app-dashboard-icon {
   grid-template-columns: minmax(0, 1fr) 86px 45px;
   align-items: center;
   gap: 6px;
-  border-bottom: 1px solid #233039;
+  border-bottom: 1px solid #262626;
   height: 21px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .sector-list > div:last-child {
   border: 0;
@@ -699,18 +699,18 @@ td .icon-button app-dashboard-icon {
 .sector-bar {
   display: inline-block;
   height: 9px;
-  background: #23323b;
+  background: #262626;
   position: relative;
 }
 .sector-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #38ae75, #54c389);
-  border-right: 2px solid #78d8a1;
+  background: linear-gradient(90deg, #94c973, #94c973);
+  border-right: 2px solid #94c973;
 }
 .sector-bar i.negative-bar {
-  background: #e95560;
-  border-right-color: #ff7276;
+  background: #ff7a6e;
+  border-right-color: #ff7a6e;
 }
 .mover-row {
   display: flex;
@@ -757,18 +757,18 @@ td .icon-button app-dashboard-icon {
   height: 26px;
   padding: 0 12px;
   width: 100%;
-  border-bottom: 1px solid #213038;
-  font-size: 9px;
+  border-bottom: 1px solid #262626;
+  font-size: 12px;
 }
 .news-row > span:nth-child(3) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 8px;
+  font-size: 12px;
 }
 .news-row small {
-  font-size: 8px;
-  color: #aebdd0;
+  font-size: 12px;
+  color: #a1a1a1;
   text-align: right;
 }
 .exposure-content {
@@ -779,7 +779,7 @@ td .icon-button app-dashboard-icon {
   padding: 8px 12px;
 }
 .exposure-content > div > span {
-  font-size: 9px;
+  font-size: 12px;
 }
 .exposure-row {
   display: grid;
@@ -787,7 +787,7 @@ td .icon-button app-dashboard-icon {
   gap: 6px;
   align-items: center;
   height: 21px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .exposure-ring {
   position: relative;
@@ -795,12 +795,12 @@ td .icon-button app-dashboard-icon {
   height: 90px;
   padding: 11px;
   border-radius: 50%;
-  background: conic-gradient(#24b874 0deg 296deg, #64cc98 296deg 316deg, #a8b6bd 316deg 360deg);
+  background: conic-gradient(#94c973 0deg 296deg, #94c973 296deg 316deg, #a1a1a1 316deg 360deg);
 }
 .exposure-ring div {
   width: 100%;
   height: 100%;
-  background: #101b20;
+  background: #111111;
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -812,7 +812,7 @@ td .icon-button app-dashboard-icon {
 }
 .exposure-ring small {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 .secondary-page {
   grid-template-rows: 104px auto;
@@ -865,12 +865,12 @@ td .icon-button app-dashboard-icon {
 .order-status-tabs button {
   padding: 8px 2px;
   border-bottom: 2px solid transparent;
-  font-size: 11px;
-  color: #becbda;
+  font-size: 12px;
+  color: #d4d4d4;
 }
 .order-status-tabs button.active {
-  border-color: #54d992;
-  color: #f1f4f6;
+  border-color: #94c973;
+  color: #ededed;
   font-weight: 600;
 }
 .order-actions {
@@ -879,14 +879,14 @@ td .icon-button app-dashboard-icon {
 }
 .order-action-btn {
   padding: 4px 8px;
-  border: 1px solid #3d505d;
+  border: 1px solid #3a3a3a;
   border-radius: 3px;
-  font-size: 9px;
-  color: #d5e0eb;
-  background: #1a2931;
+  font-size: 12px;
+  color: #d4d4d4;
+  background: #1e1e1e;
 }
 .order-action-btn:hover {
-  background: #243038;
+  background: #262626;
 }
 dialog {
   width: min(480px, calc(100% - 32px));
@@ -895,13 +895,13 @@ dialog {
   padding: 24px;
   margin: auto;
   border-radius: 9px;
-  border: 1px solid #3a515d;
-  background: #111e25;
-  color: #edf2f6;
+  border: 1px solid #303030;
+  background: #1a1a1a;
+  color: #ededed;
   box-shadow: 0 25px 90px #0009;
 }
 dialog::backdrop {
-  background: #03090dd0;
+  background: #070707d0;
   backdrop-filter: blur(4px);
 }
 .dialog-heading {
@@ -915,7 +915,7 @@ dialog::backdrop {
   font-size: 20px;
 }
 dialog p {
-  color: #bbcad9;
+  color: #d4d4d4;
   font-size: 12px;
   line-height: 1.7;
   margin: 15px 0;
@@ -931,7 +931,7 @@ dialog .primary-button {
   justify-content: space-between;
   gap: 15px;
   padding: 10px 0;
-  border-bottom: 1px solid #2a3d47;
+  border-bottom: 1px solid #303030;
   font-size: 12px;
 }
 .review-details span {
@@ -945,7 +945,7 @@ kbd {
   display: inline-block;
   padding: 2px 7px;
   margin-right: 8px;
-  background: #243844;
+  background: #262626;
   border-radius: 4px;
 }
 .sr-only {
@@ -998,7 +998,7 @@ kbd {
     font-size: 24px;
   }
   .summary-metrics .main-value > span {
-    font-size: 11px;
+    font-size: 12px;
   }
   .summary-metrics strong {
     font-size: 12px;
@@ -1058,7 +1058,7 @@ kbd {
   }
   .pro-grid {
     grid-template-columns: minmax(0, 1fr) 215px;
-    grid-template-rows: auto 352px 219px auto auto;
+    grid-template-rows: auto minmax(352px, auto) 219px auto auto;
   }
   .summary-panel {
     grid-column: 1 / -1;
@@ -1090,7 +1090,7 @@ kbd {
   }
   .sector-list > div {
     grid-template-columns: minmax(0, 1fr) 40px 39px;
-    font-size: 8px;
+    font-size: 12px;
   }
   .bottom-panels {
     grid-column: 1 / -1;
@@ -1126,7 +1126,7 @@ kbd {
     font-size: 22px;
   }
   .summary-metrics .main-value > span {
-    font-size: 10px;
+    font-size: 12px;
   }
   .bottom-panels {
     grid-template-columns: 1fr 1fr;
@@ -1200,7 +1200,7 @@ kbd {
     height: 30px;
   }
   .pro-search input {
-    font-size: 11px;
+    font-size: 12px;
   }
   .header-actions {
     width: 100%;
@@ -1213,7 +1213,7 @@ kbd {
     padding-inline: 10px;
   }
   .session-line {
-    font-size: 8px;
+    font-size: 12px;
     gap: 6px;
     height: auto;
     min-height: 30px;
@@ -1246,7 +1246,7 @@ kbd {
     font-size: 22px;
   }
   .summary-metrics .main-value > span {
-    font-size: 9px;
+    font-size: 12px;
   }
   .summary-metrics > div:nth-child(2) {
     padding-left: 14px;
@@ -1273,7 +1273,7 @@ kbd {
     padding-inline: 9px;
   }
   .panel-tabs button {
-    font-size: 10px;
+    font-size: 12px;
     white-space: nowrap;
   }
   .watch-panel {
@@ -1283,7 +1283,7 @@ kbd {
   .watch-table td,
   .watch-table th {
     padding-inline: 4px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .watch-table td:first-child,
   .watch-table th:first-child {
@@ -1301,7 +1301,7 @@ kbd {
   }
   .sector-list > div {
     grid-template-columns: minmax(0, 1fr) 70px 42px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .bottom-panels {
     display: flex;
@@ -1351,7 +1351,7 @@ kbd {
   }
 }
 .session-line .closed i {
-  background: #f0c86a;
+  background: #e2b65a;
 }
 
 // Shown instead of a blank screen when balances cannot be read (PS-11).
@@ -1362,10 +1362,10 @@ kbd {
   align-items: center;
   margin: 0 0 10px;
   padding: 10px 14px;
-  border: 1px solid #8a3a3d;
+  border: 1px solid #ff7a6e;
   border-radius: 8px;
-  background: #2a1517;
-  color: #f3d6d7;
+  background: #2a1512;
+  color: #ffb4ab;
   font-size: 13px;
 }
 .service-banner button {
@@ -1378,4 +1378,3 @@ kbd {
 .executions-panel {
   overflow-y: auto;
 }
-

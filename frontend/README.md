@@ -74,6 +74,86 @@ installed Edge; other systems need Playwright Chromium (`npx playwright install 
 
 For backend startup, follow the [setup guide](../docs/GETTING_STARTED.md).
 
+## Portfolio day-chart readability
+
+The portfolio-value chart renders its emerald area, complete line and endpoint together in one
+SVG, with no initial dash/reveal animation or separate HTML dot. The marker stays
+attached during live updates and responsive resizing. Invalid observations are
+excluded from rendering without modifying the source history.
+
+For a day with enough recorded history, **1D** opens on **Recent hour** detail.
+Use **Full day** to see the entire session. Both views retain actual timestamps;
+changing the visible window does not change the day's performance calculation or
+remove stored history. The plot has additional edge padding and a taller mobile
+layout to keep the trend readable. Viewport transitions use native animation frames
+outside Angular, with reduced-motion support and complete teardown cleanup.
+
+## Custom one-day stock chart
+
+The advanced trading overview uses `StockDashboardComponent` with our standalone
+`StockSvgChart`. The renderer uses Angular, RxJS, TypeScript and native SVG only;
+there are no charting or visualization dependencies. The novice overview shows its
+portfolio chart without a separate stock explorer. The existing long-range
+trade-history chart remains available in the advanced view.
+
+```html
+<app-retail-stock-dashboard [selectedAsset]="asset" [sampleMs]="5000" />
+```
+
+`sampleMs` accepts **5000** (default) or **10000**. Sampling uses RxJS
+`sampleTime` on the chart branch and keeps the latest real quote from each period.
+The existing market feed and other raw-stream subscribers retain their live cadence.
+Changing the interval preserves chart history and does not restart the producer.
+Select a stock with `{ symbol, name, market }`, or inject an authenticated
+`Observable<StockDashboardTick>` using `STOCK_DASHBOARD_TICKS`. The exported
+`provideStockDashboardFeed(asset)` supplies a shared, cancellable REST adapter.
+All requests use the existing authenticated `QuoteService`/`ApiHttpClient`.
+
+The adapter loads available history (the existing endpoint returns at most 1,000
+recent quotes), filters to the quote's New York trading date and preserves backend
+timestamp precision. It refreshes history on a new trading date. It cannot recover
+older quotes outside that API limit. The default **1D** view fits the available
+history within that day once, then scrolls left at that fixed span as new prices
+arrive. It does not stretch old prices to make room. `windowSeconds` optionally selects a fixed scrolling span
+between 2 and 86,400 seconds.
+
+Performance uses `/api/v1/quotes/day-opens`, independently of chart samples or the
+history page. This backend returns the first regular-session midpoint (or a prior
+close before the session); the chart rejects prior-session fallback values. Once
+received, the session baseline survives temporary opening-price request failures.
+This is the application's existing session reference, not an external exchange's
+official auction price. Synthetic prices retain their simulated-data label.
+Performance metrics retain their actual green/red session comparisons and show an
+unknown state when the baseline is missing. The chart itself always uses an emerald
+`#22c55e` 2px stroke, rounded caps and joins, and an SVG area filled from
+`rgba(34, 197, 94, 0.4)` to `rgba(34, 197, 94, 0.0)`.
+Both main chart renderers use `gradientUnits="userSpaceOnUse"`, anchored from the
+fixed plot top to its bottom. Only path coordinates and viewport clipping move;
+horizontal scrolling never translates or restarts the gradient.
+
+`stock-chart-math.ts` contains pure coordinate, path, normalization, selection and
+pixel-reduction functions. First/last/min/max points per pixel bucket retain highs,
+lows and trend without changing the original data. Custom monotone cubic segments
+pass through real observations, with control points bounded by their segment
+endpoints so they cannot create artificial price spikes. `StockChartViewport` animates time/price domains and
+reveals incoming segments over 240ms with `requestAnimationFrame`. Reduced-motion
+users receive immediate updates. The SVG nodes are created once by Angular; only
+path/coordinate attributes change during animations, outside `NgZone`.
+
+Hover, touch, and left/right/Home/End keys inspect actual prices and timestamps.
+Inspection freezes the view while new samples remain buffered; leaving, releasing
+touch, blurring, or pressing Escape smoothly resumes it. A ResizeObserver redraws
+at the new size without discarding prices. Subscriptions, listeners, observers and
+animation frames are cleaned up at teardown. Empty/loading/error states and stale
+quote warnings retain the existing dashboard design.
+
+The smaller `RealtimeStockChart` wrapper also uses this SVG renderer. Provide
+`STOCK_PRICE_TICKS` with `{ time, price }` timestamps in Unix seconds (including
+fractional seconds), and pass `[history]`, `[openingPrice]`, `[sampleMs]` and
+`[windowSeconds]` as needed. Always use the quote's backend `quotedAt` timestamp,
+not the client receipt time. Existing `openingPrice` integrations remain compatible;
+the rendering theme is independent of performance.
+
 ## Production build
 
 ```powershell

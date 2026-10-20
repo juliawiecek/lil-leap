@@ -22,7 +22,6 @@ import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, dayGainOf, valuePortfolio
 import { AuthService } from './auth.service';
 import { MarketFeed } from './market-feed.service';
 import { PricePoint, isDelayed } from './market-feed-api';
-import { MarketTicker } from './market-ticker';
 import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
@@ -44,6 +43,23 @@ interface Quote {
 /** Size of the price chart's drawing area, in SVG units. */
 const CHART_WIDTH = 824;
 const CHART_HEIGHT = 160;
+/**
+ * Bar sizes tried for each chart period, coarsest first, with how many bars cover the period
+ * (the quote service returns at most 500). A finer size is tried while history is too short.
+ */
+const CHART_BARS: Record<string, readonly (readonly [string, number])[]> = {
+  '1D': [['5m', 288], ['1m', 500]],
+  '1W': [['1h', 168], ['15m', 500], ['1m', 500]],
+  '1M': [['1d', 31], ['1h', 500], ['15m', 500], ['1m', 500]],
+  '3M': [['1d', 92], ['1h', 500], ['15m', 500], ['1m', 500]],
+  '1Y': [['1d', 366], ['1h', 500], ['15m', 500], ['1m', 500]],
+  All: [['1d', 500], ['1h', 500], ['15m', 500], ['1m', 500]],
+};
+const HOUR_MS = 3600000;
+const DAY_MS = 24 * HOUR_MS;
+/** Fewest bars that still draw a readable line. */
+const MIN_CHART_BARS = 24;
+const BAR_WIDTH_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -80,9 +96,9 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings],
   templateUrl: './advanced-dashboard.html',
-  styleUrl: './advanced-dashboard.scss',
+  styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
@@ -101,6 +117,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #lastOrderRows: OrderHistoryRow[] | null = null;
   /** Which stock's price history is loaded or loading, so a switch drops a stale response. */
   #historySymbol = '';
+  /** The stock and period of the loaded bars, so neither reloads needlessly. */
+  #historyKey = '';
+  /** Width of the loaded bars in ms; 0 when the line is raw quotes. */
+  #barMs = 0;
   readonly name = input('');
   readonly profile = input<UserProfile | null>(null);
   readonly profileLoading = input(false);
@@ -137,7 +157,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly notifications = signal(false);
   readonly privateBalance = signal(false);
   readonly period = signal('1D');
-  readonly periods = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y'];
+  readonly periods = ['1D', '1W', '1M', '3M', '1Y', 'All'];
   readonly bottomTab = signal('Positions');
   readonly bottomTabs = ['Positions', 'Balances', 'Performance'];
   /** Balances could not be read: the service is down or unreachable (PS-11). */
@@ -165,8 +185,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly topMovers = computed(() =>
     [...this.quotes()].sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 5),
   );
+  /** Which list the overview's left card shows: the watchlist, today's movers, or sector moves (display only). */
+  readonly overviewList = signal<'Watchlist' | 'Movers' | 'Sectors'>('Watchlist');
   readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
+  tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
+    const live = this.feed.quotes().find((q) => q.symbol === symbol);
+    return { key: symbol + '-' + (live?.version ?? 0), dir: live?.direction ?? null };
+  }
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
   /** Corner messages when an order fills or is rejected (PS-15). */
@@ -286,18 +313,31 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     return held ? held.cost : null;
   });
   /**
-   * The chosen period, starting no earlier than the first recorded price: the quote history keeps
-   * only recent prices, so a 1-day axis would otherwise squeeze them against the right edge.
+   * The chosen period's full span, like a trading app: 1W always shows a week even when prices
+   * only exist from today. All runs from the first recorded price or trade (at least an hour).
    */
   readonly chartWindow = computed(() => {
-    const period = periodWindow(this.period(), this.currentTime().getTime(), this.tradeMarks());
-    const first = this.priceHistory()[0]?.at;
-    return first && first > period.start && first < period.end ? { start: first, end: period.end } : period;
+    const now = this.currentTime().getTime();
+    if (this.period() !== 'All') {
+      return periodWindow(this.period(), now, this.tradeMarks());
+    }
+    const firsts = [this.priceHistory()[0]?.at, this.tradeMarks()[0]?.at].filter((at): at is number => Number.isFinite(at));
+    const start = firsts.length ? Math.min(...firsts) : now - DAY_MS;
+    return { start: Math.min(start, now - HOUR_MS), end: now };
   });
-  /** The recorded prices inside the chosen period. */
+  /**
+   * The recorded prices inside the period. Before the first one the line runs flat from the
+   * window's start at the earliest known price, so a short history reads as "no change yet".
+   */
   readonly visibleHistory = computed(() => {
     const { start, end } = this.chartWindow();
-    return this.priceHistory().filter((p) => p.at >= start && p.at <= end);
+    const all = this.priceHistory();
+    const inside = all.filter((p) => p.at >= start && p.at <= end);
+    if (inside.length && inside[0].at > start) {
+      const before = all.filter((p) => p.at < start).at(-1);
+      inside.unshift({ at: start, price: (before ?? inside[0]).price });
+    }
+    return inside;
   });
   /** Price range covering the recorded prices, the live price, every fill and the average cost. */
   readonly chartRange = computed(() =>
@@ -343,6 +383,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.page.set('Overview');
     this.routing?.go('Overview');
   }
+  /** Picks the chart period and loads its bars. */
+  setPeriod(period: string): void {
+    this.period.set(period);
+    void this.#loadHistory(this.selected(), period);
+  }
   private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
     void this.#loadHistory(quote);
@@ -380,29 +425,72 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.setTicketQuote(quote);
     }
   }
-  /** Loads the charted stock's recent prices; a failure leaves the line to build from live ticks. */
-  async #loadHistory(quote: Quote): Promise<void> {
-    if (!quote.instrumentId || quote.symbol === this.#historySymbol) {
+  /**
+   * Loads the charted stock's prices for the period as closing prices per bar (/quotes/candles):
+   * the coarsest bar size that still draws a readable line, finer ones while history is short,
+   * and the raw recent quotes when even one-minute bars are too few. A failure keeps what loaded;
+   * the line still grows from live prices.
+   */
+  async #loadHistory(quote: Quote, period = this.period()): Promise<void> {
+    const key = quote.symbol + '|' + period;
+    if (!quote.instrumentId || key === this.#historyKey) {
       return;
     }
-    this.#historySymbol = quote.symbol;
-    this.priceHistory.set([]);
+    this.#historyKey = key;
+    if (quote.symbol !== this.#historySymbol) {
+      this.#historySymbol = quote.symbol;
+      this.#barMs = 0;
+      this.priceHistory.set([]);
+    }
+    const current = () => this.#historyKey === key && !this.#destroyed;
+    let points: PricePoint[] = [];
+    let barMs = 0;
     try {
-      const points = await this.feed.client.history(quote.instrumentId);
-      if (this.#historySymbol === quote.symbol && !this.#destroyed) {
-        this.priceHistory.update((ticks) => [...points, ...ticks.filter((t) => t.at > (points.at(-1)?.at ?? 0))]);
+      for (const [interval, bars] of CHART_BARS[period] ?? CHART_BARS['1D']) {
+        // A finer size reaches less far back; stop before it would cut off older prices.
+        if (points.length && points[0].at < Date.now() - (BAR_WIDTH_MS[interval] ?? 0) * bars) {
+          break;
+        }
+        points = await this.feed.client.closes(quote.instrumentId, interval, bars);
+        barMs = BAR_WIDTH_MS[interval] ?? 0;
+        if (!current() || points.length >= MIN_CHART_BARS) {
+          break;
+        }
+      }
+      if (current() && points.length < MIN_CHART_BARS) {
+        const recent = await this.feed.client.history(quote.instrumentId);
+        if (recent.length > points.length && recent[0].at <= (points[0]?.at ?? Infinity)) {
+          points = recent;
+          barMs = 0;
+        }
       }
     } catch {
-      // The line still grows from live prices.
+      // Keep whatever loaded.
+    }
+    if (current() && points.length) {
+      this.#barMs = barMs;
+      this.priceHistory.set(points);
+      this.#addTick(this.selected());
     }
   }
-  /** Appends the latest price when it is newer than the last recorded one. */
+  /** Adds the latest price to the line: it moves the open bar, or starts the next bar once that one has closed. */
   #addTick(quote: Quote): void {
     const at = Date.parse(quote.quotedAt);
     if (quote.symbol !== this.#historySymbol || !Number.isFinite(at) || !quote.price) {
       return;
     }
-    this.priceHistory.update((points) => (points.length && points[points.length - 1].at >= at ? points : [...points, { at, price: quote.price }]));
+    const barMs = this.#barMs;
+    this.priceHistory.update((points) => {
+      const last = points[points.length - 1];
+      if (last && last.at >= at) {
+        return points;
+      }
+      // Bars sit on fixed boundaries; the last point is the open bar while it is dated after this bar's start.
+      if (last && barMs && last.at > Math.floor(at / barMs) * barMs) {
+        return [...points.slice(0, -1), { at, price: quote.price }];
+      }
+      return [...points, { at, price: quote.price }];
+    });
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
   async #announce(order: Order): Promise<void> {
@@ -643,6 +731,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (!this.quotes().length) { return; }
       const quote = this.quote(this.symbol());
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
+      void this.#loadHistory(this.selected(), this.period());
       if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
     });
     Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));

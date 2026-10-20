@@ -107,3 +107,7 @@ shared/session-core/coverage/
 __pycache__/
 # Password reset emails written locally by the auth service (contain live reset links)
 auth/outbox/
+
+# Machine-local development tools, database, and Python environment
+.local-setup/
+data-pipeline/venv/

@@ -92,7 +92,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   selector: 'app-novice-dashboard',
   imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart],
   templateUrl: './novice-dashboard.html',
-  styleUrl: './novice-dashboard.scss',
+  styleUrls: ['./novice-dashboard.scss', './novice-dashboard.refresh.scss', './novice-settings.scss'],
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
@@ -106,6 +106,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketClock = signal(new Date());
   readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
+  readonly marketClosingSoon = computed(() => this.marketOpen() && !!this.marketStatus()?.nextClose);
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.marketStatus(), this.marketClock()));
   /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
@@ -170,6 +171,28 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return 'Good morning';
     }
     return hour < 18 ? 'Good afternoon' : 'Good evening';
+  });
+  /** First name from the investor profile, for the greeting; empty when it is not known. */
+  readonly firstName = computed(() => this.profile()?.firstName?.trim() ?? '');
+  /**
+   * The sentence under the Overview greeting, from the live numbers: today's move and the held
+   * stock that moved most (no stock when none moved). Null until holdings load.
+   */
+  readonly daySummary = computed(() => {
+    const held = this.holdings();
+    if (!this.portfolioLoaded() || !held.length) {
+      return null;
+    }
+    const amount = this.todayReturn();
+    const best = held.reduce((a, b) => (Math.abs(b.change) > Math.abs(a.change) ? b : a));
+    const money = Math.abs(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return {
+      amount,
+      moveText: amount === 0 ? 'flat' : `${amount > 0 ? 'up' : 'down'} ${money}`,
+      symbol: best.change !== 0 ? best.symbol : '',
+      change: best.change,
+      changeText: `${best.change > 0 ? '+' : ''}${best.change.toFixed(2)}%`,
+    };
   });
   readonly investmentTab = signal('Holdings');
   readonly notifications = signal(false);
