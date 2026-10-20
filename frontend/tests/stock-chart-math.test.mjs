@@ -14,9 +14,30 @@ const {
   performancePalette,
   priceDomain,
   reducePoints,
+  visiblePoints,
 } = await import('../src/app/stock-chart-math.ts');
 const box = { left: 10, right: 110, top: 20, bottom: 120 },
   range = { from: 100, to: 200, min: 90, max: 110, reveal: 200 };
+
+test('empty histories, nearest boundaries and repeated screen coordinates remain finite', () => {
+  assert.deepEqual(priceDomain([]), { min: 0, max: 1 });
+  assert.deepEqual(visiblePoints([], 0, 1), []);
+  assert.equal(nearestPoint([], 100), undefined);
+  const points = [
+    { time: 100, price: 90 },
+    { time: 200, price: 110 },
+  ];
+  assert.equal(nearestPoint(points, 90), points[0]);
+  assert.equal(nearestPoint(points, 190), points[1]);
+  assert.equal(smoothPricePath([{ x: 1, y: 2 }]), 'M1,2');
+  assert.equal(
+    smoothPricePath([
+      { x: 1, y: 2 },
+      { x: 1, y: 3 },
+    ]),
+    'M1,2 L1,3',
+  );
+});
 test('sampling emits the actual latest price and timestamp, rejects late/invalid data, and leaves raw ticks live', () => {
   const scheduler = new TestScheduler(() => {}),
     source = new Subject(),
