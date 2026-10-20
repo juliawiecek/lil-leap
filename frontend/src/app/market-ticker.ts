@@ -16,9 +16,12 @@ import { marketBadgeText } from './market-status-api';
       <span class="badge" [class.closed]="!feed.status()?.open" role="status">
         <i aria-hidden="true"></i>{{ badge() }}
       </span>
-      <ul>
-        @for (quote of feed.quotes(); track quote.symbol + '-' + quote.version) {
-          <li>
+      <!-- The list is drawn twice so the tape can scroll in a seamless loop; the copy is hidden from assistive tech. -->
+      <div class="tape-window">
+        <div class="tape" [class.moving]="feed.quotes().length > 0" [style.animation-duration.s]="feed.quotes().length * 6">
+          <ul>
+            @for (quote of feed.quotes(); track quote.symbol + '-' + quote.version) {
+              <li>
             <button
               type="button"
               [class.flash-up]="quote.direction === 'up'"
@@ -38,36 +41,76 @@ import { marketBadgeText } from './market-status-api';
                 <span class="price muted">—</span>
               }
             </button>
-          </li>
-        } @empty {
-          <li class="muted">Loading prices…</li>
-        }
-      </ul>
+              </li>
+            } @empty {
+              <li class="muted">Loading prices…</li>
+            }
+          </ul>
+          @if (feed.quotes().length) {
+            <ul aria-hidden="true">
+              @for (quote of feed.quotes(); track quote.symbol + '-copy-' + quote.version) {
+                <li>
+            <button
+              type="button"
+              tabindex="-1"
+              [class.flash-up]="quote.direction === 'up'"
+              [class.flash-down]="quote.direction === 'down'"
+              (click)="pick.emit(quote.symbol)"
+            >
+              <strong>{{ quote.symbol }}</strong>
+              @if (quote.price) {
+                <span class="price">{{ quote.price | currency }}</span>
+                <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
+                  {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                </span>
+                @if (delayed(quote.quotedAt)) {
+                  <em class="delayed">Price delayed</em>
+                }
+              } @else {
+                <span class="price muted">—</span>
+              }
+            </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
     </div>
   `,
   styles: [
     `
-      :host { display: block; margin: 6px 0 12px; }
-      .ticker { display: flex; align-items: center; gap: 14px; min-height: 38px; padding: 6px 12px; overflow-x: auto;
-        scrollbar-width: none; border: 1px solid var(--line, #202e35); border-radius: 8px; background: #0f191d; font-size: 12px; }
-      .badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 4px 10px; border-radius: 999px;
-        background: #12301f; color: #8ee6a8; font-weight: 600; white-space: nowrap; }
-      .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-      .badge.closed { background: #2c2a1c; color: #f0c86a; }
-      ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
-      button { display: flex; align-items: baseline; gap: 7px; padding: 4px 9px; border: 0; border-radius: 6px; background: none;
-        color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
-      button:hover { background: #172630; }
+      :host { display: block; }
+      .ticker { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0; font-size: 12.5px; }
+      .tape-window { flex: 1; min-width: 0; overflow: hidden;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); }
+      .tape { display: flex; width: max-content; }
+      .tape ul { padding-right: 4px; }
+      .tape.moving { animation-name: tape-scroll; animation-timing-function: linear; animation-iteration-count: infinite; }
+      .tape-window:hover .tape, .tape-window:focus-within .tape { animation-play-state: paused; }
+      @keyframes tape-scroll { to { transform: translateX(-50%); } }
+      .badge { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 4px 10px 4px 0; border-radius: 999px;
+        background: transparent; color: #94c973; font-weight: 700; white-space: nowrap; }
+      .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
+      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); } 100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); } }
+      .badge.closed { color: #e2b65a; }
+      .badge.closed i { animation: none; }
+      ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+      button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;
+        color: #a4a79e; font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
+      button strong { color: #f2f0e9; font-weight: 700; }
+      .change { font-weight: 600; }
+      button:hover { background: #161616; }
       .price { font-variant-numeric: tabular-nums; }
-      .change.up { color: var(--green, #51d88c); }
-      .change.down { color: #f08a8a; }
-      .muted, .change { color: var(--muted, #aebaca); }
-      .delayed { padding: 0 5px; border-radius: 4px; background: #3a3220; color: #f0c86a; font-style: normal; font-size: 10px; }
+      .change.up { color: var(--green, #94c973); }
+      .change.down { color: #ff7a6e; }
+      .muted, .change { color: var(--muted, #a4a79e); }
+      .delayed { padding: 0 5px; border-radius: 4px; background: #211b0e; color: #e2b65a; font-style: normal; font-size: 12px; }
       .flash-up { animation: flash-up 1.2s ease-out; }
       .flash-down { animation: flash-down 1.2s ease-out; }
-      @keyframes flash-up { from { background: #1f5a37; } to { background: transparent; } }
-      @keyframes flash-down { from { background: #5a1f24; } to { background: transparent; } }
-      @media (prefers-reduced-motion: reduce) { .flash-up, .flash-down { animation: none; } }
+      @keyframes flash-up { from { background: rgba(148, 201, 115, .2); } to { background: transparent; } }
+      @keyframes flash-down { from { background: rgba(255, 122, 110, .2); } to { background: transparent; } }
+      @media (prefers-reduced-motion: reduce) { .flash-up, .flash-down, .badge i, .tape.moving { animation: none; } .tape-window { overflow-x: auto; scrollbar-width: none; } }
     `,
   ],
 })

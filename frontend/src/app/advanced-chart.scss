@@ -16,20 +16,20 @@ button {
 }
 button:focus-visible,
 select:focus-visible {
-  outline: 2px solid #69d999;
+  outline: 2px solid #94c973;
   outline-offset: 2px;
 }
 .gain {
   color: var(--green);
 }
 .loss {
-  color: #ff5e66;
+  color: #ff7a6e;
 }
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: linear-gradient(130deg, #0f191e80, #101a20a0);
+  background: linear-gradient(130deg, #11111180, #111111a0);
 }
 .sr-only {
   position: absolute;
@@ -53,7 +53,7 @@ select:focus-visible {
   white-space: nowrap;
 }
 .chart-company {
-  font-size: 10px;
+  font-size: 12px;
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,9 +67,9 @@ select:focus-visible {
 .indicators {
   display: flex;
   gap: 17px;
-  font-size: 9px;
+  font-size: 12px;
   margin-left: 7px;
-  color: #bcc8d8;
+  color: #d4d4d4;
 }
 .indicators span {
   display: flex;
@@ -86,22 +86,22 @@ select:focus-visible {
   margin-left: 2px;
 }
 .blue {
-  background: #3a78ef;
+  background: #ededed;
 }
 .blue-text {
-  color: #4a83ff;
+  color: #ededed;
 }
 .purple {
-  background: #a950e2;
+  background: #ededed;
 }
 .purple-text {
-  color: #b376e7;
+  color: #ededed;
 }
 .yellow {
-  background: #f3d21a;
+  background: #e2b65a;
 }
 .yellow-text {
-  color: #f3d21a;
+  color: #e2b65a;
 }
 .indicators .yellow {
   height: 2px;
@@ -112,17 +112,17 @@ select:focus-visible {
   align-items: center;
   padding: 2px;
   margin-left: auto;
-  border: 1px solid #1d2b32;
+  border: 1px solid #1e1e1e;
   border-radius: 4px;
 }
 .chart-periods button {
-  font-size: 8px;
+  font-size: 12px;
   padding: 4px 6px;
   border-radius: 4px;
 }
 .chart-periods .active {
-  background: #63d68c;
-  color: #0e2a1b;
+  background: #94c973;
+  color: #121a0f;
   font-weight: 600;
 }
 .technical-chart {
@@ -145,13 +145,13 @@ select:focus-visible {
   align-items: start;
   width: 34px;
   padding-left: 5px;
-  font-size: 9px;
-  border-left: 1px solid #43515b;
+  font-size: 12px;
+  border-left: 1px solid #3a3a3a;
 }
 .price-axis b {
   margin-left: -5px;
-  background: #7add98;
-  color: #133521;
+  background: #94c973;
+  color: #1a2614;
   padding: 1px 5px;
   border-radius: 2px;
   font-weight: 600;
@@ -161,7 +161,7 @@ select:focus-visible {
   position: relative;
   padding-top: 17px;
   padding-right: 34px;
-  border-top: 1px solid #2b3941;
+  border-top: 1px solid #262626;
 }
 .volume-pane {
   height: 62px;
@@ -173,7 +173,7 @@ select:focus-visible {
   position: absolute;
   top: 3px;
   left: 4px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .volume-pane svg {
   width: 100%;
@@ -192,21 +192,21 @@ select:focus-visible {
   top: 17px;
   bottom: 0;
   width: 34px;
-  border-left: 1px solid #43515b;
+  border-left: 1px solid #3a3a3a;
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   padding-left: 5px;
-  font-size: 9px;
+  font-size: 12px;
 }
 .time-axis {
   display: flex;
   justify-content: space-around;
-  border-top: 1px solid #43515b;
+  border-top: 1px solid #3a3a3a;
   margin-right: 34px;
   padding-top: 6px;
-  font-size: 9px;
-  color: #b9c8da;
+  font-size: 12px;
+  color: #d4d4d4;
 }
 
 @media (max-width: 1500px) {
@@ -243,7 +243,7 @@ select:focus-visible {
   }
   .indicators {
     gap: 8px;
-    font-size: 8px;
+    font-size: 12px;
   }
   .chart-periods button {
     padding: 3px 4px;
@@ -262,7 +262,7 @@ select:focus-visible {
     padding-inline: 8px;
   }
   .chart-toolbar > b {
-    font-size: 10px;
+    font-size: 12px;
   }
   .quote-price {
     font-size: 13px;
@@ -273,12 +273,12 @@ select:focus-visible {
   .chart-symbol select {
     width: 52px;
     padding-inline: 6px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .indicators {
     width: 100%;
     justify-content: space-between;
-    font-size: 7px;
+    font-size: 12px;
     gap: 3px;
   }
   .chart-periods {
@@ -295,39 +295,130 @@ select:focus-visible {
     padding-inline: 8px;
   }
   .time-axis {
-    font-size: 7px;
+    font-size: 12px;
   }
 }
 .trade-summary {
   margin: 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 .trade-summary b {
-  color: #eef1f5;
+  color: #ededed;
 }
 .average-cost line {
-  stroke: #e8bc0b;
+  stroke: #e2b65a;
   stroke-width: 1;
 }
 .average-cost text {
-  fill: #e8bc0b;
-  font-size: 9px;
+  fill: #e2b65a;
+  font-size: 12px;
 }
 .trade-mark path {
-  stroke: #0b1215;
+  stroke: #111111;
   stroke-width: 0.8;
 }
 .trade-mark.buy path {
-  fill: #27b779;
+  fill: #94c973;
 }
 .trade-mark.sell path {
-  fill: #ef5660;
+  fill: #ff7a6e;
 }
 
 .chart-note {
   margin: 6px 0 0;
-  color: #87918f;
-  font-size: 11px;
+  color: #7a7a7a;
+  font-size: 12px;
 }
 
+/* ==========================================================================
+   Visual refresh (Oct 2026): look and feel only. The chart sits in the middle
+   of the desk, between the watchlist and the order ticket.
+   ========================================================================== */
+@keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes nt-draw { to { stroke-dashoffset: 0; } }
+.panel { border-color: #1e1e1e; border-radius: 20px; background: radial-gradient(60% 50% at 50% 0%, rgba(148, 201, 115, 0.05), transparent 70%), #111111; animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.chart-panel { grid-column: 1 / 9; grid-row: 2; min-height: 440px; }
+.chart-toolbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: 'company company . periods' 'price change . periods' 'trades trades trades trades';
+  align-items: center;
+  gap: 4px 12px;
+  height: auto;
+  padding: 18px 20px 4px;
+  border-bottom: 0;
+  white-space: normal;
+}
+.chart-company { grid-area: company; }
+.chart-company b { margin-right: 8px; color: #ededed; font-size: 15px; font-weight: 800; }
+.quote-price { grid-area: price; }
+.chart-toolbar > b { grid-area: change; }
+.chart-periods { grid-area: periods; align-self: start; order: 0; margin-left: 0; }
+.trade-summary { grid-area: trades; flex-basis: auto; order: 0; margin-top: 2px; }
+.price-pane { position: relative; }
+.price-pane svg > rect { display: none; }
+.average-cost text { display: none; }
+.avg-cost-label { position: absolute; right: 64px; padding: 2px 8px; border-radius: 6px; background: #232323; color: #d4d4d4; font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; transform: translateY(-125%); }
+.chart-company { max-width: none; color: #a1a1a1; font-size: 14px; font-weight: 700; }
+.quote-price { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; }
+.chart-toolbar > b { font-size: 14px; font-weight: 700; }
+.trade-summary { flex-basis: 100%; order: 3; color: #a1a1a1; font-size: 13px; }
+.trade-summary b { font-weight: 700; }
+.chart-periods { gap: 2px; padding: 3px; border-color: #262626; border-radius: 10px; background: rgba(10, 10, 10, 0.6); }
+.chart-periods button { min-width: 38px; min-height: 30px; padding: 0 8px; border-radius: 8px; color: #7a7a7a; font-size: 12.5px; font-weight: 700; transition: background-color 0.15s ease, color 0.15s ease; }
+.chart-periods button:hover { color: #ededed; }
+.chart-periods .active { background: #ededed; color: #0a0a0a; font-weight: 700; }
+.technical-chart { padding: 12px 20px 14px; }
+.price-pane { height: 300px; }
+.price-pane .price-line { stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: nt-draw 1.6s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards; filter: drop-shadow(0 0 6px rgba(148, 201, 115, 0.35)); }
+.price-axis { width: 56px; padding-left: 10px; border-left-color: #262626; color: #7a7a7a; font-weight: 600; }
+.price-axis b { background: #ededed; color: #0a0a0a; border-radius: 6px; }
+.time-axis { margin-right: 56px; padding-top: 10px; border-top-color: #262626; color: #7a7a7a; font-weight: 600; }
+.average-cost line { stroke: #ededed; stroke-opacity: 0.45; stroke-dasharray: 5 4; }
+.average-cost text { fill: #d4d4d4; font-weight: 700; }
+.trade-mark path { stroke: #0a0a0a; }
+.chart-note { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) {
+  .panel, .price-pane .price-line { animation: none; }
+  .price-pane .price-line { stroke-dasharray: none; }
+}
+@media (max-width: 1200px) {
+  .chart-panel { grid-column: 1 / 8; grid-row: 2; }
+}
+@media (max-width: 950px) {
+  .chart-panel { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 760px) {
+  .chart-toolbar { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'company company' 'price change' 'trades trades' 'periods periods'; }
+  .chart-periods { justify-self: start; }
+  .chart-panel { height: auto; }
+  .price-pane { height: 180px; }
+  .chart-toolbar { padding: 12px; }
+  .quote-price { font-size: 22px; }
+}
+
+/* Middle ground (flatter, sharper): 8px corners, flat neutral surface, no glow. */
+.panel { border-color: #1e1e1e; border-radius: 8px; background: #111111; box-shadow: none; animation: none; }
+.chart-toolbar { padding: 14px 20px 2px; }
+.chart-company { font-size: 13.5px; font-weight: 600; }
+.chart-company b { font-size: 14px; }
+.quote-price { font-size: 28px; letter-spacing: -0.02em; }
+.chart-toolbar > b { font-size: 13.5px; }
+.chart-periods { gap: 2px; padding: 0; border: 0; border-radius: 0; background: none; }
+.chart-periods button { min-width: 34px; min-height: 26px; padding: 0 6px; border-radius: 3px; color: #7a7a7a; font-size: 12px; }
+.chart-periods button:hover { background: #1a1a1a; color: #ededed; }
+.chart-periods .active, .chart-periods .active:hover { background: #262626; color: #ededed; }
+.technical-chart { padding: 10px 20px 12px; }
+.price-pane .price-line { filter: none; }
+.avg-cost-label { border-radius: 2px; background: #262626; }
+.price-axis b { border-radius: 2px; }
+.average-cost line { stroke: #a1a1a1; stroke-opacity: 0.55; stroke-dasharray: 4 4; }
+
+/* Live price flash: a number briefly lights green or red when its price moves. */
+.tick { display: inline-block; margin: -1px -4px; padding: 1px 4px; border-radius: 4px; }
+.tick-up { animation: nt-tick-up 1.2s ease-out; }
+.tick-down { animation: nt-tick-down 1.2s ease-out; }
+@keyframes nt-tick-up { from { background-color: rgba(148, 201, 115, 0.28); } to { background-color: rgba(148, 201, 115, 0); } }
+@keyframes nt-tick-down { from { background-color: rgba(255, 122, 110, 0.28); } to { background-color: rgba(255, 122, 110, 0); } }
+@media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }

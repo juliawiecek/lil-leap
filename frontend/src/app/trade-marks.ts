@@ -30,14 +30,20 @@ export interface PriceRange {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PERIOD_DAYS: Record<string, number> = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, '1Y': 365 };
+const PERIOD_DAYS: Record<string, number> = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, '6M': 182, '1Y': 365, '5Y': 1826 };
 /** Room above and below the plotted prices, as a share of the price. */
 const PRICE_PADDING = 0.02;
 const LABEL_COUNT = 7;
-const LABEL_FORMATS: Record<string, Intl.DateTimeFormatOptions> = {
-  '1D': { hour: '2-digit', minute: '2-digit' },
-  '1W': { weekday: 'short' },
-};
+/** Axis label style for the time span actually shown: clock times, weekdays, dates, then months. */
+function labelFormat(span: number): Intl.DateTimeFormatOptions {
+  if (span <= 2 * DAY_MS) {
+    return { hour: '2-digit', minute: '2-digit' };
+  }
+  if (span <= 8 * DAY_MS) {
+    return { weekday: 'short' };
+  }
+  return span <= 400 * DAY_MS ? { day: 'numeric', month: 'short' } : { month: 'short', year: 'numeric' };
+}
 
 /** Filled orders for one stock, oldest first, as chart markers. */
 export function tradeMarks(rows: readonly OrderHistoryRow[], symbol: string, locale?: string): TradeMark[] {
@@ -116,9 +122,10 @@ export function pricePath(
     .join(' ');
 }
 
-/** Evenly spaced time labels across the window, formatted for the period. */
-export function timeLabels(period: string, window: ChartWindow, locale?: string): string[] {
-  const format = new Intl.DateTimeFormat(locale, LABEL_FORMATS[period] ?? { day: 'numeric', month: 'short' });
+/** Evenly spaced time labels across the window, formatted for the span it covers. */
+export function timeLabels(_period: string, window: ChartWindow, locale?: string): string[] {
+  // Labels follow the span on screen, not the period's name: a 5Y chart of two hours of prices shows times.
+  const format = new Intl.DateTimeFormat(locale, labelFormat(window.end - window.start));
   const step = (window.end - window.start) / (LABEL_COUNT - 1);
   return Array.from({ length: LABEL_COUNT }, (_, i) => format.format(window.start + step * i));
 }

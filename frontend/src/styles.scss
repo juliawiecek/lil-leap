@@ -27,11 +27,39 @@
   font-display: swap;
 }
 :root {
-  --font-ui: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --font-display: 'Playfair Display', 'Merriweather', serif;
-  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  --font-ui: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
+
+  /* One palette for every screen: neutrals, one off-white accent, one green, one red, one warning. */
+  --nt-bg: #070707;
+  --nt-surface: #0c0c0c;
+  --nt-raised: #161616;
+  --nt-line: #1f231f;
+  --nt-line-strong: #2c312b;
+  --nt-text: #f2f0e9;
+  --nt-muted: #a4a79e;
+  --nt-subtle: #7e8279;
+  --nt-accent: #f2efe6;
+  --nt-on-accent: #0b0c0b;
+  --nt-green: #94c973;
+  --nt-red: #ff7a6e;
+  --nt-warn: #e2b65a;
+  --nt-radius: 20px;
+  --nt-grid: linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
 }
-body { font-family: var(--font-ui); }
+body {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  background-color: var(--nt-bg);
+}
+@keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes nt-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+}
 
 /*
  * A dropdown's open list is drawn by the browser from the options' own colours, not the select's

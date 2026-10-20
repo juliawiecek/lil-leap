@@ -38,7 +38,7 @@ const HEIGHT = 200;
           (keydown)="scrubKey($event)"
         >
           <line class="baseline" x1="0" [attr.x2]="width" [attr.y1]="baselineY()" [attr.y2]="baselineY()" />
-          <path class="line" [attr.d]="path()" />
+          <path class="line" pathLength="1" [attr.d]="path()" />
           @if (active(); as point) {
             <line class="cursor" [attr.x1]="point.x" [attr.x2]="point.x" y1="0" [attr.y2]="height" />
           }
@@ -67,29 +67,31 @@ const HEIGHT = 200;
     }
   `,
   styles: [`
-    :host { display: block; margin-top: 14px; --up: #7ede8b; --down: #f45159; }
+    :host { display: block; margin-top: 14px; --up: #94c973; --down: #ff7a6e; }
     .chart { position: relative; --tone: var(--up); }
     .chart.down { --tone: var(--down); }
-    svg { display: block; width: 100%; height: 200px; overflow: visible; cursor: crosshair; outline: none; touch-action: pan-y; }
+    svg { display: block; width: 100%; height: 260px; overflow: visible; cursor: crosshair; outline: none; touch-action: pan-y; }
     @media (max-width: 600px) { svg, .chart-empty { height: 150px; } }
     svg:focus-visible { outline: 2px solid var(--tone); outline-offset: 6px; border-radius: 4px; }
-    .line { fill: none; stroke: var(--tone); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; transition: stroke .2s; }
-    .baseline { stroke: #5b6563; stroke-width: 1; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-    .cursor { stroke: #9aa5a2; stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border: 2px solid #0f1415; border-radius: 50%; background: var(--tone); box-sizing: border-box; pointer-events: none; }
+    .line { fill: none; stroke: var(--tone); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; transition: stroke .2s;
+      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 40%, transparent)); stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.6s cubic-bezier(.3, .7, .2, 1) .2s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    .baseline { stroke: #3a4038; stroke-width: 1; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    .cursor { stroke: #a4a79e; stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .dot { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border: 2px solid #0c0c0c; border-radius: 50%; background: var(--tone); box-sizing: border-box; pointer-events: none; }
     .dot.live { animation: pulse 2s ease-out infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--tone); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-    @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .line { transition: none; } }
-    .chart-note.delayed { color: #d9a400; }
-    .cursor-time { position: absolute; top: -20px; transform: translateX(-50%); color: #9aa5a2; font-size: 11px; white-space: nowrap; pointer-events: none; }
-    .chart-empty { display: grid; place-items: center; height: 200px; color: #87918f; font-size: 13px; }
-    .periods { display: flex; gap: 6px; margin-top: 14px; padding-bottom: 10px; border-bottom: 1px solid #283035; --tone: var(--up); }
+    @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .line { transition: none; animation: none; stroke-dasharray: none; } }
+    .chart-note.delayed { color: #e2b65a; }
+    .cursor-time { position: absolute; top: -26px; transform: translateX(-50%); padding: 4px 10px; border: 1px solid #2c312b; border-radius: 8px; background: rgba(20, 23, 20, .95); color: #f2f0e9; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
+    .chart-empty { display: grid; place-items: center; height: 260px; color: #7e8279; font-size: 13px; }
+    .periods { display: flex; width: max-content; max-width: 100%; gap: 2px; margin-top: 16px; padding: 4px; border: 1px solid #1f231f; border-radius: 12px; background: rgba(7, 7, 7, .6); --tone: var(--up); }
     .periods.down { --tone: var(--down); }
-    .periods button { min-width: 42px; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; color: #d7dedc; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .periods button:hover { color: var(--tone); }
-    .periods button.selected { color: var(--tone); box-shadow: inset 0 -2px 0 var(--tone); border-radius: 0; }
-    .periods button:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
-    .chart-note { margin: 8px 0 0; color: #87918f; font-size: 12px; }
+    .periods button { min-width: 44px; min-height: 34px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: #7e8279; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .15s, color .15s; }
+    .periods button:hover { color: #f2f0e9; }
+    .periods button.selected { background: #f2efe6; color: #0b0c0b; }
+    .periods button:focus-visible { outline: 2px solid #f2efe6; outline-offset: 2px; }
+    .chart-note { margin: 8px 0 0; color: #7e8279; font-size: 12px; }
   `],
 })
 export class PortfolioChart {

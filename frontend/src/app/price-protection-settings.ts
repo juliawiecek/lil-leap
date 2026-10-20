@@ -79,47 +79,62 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
     `
       :host { display: block; }
       .setting-row {
-        display: flex; justify-content: space-between; align-items: center; gap: 24px;
-        padding: 22px 0; border-bottom: 1px solid var(--line);
+        display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+        padding: 16px 0 20px; border-bottom: 1px solid var(--line);
       }
-      .setting-label { display: grid; gap: 4px; max-width: 360px; }
-      .setting-label small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+      .setting-label { display: grid; gap: 3px; max-width: 520px; }
+      .setting-label > span { font-size: 14px; font-weight: 600; }
+      .setting-label small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
       .segmented {
-        display: flex; align-items: center; gap: 2px; height: 28px; padding: 1px;
-        border: 1px solid var(--line); border-radius: 6px;
+        display: inline-flex; align-items: center; gap: 2px; padding: 3px;
+        border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.25);
       }
-      .segmented button, .segmented .custom {
-        display: inline-flex; align-items: center; height: 100%; min-width: 40px; justify-content: center;
-        padding: 0 9px; border-radius: 5px; color: #c0cad9; font-size: 11px;
+      .segmented button {
+        min-width: 48px; height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: none;
+        color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
       }
-      .segmented .selected { background: var(--green); color: #0e2a1b; font-weight: 600; }
+      .segmented button:hover { color: #f2f0e9; }
+      .segmented button.selected { background: var(--protection-selected-bg, #f2efe6); color: var(--protection-selected-text, #0b0c0b); }
+      .segmented .custom {
+        display: inline-flex; align-items: center; gap: 2px; height: 32px; margin-left: 2px; padding: 0 10px;
+        border-left: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600;
+      }
+      .segmented .custom.selected {
+        background: var(--protection-selected-bg, transparent);
+        color: var(--protection-selected-text, #f2f0e9);
+        border-radius: 6px;
+      }
+      .segmented .custom.selected input { color: inherit; }
       .custom input {
-        width: 46px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: right;
+        width: 56px; padding: 0; border: 0; background: none; color: #f2f0e9; font: inherit; text-align: right; outline: none;
       }
       .custom input::placeholder { color: var(--muted); }
-      .overrides { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+      .overrides { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
       .chip {
-        display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px;
-        border: 1px solid var(--line); border-radius: 999px; font-size: 11px;
+        display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 4px 0 12px;
+        border: 1px solid var(--line); border-radius: 6px; font-size: 13px; font-weight: 700;
       }
-      .chip b { color: var(--green); font-weight: 600; }
-      .chip button { width: 20px; height: 20px; border-radius: 50%; color: var(--muted); font-size: 13px; line-height: 1; }
-      .chip button:hover { color: #eef1f5; background: rgba(255, 255, 255, 0.06); }
-      .add-override { display: flex; align-items: center; gap: 6px; }
+      .chip b { color: var(--muted); font-weight: 600; }
+      .chip button {
+        width: 22px; height: 22px; border: 0; border-radius: 4px; background: none;
+        color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer;
+      }
+      .chip button:hover { color: #f2f0e9; background: rgba(255, 255, 255, 0.06); }
+      .add-override { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
       select, .percent-field {
-        height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
-        background-color: #0f1518; color: inherit; font-size: 11px; color-scheme: dark;
+        height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.25); color: inherit; font-size: 13px; font-weight: 600; color-scheme: dark;
       }
-      .percent-field { display: inline-flex; align-items: center; gap: 2px; }
-      .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: right; }
+      .percent-field { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
+      .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: #f2f0e9; font: inherit; text-align: right; outline: none; }
       .add {
-        height: 28px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
-        color: #d5e0eb; font-size: 11px; background: rgba(255, 255, 255, 0.04);
+        height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: none;
+        color: #f2f0e9; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
       }
-      .add:hover { border-color: var(--green); }
+      .add:hover { border-color: var(--muted); }
       input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
       input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
-      .message { margin: 10px 0 0; color: #f0c86a; font-size: 11px; }
+      .message { margin: 10px 0 0; color: #e2b65a; font-size: 12px; }
       .sr-only {
         position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
         clip-path: inset(50%); white-space: nowrap; border: 0;

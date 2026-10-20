@@ -1,8 +1,12 @@
 <div class="novice-shell">
   <aside class="novice-sidebar">
     <a class="wordmark" href="/" (click)="$event.preventDefault(); navigate('Overview')"
-      >Next<span>Trade</span><app-dashboard-icon name="arrow"
-    /></a>
+      >Next<span>Trade</span
+      ><svg class="wordmark-trend" viewBox="0 0 22 16" aria-hidden="true">
+        <path d="M1 13 7 9l4 2 8-9" />
+        <path d="m14 2h5v5" />
+      </svg
+    ></a>
     <nav aria-label="Main navigation">
       @for (item of navigation; track item.label) {
         <button
@@ -88,11 +92,24 @@
     <main class="novice-content">
       <div class="page-heading">
         <div>
-          <span class="greeting">{{ greeting() }}</span>
-          <h1>{{ activeTab() === 'Overview' ? 'Portfolio' : activeTab() }}</h1>
+          @if (activeTab() === 'Overview') {
+            <h1 class="greeting-title">{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
+            @if (daySummary(); as day) {
+              @if (showBalance() && day.symbol) {
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0">{{ day.moveText }}</b> today, and <b>{{ day.symbol }}</b> is your best mover <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">({{ day.changeText }})</span>.</p>
+              } @else if (showBalance()) {
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0">{{ day.moveText }}</b> today.</p>
+              } @else if (day.symbol) {
+                <p class="day-summary"><b>{{ day.symbol }}</b> is your best mover today <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">({{ day.changeText }})</span>.</p>
+              }
+            }
+          } @else {
+            <span class="greeting">{{ greeting() }}</span>
+            <h1>{{ activeTab() }}</h1>
+          }
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" role="status"><i></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
+          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
@@ -189,10 +206,8 @@
                     <caption class="sr-only">Holdings</caption>
                     <thead>
                       <tr>
-                        <th>Symbol</th>
-                        <th>Name</th>
-                        <th>Value</th>
-                        <th>Shares</th>
+                        <th>Symbol · Name</th>
+                        <th>Value · Shares</th>
                         <th>Avg. price</th>
                         <th>Today</th>
                         <th>Total return</th>
@@ -227,12 +242,12 @@
                                     holding.logo === 'vanguard' ? 'V' : holding.symbol.slice(0, 1)
                                   }}
                                 }</span
-                              ><b>{{ holding.symbol }}</b>
+                              ><span class="holding-id"><b>{{ holding.symbol }}</b><span class="company-name">{{ holding.name }}</span></span>
                             </button>
                           </td>
-                          <td class="company-name">{{ holding.name }}</td>
-                          <td>{{ holding.value | currency }}</td>
-                          <td>{{ holding.shares | number: '1.3-3' }}</td>
+                          <td>
+                            <span class="cell-main">{{ holding.value | currency }}</span><span class="cell-sub">{{ holding.shares | number: '1.3-3' }} shares</span>
+                          </td>
                           <td>{{ holding.average | currency }}</td>
                           <td [class.positive]="holding.today > 0" [class.negative]="holding.today < 0">
                             {{ holding.today > 0 ? '+' : '' }}{{ holding.today | currency
@@ -252,13 +267,13 @@
                               [attr.aria-label]="'Trade ' + holding.symbol"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
-                              <app-dashboard-icon name="more" />
+                              Trade
                             </button>
                           </td>
                         </tr>
                       } @empty {
                         <tr>
-                          <td colspan="8" class="empty-row">
+                          <td colspan="6" class="empty-row">
                             {{ portfolioLoaded() ? 'No positions yet. Use Buy to make your first trade.' : 'Loading your holdings…' }}
                           </td>
                         </tr>
@@ -293,44 +308,64 @@
             </section>
           }
           @if (activeTab() === 'Settings') {
-            <section class="panel settings-panel">
-              <h2>Account settings</h2>
+            <section class="settings-page" aria-label="Account settings">
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
-                <div>
-                  <span>Full name</span><strong>{{ userProfile.firstName }} {{ userProfile.lastName }}</strong>
-                </div>
-                <div>
-                  <span>Email</span><strong>{{ userProfile.email }}</strong>
-                </div>
-                <div>
-                  <span>Phone</span><strong>{{ userProfile.phone }}</strong>
-                </div>
-                <div>
-                  <span>Address</span><strong>{{ userProfile.address }}</strong>
+                <header class="settings-profile">
+                  <span class="settings-avatar" aria-hidden="true">{{ (userProfile.firstName || 'A').slice(0, 1).toUpperCase() }}{{ (userProfile.lastName || '').slice(0, 1).toUpperCase() }}</span>
+                  <div class="settings-identity">
+                    <span class="settings-eyebrow">Your profile</span>
+                    <h2>{{ userProfile.firstName }} {{ userProfile.lastName }}</h2>
+                    <p>{{ userProfile.email }}</p>
+                  </div>
+                </header>
+                <div class="settings-section">
+                  <div class="settings-intro"><h2>Personal details</h2><p>Your contact information.</p></div>
+                  <dl class="settings-list">
+                    <div><dt>Phone</dt><dd>{{ userProfile.phone || 'Not provided' }}</dd></div>
+                    <div><dt>Address</dt><dd>{{ userProfile.address || 'Not provided' }}</dd></div>
+                  </dl>
                 </div>
               }
-              <div>
-                <span>Account name</span><strong>{{ name() || 'Your account' }}</strong>
+              <div class="settings-section">
+                <div class="settings-intro"><h2>Account</h2><p>Your trading account and the experience it uses.</p></div>
+                <dl class="settings-list account-details">
+                  <div><dt>Account name</dt><dd>{{ name() || 'Your account' }}</dd></div>
+                  <div><dt>Trader tier</dt><dd><span class="tier-tag" title="Assigned from the net worth and income you declared">Novice · Guided</span></dd></div>
+                </dl>
               </div>
-              <div>
-                <span>Trader tier</span><strong title="Assigned from the net worth and income you declared">Novice · Guided</strong>
+              <div class="settings-section">
+                <div class="settings-intro"><h2>Display</h2><p>How NextTrade shows your money.</p></div>
+                <div class="settings-list">
+                  <div>
+                    <span class="setting-text"><b>Show portfolio balance</b><small>Turn off to hide your totals on screen.</small></span>
+                    <button
+                      type="button"
+                      role="switch"
+                      class="switch"
+                      [class.on]="showBalance()"
+                      [attr.aria-checked]="showBalance()"
+                      aria-label="Show portfolio balance"
+                      (click)="showBalance.set(!showBalance())"
+                    ><i></i></button>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span>Portfolio balance</span
-                ><button
-                  class="secondary-button"
-                  type="button"
-                  (click)="showBalance.set(!showBalance())"
-                >
-                  {{ showBalance() ? 'Hide balance' : 'Show balance' }}
-                </button>
+              <div class="settings-section">
+                <div class="settings-intro"><h2>Trading safeguards</h2><p>Limits that protect you when prices move quickly.</p></div>
+                <div class="safeguards-group">
+                  <app-price-protection-settings [symbols]="listedSymbols()" />
+                </div>
               </div>
-              <app-price-protection-settings [symbols]="listedSymbols()" />
-              <button class="secondary-button" type="button" (click)="signOut.emit()">
-                Sign out ↗
-              </button>
+              <footer class="settings-session">
+                <div>
+                  <h2>Session</h2>
+                  <p class="signed-in">Signed in as <b>{{ name() || 'your account' }}</b></p>
+                  <p>You’ll need to sign in again after signing out.</p>
+                </div>
+                <button class="secondary-button" type="button" (click)="signOut.emit()">Sign out</button>
+              </footer>
             </section>
           }
         </div>
@@ -347,12 +382,19 @@
                 <div class="allocation-donut" role="img" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
                   <!-- A circle of circumference 100, so each arc's length is its percentage. -->
                   <svg viewBox="0 0 42 42" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="allocation-stocks-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#3d78b5" />
+                        <stop offset="100%" stop-color="#79b8e8" />
+                      </linearGradient>
+                    </defs>
                     <circle class="ring cash" cx="21" cy="21" r="15.9155" />
                     <circle
                       class="ring stocks"
                       cx="21"
                       cy="21"
                       r="15.9155"
+                      stroke="url(#allocation-stocks-gradient)"
                       [attr.stroke-dasharray]="stocksShare() + ' ' + (100 - stocksShare())"
                     />
                   </svg>
@@ -382,9 +424,7 @@
               <div class="trade-actions">
                 <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
                 ><button type="button" class="secondary-button" (click)="openTrade('Sell')">
-                  Sell</button
-                ><button type="button" class="outline-button" (click)="openTrade()">
-                  Open trade ticket
+                  Sell
                 </button>
               </div>
             </section>
@@ -527,10 +567,10 @@
         <p class="review-confirmation review-summary" role="status">{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
-          <button class="green-button submit-trade" type="submit">Confirm {{ side().toLowerCase() }}</button>
+          <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
         </div>
       } @else {
-        <button class="green-button submit-trade" type="submit">Review {{ side().toLowerCase() }}</button>
+        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
       }
       <output>{{ tradeMessage() }}</output>
     </form>

@@ -1,7 +1,7 @@
 <section class="panel chart-panel" aria-label="Stock price chart">
   <div class="chart-toolbar">
-    <span class="chart-company">{{ desk().selected().name }}</span
-    ><strong class="quote-price">{{ desk().selected().price | currency }}</strong
+    <span class="chart-company"><b>{{ desk().selected().symbol }}</b>{{ desk().selected().name }}</span
+    ><strong class="quote-price">@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</span>}</strong
     ><b [class.gain]="desk().selected().change > 0" [class.loss]="desk().selected().change < 0"
       >{{ desk().selectedDayMove() > 0 ? '+' : '' }}{{ desk().selectedDayMove() | number: '1.2-2' }}
       ({{ desk().selected().change > 0 ? '+' : '' }}{{ desk().selected().change | number: '1.2-2' }}%) today</b
@@ -23,7 +23,7 @@
           type="button"
           [class.active]="desk().period() === p"
           [attr.aria-pressed]="desk().period() === p"
-          (click)="desk().period.set(p)"
+          (click)="desk().setPeriod(p)"
         >
           {{ p }}
         </button>
@@ -40,12 +40,12 @@
       >
         <defs>
           <pattern id="pro-grid" width="112" height="30" patternUnits="userSpaceOnUse">
-            <path d="M112 0H0V30" fill="none" stroke="#233039" stroke-width=".65" />
+            <path d="M112 0H0V30" fill="none" stroke="#262626" stroke-width=".65" />
           </pattern>
         </defs>
         <rect width="824" height="160" fill="url(#pro-grid)" />
         @if (desk().priceLine()) {
-          <path class="price-line" [attr.d]="desk().priceLine()" fill="none" stroke="#3878ec" stroke-width="1.4" vector-effect="non-scaling-stroke" />
+          <path class="price-line" pathLength="1" [attr.d]="desk().priceLine()" fill="none" stroke="#94c973" stroke-width="2" vector-effect="non-scaling-stroke" />
         }
         @if (desk().averageCostY() !== null) {
           <g class="average-cost">
@@ -66,6 +66,9 @@
           </g>
         }
       </svg>
+      @if (desk().averageCostY() !== null) {
+        <span class="avg-cost-label" aria-hidden="true" [style.top.%]="desk().averageCostY()! / 1.6">Avg cost {{ desk().averageCost() | currency }}</span>
+      }
       <div class="price-axis">
         @for (price of desk().priceAxis(); track $index) {
           <span>{{ price | number: '1.2-2' }}</span>
