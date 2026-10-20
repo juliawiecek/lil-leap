@@ -4,6 +4,7 @@ import com.neueda.leap.reporting.dto.ClientActivityTrendDto;
 import com.neueda.leap.reporting.dto.OverviewDto;
 import com.neueda.leap.reporting.dto.TopInstrumentDto;
 import com.neueda.leap.reporting.entity.TradeFillEntity;
+import com.neueda.leap.reporting.model.MarketDay;
 import com.neueda.leap.reporting.model.ReportDateRange;
 import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import org.springframework.core.io.ByteArrayResource;
@@ -130,7 +131,7 @@ public class ReportingServiceImpl implements ReportingService {
      * Creates the reporting service.
      *
      * @param repository existing read-only reporting repository used by the dashboard insights endpoints
-     * @param clock UTC-aware clock used to derive the current day window
+     * @param clock source of the current instant, used to find today's New York trading day
      * @param resourceLoader classpath resource loader used to read the BR-16 CSV dataset
      */
     public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {
@@ -224,20 +225,6 @@ public class ReportingServiceImpl implements ReportingService {
     private String reportFilename(String reportName, ReportDateRange range) {
         return reportName + "_" + DATE_FORMATTER.format(range.startDate())
                 + "_" + DATE_FORMATTER.format(range.endDate()) + ".csv";
-    }
-
-    private ReportDateRange currentUtcDayRange() {
-        LocalDate todayUtc = LocalDate.now(clock);
-        return new ReportDateRange(todayUtc, todayUtc);
-    }
-
-    private String toUtcHourLabel(Instant executionTime) {
-        return executionTime.atOffset(ZoneOffset.UTC)
-                .withMinute(0)
-                .withSecond(0)
-                .withNano(0)
-                .toLocalTime()
-                .format(HOUR_FORMATTER);
     }
 
     private long defaultLong(Long value) {

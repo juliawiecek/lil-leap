@@ -203,7 +203,8 @@ describe('auth (e2e)', () => {
       const wrongPassword = await post('/auth/login', { email: traderEmail, password: 'nope-nope-nope' }).expect(401);
       const unknownEmail = await post('/auth/login', { email: 'nobody@example.com', password }).expect(401);
 
-      expect(wrongPassword.body).toEqual({ error: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' });
+      expect(wrongPassword.body).toEqual({ error: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password, or sign-in is locked. After 3 failed attempts, wait 15 minutes and try again.' });
       expect(unknownEmail.body).toEqual(wrongPassword.body);
     });
   });

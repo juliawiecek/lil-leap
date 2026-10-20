@@ -64,6 +64,16 @@ class ReportingControllerTest {
     }
 
     @Test
+    void operationsStaffCanReadReportingToo() throws Exception {
+        when(reportingService.getOverview()).thenReturn(
+                new OverviewDto(1234, 87, new BigDecimal("1500000.00")));
+
+        mvc.perform(asRole("OPERATIONS", get("/reports/insights/overview")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tradeVolumeToday").value(1234));
+    }
+
+    @Test
     void overviewReturnsSummary() throws Exception {
         when(reportingService.getOverview()).thenReturn(
                 new OverviewDto(1234, 87, new BigDecimal("1500000.00")));

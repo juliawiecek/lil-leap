@@ -25,6 +25,8 @@ class QuoteBoundaryTest {
     @Test
     void missingOrInvalidTokenNeverQueriesQuotes() throws Exception {
         mvc.perform(get("/quotes/history/{id}", UUID.randomUUID())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/quotes/day-opens").param("ids", UUID.randomUUID().toString()))
+                .andExpect(status().isUnauthorized());
         mvc.perform(get("/quotes/history/{id}", UUID.randomUUID()).header("Authorization", "Bearer invalid"))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(repository);
@@ -38,6 +40,8 @@ class QuoteBoundaryTest {
                     .andExpect(status().isNotFound());
             mvc.perform(get("/quotes/latest/by-instrument/bad-id").header("Authorization", token))
                     .andExpect(status().isBadRequest());
+            mvc.perform(get("/quotes/day-opens").param("ids", UUID.randomUUID().toString())
+                    .header("Authorization", token)).andExpect(status().isOk());
         }
     }
 }

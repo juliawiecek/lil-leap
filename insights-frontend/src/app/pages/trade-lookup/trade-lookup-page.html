@@ -1,0 +1,114 @@
+<app-page-heading title="Trade lookup" subtitle="Every recorded step of one trade, oldest first, for audits and client disputes." />
+<form class="filter-bar" (submit)="$event.preventDefault(); submit()">
+  <label class="grow"
+    >Order ID<input
+      name="orderId"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="e.g. 3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+  /></label>
+  <button class="primary" type="submit" [disabled]="loading()">
+    {{ loading() ? 'Looking up…' : 'Look up' }}
+  </button>
+</form>
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+@if (result(); as trade) {
+  @if (summary(); as c) {
+    <div class="two-columns">
+      <section class="panel" aria-labelledby="case-title">
+        <div class="panel-heading">
+          <h2 id="case-title">Outcome</h2>
+          <span class="badge" [class.rejected]="c.status === 'REJECTED'" [class.neutral]="!c.status || c.status === 'CANCELLED'">{{ c.status ? typeLabel(c.status) : 'No status recorded' }}</span>
+        </div>
+        <dl class="details">
+          @if (c.reason) {
+            <dt>Reason</dt>
+            <dd>{{ c.reason }}</dd>
+          }
+          <dt>Side</dt>
+          <dd>{{ c.side ? typeLabel(c.side) : '–' }}</dd>
+          <dt>Filled</dt>
+          <dd>{{ c.quantity ? (c.quantity | number) + ' shares at $' + c.price : 'Not filled' }}</dd>
+          <dt>Cash impact</dt>
+          <dd>{{ c.cashDelta ? (c.cashDelta.startsWith('-') ? '−$' + c.cashDelta.slice(1) : '+$' + c.cashDelta) + ' USD' : '–' }}</dd>
+          <dt>Shares moved</dt>
+          <dd>{{ c.sharesChange ?? '–' }}</dd>
+          <dt>First recorded</dt>
+          <dd>{{ c.firstAt ? (c.firstAt | date: 'MMM d, y, HH:mm:ss' : 'UTC') + ' UTC' : '–' }}</dd>
+          <dt>Last recorded</dt>
+          <dd>{{ c.lastAt ? (c.lastAt | date: 'MMM d, y, HH:mm:ss' : 'UTC') + ' UTC' : '–' }}</dd>
+        </dl>
+      </section>
+      <section class="panel" aria-labelledby="checks-title">
+        <div class="panel-heading">
+          <h2 id="checks-title">Record checks</h2>
+          <span class="badge" [class.rejected]="problems() > 0">{{ problems() ? problems() + ' to review' : 'All consistent' }}</span>
+        </div>
+        <ul class="checks">
+          @for (check of c.checks; track check.label) {
+            <li [class.failed]="!check.ok">
+              <span class="mark" aria-hidden="true">{{ check.ok ? '✓' : '!' }}</span>
+              <span class="sr-only">{{ check.ok ? 'Passed: ' : 'Needs review: ' }}</span>
+              <strong>{{ check.label }}</strong><span>{{ check.detail }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+  }
+  <section class="panel" aria-labelledby="trail-title">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">ORDER</p>
+        <h2 id="trail-title" class="mono order-id">{{ trade.orderId }}</h2>
+      </div>
+      <span class="badge" [class.neutral]="!trade.auditRecorded">{{ trade.events.length }} recorded steps</span>
+    </div>
+    @if (!trade.auditRecorded) {
+      <p class="notice" role="note">No audit entries are recorded for this trade yet, so its trail is incomplete.</p>
+    }
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
+        <thead>
+          <tr>
+            <th>Recorded (UTC)</th>
+            <th>Record</th>
+            <th>Step</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (event of trade.events; track $index) {
+            <tr>
+              <td>{{ event.occurredAt | date: 'MMM d, y, HH:mm:ss' : 'UTC' }}</td>
+              <td>{{ sourceLabel(event.source) }}</td>
+              <td>{{ typeLabel(event.type) }}</td>
+              <td class="details-cell">
+                @for (item of fields(event); track $index) {
+                  <span><b>{{ item.label }}</b> {{ item.value }}</span>
+                } @empty {
+                  –
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty">No steps are recorded for this trade.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else if (!loading() && !error()) {
+  <section class="panel empty">
+    <app-dashboard-icon name="search" />
+    <h2>Look up a trade</h2>
+    <p>Enter an order ID to see its status changes, audit entries, the fill and the cash and holding movements it caused.</p>
+  </section>
+}

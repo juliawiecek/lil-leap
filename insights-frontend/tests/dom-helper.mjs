@@ -1,6 +1,8 @@
 import './component-helper.mjs';
 import { Window } from 'happy-dom';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ɵresolveComponentResources } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
@@ -26,9 +28,15 @@ browser.HTMLElement.prototype.scrollTo = () => {};
 browser.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
 browser.HTMLDialogElement.prototype.close = function () { this.open = false; };
 
+// Components live in shell/, pages/*/ and shared/; templateUrl only names the file, so find it by name.
+const appDir = fileURLToPath(new URL('../src/app/', import.meta.url));
+const templates = new Map(readdirSync(appDir, { recursive: true })
+  .filter(file => file.endsWith('.html'))
+  .map(file => [basename(file), join(appDir, file)]));
+
 export async function resolveTemplates() {
   await ɵresolveComponentResources(url => Promise.resolve(
-    url.endsWith('.html') ? readFileSync(new URL('../src/app/' + url, import.meta.url), 'utf8') : '',
+    url.endsWith('.html') ? readFileSync(templates.get(basename(url)), 'utf8') : '',
   ));
 }
 

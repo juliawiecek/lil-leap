@@ -25,7 +25,7 @@ function fakeReports(result = csv) {
 }
 
 function app(t, reports) {
-  const instance = component(t, App, reports ? [{ provide: REPORT_FILES, useValue: reports.service }] : []);
+  const instance = component(t, ReportsPage, reports ? [{ provide: REPORT_FILES, useValue: reports.service }] : []);
   const download = t.mock.method(instance, 'download', () => {});
   return { instance, download };
 }
@@ -138,8 +138,7 @@ test('without a report service the page explains that generation is unavailable'
 
 test('the rendered reports page requires both dates before any report can be generated', async t => {
   const reports = fakeReports();
-  const fixture = await render(t, App, {}, [
-    { provide: AuthService, useValue: { userRole: 'ANALYST', email: 'analyst@nexttrade.local' } },
+  const fixture = await render(t, ReportsPage, {}, [
     { provide: REPORT_FILES, useValue: reports.service },
     { provide: LIVE_REPORTS, useValue: { load: async () => ({ accounts: 1, orders: 1, fills: 1, gross_executed_value: 1 }), logout: async () => {} } },
   ]);

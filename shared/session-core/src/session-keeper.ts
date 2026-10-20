@@ -5,7 +5,7 @@
  * signs an idle user out on time instead of on their next request.
  */
 
-/** Must match the auth service's SESSION_INACTIVITY_MINUTES (default 10). */
+/** Must match Identity (default 10); rationale: docs/architecture/ADR-NEXT-253-authentication-policy.md. */
 export const SESSION_INACTIVITY_MINUTES = 10;
 
 export interface SessionClient {

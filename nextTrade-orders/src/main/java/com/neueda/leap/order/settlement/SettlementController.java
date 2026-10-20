@@ -3,6 +3,8 @@ package com.neueda.leap.order.settlement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,6 +55,17 @@ public class SettlementController {
     @PostMapping("/rollback")
     public ResponseEntity<SettlementResult> rollback(@RequestParam(required = false) String settlementId) {
         return ResponseEntity.ok(settlements.rollback(parse(settlementId)));
+    }
+
+    /**
+     * Returns the ledger-derived settlement state for an order/trade.
+     *
+     * @param tradeId the permanent order identifier
+     * @return current settlement state, or 404 when the trade is unknown
+     */
+    @GetMapping("/status/{tradeId}")
+    public ResponseEntity<SettlementStatusResponse> status(@PathVariable UUID tradeId) {
+        return ResponseEntity.ok(settlements.status(tradeId));
     }
 
     /**

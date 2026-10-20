@@ -10,7 +10,7 @@ for (const app of ['NextTrade', 'Insights']) {
     page.on('request', r => { if (r.url().endsWith('/auth/refresh')) refreshes++; });
     // Fast-forward skips unnecessary rendering work but still fires scheduled checks.
     await page.clock.fastForward(599_000);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/(dashboard|insights)$/);
     await page.clock.fastForward(16_000);
     await expect(page).toHaveURL(url => url.pathname === '/login');
     await expect(page.locator('app-trading-workspace, app-insights-workspace')).toHaveCount(0);

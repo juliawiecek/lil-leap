@@ -1,12 +1,16 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
+  ApiNotFoundResponse,
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -22,6 +26,10 @@ import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UserProfileResponseDto } from './dto/user-profile-response.dto';
+import { AccessTokenGuard, AuthenticatedRequest } from '../security/access-token.guard';
+import { ProfileAccessDeniedException } from './exceptions/profile-access-denied.exception';
+import { ProfileNotFoundException } from './exceptions/profile-not-found.exception';
 
 /** Auth REST surface: register, login, refresh, logout. One endpoint per operation for both roles. */
 @ApiTags('auth')
@@ -63,10 +71,14 @@ export class AuthController {
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Sign in and get an access + refresh token pair' })
+  @ApiOperation({
+    summary: 'Sign in and get an access + refresh token pair',
+    description: 'Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. ' +
+      'Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy.',
+  })
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'INVALID_REQUEST: email or password missing.' })
-  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email and a wrong password.' })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email, incorrect password or active 15-minute lock.' })
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
     const user = await this.userService.login(request);
 
@@ -76,6 +88,29 @@ export class AuthController {
     const refreshToken = await this.refreshTokenService.issue(user);
 
     return new LoginResponseDto(accessToken, refreshToken, UserResponseDto.from(user));
+  }
+
+  /** Returns only the authenticated user's identity and contact profile. */
+  @Get('users/:id')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the authenticated user profile' })
+  @ApiParam({ name: 'id', format: 'uuid', description: 'The authenticated user ID.' })
+  @ApiOkResponse({ type: UserProfileResponseDto })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'PROFILE_ACCESS_DENIED: the profile belongs to another user.' })
+  @ApiNotFoundResponse({ type: ErrorResponseDto, description: 'PROFILE_NOT_FOUND: no profile exists for the authenticated user.' })
+  @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.' })
+  async profile(@Param('id') id: string, @Req() request: AuthenticatedRequest): Promise<UserProfileResponseDto> {
+    if (id !== request.userId) {
+      throw new ProfileAccessDeniedException();
+    }
+
+    const profile = await this.userService.findProfileByUserId(request.userId);
+    if (!profile) {
+      throw new ProfileNotFoundException();
+    }
+
+    return UserProfileResponseDto.from(profile);
   }
 
   /** Exchanges a refresh token for a new access token; the old refresh token is invalidated either way. */

@@ -1,6 +1,6 @@
 /**
  * Live prices for every tradable stock (TS-14.7): the instrument list, each stock's latest quote,
- * and its first quote of the day. All reads go to the Holdings service with the user's token.
+ * and its regular-session baseline. All reads go to Holdings with the user's token.
  */
 import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -11,7 +11,7 @@ import type { AccessTokenSource } from './order-history-api';
 export const QUOTE_STALE_MS = 60000;
 /** Width of each price-bar interval the holdings service offers. */
 const BAR_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
-/** Rows of history read to find the day's first quote; the server caps history at 1000. */
+/** Recent history for charts; session baselines use a separate indexed lookup. */
 const HISTORY_ROWS = 1000;
 
 export interface ListedInstrument {
@@ -27,7 +27,7 @@ export interface LiveQuote extends ListedInstrument {
   price: number;
   bid: number;
   ask: number;
-  /** Percent change against the day's first quote; 0 when unknown. */
+  /** Percent change against the session open, or previous close before open; 0 when unknown. */
   change: number;
   /** When the latest quote was taken, ISO-8601; empty until the first quote arrives. */
   quotedAt: string;
@@ -153,16 +153,17 @@ export class MarketFeedClient {
   }
 
   /**
-   * The earliest quote taken today (local time) among recent history, or undefined when today has
-   * none. History is newest first and capped, so on a busy day this is the earliest quote still in it.
+   * Session baselines in one bounded request. Holdings uses 09:30 America/New_York
+   * (DST-aware), or the previous close before open, without a history-page limit.
    */
-  async dayOpen(instrumentId: string, now = new Date()): Promise<number | undefined> {
-    const rows = await this.#get<QuoteRow[]>(
-      `/quotes/history/${encodeURIComponent(instrumentId)}?limit=${HISTORY_ROWS}`,
+  async dayOpens(instrumentIds: readonly string[]): Promise<Map<string, number>> {
+    if (!instrumentIds.length) {
+      return new Map();
+    }
+    const rows = await this.#get<(QuoteRow & { instrumentId: string })[]>(
+      `/quotes/day-opens?ids=${instrumentIds.map(encodeURIComponent).join(',')}`,
     );
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const today = rows.filter((row) => Date.parse(row.quotedAt) >= startOfDay);
-    return today.length ? tick(today.at(-1)!).price : undefined;
+    return new Map(rows.map((row) => [row.instrumentId, Number(row.midpoint)]));
   }
 
   /** The shared transport adds the bearer token, and its interceptor ends the session on a 401. */

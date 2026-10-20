@@ -1,0 +1,381 @@
+// Matches the NextTrade sign-in (frontend/src/app/_login-layout.scss): framed screen, split dark
+// background, moving band and candle chart, brand lockup top left, headline left, form on the right.
+:host {
+  --login-green: #80b95c;
+  --font-display: 'Playfair Display', 'Merriweather', serif;
+  display: block;
+  color: #e1e5dc;
+  font-family: var(--font-ui);
+}
+.login-screen {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  border: 10px solid #181918;
+  border-top-width: 5px;
+  background: linear-gradient(90deg, #050907 0%, #050907 60%, #0b0e0c 60%, #090c0a 100%);
+  animation: arrive 900ms ease both;
+}
+.market-tape {
+  position: fixed;
+  z-index: 2;
+  inset: 5px 10px auto;
+  height: 34px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #090b09;
+  border-bottom: 1px solid #141714;
+  pointer-events: none;
+}
+.tape-track {
+  display: flex;
+  width: max-content;
+  color: #747a70;
+  font: 500 clamp(10px, 1vw, 12px) var(--font-mono);
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: tape-scroll 65s linear infinite;
+}
+.tape-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  min-width: calc(100vw - 60px);
+  gap: 20px;
+  padding-right: 20px;
+}
+.tape-group .divider {
+  color: #3c423a;
+}
+.signin-stock-background {
+  position: fixed;
+  z-index: 0;
+  inset: 39px auto 10px 10px;
+  width: calc((100% - 20px) * 0.6);
+  border-right: 1px solid #1b2018;
+  pointer-events: none;
+}
+.signin-stock-background svg {
+  width: 100%;
+  height: 100%;
+}
+// Soften the chart behind the copy and keep the right-hand candles crisp, as NextTrade does.
+.signin-stock-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 9, 7, 0.62);
+  backdrop-filter: blur(4px);
+  mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
+  mask-composite: intersect;
+}
+.login-candles {
+  fill: #7fa459;
+  stroke: #7fa459;
+  stroke-width: 0.4;
+}
+.login-candles .falling {
+  fill: #4b5b42;
+  stroke: #647653;
+}
+.login-candles rect {
+  stroke: none;
+}
+.brand-lockup {
+  position: absolute;
+  z-index: 2;
+  top: 11%;
+  left: 3.2%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #eeeeee;
+}
+.brand-mark {
+  width: 48px;
+  height: 48px;
+}
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+}
+.brand-name {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+.brand-next,
+.brand-accent,
+.brand-product {
+  font-weight: 700;
+}
+.brand-accent {
+  color: #78a85f;
+  margin-left: 1.5px;
+}
+.brand-product {
+  color: #eeeeee;
+}
+.auth-shell {
+  position: fixed;
+  z-index: 1;
+  inset: 39px 10px 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 4% 22px;
+}
+.auth-header {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 18px;
+}
+.secure-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #93958f;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.secure-status::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--login-green);
+}
+.auth-content {
+  display: grid;
+  grid-template-columns: 59% 41%;
+  align-items: center;
+  width: 100%;
+  margin: auto 0;
+}
+.auth-copy {
+  padding-right: 15%;
+}
+.auth-eyebrow {
+  margin: 0 0 26px;
+  color: #90aa81;
+  font: 600 clamp(9px, 0.85vw, 11px) / 1 var(--font-ui);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.auth-copy h1 {
+  margin: 0;
+  font-size: clamp(42px, 5.2vw, 72px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+.auth-copy h1 em {
+  display: block;
+  font-style: normal;
+  color: var(--login-green);
+}
+.auth-copy > p {
+  max-width: min(100%, 34vw);
+  margin: 24px 0 0;
+  font-size: clamp(14px, 1.4vw, 18px);
+  line-height: 1.7;
+  color: #a4a6a0;
+}
+.auth-panel {
+  position: relative;
+  left: 1.8vw;
+  justify-self: center;
+  width: 88%;
+  max-width: 520px;
+}
+.auth-panel h2 {
+  margin: 0 0 9px;
+  font-size: clamp(32px, 3vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.auth-subtitle {
+  margin: 0 0 30px;
+  font-size: 16px;
+  color: #93958f;
+}
+form {
+  display: grid;
+  gap: 24px;
+}
+.field-group {
+  display: grid;
+  gap: 7px;
+}
+label {
+  font-size: 16px;
+}
+input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 56px;
+  padding: 0 15px;
+  border: 1px solid #3b4237;
+  border-radius: 6px;
+  background: #090a09;
+  color: #eeeeee;
+  font: inherit;
+  font-size: 17px;
+}
+input::placeholder {
+  color: #858982;
+}
+input:focus {
+  border-color: var(--login-green);
+  outline: none;
+}
+.input-wrap {
+  position: relative;
+}
+.input-wrap input {
+  padding-right: 64px;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: #a3a69e;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.form-status {
+  margin: 0;
+  color: #f7abab;
+  line-height: 1.5;
+}
+.primary-action {
+  min-height: 56px;
+  border: 1px solid #80b95c;
+  border-radius: 6px;
+  background: var(--login-green);
+  color: #101710;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 180ms;
+}
+.primary-action:hover {
+  background: #90c66d;
+}
+.primary-action:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.auth-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #8b9088;
+  font-size: clamp(9px, 0.95vw, 11px);
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--login-green);
+  outline-offset: 3px;
+}
+@media (max-width: 900px) {
+  .login-screen {
+    border-width: 5px;
+    background: #090a09;
+  }
+  .market-tape {
+    inset-inline: 5px;
+  }
+  .signin-stock-background {
+    inset: 39px 5px auto;
+    width: auto;
+    height: 340px;
+    opacity: 0.55;
+    border: 0;
+  }
+  .brand-lockup {
+    top: 53px;
+    left: 17px;
+  }
+  .brand-name {
+    font-size: 28px;
+  }
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+  .auth-shell {
+    inset: 39px 5px 5px;
+    padding: 22px 20px;
+    gap: 28px;
+  }
+  .auth-content {
+    grid-template-columns: 1fr;
+    gap: 38px;
+    max-width: 520px;
+    margin: 96px auto 0;
+  }
+  .auth-copy {
+    padding: 0;
+  }
+  .auth-copy h1 {
+    font-size: 42px;
+  }
+  .auth-copy > p {
+    max-width: 350px;
+    font-size: 14px;
+  }
+  .auth-panel {
+    width: 100%;
+    left: 0;
+  }
+  .auth-panel h2 {
+    font-size: 32px;
+  }
+  input {
+    height: 52px;
+    font-size: 16px;
+  }
+  .primary-action {
+    min-height: 52px;
+  }
+  .auth-footer {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-screen,
+  .tape-track {
+    animation: none;
+  }
+}
+@keyframes tape-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
