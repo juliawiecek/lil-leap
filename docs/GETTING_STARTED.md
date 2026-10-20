@@ -1,6 +1,6 @@
 # Getting started
 
-NEXT-193 separates Identity, Holdings, Orders, Quotes and reporting-only Insights.
+NEXT-193 separates Identity, Holdings (which also generates quotes), Orders and reporting-only Insights; Kafka carries order events.
 Read [service boundaries](architecture/service-boundaries.md) for the diagram,
 route table, migration instructions and remaining product gaps.
 
@@ -26,12 +26,12 @@ does not migrate an existing schema. Preserve the primary data volume.
 | Identity Swagger UI | http://localhost:4200/auth/docs |
 
 Only the gateway publishes ports. Internal ports are Holdings 8080, Identity 8081,
-Orders 8082, Quotes 8083, Insights 8084 and PostgreSQL 5432. PostgreSQL has a primary
+Orders 8082, Insights 8084 and PostgreSQL 5432. PostgreSQL has a primary
 and an asynchronous reporting replica. See [database setup](DATABASE_SETUP.md).
 
 ## Develop locally
 
-For native builds use Java 17 and Maven 3.9+, Node 24.15+ (24.x), and Python 3.12+.
+For native builds use Java 17 and Maven 3.9+, Node 24.15+ (24.x), and Python 3.12+ for the repository scripts.
 Docker builds supply their own runtimes.
 
 With Compose running, open a terminal in `frontend` or `insights-frontend`:
@@ -50,7 +50,6 @@ to Identity; trading and reporting dashboard data still include local fixtures.
 - In each of `nextTrade-orders`, `nextTrade-holdings`, `insights`: `mvn -B clean verify`.
 - In `auth`: `npm ci`, `npm test`, `npm run build`.
 - In each frontend: `npm ci`, `npm test`, `npm run build`.
-- In `data-pipeline`, use a virtual environment, install `requirements.txt`, then `python -m pytest`.
 - From the root: `docker compose config -q` and `bash scripts/auth-integration-test.sh`.
 
 The integration script starts the real stack and checks Identity tokens, Holdings

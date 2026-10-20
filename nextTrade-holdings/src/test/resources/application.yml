@@ -1,3 +1,8 @@
 app:
   jwt:
     secret: test-secret-at-least-32-bytes-long-000000
+# Tests insert their own quotes; a background writer would make them racy.
+marketdata:
+  quotes:
+    generator:
+      enabled: false

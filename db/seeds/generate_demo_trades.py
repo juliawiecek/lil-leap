@@ -6,8 +6,9 @@ One deterministic trade book feeds three committed files, so they never drift:
   db/seeds/003_demo_trading_activity.sql      demo clients, accounts and trade book
   insights/src/main/resources/reports/trades.csv  BR-16 report dataset (every seeded fill)
 
-Instrument markets and reference prices come from the quote pipeline catalog
-(data-pipeline/src/instrument_catalog.py), so seeded fills sit near live quotes.
+Instrument markets and reference prices come from the quote catalog
+(nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv), so seeded
+fills sit near live quotes.
 
 The SQL book is relative: day offset 0 is the UTC day the database is seeded.
 The CSV is the same book anchored at ANCHOR_DATE. Re-anchor it with --anchor.
@@ -19,8 +20,8 @@ Usage (from the repository root, standard library only):
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
-import importlib.util
 import random
 import sys
 import uuid
@@ -32,17 +33,24 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 
 
-def _load_catalog():
-    # Load the module by path: the data-pipeline package __init__ needs third-party packages.
-    path = REPO / "data-pipeline/src/instrument_catalog.py"
-    spec = importlib.util.spec_from_file_location("instrument_catalog", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module  # dataclasses resolves the module while building the class
-    spec.loader.exec_module(module)
-    return module
+CATALOG_CSV = REPO / "nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv"
 
 
-COMMON_STOCKS = _load_catalog().COMMON_STOCKS
+@dataclass(frozen=True)
+class CatalogStock:
+    symbol: str
+    market_code: str
+    start_price: float
+
+
+def _load_catalog() -> tuple[CatalogStock, ...]:
+    # Holdings generates live quotes from the same file, so seeded fills sit near live prices.
+    with CATALOG_CSV.open(newline="", encoding="utf-8") as handle:
+        return tuple(CatalogStock(row["symbol"], row["market_code"], float(row["start_price"]))
+                     for row in csv.DictReader(handle))
+
+
+COMMON_STOCKS = _load_catalog()
 
 INSTRUMENTS_SQL = REPO / "db/seeds/001_us_equity_instruments.sql"
 TRADES_SQL = REPO / "db/seeds/003_demo_trading_activity.sql"
