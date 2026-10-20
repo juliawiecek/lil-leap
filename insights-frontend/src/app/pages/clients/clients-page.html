@@ -1,5 +1,5 @@
 <app-page-heading title="Clients" subtitle="Every trading account in the reporting dataset, who owns it, its trader level and trades." />
-<form class="filter-bar" role="search" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
+<form class="filter-bar" role="search" method="get" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
   <label class="grow"
     >Search<input
       #searchBox

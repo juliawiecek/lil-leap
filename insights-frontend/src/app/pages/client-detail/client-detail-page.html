@@ -62,7 +62,7 @@
     </div>
   } @else {
     <div id="panel-orders" role="tabpanel" aria-labelledby="tab-orders">
-      <form class="filter-bar" role="search" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
+      <form class="filter-bar" role="search" method="get" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
         <label class="grow"
           >Find an order<input
             #orderSearch

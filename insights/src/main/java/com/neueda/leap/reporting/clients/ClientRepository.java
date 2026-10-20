@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Trading accounts, their holdings and filled orders, worked out from the reporting dataset
@@ -44,12 +45,10 @@ public class ClientRepository {
      */
     public ClientDtos.Page<ClientDtos.ClientSummary> list(ClientQuery query) {
         List<Trade> trades = dataset.trades();
-        UUID id = query.search() == null ? null : uuid(query.search());
-        String text = query.search() == null ? null : query.search().toLowerCase(Locale.ROOT);
         List<ClientDtos.ClientSummary> matches = summaries(trades).stream()
                 .filter(account -> query.level() == null || query.level().equals(account.traderLevel()))
                 .filter(account -> query.status() == null || query.status().equals(account.status()))
-                .filter(account -> text == null || (id != null ? owns(trades, account.accountId(), id) : matches(account, text)))
+                .filter(searchFilter(query.search(), trades))
                 .sorted(order(query.sort(), query.descending()))
                 .toList();
         return ClientDtos.Page.slice(matches, query.page(), query.size());
@@ -127,6 +126,19 @@ public class ClientRepository {
     private List<Trade> fills(UUID accountId) {
         String id = accountId.toString();
         return dataset.trades().stream().filter(trade -> trade.accountId().equals(id)).toList();
+    }
+
+    /** No search matches every account; a full ID finds its account; other text matches as {@link #matches}. */
+    private static Predicate<ClientDtos.ClientSummary> searchFilter(String search, List<Trade> trades) {
+        if (search == null) {
+            return account -> true;
+        }
+        UUID id = uuid(search);
+        if (id != null) {
+            return account -> owns(trades, account.accountId(), id);
+        }
+        String text = search.toLowerCase(Locale.ROOT);
+        return account -> matches(account, text);
     }
 
     /** A pasted ID matches the account itself or one of its orders. */
