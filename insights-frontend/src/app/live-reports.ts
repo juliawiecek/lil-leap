@@ -31,12 +31,16 @@ export interface LiveReports {
 export const LIVE_REPORTS = new InjectionToken<LiveReports>('Live reporting API');
 
 /** CSV reports the insights service generates from its trade dataset. */
-export type ReportKind = 'instrument-report' | 'client-segment-report' | 'trading-activity-report';
+export type ReportKind =
+  | 'instrument-report'
+  | 'client-segment-report'
+  | 'trading-activity-report'
+  | 'buy-sell-balance-report';
 export interface ReportFile {
   filename: string;
   csv: string;
 }
-/** Inclusive UTC calendar dates, formatted yyyy-mm-dd. Both are required by the API. */
+/** Inclusive New York trading days, formatted yyyy-mm-dd. Both are required by the API. */
 export interface ReportRange {
   startDate: string;
   endDate: string;
@@ -51,9 +55,18 @@ export const MAX_REPORT_DAYS = 366;
 const DAY_MS = 86_400_000;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** UTC calendar date `daysBack` days before `now`, as yyyy-mm-dd. */
-export function utcDate(now: Date = new Date(), daysBack = 0): string {
-  return new Date(now.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
+const NEW_YORK_DAY = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** New York calendar date `daysBack` days before `now`, as yyyy-mm-dd, matching the API's trading days. */
+export function newYorkDate(now: Date = new Date(), daysBack = 0): string {
+  const part = (type: string) => NEW_YORK_DAY.formatToParts(now).find((p) => p.type === type)?.value;
+  const today = Date.parse(`${part('year')}-${part('month')}-${part('day')}T00:00:00Z`);
+  return new Date(today - daysBack * DAY_MS).toISOString().slice(0, 10);
 }
 
 function parseIsoDate(value: string): number | null {

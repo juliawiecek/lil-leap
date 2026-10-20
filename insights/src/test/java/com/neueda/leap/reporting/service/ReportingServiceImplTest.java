@@ -132,12 +132,60 @@ class ReportingServiceImplTest {
 
         assertThat(activityCsv)
                 .startsWith("trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("2026-10-16,14:00,8,8,286,68966.56")
+                // 14:00 UTC is 10:00 in New York (EDT).
+                .contains("2026-10-16,10:00,8,8,286,68966.56")
                 .hasLineCount(68);
     }
 
     @Test
-    void reportsOnlyIncludeTradesInsideTheUtcDateRange() {
+    void buySellBalanceSplitsSidesPerInstrumentWithNetBuyersFirst() {
+        ResponseEntity<Resource> report = service.generateBuySellBalanceReport(FULL_RANGE);
+        List<String> lines = csvBody(report).lines().toList();
+
+        assertThat(lines.get(0)).isEqualTo("instrument_symbol,instrument_name,asset_class,market_code,"
+                + "buy_trade_count,sell_trade_count,buy_quantity,sell_quantity,net_quantity,"
+                + "buy_notional,sell_notional,net_notional");
+        assertThat(lines).hasSize(34)
+                .contains("KO,The Coca-Cola Company,COMMON_STOCK,NYSE,4,0,727,0,727,49295.24,0.00,49295.24", atIndex(1))
+                .contains("NVDA,NVIDIA Corporation,COMMON_STOCK,NASDAQ,9,7,553,151,402,95364.81,26498.74,68866.07", atIndex(2))
+                .contains("INTC,Intel Corporation,COMMON_STOCK,NASDAQ,1,2,35,35,0,1255.80,1262.64,-6.84", atIndex(33));
+        // Count columns are read from the end because quoted instrument names can contain commas.
+        long trades = lines.stream().skip(1)
+                .map(line -> line.split(","))
+                .mapToLong(columns -> Long.parseLong(columns[columns.length - 8]) + Long.parseLong(columns[columns.length - 7]))
+                .sum();
+        assertThat(trades).isEqualTo(147);
+        assertThat(report.getHeaders().getContentDisposition().getFilename())
+                .isEqualTo("buy-sell-balance-report_2026-09-01_2026-10-31.csv");
+    }
+
+    @Test
+    void buySellBalanceShowsNetSellersLastWithNegativeNets() throws Exception {
+        String csv = csvHeader() + "\n"
+                + "f1,o1,2026-10-01T14:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u1,e,a1,001,ACTIVE,NOVICE,BUY,10,5.00\n"
+                + "f2,o2,2026-10-01T15:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u2,e,a2,002,ACTIVE,NOVICE,SELL,25,6.00\n"
+                + "f3,o3,2026-10-01T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,a1,001,ACTIVE,NOVICE,BUY,3,2.50\n"
+                + "f4,o4,2026-10-02T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,a1,001,ACTIVE,NOVICE,BUY,99,2.50\n";
+        ReportDateRange octoberFirst = new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
+
+        assertThat(csvBody(csvService(csv).generateBuySellBalanceReport(octoberFirst)).lines().skip(1).toList())
+                .containsExactly(
+                        "BBB,Beta,COMMON_STOCK,NASDAQ,1,0,3,0,3,7.50,0.00,7.50",
+                        "AAA,Alpha,COMMON_STOCK,NYSE,1,1,10,25,-15,50.00,150.00,-100.00");
+    }
+
+    @Test
+    void buySellBalanceRejectsUnknownSides() throws Exception {
+        var unknownSide = csvService(csvHeader()
+                + "\nf,o,2026-10-01T12:00:00Z,i,AAPL,Apple,COMMON_STOCK,NASDAQ,u,e,a,001,ACTIVE,NOVICE,SHORT,1,1.00");
+
+        assertThatThrownBy(() -> unknownSide.generateBuySellBalanceReport(FULL_RANGE))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Unexpected side");
+    }
+
+    @Test
+    void reportsOnlyIncludeTradesInsideTheNewYorkDateRange() {
         ReportDateRange anchorDay = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
 
         List<String> activityRows = csvBody(service.generateTradingActivityReport(anchorDay)).lines().skip(1).toList();
@@ -160,11 +208,11 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void dateRangeIsInclusiveAndUtcBounded() {
+    void dateRangeIsInclusiveAndBoundedByNewYorkMidnight() {
         ReportDateRange range = new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
-        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T00:00:00Z"));
-        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T00:00:00Z"));
+        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T04:00:00Z"));
+        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T04:00:00Z"));
     }
 
     @Test

@@ -2,11 +2,11 @@ package com.neueda.leap.reporting.model;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
 /**
- * Inclusive calendar-date range for a report, interpreted in UTC.
+ * Inclusive calendar-date range for a report, interpreted as New York trading days
+ * (see {@link MarketDay}), so reports agree with the Insights page.
  *
  * <p>Construction validates the range, so any instance is safe to pass to a
  * repository. The range is capped at {@value #MAX_DAYS} days to keep reporting
@@ -42,20 +42,20 @@ public record ReportDateRange(LocalDate startDate, LocalDate endDate) {
     }
 
     /**
-     * Returns the first instant included in the range (start of {@code startDate}, UTC).
+     * Returns the first instant included in the range (midnight starting {@code startDate} in New York).
      *
      * @return inclusive lower bound
      */
     public Instant startInclusive() {
-        return startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        return new MarketDay(startDate).startInclusive();
     }
 
     /**
-     * Returns the first instant after the range (start of the day after {@code endDate}, UTC).
+     * Returns the first instant after the range (midnight ending {@code endDate} in New York).
      *
      * @return exclusive upper bound
      */
     public Instant endExclusive() {
-        return endDate.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        return new MarketDay(endDate).endExclusive();
     }
 }

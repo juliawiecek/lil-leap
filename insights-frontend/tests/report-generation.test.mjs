@@ -4,12 +4,12 @@ import { render, input } from './dom-helper.mjs';
 import { component } from './component-helper.mjs';
 const { ReportsPage } = await import('../src/app/pages/reports/reports-page.ts');
 const {
-  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, utcDate,
+  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, newYorkDate,
 } = await import('../src/app/live-reports.ts');
 
 const csv = 'instrument_symbol,trade_count\nAAPL,7\nJPM,4\n';
 const october = { startDate: '2026-10-01', endDate: '2026-10-16' };
-const kinds = ['instrument-report', 'client-segment-report', 'trading-activity-report'];
+const kinds = ['instrument-report', 'client-segment-report', 'trading-activity-report', 'buy-sell-balance-report'];
 
 function fakeReports(result = csv) {
   const calls = [];
@@ -40,16 +40,19 @@ test('report ranges must have both dates, be ordered, real, and at most a year l
   assert.match(reportRangeError('2025-01-01', '2026-01-02'), /at most 366 days/);
 });
 
-test('UTC dates do not shift with the local time zone', () => {
-  const lateEvening = new Date('2026-10-19T23:30:00-05:00');
-  assert.equal(utcDate(lateEvening), '2026-10-20');
-  assert.equal(utcDate(lateEvening, 29), '2026-09-21');
+test('report dates follow the New York calendar, not UTC or the local time zone', () => {
+  // 22:30 in Chicago is 23:30 in New York, but already October 20 in UTC.
+  const lateEvening = new Date('2026-10-19T22:30:00-05:00');
+  assert.equal(newYorkDate(lateEvening), '2026-10-19');
+  assert.equal(newYorkDate(lateEvening, 29), '2026-09-20');
+  // Just after New York midnight the date moves on.
+  assert.equal(newYorkDate(new Date('2026-10-20T04:05:00Z')), '2026-10-20');
 });
 
 test('the reports page always starts with a valid 30-day range ending today', t => {
   const { instance } = app(t);
-  assert.equal(instance.reportEnd(), utcDate());
-  assert.equal(instance.reportStart(), utcDate(new Date(), 29));
+  assert.equal(instance.reportEnd(), newYorkDate());
+  assert.equal(instance.reportStart(), newYorkDate(new Date(), 29));
   assert.equal(instance.reportDateError(), '');
 });
 
@@ -137,16 +140,17 @@ test('without a report service the page explains that generation is unavailable'
 
 test('the rendered reports page requires both dates before any report can be generated', async t => {
   const reports = fakeReports();
-  const fixture = await render(t, ReportsPage, {}, [
-    { provide: REPORT_FILES, useValue: reports.service },
-  ]);
+  const fixture = await render(t, ReportsPage, {}, [{ provide: REPORT_FILES, useValue: reports.service }]);
   const instance = fixture.componentInstance;
   t.mock.method(instance, 'download', () => {});
-  await fixture.whenStable(); fixture.detectChanges();
   const host = fixture.nativeElement;
+  await fixture.whenStable(); fixture.detectChanges();
   const buttons = () => kinds.map(kind => host.querySelector(`[data-testid="generate-${kind}"]`));
 
-  assert.equal(host.querySelectorAll('.report-card').length, 3);
+  assert.equal(host.querySelectorAll('.report-card').length, 4);
+  assert.doesNotMatch(host.textContent, /Scheduled Reports|No scheduled reports/, 'there is no scheduled reports placeholder');
+  assert.match(host.textContent, /Buy\/Sell Balance Report/);
+  assert.match(host.textContent, /Reporting period \(New York time, inclusive\)/);
   for (const id of ['report-start', 'report-end']) {
     const field = host.querySelector(`[data-testid="${id}"]`);
     assert.equal(field.required, true);
@@ -197,6 +201,9 @@ test('the configured report provider GETs CSV text with both dates and keeps the
   disposition = null;
   assert.equal((await files.generate('client-segment-report', october)).filename,
     'client-segment-report_2026-10-01_2026-10-16.csv');
+  await files.generate('buy-sell-balance-report', october);
+  assert.equal(requests[2].url, '/api/v1/reports/generate/buy-sell-balance-report');
+  assert.deepEqual(requests[2].options.params, october);
 });
 
 test('attachment filenames prefer the encoded form and fall back safely', () => {
