@@ -10,8 +10,8 @@
   border: 4px solid #ffd84d;
   border-radius: 10px;
   box-shadow: 0 0 0 3px #000, 0 0 22px 4px #ffd84d88;
+  /* No glide: the ring is redrawn every frame on its item, so it stays exactly on moving prices. */
   pointer-events: none;
-  transition: left 0.12s ease-out, top 0.12s ease-out, width 0.12s ease-out, height 0.12s ease-out;
 }
 .scan-ring.group {
   border-style: dashed;
@@ -108,11 +108,6 @@
   color: inherit;
   font: 600 18px/1 var(--font-ui);
   cursor: pointer;
-}
-@media (prefers-reduced-motion: reduce) {
-  .scan-ring {
-    transition: none;
-  }
 }
 @media (forced-colors: active) {
   .scan-ring {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, browser } from './dom-helper.mjs';
 const {
-  ScanEngine, SwitchScanService, isSwitchKey, parseScanSettings, scanLabel, screenBox,
+  ScanEngine, SwitchScanService, isSwitchControlShortcut, isSwitchKey, parseScanSettings, ringTarget, scanLabel, screenBox,
 } = await import('../src/app/switch-scan.ts');
 const { ACCESSIBILITY_STORAGE_KEY } = await import('../src/app/accessibility.ts');
 const { SwitchScanSettings } = await import('../src/app/switch-scan-settings.ts');
@@ -51,14 +51,17 @@ function choose(engine, ...path) {
 }
 
 test('settings fall back to safe defaults', () => {
-  const defaults = { enabled: false, intervalMs: 1200, key: 'Space', speak: false };
+  const defaults = { enabled: false, intervalMs: 1200, key: 'Space', speak: false, backEverySec: 30, pauseEverySec: 120 };
   assert.deepEqual(parseScanSettings(undefined), defaults);
   assert.deepEqual(parseScanSettings('text'), defaults);
   assert.deepEqual(
-    parseScanSettings({ enabled: true, intervalMs: 2000, key: 'Enter', speak: true }),
-    { enabled: true, intervalMs: 2000, key: 'Enter', speak: true },
+    parseScanSettings({ enabled: true, intervalMs: 2000, key: 'Enter', speak: true, backEverySec: 0, pauseEverySec: 300 }),
+    { enabled: true, intervalMs: 2000, key: 'Enter', speak: true, backEverySec: 0, pauseEverySec: 300 },
   );
-  assert.deepEqual(parseScanSettings({ enabled: 'yes', intervalMs: 5, key: 'Tab', speak: 'yes' }), defaults);
+  assert.deepEqual(
+    parseScanSettings({ enabled: 'yes', intervalMs: 5, key: 'Tab', speak: 'yes', backEverySec: 7, pauseEverySec: -1 }),
+    defaults,
+  );
 });
 
 /** A speech engine stand-in that records what the ring says; nothing finishes until the test says so. */
@@ -95,6 +98,125 @@ test('reading aloud says each item as the ring reaches it, once, with its state 
   engine.press();
   engine.next();
   assert.ok(said().length > count, 'the keypad is read out too');
+});
+
+test('inside a group, "Go back?" is offered every 30 seconds wherever the ring is, and pressing backs out', (t) => {
+  const { said } = withSpeech(t);
+  const engine = setup(t, { speak: true, backEveryMs: 30000, pauseEveryMs: 0 });
+  const start = Date.now();
+  engine.next(start + 31000);
+  assert.equal(engine.prompt, null, 'never offered at the top level, where there is nothing to go back to');
+  choose(engine, 'group:Trade');
+  engine.next(start + 1000);
+  assert.equal(describe(engine.current()), 'control:Number of shares');
+  engine.next(start + 32000);
+  assert.equal(engine.prompt, 'back');
+  assert.equal(said().at(-1), 'Go back? Press space now.');
+  assert.match(doc.querySelector('.scan-chip').textContent, /Go back\? Press space now/);
+  engine.press();
+  assert.equal(engine.prompt, null);
+  assert.equal(engine.depth, 1, 'backed out of Trade');
+  assert.equal(describe(engine.current()), 'group:Trade');
+});
+
+test('an unanswered offer gives way after one step, and the ring carries on where it was', (t) => {
+  const engine = setup(t, { backEveryMs: 30000, pauseEveryMs: 0 });
+  choose(engine, 'group:Trade');
+  engine.next();
+  const before = describe(engine.current());
+  engine.next(Date.now() + 31000);
+  assert.equal(engine.prompt, 'back');
+  engine.next(Date.now() + 31500);
+  assert.equal(engine.prompt, null);
+  assert.equal(describe(engine.current()), before, 'back on the same item, not skipped ahead');
+  engine.next(Date.now() + 32000);
+  assert.equal(engine.prompt, null, 'not offered again until another 30 seconds pass');
+});
+
+test('"Pause switch control?" is offered on its own interval and pauses when pressed; 0 turns offers off', (t) => {
+  const { said } = withSpeech(t);
+  const engine = setup(t, { speak: true, backEveryMs: 0, pauseEveryMs: 120000 });
+  engine.next(Date.now() + 121000);
+  assert.equal(engine.prompt, 'pause');
+  assert.equal(said().at(-1), 'Pause switch control? Press space now.');
+  engine.press();
+  assert.equal(engine.paused, true);
+  doc.body.innerHTML = '';
+  const quiet = setup(t, { backEveryMs: 0, pauseEveryMs: 0 });
+  choose(quiet, 'group:Trade');
+  quiet.next(Date.now() + 10 * 60000);
+  assert.equal(quiet.prompt, null);
+});
+
+test('a settings toggle is ringed with the row it labels, so the ring never sits on a lone dot', () => {
+  doc.body.innerHTML = `
+    <div id="row"><span>Show portfolio balance</span><button role="switch" aria-label="Show portfolio balance"></button></div>
+    <label id="check"><input type="checkbox" /> Read each item aloud</label>
+    <div id="seg"><button id="one">1%</button><button>2%</button></div>`;
+  assert.equal(ringTarget(doc.querySelector('[role="switch"]')).id, 'row');
+  assert.equal(ringTarget(doc.querySelector('input')).id, 'check');
+  assert.equal(ringTarget(doc.getElementById('one')).id, 'one', 'a button with its own text keeps its own ring');
+  doc.body.innerHTML = '';
+});
+
+test('an item redrawn under the ring (live prices) is not read out again', (t) => {
+  const { said } = withSpeech(t);
+  const engine = setup(t, { speak: true });
+  choose(engine, 'group:Trade');
+  doc.getElementById('buy').addEventListener('click', () => {
+    doc.getElementById('buy').outerHTML = '<button id="buy">Buy</button>';
+  });
+  waitFor(engine, 'control:Buy');
+  const before = said().length;
+  engine.press();
+  assert.deepEqual(said().slice(before), ['Buy selected.'], 'the redrawn Buy is the same item, so it is not repeated');
+});
+
+test('the page can speak through the ring, after what the ring is saying', (t) => {
+  const { said, synth } = withSpeech(t);
+  const engine = setup(t, { speak: true });
+  const cancels = synth.cancelled;
+  engine.say('1 day. Now you have $25,000.00, unchanged.');
+  assert.equal(said().at(-1), '1 day. Now you have $25,000.00, unchanged.');
+  assert.equal(synth.cancelled, cancels, 'queued, not cutting the ring off');
+  assert.equal(doc.querySelector('.scan-live').textContent, '1 day. Now you have $25,000.00, unchanged.');
+});
+
+test('Alt+S turns switch control on with reading aloud from any page, and off again', (t) => {
+  const values = new Map();
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true, value: { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, v) },
+  });
+  const { said } = withSpeech(t);
+  const service = new SwitchScanService();
+  const stop = service.listenForShortcut(doc);
+  t.after(() => {
+    stop();
+    service.update({ enabled: false });
+    if (previous) Object.defineProperty(globalThis, 'localStorage', previous); else delete globalThis.localStorage;
+    doc.body.innerHTML = '';
+  });
+  const altS = () => {
+    const event = new browser.KeyboardEvent('keydown', { key: 's', altKey: true, bubbles: true, cancelable: true });
+    doc.body.dispatchEvent(event);
+    return event;
+  };
+  assert.equal(isSwitchControlShortcut(new browser.KeyboardEvent('keydown', { key: 's', altKey: true, ctrlKey: true })), false);
+  assert.equal(altS().defaultPrevented, true);
+  assert.equal(service.settings().enabled, true);
+  assert.equal(service.settings().speak, true, 'turned on by keyboard, so items are read aloud');
+  assert.equal(service.engine.running, true);
+  assert.match(said()[0], /^Switch control on/);
+  service.announce('Chart summary.');
+  assert.equal(said().at(-1), 'Chart summary.');
+  altS();
+  assert.equal(service.settings().enabled, false);
+  assert.equal(service.engine, null);
+  assert.equal(said().at(-1), 'Switch control off.');
+  stop();
+  altS();
+  assert.equal(service.settings().enabled, false, 'no longer listening once stopped');
 });
 
 test('with reading aloud off, or while the briefing talks, the ring stays quiet', (t) => {
@@ -309,7 +431,9 @@ test('the service saves settings and starts or stops the engine', (t) => {
   service.update({ enabled: true, intervalMs: 2000 });
   assert.equal(service.engine.running, true);
   assert.equal(service.engine.intervalMs, 2000);
-  assert.deepEqual(JSON.parse(values.get(ACCESSIBILITY_STORAGE_KEY)).switchControl, { enabled: true, intervalMs: 2000, key: 'Space', speak: false });
+  assert.deepEqual(JSON.parse(values.get(ACCESSIBILITY_STORAGE_KEY)).switchControl, {
+    enabled: true, intervalMs: 2000, key: 'Space', speak: false, backEverySec: 30, pauseEverySec: 120,
+  });
   service.update({ speak: true });
   assert.equal(service.engine.speak, true, 'reading aloud turns on without restarting');
   const first = service.engine;
@@ -327,19 +451,27 @@ test('the service saves settings and starts or stops the engine', (t) => {
 
 test('the settings card toggles switch control and its options', async (t) => {
   const calls = [];
-  const fake = { settings: () => ({ enabled: false, intervalMs: 1200, key: 'Space', speak: false }), update: (c) => calls.push(c) };
+  const fake = {
+    settings: () => ({ enabled: false, intervalMs: 1200, key: 'Space', speak: false, backEverySec: 30, pauseEverySec: 120 }),
+    update: (c) => calls.push(c),
+  };
   const fixture = await render(t, SwitchScanSettings, {}, [{ provide: SwitchScanService, useValue: fake }]);
   const root = fixture.nativeElement;
   const toggle = root.querySelector('.scan-toggle');
   assert.equal(toggle.getAttribute('aria-pressed'), 'false');
   toggle.click();
-  const [speed, key] = root.querySelectorAll('select');
+  const [speed, key, back, pause] = root.querySelectorAll('select');
   speed.value = '2000'; speed.dispatchEvent(new browser.Event('change'));
   key.value = 'Enter'; key.dispatchEvent(new browser.Event('change'));
+  assert.equal(back.value, '30');
+  back.value = '60'; back.dispatchEvent(new browser.Event('change'));
+  pause.value = '0'; pause.dispatchEvent(new browser.Event('change'));
   const speak = root.querySelector('input[type="checkbox"]');
   assert.equal(speak.checked, false);
   speak.checked = true; speak.dispatchEvent(new browser.Event('change'));
-  assert.deepEqual(calls, [{ enabled: true }, { intervalMs: 2000 }, { key: 'Enter' }, { speak: true }]);
+  assert.deepEqual(calls, [
+    { enabled: true }, { intervalMs: 2000 }, { key: 'Enter' }, { backEverySec: 60 }, { pauseEverySec: 0 }, { speak: true },
+  ]);
 });
 
 test('a component host drawn with display: contents counts as visible through its children', (t) => {

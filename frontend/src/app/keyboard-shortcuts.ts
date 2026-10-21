@@ -12,6 +12,7 @@ export interface KeyboardShortcut {
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: ['?'], action: 'Open this list of shortcuts from anywhere on the dashboard.' },
   { keys: ['Alt + B'], action: 'Play the audio market briefing.' },
+  { keys: ['Alt + S'], action: 'Turn switch control on, reading each item aloud, or off. Works on every page.' },
   { keys: ['Tab'], action: 'Move to the next control. Shift + Tab moves back.' },
   { keys: ['Enter'], action: 'Activate the focused button or link, or review an order.' },
   { keys: ['Space'], action: 'Press the focused button or switch.' },

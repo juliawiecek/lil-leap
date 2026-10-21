@@ -19,8 +19,13 @@ export interface ScanSettings {
   key: ScanKey;
   /** Read each item aloud as the ring reaches it, for people who cannot see the ring (auditory scanning). */
   speak: boolean;
+  /** Inside a group, offer "Go back?" this often, wherever the ring is (0 = never). */
+  backEverySec: number;
+  /** Offer "Pause switch control?" this often (0 = never). */
+  pauseEverySec: number;
 }
 export type ScanKey = 'Space' | 'Enter';
+export type ScanPrompt = 'back' | 'pause';
 
 export const SCAN_SPEEDS = [
   { value: 700, label: 'Fast (0.7 s)' },
@@ -32,7 +37,19 @@ export const SCAN_KEYS: { value: ScanKey; label: string }[] = [
   { value: 'Space', label: 'Space bar' },
   { value: 'Enter', label: 'Enter' },
 ];
-const DEFAULT_SCAN: ScanSettings = { enabled: false, intervalMs: 1200, key: 'Space', speak: false };
+export const SCAN_BACK_PROMPTS = [
+  { value: 0, label: 'Never' },
+  { value: 30, label: 'Every 30 seconds' },
+  { value: 60, label: 'Every minute' },
+];
+export const SCAN_PAUSE_PROMPTS = [
+  { value: 0, label: 'Never' },
+  { value: 120, label: 'Every 2 minutes' },
+  { value: 300, label: 'Every 5 minutes' },
+];
+const DEFAULT_SCAN: ScanSettings = {
+  enabled: false, intervalMs: 1200, key: 'Space', speak: false, backEverySec: 30, pauseEverySec: 120,
+};
 /** Unanswered passes through a group before scanning steps back out of it. */
 const CYCLES_BEFORE_BACK = 2;
 /** Spoken items are read a little faster than the briefing, since they are short. */
@@ -48,7 +65,35 @@ export function parseScanSettings(saved: unknown): ScanSettings {
     intervalMs: SCAN_SPEEDS.some((speed) => speed.value === s.intervalMs) ? s.intervalMs! : DEFAULT_SCAN.intervalMs,
     key: SCAN_KEYS.some((k) => k.value === s.key) ? s.key! : DEFAULT_SCAN.key,
     speak: s.speak === true,
+    backEverySec: SCAN_BACK_PROMPTS.some((p) => p.value === s.backEverySec) ? s.backEverySec! : DEFAULT_SCAN.backEverySec,
+    pauseEverySec: SCAN_PAUSE_PROMPTS.some((p) => p.value === s.pauseEverySec) ? s.pauseEverySec! : DEFAULT_SCAN.pauseEverySec,
   };
+}
+
+/** Alt+S turns switch control on or off from anywhere, so someone who cannot see Settings can start it. */
+export function isSwitchControlShortcut(event: KeyboardEvent): boolean {
+  return event.altKey && !event.ctrlKey && !event.metaKey && event.key?.toLowerCase() === 's';
+}
+
+/**
+ * The element the ring is drawn around. A settings toggle sits far from its label, so on its own
+ * it looks like a dot in empty space; the ring takes in the row it labels instead.
+ */
+export function ringTarget(el: HTMLElement): HTMLElement {
+  const field = el as HTMLInputElement;
+  if (el.tagName === 'INPUT' && (field.type === 'checkbox' || field.type === 'radio') && field.labels?.length) {
+    const label = field.labels[0];
+    return label.contains(el) ? label : el;
+  }
+  if (el.getAttribute('role') !== 'switch' || !el.parentElement) {
+    return el;
+  }
+  const row = el.parentElement;
+  const controlText = [...row.querySelectorAll(FOCUSABLE)].reduce((n, c) => n + (c.textContent ?? '').trim().length, 0);
+  const ownText = (row.textContent ?? '').trim().length > controlText;
+  const box = el.getBoundingClientRect();
+  const rowBox = row.getBoundingClientRect();
+  return ownText && rowBox.height <= Math.max(box.height * 4, 96) ? row : el;
 }
 
 /** True when a key event is the configured switch. */
@@ -67,6 +112,9 @@ export interface ScanEngineOptions {
   key?: ScanKey;
   /** Read each item aloud as the ring reaches it. */
   speak?: boolean;
+  /** How often to offer "Go back?" inside a group, and "Pause switch control?", in ms (0 = never). */
+  backEveryMs?: number;
+  pauseEveryMs?: number;
   /** Whether an element is on screen. Tests replace it; browsers use layout. */
   isVisible?: (el: HTMLElement) => boolean;
   /** Called by the "Turn off" button on the status bar. */
@@ -158,6 +206,8 @@ export class ScanEngine {
   intervalMs: number;
   key: ScanKey;
   speak: boolean;
+  backEveryMs: number;
+  pauseEveryMs: number;
   readonly #doc: Document;
   readonly #isVisible: (el: HTMLElement) => boolean;
   readonly #onTurnOff: () => void;
@@ -182,12 +232,21 @@ export class ScanEngine {
   #spokenKey: unknown = null;
   /** An announcement was just read; the next item waits for it instead of cutting it off. */
   #queueNext = false;
+  /** A "Go back?" or "Pause?" offer showing instead of the current item, for one step. */
+  #prompt: ScanPrompt | null = null;
+  #lastBackPrompt = 0;
+  #lastPausePrompt = 0;
+  /** What the ring is drawn around, followed every frame so it stays on moving or redrawn items. */
+  #tracked: HTMLElement | null = null;
+  #frame: number | undefined;
 
   constructor(doc: Document, options: ScanEngineOptions = {}) {
     this.#doc = doc;
     this.intervalMs = options.intervalMs ?? DEFAULT_SCAN.intervalMs;
     this.key = options.key ?? DEFAULT_SCAN.key;
     this.speak = options.speak ?? DEFAULT_SCAN.speak;
+    this.backEveryMs = options.backEveryMs ?? DEFAULT_SCAN.backEverySec * 1000;
+    this.pauseEveryMs = options.pauseEveryMs ?? DEFAULT_SCAN.pauseEverySec * 1000;
     this.#isVisible = options.isVisible ?? defaultVisible;
     this.#onTurnOff = options.onTurnOff ?? (() => this.stop());
     this.#autoAdvance = options.autoAdvance ?? true;
@@ -201,6 +260,10 @@ export class ScanEngine {
   }
   get pickerOpen(): boolean {
     return !!this.#picker;
+  }
+  /** The offer showing instead of the current item, if any. */
+  get prompt(): ScanPrompt | null {
+    return this.#prompt;
   }
   /** How many levels deep scanning is; 1 is the page (or the open dialog) itself. */
   get depth(): number {
@@ -223,9 +286,14 @@ export class ScanEngine {
     this.#index = 0;
     this.#cycles = 0;
     this.#spokenKey = null;
+    this.#prompt = null;
+    this.#lastBackPrompt = this.#lastPausePrompt = Date.now();
     this.#announce(`Switch control on. Press ${this.key === 'Space' ? 'the space bar' : 'Enter'} to choose.`);
     this.#render();
     this.#restartTimer();
+    if (this.#autoAdvance) {
+      this.#follow();
+    }
   }
 
   stop(): void {
@@ -234,6 +302,11 @@ export class ScanEngine {
     }
     this.#running = false;
     clearInterval(this.#timer);
+    if (this.#frame !== undefined) {
+      this.#doc.defaultView?.cancelAnimationFrame(this.#frame);
+      this.#frame = undefined;
+    }
+    this.#tracked = null;
     if (this.#utterance) {
       globalThis.speechSynthesis?.cancel();
       this.#utterance = null;
@@ -291,9 +364,32 @@ export class ScanEngine {
     return items[this.#index];
   }
 
-  /** Moves the ring to the next item; after a few unanswered passes, leaves the group. */
-  next(): void {
+  /**
+   * Moves the ring to the next item; after a few unanswered passes, leaves the group. When an offer
+   * is due ("Go back?", "Pause?") it shows for one step instead, then the ring carries on from
+   * where it was.
+   */
+  next(now = Date.now()): void {
     if (!this.#running || this.#paused) {
+      return;
+    }
+    if (this.#prompt) {
+      this.#prompt = null;
+      this.#spokenKey = null;
+      this.#announce('');
+      this.#render();
+      return;
+    }
+    const due = this.#duePrompt(now);
+    if (due) {
+      this.#prompt = due;
+      if (due === 'back') {
+        this.#lastBackPrompt = now;
+      } else {
+        this.#lastPausePrompt = now;
+      }
+      this.#announce('', false);
+      this.#render();
       return;
     }
     const count = this.items().length;
@@ -328,19 +424,23 @@ export class ScanEngine {
       this.#restartTimer();
       return;
     }
-    const item = this.current();
+    const offer = this.#prompt;
+    this.#prompt = null;
+    const item: ScanItem | null = offer ? { kind: offer } : this.current();
     if (!item) {
       return;
     }
     this.#cycles = 0;
     if (item.kind === 'back') {
       this.#pop();
+      this.#spokenKey = null;
     } else if (item.kind === 'pause') {
       this.#paused = true;
       this.#announce('Scanning paused. Press the switch to resume.');
     } else if (item.kind === 'group') {
       this.#stack.push(item.el);
       this.#index = 0;
+      this.#lastBackPrompt = Date.now();
       this.#announce(`${scanLabel(item.el)}, ${this.#collect(item.el).length} items.`);
     } else {
       this.#activate(item.el);
@@ -626,6 +726,20 @@ export class ScanEngine {
     this.#doc.body.append(this.#bar);
   }
 
+  /** Which offer is due now, if any. "Go back?" only makes sense inside a group. */
+  #duePrompt(now: number): ScanPrompt | null {
+    if (this.#picker) {
+      return null;
+    }
+    if (this.pauseEveryMs > 0 && now - this.#lastPausePrompt >= this.pauseEveryMs) {
+      return 'pause';
+    }
+    if (this.backEveryMs > 0 && this.#stack.length > 1 && now - this.#lastBackPrompt >= this.backEveryMs) {
+      return 'back';
+    }
+    return null;
+  }
+
   /** Puts the ring on the current item and focuses it, so screen readers follow along too. */
   #render(): void {
     if (!this.#running || !this.#ring || !this.#chip || !this.#live) {
@@ -638,30 +752,61 @@ export class ScanEngine {
       }
     }
     const item = this.#paused ? null : this.current();
+    const chipShown = !!this.#prompt || item?.kind === 'back' || item?.kind === 'pause';
     this.#ring.hidden = !item;
-    this.#chip.hidden = !item || (item.kind !== 'back' && item.kind !== 'pause');
-    this.#ring.classList.toggle('group', item?.kind === 'group');
+    this.#chip.hidden = !item || !chipShown;
+    this.#ring.classList.toggle('group', !chipShown && item?.kind === 'group');
     if (!item) {
       return;
     }
-    if (item.kind === 'back' || item.kind === 'pause') {
-      const name = item.kind === 'back' ? 'Back' : 'Pause scanning';
-      this.#chip.textContent = item.kind === 'back' ? '◀ Back' : '⏸ Pause scanning';
-      this.#placeChip(item.kind === 'back' ? this.#stack.at(-1)! : null);
-      this.#announce(name, false);
-      this.#sayItem(`${item.kind}:${this.#stack.length}`, name);
+    if (this.#prompt) {
+      this.#renderPrompt(this.#prompt);
+    } else if (item.kind === 'back' || item.kind === 'pause') {
+      this.#renderChip(item.kind);
     } else {
-      if (item.kind === 'control') {
-        item.el.focus({ preventScroll: true });
-        this.#sayItem(item.el, spokenItem(item.el));
-      } else {
-        this.#announce(`${scanLabel(item.el)} group`, false);
-        this.#sayItem(item.el, `${scanLabel(item.el)} group`);
-      }
-      const scrollTarget = isContents(item.el) ? (item.el.firstElementChild as HTMLElement | null) : item.el;
-      scrollTarget?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+      this.#renderElement(item);
     }
     this.#position();
+  }
+
+  /** "Go back? Press space now." or "Pause switch control? Press space now.", on the chip. */
+  #renderPrompt(prompt: ScanPrompt): void {
+    const key = this.key === 'Space' ? 'space' : 'Enter';
+    const question = prompt === 'back' ? 'Go back?' : 'Pause switch control?';
+    this.#chip!.textContent = `${prompt === 'back' ? '◀' : '⏸'} ${question} Press ${key} now`;
+    this.#placeChip(prompt === 'back' ? this.#stack.at(-1)! : null);
+    this.#announce(`${question} Press ${key} now.`, false);
+    this.#sayItem(`prompt:${prompt}:${prompt === 'back' ? this.#lastBackPrompt : this.#lastPausePrompt}`, `${question} Press ${key} now.`);
+  }
+
+  #renderChip(kind: 'back' | 'pause'): void {
+    const name = kind === 'back' ? 'Back' : 'Pause scanning';
+    this.#chip!.textContent = kind === 'back' ? '◀ Back' : '⏸ Pause scanning';
+    this.#placeChip(kind === 'back' ? this.#stack.at(-1)! : null);
+    this.#announce(name, false);
+    this.#sayItem(`${kind}:${this.#stack.length}`, name);
+  }
+
+  #renderElement(item: { kind: 'control' | 'group'; el: HTMLElement }): void {
+    if (item.kind === 'control') {
+      item.el.focus({ preventScroll: true });
+      this.#sayItem(this.#itemKey(), spokenItem(item.el));
+    } else {
+      this.#announce(`${scanLabel(item.el)} group`, false);
+      this.#sayItem(this.#itemKey(), `${scanLabel(item.el)} group`);
+    }
+    const scrollTarget = isContents(item.el) ? (item.el.firstElementChild as HTMLElement | null) : item.el;
+    scrollTarget?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
+
+  /**
+   * Where the ring is: its level and position there. Prices redraw their buttons on every update,
+   * so keying by position (not by element) keeps a redraw from reading the same item again.
+   */
+  #itemKey(): string {
+    const top = this.#stack.at(-1);
+    const level = top?.getAttribute('data-scan-group') ?? top?.getAttribute('aria-label') ?? top?.tagName ?? '';
+    return `${this.#stack.length}:${level}:${this.#index}`;
   }
 
   #placeChip(group: HTMLElement | null): void {
@@ -682,16 +827,62 @@ export class ScanEngine {
   #position(): void {
     const item = this.#paused ? null : this.current();
     if (!item || !this.#ring) {
+      this.#tracked = null;
       return;
     }
-    const target = 'el' in item ? item.el : this.#chip!;
+    this.#tracked = this.#prompt || !('el' in item) ? this.#chip! : ringTarget(item.el);
+    this.#drawRing(this.#tracked);
+  }
+
+  #drawRing(target: HTMLElement): void {
     const box = screenBox(target);
-    Object.assign(this.#ring.style, {
+    Object.assign(this.#ring!.style, {
       left: `${box.left - 4}px`,
       top: `${box.top - 4}px`,
       width: `${box.width + 8}px`,
       height: `${box.height + 8}px`,
     });
+  }
+
+  /**
+   * Keeps the ring on its item every frame: the price tape scrolls, panels grow as data loads, and
+   * live prices redraw their buttons. A redrawn item is found again by its position, and gets focus
+   * back so screen readers and the tape's pause-on-focus keep working.
+   */
+  readonly #follow = (): void => {
+    this.#frame = undefined;
+    if (!this.#running) {
+      return;
+    }
+    if (!this.#paused && this.#ring && !this.#ring.hidden) {
+      if (this.#tracked && !this.#tracked.isConnected) {
+        this.#position();
+      } else if (this.#tracked) {
+        this.#drawRing(this.#tracked);
+      }
+      this.#refocus();
+    }
+    this.#frame = this.#doc.defaultView?.requestAnimationFrame(this.#follow);
+  };
+
+  /** A redraw removed the focused item; focus its replacement. Only looks when focus was lost. */
+  #refocus(): void {
+    const active = this.#doc.activeElement;
+    if (this.#prompt || (active && active !== this.#doc.body)) {
+      return;
+    }
+    const item = this.current();
+    if (item?.kind === 'control') {
+      item.el.focus({ preventScroll: true });
+    }
+  }
+
+  /** Says something for the page, such as a chart summary, after what the ring is saying. */
+  say(text: string): void {
+    if (this.#live) {
+      this.#live.textContent = text;
+    }
+    this.#say(text, true);
   }
 
   /** Tells screen readers what happened and, when speaking is on, says it aloud too. */
@@ -824,16 +1015,57 @@ export class SwitchScanService {
       this.#engine.intervalMs = next.intervalMs;
       this.#engine.key = next.key;
       this.#engine.speak = next.speak;
+      this.#engine.backEveryMs = next.backEverySec * 1000;
+      this.#engine.pauseEveryMs = next.pauseEverySec * 1000;
       this.#engine.restart();
     }
+  }
+
+  /** Says something for the page (a chart summary) while switch control is on. */
+  announce(text: string): void {
+    this.#engine?.say(text);
+  }
+
+  /**
+   * Alt+S turns switch control on or off from any page, sign-in included, so someone who cannot
+   * see the Settings page can start it. Turning it on this way also reads items aloud. Returns a
+   * function that stops listening.
+   */
+  listenForShortcut(doc: Document = document): () => void {
+    const onKey = (event: KeyboardEvent) => {
+      if (!isSwitchControlShortcut(event)) {
+        return;
+      }
+      event.preventDefault();
+      if (this.settings().enabled) {
+        this.update({ enabled: false });
+        speakNow('Switch control off.');
+      } else {
+        this.update({ enabled: true, speak: true });
+      }
+    };
+    doc.addEventListener('keydown', onKey, true);
+    return () => doc.removeEventListener('keydown', onKey, true);
   }
 
   #start(): void {
     if (typeof document === 'undefined') {
       return;
     }
-    const { intervalMs, key, speak } = this.settings();
-    this.#engine = new ScanEngine(document, { intervalMs, key, speak, onTurnOff: () => this.update({ enabled: false }) });
+    const { intervalMs, key, speak, backEverySec, pauseEverySec } = this.settings();
+    this.#engine = new ScanEngine(document, {
+      intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
+      onTurnOff: () => this.update({ enabled: false }),
+    });
     this.#engine.start();
+  }
+}
+
+/** Speaks one sentence right away, for confirmations given after the ring has stopped. */
+function speakNow(text: string): void {
+  const synth = globalThis.speechSynthesis;
+  if (synth && typeof globalThis.SpeechSynthesisUtterance === 'function') {
+    synth.cancel();
+    synth.speak(new SpeechSynthesisUtterance(text));
   }
 }

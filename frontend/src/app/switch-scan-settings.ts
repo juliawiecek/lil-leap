@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
+import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
 
 /** Switch control card in Settings > Accessibility (PS-19): on/off, speed, switch key, read aloud. */
 @Component({
@@ -11,7 +11,8 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
           <b id="scan-settings-title">Switch control</b>
           <small>
             Use the whole dashboard with one button. A ring moves through the page; press your switch to choose
-            what it is on. Number and text fields open an on-screen keypad.
+            what it is on. Number and text fields open an on-screen keypad. Press <kbd>Alt</kbd> + <kbd>S</kbd> on any
+            page to turn it on with every item read aloud, or off.
           </small>
         </span>
         <button
@@ -41,6 +42,22 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
             }
           </select></label
         >
+        <label
+          >Offer "Go back?"
+          <select (change)="scan.update({ backEverySec: +$any($event.target).value })">
+            @for (p of backPrompts; track p.value) {
+              <option [value]="p.value" [selected]="p.value === scan.settings().backEverySec">{{ p.label }}</option>
+            }
+          </select></label
+        >
+        <label
+          >Offer "Pause?"
+          <select (change)="scan.update({ pauseEverySec: +$any($event.target).value })">
+            @for (p of pausePrompts; track p.value) {
+              <option [value]="p.value" [selected]="p.value === scan.settings().pauseEverySec">{{ p.label }}</option>
+            }
+          </select></label
+        >
         <label class="check"
           ><input type="checkbox" [checked]="scan.settings().speak" (change)="scan.update({ speak: $any($event.target).checked })" />
           Read each item aloud</label
@@ -55,6 +72,7 @@ import { SCAN_KEYS, SCAN_SPEEDS, SwitchScanService } from './switch-scan';
       .card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .card-text b { font-size: 14px; font-weight: 600; }
       .card-text small { max-width: 56ch; color: #a4a79e; font-size: 12.5px; line-height: 1.5; }
+      kbd { padding: 0 5px; border: 1px solid #3a3f38; border-radius: 4px; font: inherit; font-weight: 700; }
       .scan-toggle { flex: none; min-width: 64px; min-height: 34px; border: 1px solid #3a3f38; border-radius: 999px; background: transparent;
         color: #f2f0e9; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
       .scan-toggle[aria-pressed='true'] { border-color: #f2efe6; background: #f2efe6; color: #0b0c0b; }
@@ -72,4 +90,6 @@ export class SwitchScanSettings {
   readonly scan = inject(SwitchScanService);
   readonly speeds = SCAN_SPEEDS;
   readonly keys = SCAN_KEYS;
+  readonly backPrompts = SCAN_BACK_PROMPTS;
+  readonly pausePrompts = SCAN_PAUSE_PROMPTS;
 }

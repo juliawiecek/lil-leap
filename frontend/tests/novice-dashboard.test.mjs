@@ -473,6 +473,19 @@ test('the spoken briefing reads the portfolio as shown, live moves and this acco
   assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
 });
 
+test('choosing a chart period says where the portfolio started and where it is now', async t => {
+  const { desk } = await tradingDesk(t, { chart: true });
+  desk.feed.client = { closes: async () => [] };
+  desk.setChartPeriod('1W');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 week\. /);
+  desk.showBalance.set(false);
+  desk.setChartPeriod('1M');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 month\. (Your balance is hidden|There is no history)/);
+  assert.ok(!desk.chartAnnouncement().includes('$'), 'no amounts while the balance is hidden');
+});
+
 test('an order still running past the tracking limit points the user to Activity', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('ACCEPTED')]] });
   await desk.trackOrder('o1', Date.now() - ORDER_TRACK_LIMIT_MS);

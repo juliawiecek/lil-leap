@@ -39,6 +39,8 @@ import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
+import { chartSummary } from './chart-speech';
+import { SwitchScanService } from './switch-scan';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -224,6 +226,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartHistory = signal<ValuePoint[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
+  /** The last chart summary said aloud, for screen readers (a polite live region). */
+  readonly chartAnnouncement = signal('');
+  readonly #switchScan = inject(SwitchScanService, { optional: true });
   /** The chart point under the cursor; the value above the chart follows it while it is set. */
   readonly chartScrub = signal<ValuePoint | null>(null);
   /** The big number: the scrubbed point's value, otherwise the live total. */
@@ -652,7 +657,30 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   setChartPeriod(period: ChartPeriod): void {
     this.chartPeriod.set(period);
     this.chartScrub.set(null);
-    void this.loadChart();
+    void this.loadChart().then(() => this.#announceChart(period));
+  }
+
+  /**
+   * Says how the portfolio moved over the period just chosen, once its history has loaded:
+   * "1 month. A month ago you had $24,000.00. Now you have $25,450.09, up 6.04 percent." Shown to
+   * screen readers and read aloud by switch control. A period changed again meanwhile is not read.
+   */
+  #announceChart(period: ChartPeriod): void {
+    if (this.destroyed || this.chartPeriod() !== period) {
+      return;
+    }
+    const points = this.chartPoints();
+    const text = chartSummary({
+      period,
+      start: points.length ? startValue(points) : 0,
+      end: points.at(-1)?.value ?? this.portfolioValue(),
+      // A period reaching back before the account had money starts from its first deposit.
+      fromOpening: !!this.chartSpan()?.fromOpening || (points[0]?.value ?? 0) === 0,
+      balanceHidden: !this.showBalance(),
+      hasHistory: points.length >= 2 && !this.chartError(),
+    });
+    this.chartAnnouncement.set(text);
+    this.#switchScan?.announce(text);
   }
   /**
    * Rebuilds the portfolio-value chart for the chosen period from the account's real history:

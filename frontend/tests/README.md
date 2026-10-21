@@ -32,7 +32,11 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
   timing, the Settings card, and each account's last briefing kept across reloads.
 - `switch-scan.test.mjs`: PS-19 switch control groups, Back/Pause, keypads for number,
   text and dropdown fields, dialogs, re-rendered pages, the switch key, reading items
-  aloud, and settings kept in the Accessibility settings store.
+  aloud, "Go back?" and "Pause?" offers, ringing a settings toggle with its row,
+  not re-reading redrawn prices, Alt+S, and settings kept in the Accessibility
+  settings store.
+- `spoken-labels.test.mjs`: chart period names and the spoken chart summary,
+  and price tape items read by company name.
 - `app.test.mjs`: rendered signup/sign-in flows, registration, errors, session
   actions, password visibility, canvas drawing, and lifecycle cleanup.
 - `display-components.test.mjs`: rendered dashboard selection, sign-out,

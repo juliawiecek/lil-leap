@@ -18,8 +18,9 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAppInitializer(() => inject(AppSessionService).initialize()),
     provideAccessibility(),
-    // Switch control resumes straight after a reload when it was left on (PS-19).
-    provideAccessibilityStartup(() => inject(SwitchScanService)),
+    // Switch control resumes straight after a reload when it was left on, and Alt+S starts it
+    // from any page, sign-in included (PS-19).
+    provideAccessibilityStartup(() => inject(SwitchScanService).listenForShortcut()),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },
