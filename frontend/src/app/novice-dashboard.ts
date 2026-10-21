@@ -93,13 +93,15 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [FinancialChange, 
+  imports: [
+    FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
     AccessibilitySettings, KeyboardShortcuts,
   ],
   templateUrl: './novice-dashboard.html',
+
+
   styleUrls: ['./novice-dashboard.scss', './novice-dashboard.refresh.scss', './novice-settings.scss', './novice-allocation.scss'],
-  host: { '(document:keydown)': 'onShortcutKey($event)' },
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
