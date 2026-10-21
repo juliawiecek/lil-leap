@@ -90,6 +90,10 @@ export function orderItem(row: OrderHistoryRow): ActivityItem {
   } else {
     detail = titleCase(row.status);
   }
+  if (row.exitParentId) detail += ' \u00b7 Automatic exit';
+  if (row.orderType === 'LIMIT' && row.limitPrice != null) detail += ` \u00b7 Limit ${formatMoney(row.limitPrice)}`;
+  if (row.takeProfitPrice != null) detail += ` \u00b7 TP ${formatMoney(row.takeProfitPrice)}`;
+  if (row.stopLossPrice != null) detail += ` \u00b7 SL ${formatMoney(row.stopLossPrice)}`;
   return {
     id: `order-${row.orderId}`,
     kind: 'order',

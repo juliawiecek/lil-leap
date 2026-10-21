@@ -308,3 +308,15 @@ test('a refused cancel shows the reason and reloads the real status (PS-14)', as
   assert.equal(feed.cancelling(), false);
   feed.ngOnDestroy();
 });
+
+
+test('activity identifies automatic exits and displays their configured prices', () => {
+  const item = orderItem(row({ status: 'PENDING', fillPrice: null, exitParentId: 'parent',
+    takeProfitPrice: 110, stopLossPrice: 90 }));
+  assert.match(item.detail, /Automatic exit/);
+  assert.match(item.detail, /TP \$110.00/);
+  assert.match(item.detail, /SL \$90.00/);
+  const limit = orderItem(row({ status: 'PENDING', fillPrice: null, orderType: 'LIMIT', limitPrice: 95 }));
+  assert.match(limit.detail, /Limit \$95.00/);
+  assert.equal(hasOpenOrders([row({ status: 'CANCELLED' })]), false);
+});

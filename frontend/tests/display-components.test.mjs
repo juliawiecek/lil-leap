@@ -49,7 +49,7 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   for (const gone of ['#pro-type', '#pro-limit', '#pro-tif', '#profit-price', '#stop-price']) {
     assert.equal(fixture.nativeElement.querySelector(gone), null, `${gone} has no backend`);
   }
-  assert.match(fixture.nativeElement.textContent, /Market order/);
+  assert.match(fixture.nativeElement.textContent, /Executes at the next available market price/);
   assert.doesNotMatch(fixture.nativeElement.textContent, /Fees|Order Book|Options/);
   const review = t.mock.method(desk, 'openModal', () => {});
   fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
@@ -64,7 +64,9 @@ test('chart period buttons update accessible labels; the chart shows recorded pr
   const fixture = await render(t, AdvancedChart, { desk });
   assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D price chart"]'));
   assert.match(fixture.nativeElement.textContent, /Collecting prices for AAPL/);
-  assert.doesNotMatch(fixture.nativeElement.textContent, /EMA|VWAP|RSI|Volume/);
+  assert.doesNotMatch(fixture.nativeElement.textContent, /VWAP|RSI|Volume/);
+  assert.equal(fixture.nativeElement.querySelector('.sma-line'), null);
+  assert.equal(fixture.nativeElement.querySelector('.ema-line'), null);
   const weekly = button(fixture, '1W');
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
   assert.equal(desk.period(), '1W');

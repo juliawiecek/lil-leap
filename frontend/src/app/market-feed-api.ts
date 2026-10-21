@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
+import type { Candle } from './stock-indicators';
 
 /** A quote older than this is shown as "Price delayed", matching the orders service's freshness rule. */
 export const QUOTE_STALE_MS = 60000;
@@ -141,6 +142,18 @@ export class MarketFeedClient {
       .map((row) => ({ at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) }))
       .filter((point) => Number.isFinite(point.at) && point.price > 0)
       .sort((a, b) => a.at - b.at);
+  }
+
+  /** Full OHLC bars from stored midpoint quotes; never fabricate missing candle fields. */
+  async candles(instrumentId: string, interval: string, limit = 500): Promise<Candle[]> {
+    const rows = await this.#get<{ time: string; open: number | string; high: number | string; low: number | string; close: number | string }[]>(
+      `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
+    );
+    if (!Array.isArray(rows)) throw new Error('Could not load candles.');
+    const bars = rows.map(row => ({ at: Date.parse(row.time), open: Number(row.open), high: Number(row.high), low: Number(row.low), close: Number(row.close) }));
+    if (bars.some(b => !Number.isFinite(b.at) || ![b.open, b.high, b.low, b.close].every(p => Number.isFinite(p) && p > 0)
+      || b.low > Math.min(b.open, b.close) || b.high < Math.max(b.open, b.close) || b.low > b.high)) throw new Error('Incomplete candle data.');
+    return bars.sort((a, b) => a.at - b.at);
   }
 
   /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */

@@ -52,6 +52,14 @@ export interface CashEvent {
   amount: number;
 }
 
+/** First recorded funding, or the account opening time when it has no activity. */
+export function fundedAt(createdAt: string | undefined, cash: readonly CashEvent[]): number | null {
+  const first = cash.reduce((earliest, e) => Math.min(earliest, e.at), Number.POSITIVE_INFINITY);
+  if (Number.isFinite(first)) return first;
+  const opened = createdAt ? Date.parse(createdAt) : Number.NaN;
+  return Number.isFinite(opened) ? opened : null;
+}
+
 /** A dated change in shares held: positive for a buy, negative for a sell, at its fill price. */
 export interface ShareEvent {
   at: number;

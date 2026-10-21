@@ -30,12 +30,34 @@
       }
     </div>
   </div>
+  <div class="chart-tools">
+    <div role="group" aria-label="Stock chart style">
+      @for (item of modes; track item) { <button type="button" [attr.aria-pressed]="mode() === item" (click)="mode.set(item); clearCursor()">{{ item }}</button> }
+    </div>
+    <label>Bar interval <select aria-label="Bar interval" [disabled]="!needsBars()" [value]="interval()" (change)="interval.set($any($event.target).value)">@for (item of intervals; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+    <label><input type="checkbox" [checked]="sma()" (change)="sma.set($any($event.target).checked)" /> SMA</label>
+    @if (sma()) { <label>Periods <input aria-label="SMA periods" type="number" min="2" max="200" step="1" [value]="smaPeriod()" (input)="smaPeriod.set(+$any($event.target).value)" /></label> }
+    <label><input type="checkbox" [checked]="ema()" (change)="ema.set($any($event.target).checked)" /> EMA</label>
+    @if (ema()) { <label>Periods <input aria-label="EMA periods" type="number" min="2" max="200" step="1" [value]="emaPeriod()" (input)="emaPeriod.set(+$any($event.target).value)" /></label> }
+  </div>
+  @if (needsBars()) {
+    <p class="indicator-note">{{ interval() }} bars · Quote midpoint OHLC · Latest bar can change · Up to 500 recorded bars. Moving averages use observed bar closes, including the current bar.</p>
+    @if (error()) { <p class="indicator-note" role="alert">{{ error() }} <button type="button" (click)="loadBars()" [disabled]="loading()">Retry candles</button></p> }
+    @else if (loading() && !bars().length) { <p class="indicator-note" role="status">Loading candle history…</p> }
+    @else if (!visibleBars().length) { <p class="indicator-note" role="status">No recorded bars in this range. Try a longer bar interval.</p> }
+    @if (sma() && !smaPoints().length) { <p class="indicator-note" role="status">SMA needs a whole-number period from 2–200 and at least that many recorded bars.</p> }
+    @if (ema() && !emaPoints().length) { <p class="indicator-note" role="status">EMA needs a whole-number period from 2–200 and at least that many recorded bars.</p> }
+    <p class="indicator-note">@if (sma()) { <span class="sma-key">SMA {{ smaPeriod() }}</span> } @if (ema()) { <span class="ema-key">EMA {{ emaPeriod() }}</span> }</p>
+  }
   <div class="technical-chart">
     <div class="price-pane">
       <svg
         viewBox="0 0 824 160"
         preserveAspectRatio="none"
         role="img"
+        tabindex="0"
+        (pointermove)="scrub($event)" (pointerdown)="scrub($event)"
+        (pointerleave)="clearCursor()" (pointercancel)="clearCursor()" (blur)="clearCursor()" (keydown)="scrubKey($event)"
         [attr.aria-label]="desk().selected().symbol + ' ' + desk().period() + ' price chart'"
       >
         <defs>
@@ -44,18 +66,33 @@
           </pattern>
         </defs>
         <rect width="824" height="160" fill="url(#pro-grid)" />
-        @if (desk().priceLine()) {
-          <path class="price-line" pathLength="1" [attr.d]="desk().priceLine()" fill="none" stroke="#94c973" stroke-width="2" vector-effect="non-scaling-stroke" />
+        @if (mode() === 'Line' && linePoints().length >= 2) {
+          <path class="price-line" [attr.d]="line(linePoints())" fill="none" stroke="#94c973" stroke-width="2" vector-effect="non-scaling-stroke" />
         }
-        @if (desk().averageCostY() !== null) {
+        @if (mode() !== 'Line') {
+          @for (bar of glyphs(); track bar.at) {
+            <g class="ohlc-glyph" [class.up]="bar.close >= bar.open" [class.down]="bar.close < bar.open">
+              <line [attr.x1]="bar.x" [attr.x2]="bar.x" [attr.y1]="bar.highY" [attr.y2]="bar.lowY" />
+              @if (mode() === 'Candles') {
+                <rect [attr.x]="bar.x - bar.width / 2" [attr.y]="bar.top" [attr.width]="bar.width" [attr.height]="bar.height" />
+              } @else {
+                <line [attr.x1]="bar.x - bar.width / 2" [attr.x2]="bar.x" [attr.y1]="bar.openY" [attr.y2]="bar.openY" />
+                <line [attr.x1]="bar.x" [attr.x2]="bar.x + bar.width / 2" [attr.y1]="bar.closeY" [attr.y2]="bar.closeY" />
+              }
+            </g>
+          }
+        }
+        @if (smaPoints().length) { <path class="indicator-line sma-line" [attr.d]="line(smaPoints())" /> }
+        @if (emaPoints().length) { <path class="indicator-line ema-line" [attr.d]="line(emaPoints())" /> }
+        @if (averageY() !== null) {
           <g class="average-cost">
-            <line x1="0" x2="824" [attr.y1]="desk().averageCostY()" [attr.y2]="desk().averageCostY()" stroke-dasharray="5 4" />
-            <text x="820" [attr.y]="desk().averageCostY()! - 4" text-anchor="end">
+            <line x1="0" x2="824" [attr.y1]="averageY()" [attr.y2]="averageY()" stroke-dasharray="5 4" />
+            <text x="820" [attr.y]="averageY()! - 4" text-anchor="end">
               Avg cost {{ desk().averageCost() | currency }}
             </text>
           </g>
         }
-        @for (mark of desk().plottedTrades(); track mark.at) {
+        @for (mark of trades(); track mark.at) {
           <g class="trade-mark" [class.buy]="mark.side === 'BUY'" [class.sell]="mark.side === 'SELL'">
             <title>{{ mark.label }}</title>
             <path
@@ -65,12 +102,24 @@
             />
           </g>
         }
+        @if (active(); as point) {
+          <g class="stock-crosshair" aria-hidden="true">
+            <line [attr.x1]="point.x" [attr.x2]="point.x" y1="0" y2="160" />
+            <line x1="0" x2="824" [attr.y1]="point.y" [attr.y2]="point.y" />
+            <circle [attr.cx]="point.x" [attr.cy]="point.y" r="3" />
+          </g>
+        }
       </svg>
-      @if (desk().averageCostY() !== null) {
-        <span class="avg-cost-label" aria-hidden="true" [style.top.%]="desk().averageCostY()! / 1.6">Avg cost {{ desk().averageCost() | currency }}</span>
+      @if (active(); as point) {
+        <div class="stock-tooltip" role="status"><strong>{{ desk().selected().symbol }} · {{ point.price | currency }}</strong><span>{{ point.time }}</span>
+          @if (activeBar(); as bar) { <span>O {{ bar.open | currency }} · H {{ bar.high | currency }}</span><span>L {{ bar.low | currency }} · C {{ bar.close | currency }}</span><span>{{ interval() }} bar starting at this time</span> }
+        </div>
+      }
+      @if (averageY() !== null) {
+        <span class="avg-cost-label" aria-hidden="true" [style.top.%]="averageY()! / 1.6">Avg cost {{ desk().averageCost() | currency }}</span>
       }
       <div class="price-axis">
-        @for (price of desk().priceAxis(); track $index) {
+        @for (price of axis(); track $index) {
           <span>{{ price | number: '1.2-2' }}</span>
         }
       </div>
@@ -80,7 +129,7 @@
         <span>{{ time }}</span>
       }
     </div>
-    @if (!desk().priceLine()) {
+    @if (mode() === 'Line' && !desk().priceLine()) {
       <p class="chart-note">Collecting prices for {{ desk().selected().symbol || 'this stock' }}. The line appears as quotes arrive.</p>
     } @else if (desk().historyStart(); as start) {
       <p class="chart-note">Prices recorded since {{ start | date: 'MMM d, HH:mm' }}.</p>

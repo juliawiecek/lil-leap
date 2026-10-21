@@ -76,15 +76,16 @@ def test_continuous_retries_then_advances_seed_and_respects_interval(monkeypatch
     from src import quote_ingestor as ingestor
     generate = Mock(return_value=frame())
     connect = Mock(side_effect=[ingestor.DatabaseUnavailableError("offline"), nullcontext(object()), nullcontext(object())])
-    monkeypatch.setattr(ingestor, "generate_current", generate)
+    monkeypatch.setattr(ingestor, "generate_next", generate)
+    monkeypatch.setattr(ingestor.QuoteRepository, "latest_midpoints", lambda _: {"AAPL": 300.0})
     monkeypatch.setattr(ingestor, "connect", connect)
     monkeypatch.setattr(ingestor, "ingest_frame", Mock(return_value=(1, 0)))
     monkeypatch.setattr(ingestor.time, "monotonic", Mock(side_effect=[0, 1, 3, 4, 10]))
     sleeps = []
     ingestor.run_continuous(5, 42, stop=lambda: len(sleeps) == 3, sleep=sleeps.append)
     assert sleeps == [1, 3, 0]
-    # Each tick generates a 3-step price path (so prices move) and keeps the latest step.
-    assert [c.args for c in generate.call_args_list] == [(3, 42), (3, 42), (3, 43)]
+    # No state advances while disconnected; each successful tick resumes persisted prices.
+    assert [c.args for c in generate.call_args_list] == [({"AAPL": 300.0}, 5, 42), ({"AAPL": 300.0}, 5, 43)]
 
 
 def test_continuous_stops_after_bounded_database_retries(monkeypatch):

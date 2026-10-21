@@ -58,6 +58,8 @@ PostgreSQL is the durable shared quote source. The Orders service reads it direc
 
 One shot: `python -m src.quote_ingestor --once --periods 10 --seed 42`. Continuous: `python -m src.quote_ingestor --continuous`. Set `QUOTE_PROVIDER=csv` only for explicit local fallback. PostgreSQL failures never silently fall back to CSV.
 
+Continuous ingestion resumes each symbol from its latest committed, non-future database quote on every tick, including after a restart. The catalogue starting price is used only when no quote exists. Each GBM step uses `QUOTE_INTERVAL_SECONDS` as its simulated duration, so a two-second update no longer applies two minutes of volatility. Downtime pauses the simulation; it does not create backfilled or accelerated price moves. Failed writes cannot advance the persisted price. Quotes remain synthetic. One-shot generation and CSV replay retain their reproducible seeded behaviour and are separate from continuous ingestion.
+
 Retention deletes nothing by default (`QUOTE_RETENTION_DAYS=0`); positive values enable the configured retention policy. Orders owns execution, fills and atomic cash/holdings settlement. This quote service only generates, persists and serves quotes.
 
 Compose runs `python -m src.service_runner` on internal port 8083 with continuous ingestion. The gateway exposes quote reads at `http://localhost:4200/api/v1/quotes/AAPL`. The generator is in-process; a separate external HTTP provider is not implemented.

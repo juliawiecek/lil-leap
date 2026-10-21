@@ -4,9 +4,10 @@ import argparse, os, signal, time
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import pandas as pd
+import numpy as np
 from src.database import connect, DatabaseUnavailableError
-from src.generate_quotes import generate_quotes, validate_quotes
-from src.instrument_catalog import INSTRUMENTS_BY_SYMBOL
+from src.generate_quotes import generate_quotes, generate_price_path, validate_quotes
+from src.instrument_catalog import INSTRUMENTS_BY_SYMBOL, SYMBOL_CONFIG
 from src.instrument_repository import InstrumentRepository
 from src.quote_repository import QuoteRepository
 
@@ -67,17 +68,36 @@ def run_once(periods: int, seed: int) -> tuple[int,int,int]:
     )
     return len(frame), inserted, skipped
 
+def generate_next(previous: dict[str, float], interval: float, seed: int) -> pd.DataFrame:
+    """One time-scaled GBM step from the persisted price, not the catalog anchor."""
+    rng = np.random.default_rng(seed)
+    now = datetime.now(timezone.utc)
+    rows = []
+    for symbol, config in SYMBOL_CONFIG.items():
+        start = previous.get(symbol, config["start_price"])
+        if not np.isfinite(start) or start <= 0:
+            raise QuoteIngestionError(f"Invalid previous price for {symbol}")
+        price = max(0.0002, round(float(generate_price_path(
+            start, config["drift"], config["volatility"], 2, rng, step_seconds=interval
+        )[-1]), 4))
+        spread = max(round(price * 0.0002, 4), 0.0001)
+        rows.append({"symbol": symbol, "quote_timestamp": now, "price": price,
+                     "bid": round(price - spread, 4), "ask": round(price + spread, 4),
+                     "currency": "USD", "source": "SYNTHETIC_GBM", "synthetic": True})
+    return pd.DataFrame(rows)
+
+
 def run_continuous(interval: float, seed: int, stop=None, sleep=time.sleep) -> None:
+    if not np.isfinite(interval) or interval <= 0:
+        raise ValueError("interval must be finite and positive")
     should_stop=stop or (lambda: False); attempt=0; batch=0
     while not should_stop():
         started=time.monotonic()
         try:
-            # Generate 3 prices per interval to get GBM variation (periods must be > 1 for price movement)
-            # We take the last price to show market movement over time
-            frame=generate_current(3, seed + batch)
-            # Keep only the most recent price for this interval
-            frame = frame.groupby('symbol', as_index=False).tail(1)
-            with connect() as conn: inserted, skipped=ingest_frame(frame, conn)
+            with connect() as conn:
+                previous = QuoteRepository(conn).latest_midpoints()
+                frame = generate_next(previous, interval, seed + batch)
+                inserted, skipped = ingest_frame(frame, conn)
             print(f"quote batch inserted={inserted} skipped={skipped} symbols={len(frame)}")
             attempt=0; batch += 1
         except DatabaseUnavailableError:

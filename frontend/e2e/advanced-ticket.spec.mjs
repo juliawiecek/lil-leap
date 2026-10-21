@@ -1,0 +1,45 @@
+import { test, expect } from '@playwright/test';
+import { identity, ready, uuid } from './fixtures.mjs';
+
+test('advanced ticket displays spread, sizes risk and restores a saved preset', async ({ page }, info) => {
+  test.skip(info.project.metadata.role !== 'TRADER');
+  await identity(page, info);
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    const quote = { instrumentId: uuid, symbol: 'AAPL', bid: 99, ask: 101, midpoint: 100, quotedAt: new Date().toISOString() };
+    let json = [];
+    if (path.endsWith('/accounts')) json = [{ account_id: uuid, account_number: '001', account_name: 'Trading', account_status: 'ACTIVE', trading_enabled: true, trader_level: 'ADVANCED' }];
+    if (path.endsWith('/instruments')) json = [{ instrumentId: uuid, symbol: 'AAPL', instrumentName: 'Apple', tradable: true, enabled: true }];
+    if (path.endsWith('/cash')) json = [{ balance: 5000 }];
+    if (path.endsWith('/quotes/latest/by-instruments') || path.endsWith('/quotes/day-opens')) json = [quote];
+    if (path.includes('/quotes/latest/by-instrument/')) json = quote;
+    if (path.endsWith('/market/status')) json = { open: true, exchangeTimeZone: 'America/New_York', nextClose: new Date(Date.now() + 3600000).toISOString() };
+    await route.fulfill({ json });
+  });
+  await page.goto('/dashboard'); await ready(page);
+  const ticket = page.locator('app-advanced-ticket');
+  await expect(ticket.locator('.quote-strip')).toContainText('$99.00');
+  await expect(ticket.locator('.quote-strip')).toContainText('$101.00');
+  await expect(ticket.locator('.quote-strip')).toContainText('$2.00');
+  await ticket.getByRole('button', { name: 'Stop loss Off', exact: true }).click();
+  await ticket.locator('#pro-stop').fill('96');
+  await ticket.locator('summary', { hasText: 'Risk-based sizing' }).click();
+  await ticket.getByLabel('Risk budget (USD)').fill('100');
+  await ticket.getByRole('button', { name: 'Apply share quantity' }).click();
+  await expect(ticket.getByLabel('Quantity', { exact: true })).toHaveValue('20');
+  await ticket.locator('summary', { hasText: 'Saved order presets' }).click();
+  await ticket.getByLabel('Preset name').fill('Test setup');
+  await ticket.getByRole('button', { name: 'Save current settings' }).click();
+  await expect(ticket.locator('.preset-status')).toContainText('Saved Test setup');
+  await page.reload(); await ready(page);
+  await ticket.locator('summary', { hasText: 'Saved order presets' }).click();
+  await ticket.getByRole('button', { name: 'Test setup Market' }).click();
+  await expect(ticket.getByLabel('Quantity', { exact: true })).toHaveValue('20');
+  await expect(ticket.locator('#pro-exit-unit')).toHaveValue('percent');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await ticket.locator('section').screenshot({ path: info.outputPath('advanced-ticket-desktop.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(ticket.locator('section')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await ticket.locator('section').screenshot({ path: info.outputPath('advanced-ticket-mobile.png') });
+});

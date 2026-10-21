@@ -48,11 +48,14 @@ for (const side of ['Buy', 'Sell']) {
     input(fixture, '#pro-symbol', 'NVDA', 'change');
     input(fixture, '#pro-quantity', '2');
     const ticketText = root.querySelector('app-advanced-ticket').textContent;
-    assert.match(ticketText, /Market order/);
-    assert.match(ticketText, /Final price and total may differ/);
-    assert.doesNotMatch(ticketText, /Limit|Time in Force|Take Profit|Stop Loss|Fees/i);
+    assert.match(ticketText, /Executes at the next available market price/);
+    assert.match(ticketText, /Final price may differ/);
+    assert.match(ticketText, /Take profit OffStop loss Off/);
+    assert.equal(root.querySelector('#pro-limit'), null);
+    assert.equal(root.querySelector('#pro-profit'), null);
+    assert.equal(root.querySelector('#pro-stop'), null);
     assert.deepEqual([...root.querySelectorAll('app-advanced-ticket select')].map(el => el.id), ['pro-symbol']);
-    assert.deepEqual([...root.querySelectorAll('app-advanced-ticket input')].map(el => el.id), ['pro-quantity']);
+    assert.deepEqual([...root.querySelectorAll('app-advanced-ticket input')].map(el => el.id), ['pro-quantity', 'pro-risk-budget', 'pro-preset-name']);
     assert.equal(desk.total(), 400);
     assert.match(root.querySelector('.cost-summary').textContent, /Estimated total\s*\$400\.00/);
     button(fixture, 'Change for this order');

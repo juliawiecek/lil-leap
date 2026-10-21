@@ -1,0 +1,33 @@
+import { test, expect } from '@playwright/test';
+import { advancedDesk } from './advanced-dashboard-fixture.mjs';
+
+test('stock chart shows recorded prices and dates on hover, keyboard and touch', async ({ page }, info) => {
+  test.skip(info.project.metadata.role !== 'TRADER');
+  const { ticket, state } = await advancedDesk(page, info);
+  const chart = page.locator('app-advanced-chart'), svg = chart.locator('svg'), tooltip = chart.locator('.stock-tooltip');
+  await expect(chart.locator('.price-line')).toBeVisible();
+  await svg.hover({ position: { x: 10, y: 60 } });
+  await expect(tooltip).toContainText('AAPL · $90.00');
+  await expect(tooltip).toContainText(/\d{4}.*\d+:\d{2}:\d{2}.*CT/);
+  await expect(chart.locator('.stock-crosshair')).toBeVisible();
+  await svg.focus();
+  await expect.poll(async () => { await svg.press('End'); return tooltip.textContent(); }).toContain('AAPL · $99.67');
+  await svg.press('Home'); await expect(tooltip).toContainText('$90.00');
+  await svg.press('ArrowRight'); await expect(tooltip).toContainText('$90.33');
+  await svg.press('Escape'); await expect(tooltip).toHaveCount(0);
+  await svg.hover({ position: { x: 10, y: 60 } });
+  await chart.getByRole('button', { name: '1W', exact: true }).click(); await expect(tooltip).toHaveCount(0);
+  await ticket.locator('#pro-symbol').selectOption('MSFT'); await expect(tooltip).toHaveCount(0);
+  await expect(chart.locator('.price-line')).toBeVisible();
+  await svg.focus();
+  await svg.press('Home'); await expect(tooltip).toContainText('MSFT · $90.00');
+  await page.mouse.move(0, 0); await svg.blur(); await expect(tooltip).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await svg.scrollIntoViewIfNeeded();
+  const box = await svg.boundingBox();
+  await svg.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: box.x + box.width / 2, clientY: box.y + 50 });
+  await expect(tooltip).toBeVisible();
+  await chart.locator('section').screenshot({ path: info.outputPath('stock-hover-mobile.png') });
+  const bounds = await tooltip.boundingBox(); expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  expect(state.errors).toEqual([]);
+});

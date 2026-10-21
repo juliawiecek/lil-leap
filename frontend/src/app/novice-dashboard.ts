@@ -33,7 +33,7 @@ import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession, fundedAt,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
 
@@ -49,14 +49,7 @@ const PERIOD_LABELS: Record<ChartPeriod, string> = {
  * When the account first held money: its first deposit, transfer or fill. Before that it was
  * worth nothing, so the chart starts there; with no activity yet, the account's opening time.
  */
-export function fundedAt(createdAt: string | undefined, cash: readonly CashEvent[]): number | null {
-  const first = cash.reduce((earliest, e) => Math.min(earliest, e.at), Number.POSITIVE_INFINITY);
-  if (Number.isFinite(first)) {
-    return first;
-  }
-  const opened = createdAt ? Date.parse(createdAt) : Number.NaN;
-  return Number.isFinite(opened) ? opened : null;
-}
+export { fundedAt } from './portfolio-history';
 
 /** The last of the values in each bar of `width` ms, in time order. */
 export function lastPerBar(points: readonly ValuePoint[], width: number): ValuePoint[] {
@@ -685,7 +678,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    * stock's current bid-to-midpoint ratio, and the history meets the live line without a jump.
    */
   async #closes(symbols: string[], range: ChartRange, now: number): Promise<Map<string, PricePoint[]>> {
-    const { interval, limit } = barStep(range);
+    const { interval, limit } = barStep({ ...range, end: now });
     const ids = new Map([
       ...this.instruments().map((i) => [i.symbol, i.instrumentId] as const),
       ...this.feed.quotes().map((q) => [q.symbol, q.instrumentId] as const),

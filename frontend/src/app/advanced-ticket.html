@@ -25,7 +25,25 @@
         ><span>{{ desk().selected()?.name }}</span
         ><app-dashboard-icon name="search" />
       </div>
-      <p class="ticket-note">Market order: fills at the live price when the market is open. Final price and total may differ from this estimate.</p>
+      <div class="quote-strip" aria-label="Bid, ask and spread">
+        <div><span>Bid</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.bid | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>
+        <div><span>Ask</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.ask | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>
+        <div><span>Spread</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.spread | currency:'USD':'symbol':'1.2-4') : '--' }}</strong>
+          @if (desk().ticketQuote(); as quote) { <small>{{ quote.spreadPercent | number:'1.2-2' }}%</small> }
+        </div>
+      </div>
+      <label>Order type</label>
+      <div class="option-switch" aria-label="Order type">
+        <button type="button" [class.active]="desk().orderType() === 'MARKET'" [attr.aria-pressed]="desk().orderType() === 'MARKET'" (click)="desk().setOrderType('MARKET')">Market</button>
+        <button type="button" [class.active]="desk().orderType() === 'LIMIT'" [attr.aria-pressed]="desk().orderType() === 'LIMIT'" (click)="desk().setOrderType('LIMIT')">Limit</button>
+      </div>
+      @if (desk().orderType() === 'LIMIT') {
+        <label for="pro-limit">Limit price (USD)</label>
+        <input id="pro-limit" type="number" min="0.01" step="0.01" required [value]="desk().limitPrice()" (input)="desk().limitPrice.set($any($event.target).value)" />
+        <p class="ticket-note">{{ desk().side() === 'Buy' ? 'Maximum buy' : 'Minimum sell' }} price per share. Execution is not guaranteed.</p>
+      } @else {
+        <p class="ticket-note">Executes at the next available market price. Final price may differ.</p>
+      }
       <label for="pro-quantity">Quantity</label
       ><input
         id="pro-quantity"
@@ -36,21 +54,84 @@
         [value]="desk().quantity()"
         (input)="desk().quantity.set($any($event.target).value); desk().message.set('')"
       />
+      <div class="size-presets" aria-label="Position sizing">
+        @for (percent of [25, 50, 75, 100]; track percent) {
+          <button type="button" (click)="desk().sizeOrder(percent)">{{ percent }}%</button>
+        }
+      </div>
+      <p class="ticket-note">{{ desk().side() === 'Buy' ? 'Percentage of buying power' : 'Percentage of shares held' }}</p>
+      <label>Take profit / Stop loss</label>
+      <div class="option-switch exit-toggles">
+        <button type="button" [class.active]="desk().takeProfitEnabled()" [attr.aria-pressed]="desk().takeProfitEnabled()" (click)="desk().takeProfitEnabled.set(!desk().takeProfitEnabled())">Take profit <span>{{ desk().takeProfitEnabled() ? 'On' : 'Off' }}</span></button>
+        <button type="button" [class.active]="desk().stopLossEnabled()" [attr.aria-pressed]="desk().stopLossEnabled()" (click)="desk().stopLossEnabled.set(!desk().stopLossEnabled())">Stop loss <span>{{ desk().stopLossEnabled() ? 'On' : 'Off' }}</span></button>
+      </div>
+      @if (desk().takeProfitEnabled() || desk().stopLossEnabled()) {
+        <label for="pro-exit-unit">Set exits using</label>
+        <select id="pro-exit-unit" [value]="desk().exitUnit()" (change)="desk().setExitUnit($any($event.target).value)"><option value="price">Price (USD)</option><option value="percent">Distance from entry (%)</option></select>
+        @if (desk().takeProfitEnabled()) {
+          <label for="pro-profit">Take-profit {{ desk().exitUnit() === 'price' ? 'price (USD)' : 'distance (%)' }}</label>
+          <input id="pro-profit" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().takeProfit()" (input)="desk().takeProfit.set($any($event.target).value)" />
+        }
+        @if (desk().stopLossEnabled()) {
+          <label for="pro-stop">Stop-loss {{ desk().exitUnit() === 'price' ? 'price (USD)' : 'distance (%)' }}</label>
+          <input id="pro-stop" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().stopLoss()" (input)="desk().stopLoss.set($any($event.target).value)" />
+          <p class="ticket-note">Stop price is a trigger; the final execution price may differ.</p>
+        }
+        <p class="ticket-note">After the entry fills, one {{ desk().side() === 'Buy' ? 'sell exit' : 'buy-back order' }} activates at either level. Orders stay open until filled or cancelled. Exit levels are relative to this {{ desk().side() === 'Buy' ? 'buy' : 'sell' }} entry. Estimates exclude slippage.</p>
+      }
+      <details class="advanced-tools">
+        <summary>Risk-based sizing</summary>
+        <label for="pro-risk-budget">Risk budget (USD)</label>
+        <input id="pro-risk-budget" type="text" inputmode="decimal" [value]="riskBudget()" (input)="riskBudget.set($any($event.target).value)" />
+        <p id="pro-sizing-help" class="ticket-note" [class.ticket-warning]="!!sizingBlockReason()" aria-live="polite">{{ sizingNote() }}</p>
+        @if (suggestedQuantity() > 0) {
+          <div class="sizing-result"><span>Suggested shares</span><strong>{{ suggestedQuantity() | number }}</strong></div>
+          <div class="sizing-result"><span>Estimated risk at stop</span><strong>{{ suggestedQuantity() * (desk().entryPrice() - desk().exitPrice('loss')) * (desk().side() === 'Buy' ? 1 : -1) | currency }}</strong></div>
+        }
+        <button type="button" class="secondary-button tool-action" aria-describedby="pro-sizing-help" [disabled]="suggestedQuantity() < 1" (click)="applyRiskSize()">Apply share quantity</button>
+        <p class="ticket-note">An estimate, not a maximum loss. Gaps and slippage can increase the loss.</p>
+      </details>
+      <details class="advanced-tools">
+        <summary>Saved order presets <span>{{ presets().length }}/10</span></summary>
+        <p class="ticket-note">Saved for this account in this browser. Keeps quantity, order type, protection, risk budget and percentage exits. Applies to the current stock and side; limit price resets to the current quote.</p>
+        @for (preset of presets(); track preset.name) {
+          <div class="preset-row">
+            <button type="button" class="preset-apply" (click)="applyPreset(preset)">{{ preset.name }}<small>{{ preset.orderType === 'LIMIT' ? 'Limit' : 'Market' }} &middot; {{ preset.quantity }} shares</small></button>
+            <button type="button" class="preset-remove" [attr.aria-label]="'Remove preset ' + preset.name" (click)="deletePreset(preset)">Remove</button>
+          </div>
+        }
+        <label for="pro-preset-name">Preset name</label>
+        <input id="pro-preset-name" type="text" maxlength="40" placeholder="e.g. Swing setup" [value]="presetName()" (input)="presetName.set($any($event.target).value)" />
+        <button type="button" class="secondary-button tool-action" [disabled]="!storageKey() || !presetName().trim()" (click)="savePreset()">Save current settings</button>
+        <output class="ticket-note preset-status" aria-live="polite">{{ presetMessage() }}</output>
+      </details>
       <div class="cost-summary">
         <div>
           <span>Live price</span>@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</span>}
         </div>
         <div>
+          <span>{{ desk().orderType() === 'LIMIT' ? 'Limit price' : (desk().side() === 'Buy' ? 'Estimated buy price (ask)' : 'Estimated sell price (bid)') }}</span><span>{{ desk().entryPrice() | currency:'USD':'symbol':'1.2-4' }}</span>
+        </div>
+        <div>
           <strong>Estimated total</strong><strong>{{ desk().total() | currency }}</strong>
         </div>
       </div>
+      @if (desk().takeProfitEnabled() && desk().takeProfit()) {
+        <p class="ticket-note">Target: {{ desk().exitPrice('profit') | currency }} &middot; Potential reward: {{ desk().reward() | currency }}</p>
+      }
+      @if (desk().stopLossEnabled() && desk().stopLoss()) {
+        <p class="ticket-note">Stop: {{ desk().exitPrice('loss') | currency }} &middot; Estimated risk: {{ desk().risk() | currency }}</p>
+      }
+      @if (desk().takeProfitEnabled() && desk().stopLossEnabled() && desk().risk() > 0) {
+        <p class="ticket-note">Reward / risk: {{ (desk().reward() / desk().risk()).toFixed(2) }} : 1</p>
+      }
       @if (desk().priceDelayed()) {
         <p class="ticket-warning" role="note">Price delayed: the last quote is over a minute old.</p>
       }
       @if (desk().closedWarning()) {
         <p class="ticket-warning" role="note">{{ desk().closedWarning() }}</p>
       }
-      @if (desk().protectionNote()) {
+      @if (desk().orderType() === 'MARKET' && desk().protectionNote()) {
         <div class="protection-row">
           <div class="protection-copy">
             <span>Price protection <b>{{ desk().tolerance() }}%</b></span>

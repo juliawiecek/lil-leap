@@ -38,7 +38,7 @@ const HEIGHT = 200;
           (keydown)="scrubKey($event)"
         >
           <line class="baseline" x1="0" [attr.x2]="width" [attr.y1]="baselineY()" [attr.y2]="baselineY()" />
-          <path class="line" pathLength="1" [attr.d]="path()" />
+          <path class="line" [attr.d]="path()" />
           @if (active(); as point) {
             <line class="cursor" [attr.x1]="point.x" [attr.x2]="point.x" y1="0" [attr.y2]="height" />
           }
@@ -74,8 +74,7 @@ const HEIGHT = 200;
     @media (max-width: 600px) { svg, .chart-empty { height: 150px; } }
     svg:focus-visible { outline: 2px solid var(--tone); outline-offset: 6px; border-radius: 4px; }
     .line { fill: none; stroke: var(--tone); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; transition: stroke .2s;
-      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 40%, transparent)); stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.6s cubic-bezier(.3, .7, .2, 1) .2s forwards; }
-    @keyframes draw { to { stroke-dashoffset: 0; } }
+      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 40%, transparent)); }
     .baseline { stroke: #3a4038; stroke-width: 1; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
     .cursor { stroke: #a4a79e; stroke-width: 1; vector-effect: non-scaling-stroke; }
     .dot { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border: 2px solid #0c0c0c; border-radius: 50%; background: var(--tone); box-sizing: border-box; pointer-events: none; }

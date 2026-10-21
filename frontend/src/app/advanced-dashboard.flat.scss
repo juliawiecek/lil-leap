@@ -9,6 +9,13 @@
   100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
 }
 :host { background: #0a0a0a; --line: #232323; }
+.sidebar-resizer { position:absolute; top:0; right:-5px; width:10px; height:100%; z-index:20; cursor:col-resize; touch-action:none; }
+.sidebar-resizer::after { content:''; position:absolute; top:0; bottom:0; left:4px; width:2px; background:#3b3b3b; }
+.sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .resizing-sidebar .sidebar-resizer::after { background:#94c973; }
+.sidebar-resizer:focus-visible { outline:2px solid #94c973; outline-offset:-2px; }
+.resizing-sidebar { user-select:none; cursor:col-resize; }
+@media(min-width:761px) { .pro-shell, .pro-shell.collapsed { grid-template-columns:var(--sidebar-width, 200px) minmax(0, 1fr); } }
+@media(max-width:760px) { .sidebar-resizer { display:none; } }
 h2 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
 
 /* Sidebar */
@@ -19,8 +26,10 @@ h2 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
 .pro-sidebar nav button:hover { background: #161616; }
 .pro-sidebar nav button.active { border-left-color: #ededed; background: #1a1a1a; }
 .pro-sidebar nav app-dashboard-icon { width: 16px; height: 16px; }
-.sidebar-help { border-top-color: #232323; }
-.sidebar-help button { min-height: 34px; border-radius: 4px; font-size: 13px; }
+.sidebar-help { border-top-color: #232323; min-width:0; margin-inline:4px; }
+.sidebar-help button { min-height: 34px; min-width:0; gap:8px; border-radius: 4px; font-size: 13px; }
+.sidebar-help button app-dashboard-icon { flex-shrink:0; }
+.pro-shell:not(.collapsed) .sidebar-help button span { min-width:0; white-space:normal; overflow-wrap:anywhere; text-align:left; }
 .sidebar-help button:hover { background: #161616; }
 
 /* Header: solid, no blur; market status sits with the account controls */

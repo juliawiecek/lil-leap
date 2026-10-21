@@ -30,6 +30,7 @@ class OrderExecutionWorkerLifecycleTest {
 
     @BeforeEach
     void transactionsAreIndependent() {
+        when(jdbc.queryForObject(contains("execution_attempts - price_waits"), eq(Long.class), eq(claim.orderId()))).thenReturn(claim.attempt());
         when(manager.getTransaction(any())).thenAnswer(invocation -> {
             TransactionDefinition definition = invocation.getArgument(0);
             assertThat(definition.getPropagationBehavior()).isEqualTo(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -50,7 +51,7 @@ class OrderExecutionWorkerLifecycleTest {
     }
 
     private void deferred(String reason) {
-        verify(jdbc).update(contains("ORDER_REQUEUED"), eq(5), eq(reason), eq(claim.orderId()), eq(2L));
+        verify(jdbc).update(contains("ORDER_REQUEUED"), eq(5), eq(reason), eq(reason), eq(claim.orderId()), eq(2L));
         assertThat(transactions).hasSize(2);
         verify(manager).commit(transactions.get(1));
     }

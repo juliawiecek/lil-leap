@@ -22,6 +22,21 @@ class StoredQuote:
 class QuoteRepository:
     def __init__(self, connection): self.connection = connection
 
+    def latest_midpoints(self) -> dict[str, float]:
+        """Resume each listed stock from its latest committed, non-future quote."""
+        with self.connection.cursor() as cur:
+            cur.execute("""
+                SELECT i.symbol, (q.bid + q.ask) / 2
+                FROM instruments i
+                CROSS JOIN LATERAL (
+                    SELECT bid, ask FROM quotes
+                    WHERE instrument_id = i.instrument_id AND quoted_at <= CURRENT_TIMESTAMP
+                    ORDER BY quoted_at DESC, created_at DESC, quote_id DESC LIMIT 1
+                ) q
+                WHERE i.enabled AND i.tradable
+            """)
+            return {symbol: float(price) for symbol, price in cur.fetchall()}
+
     def insert_many(self, rows: list[tuple]) -> tuple[int, int]:
         inserted = 0
         with self.connection.cursor() as cur:

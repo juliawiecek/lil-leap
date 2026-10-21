@@ -385,6 +385,11 @@ CREATE TABLE orders (
 
     side VARCHAR(10) NOT NULL,  -- BR-04: BUY or SELL
     quantity BIGINT NOT NULL,
+    price_waits BIGINT NOT NULL DEFAULT 0 CHECK (price_waits >= 0),
+    limit_price NUMERIC(18,4) CHECK (limit_price > 0),
+    take_profit_price NUMERIC(18,4) CHECK (take_profit_price > 0),
+    stop_loss_price NUMERIC(18,4) CHECK (stop_loss_price > 0),
+    exit_parent_id UUID UNIQUE REFERENCES orders(order_id),
     order_type VARCHAR(20) NOT NULL DEFAULT 'MARKET',
     status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED',  -- BR-06: 2-phase: SUBMITTED → ACCEPTED or REJECTED
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -408,7 +413,9 @@ CREATE TABLE orders (
     CONSTRAINT uk_orders_account_client_reference UNIQUE (account_id, client_reference),
     CONSTRAINT chk_order_side CHECK (side IN ('BUY', 'SELL')),
     CONSTRAINT chk_order_quantity CHECK (quantity > 0),
-    CONSTRAINT chk_order_type CHECK (order_type = 'MARKET'),
+    CONSTRAINT chk_limit_price_required CHECK ((order_type = 'LIMIT') = (limit_price IS NOT NULL)),
+    CONSTRAINT chk_exit_prices CHECK (exit_parent_id IS NULL OR (take_profit_price IS NOT NULL OR stop_loss_price IS NOT NULL)),
+    CONSTRAINT chk_order_type CHECK (order_type IN ('MARKET', 'LIMIT')),
     CONSTRAINT chk_order_status CHECK (
         status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )

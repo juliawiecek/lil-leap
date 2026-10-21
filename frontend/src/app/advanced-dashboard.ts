@@ -5,6 +5,7 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
 import { AdvancedChart } from './advanced-chart';
+import { AdvancedPortfolio } from './advanced-portfolio';
 import { ActivityFeed } from './activity-feed';
 import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
 import { AccountSwitcher } from './account-switcher';
@@ -96,7 +97,7 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, AdvancedPortfolio, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
 })
@@ -110,6 +111,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
   #destroyed = false;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
+  #portfolioRequest = 0;
+  #portfolioAccountId: string | undefined;
   /** Latest bid and today's % change per instrument, both from the shared feed (PS-10). */
   readonly #bids = new Map<string, number>();
   readonly #dayChanges = new Map<string, number>();
@@ -153,6 +156,33 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   ];
   readonly page = signal('Overview');
   readonly collapsed = signal(false);
+  readonly sidebarWidth = signal(200);
+  readonly resizingSidebar = signal(false);
+  #sidebarDrag: { pointer: number; start: number; width: number } | null = null;
+  setSidebarWidth(width: number): void {
+    if (!Number.isFinite(width)) return;
+    const size = Math.max(64, Math.min(320, Math.round(width)));
+    this.sidebarWidth.set(size);
+    this.collapsed.set(size < 180);
+    try { localStorage.setItem('nexttrade.advanced.sidebar-width', String(size)); } catch { /* Resizing works without storage. */ }
+  }
+  startSidebarResize(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
+    handle.focus(); handle.setPointerCapture(event.pointerId);
+    this.#sidebarDrag = { pointer: event.pointerId, start: event.clientX, width: this.sidebarWidth() };
+    this.resizingSidebar.set(true);
+  }
+  moveSidebarResize(event: PointerEvent): void {
+    const drag = this.#sidebarDrag;
+    if (drag?.pointer === event.pointerId) this.setSidebarWidth(drag.width + event.clientX - drag.start);
+  }
+  stopSidebarResize(): void { this.#sidebarDrag = null; this.resizingSidebar.set(false); }
+  sidebarResizeKey(event: KeyboardEvent): void {
+    const sizes: Record<string, number> = { ArrowLeft: this.sidebarWidth() - 16, ArrowRight: this.sidebarWidth() + 16, Home: 64, End: 320 };
+    if (event.key in sizes) { event.preventDefault(); this.setSidebarWidth(sizes[event.key]); }
+  }
   readonly query = signal('');
   readonly notifications = signal(false);
   readonly privateBalance = signal(false);
@@ -211,7 +241,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       side: this.side() === 'Sell' ? 'Sell' : 'Buy',
       quantity: Number(this.quantity()) || 0,
       symbol: this.selected().symbol,
-      price: this.selected().price,
+      price: this.marketEntryPrice(),
       tolerancePercent: this.tolerance(),
       opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.currentTime()) : '',
     });
@@ -274,7 +304,54 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
-  /** The orders service fills MARKET orders only, so the ticket offers nothing else. */
+  readonly orderType = signal<'MARKET' | 'LIMIT'>('MARKET');
+  readonly limitPrice = signal('');
+  readonly takeProfitEnabled = signal(false);
+  readonly stopLossEnabled = signal(false);
+  readonly exitUnit = signal<'price' | 'percent'>('price');
+  readonly takeProfit = signal('');
+  readonly stopLoss = signal('');
+  readonly ticketQuote = computed(() => {
+    const q = this.feed.quotes().find(q => q.symbol === this.selected().symbol);
+    if (!q || !Number.isFinite(q.bid) || !Number.isFinite(q.ask) || q.bid <= 0 || q.ask < q.bid) return null;
+    return { bid: q.bid, ask: q.ask, spread: q.ask - q.bid, spreadPercent: (q.ask - q.bid) / ((q.ask + q.bid) / 2) * 100 };
+  });
+  readonly marketEntryPrice = computed(() => {
+    if (this.selected().price <= 0) return 0;
+    const quote = this.ticketQuote();
+    return quote ? (this.side() === 'Buy' ? quote.ask : quote.bid) : this.selected().price;
+  });
+  readonly entryPrice = computed(() => this.orderType() === 'LIMIT' ? Number(this.limitPrice()) : this.marketEntryPrice());
+  readonly exitPrice = (kind: 'profit' | 'loss'): number => {
+    const value = Number(kind === 'profit' ? this.takeProfit() : this.stopLoss());
+    if (this.exitUnit() === 'price') return value;
+    const direction = (this.side() === 'Buy' ? 1 : -1) * (kind === 'profit' ? 1 : -1);
+    return Math.round(this.entryPrice() * (1 + direction * value / 100) * 100) / 100;
+  };
+  readonly reward = computed(() => Math.abs(this.exitPrice('profit') - this.entryPrice()) * Number(this.quantity()));
+  readonly risk = computed(() => Math.abs(this.exitPrice('loss') - this.entryPrice()) * Number(this.quantity()));
+  setOrderType(type: 'MARKET' | 'LIMIT'): void {
+    this.orderType.set(type);
+    if (type === 'LIMIT' && !this.limitPrice()) this.limitPrice.set(this.marketEntryPrice() > 0 ? this.marketEntryPrice().toFixed(2) : '');
+    this.message.set('');
+  }
+  setExitUnit(unit: 'price' | 'percent'): void {
+    if (unit === this.exitUnit()) return;
+    const entry = this.entryPrice();
+    for (const [kind, field] of [['profit', this.takeProfit], ['loss', this.stopLoss]] as const) {
+      if (!field()) continue;
+      const price = this.exitPrice(kind);
+      field.set(unit === 'price' ? price.toFixed(2) : (entry > 0 ? Math.abs(price - entry) / entry * 100 : 0).toFixed(2));
+    }
+    this.exitUnit.set(unit);
+  }
+  sizeOrder(percent: number): void {
+    const available = this.side() === 'Buy'
+      ? Math.floor(this.buyingPower() / (this.entryPrice() * (this.orderType() === 'MARKET' ? 1 + this.tolerance() / 100 : 1)))
+      : this.positions().find(p => p.symbol === this.selected().symbol)?.quantity ?? 0;
+    this.quantity.set(String(Number.isFinite(available) ? Math.floor(available * percent / 100) : 0));
+    this.message.set('');
+  }
   readonly quantity = signal('1');
   readonly message = signal('');
   readonly modal = signal('review');
@@ -286,7 +363,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly tolerance = computed(() => this.orderTolerance() ?? this.protection.toleranceFor(this.selected().symbol));
   /** "Fills at up to $231.95 (2% above $227.40)" for the ticket's stock. */
   readonly protectionNote = computed(() => {
-    const { price } = this.selected();
+    const price = this.marketEntryPrice();
     return price > 0 ? protectionText(price, this.tolerance(), this.side() === 'Sell' ? 'Sell' : 'Buy') : '';
   });
   readonly listedSymbols = computed(() => this.quotes().map((q) => q.symbol));
@@ -298,7 +375,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
   }
   /** Estimated cost at the live price; the orders service charges no fees. */
-  readonly total = computed(() => Number(this.quantity()) * this.selected().price);
+  readonly total = computed(() => Number(this.quantity()) * this.entryPrice());
   /** The charted stock's recorded prices, oldest first: its recent history plus each live tick (PS-06). */
   readonly priceHistory = signal<PricePoint[]>([]);
   /** Today's move of the charted stock in dollars, from its percent change since the day's first quote. */
@@ -374,6 +451,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
   }
   choose(quote: Quote): void {
+    if (quote.symbol !== this.selected().symbol) {
+      this.limitPrice.set(quote.price > 0 ? quote.price.toFixed(2) : '');
+      this.takeProfit.set(''); this.stopLoss.set('');
+    }
     this.symbol.set(quote.symbol);
     this.orderTolerance.set(null);
     this.editingTolerance.set(false);
@@ -543,6 +624,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
       return 'There is no live price for this stock yet. Try again in a moment.';
     }
+    if (this.orderType() === 'LIMIT' && (!Number.isFinite(this.entryPrice()) || this.entryPrice() <= 0)) {
+      return 'Enter a limit price greater than zero.';
+    }
+    for (const [enabled, kind, label] of [[this.takeProfitEnabled(), 'profit', 'Take profit'], [this.stopLossEnabled(), 'loss', 'Stop loss']] as const) {
+      if (!enabled) continue;
+      const exit = this.exitPrice(kind);
+      const raw = Number(kind === 'profit' ? this.takeProfit() : this.stopLoss());
+      if (!Number.isFinite(exit) || exit <= 0 || !Number.isFinite(raw) || raw <= 0) return `${label} must be greater than zero.`;
+      const above = (this.side() === 'Buy') === (kind === 'profit');
+      if (above ? exit <= this.entryPrice() : exit >= this.entryPrice()) return `${label} must be ${above ? 'above' : 'below'} the entry price.`;
+    }
     if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
     }
@@ -600,7 +692,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         instrumentId: instrument.instrumentId,
         side: this.side() === 'Buy' ? 'BUY' : 'SELL',
         quantity: count,
-        orderType: 'MARKET',
+        orderType: this.orderType(),
+        ...(this.orderType() === 'LIMIT' && { limitPrice: this.entryPrice() }),
+        ...(this.takeProfitEnabled() && { takeProfitPrice: this.exitPrice('profit') }),
+        ...(this.stopLossEnabled() && { stopLossPrice: this.exitPrice('loss') }),
         clientReference: this.clientReference(),
         bufferPercent: this.tolerance(),
       });
@@ -647,12 +742,19 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   /** Reloads cash and positions; prices come from the shared feed as they arrive. */
   async refreshPortfolio(): Promise<void> {
+    const request = ++this.#portfolioRequest;
+    const accountId = this.selectedAccount()?.account_id;
+    if (accountId !== this.#portfolioAccountId) {
+      this.#portfolioAccountId = accountId;
+      this.portfolioLoaded.set(false);
+    }
     try {
-      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
-      if (this.destroyed) { return; }
+      const portfolio = await this.portfolioClient.load(accountId);
+      if (this.destroyed || request !== this.#portfolioRequest || accountId !== this.selectedAccount()?.account_id) { return; }
       this.applyPortfolio(portfolio);
       this.serviceDown.set(false);
     } catch (error) {
+      if (this.destroyed || request !== this.#portfolioRequest || accountId !== this.selectedAccount()?.account_id) { return; }
       this.serviceDown.set(true);
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
     }
@@ -723,6 +825,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }, QUOTE_REFRESH_MS);
   }
   constructor(private readonly auth: AuthService) {
+    try {
+      const saved = localStorage.getItem('nexttrade.advanced.sidebar-width');
+      if (saved !== null) this.setSidebarWidth(Number(saved));
+    } catch { /* Use the default width when storage is unavailable. */ }
     this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
       { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
       { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers'] }
@@ -808,7 +914,7 @@ function toOrder(row: OrderHistoryRow): Order {
     quantity: row.quantity,
     price: row.fillPrice,
     status: titleCase(row.status),
-    type: 'Market',
+    type: row.exitParentId ? 'Automatic exit' : titleCase(row.orderType ?? 'MARKET'),
   };
 }
 

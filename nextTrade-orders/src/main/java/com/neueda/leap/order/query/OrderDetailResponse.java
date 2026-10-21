@@ -39,6 +39,13 @@ public record OrderDetailResponse(
         BigDecimal bufferPercent,
         Long filledQuantity,
         BigDecimal executionPrice,
-        Instant filledAt
+        Instant filledAt, BigDecimal limitPrice, BigDecimal takeProfitPrice, BigDecimal stopLossPrice, UUID exitParentId
 ) {
+    public OrderDetailResponse(UUID orderId, UUID accountId, UUID instrumentId, String symbol, UUID clientReference,
+                               String side, long quantity, String orderType, String status, Instant submittedAt,
+                               Instant acceptedAt, Instant updatedAt, BigDecimal bufferPercent, Long filledQuantity,
+                               BigDecimal executionPrice, Instant filledAt) {
+        this(orderId, accountId, instrumentId, symbol, clientReference, side, quantity, orderType, status,
+                submittedAt, acceptedAt, updatedAt, bufferPercent, filledQuantity, executionPrice, filledAt, null, null, null, null);
+    }
 }

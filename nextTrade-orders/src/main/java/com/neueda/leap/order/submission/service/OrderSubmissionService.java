@@ -113,6 +113,8 @@ public class OrderSubmissionService {
         // Price protection (PS-12) measures moves from the price orders itself saw; never one sent by the client.
         BigDecimal referencePrice = prices.estimate(instrument.instrumentId(), request.normalizedSide(), request.quantity())
                 .map(IndicativePriceService.IndicativePrice::indicativePrice).orElse(null);
+        BigDecimal entry = "LIMIT".equals(request.normalizedOrderType()) ? request.limitPrice() : referencePrice;
+        validateExits(request, entry);
         var saved = repository.insert(request, instrument.instrumentId(), instrument.symbol(), referencePrice);
         saved.ifPresent(order -> audit.recordAccepted(
                 authenticatedUserId, request.accountId(), order.orderId(), requestId, checks.list()));
@@ -138,7 +140,20 @@ public class OrderSubmissionService {
         boolean sameTerms = request.normalizedSide().equals(existing.side())
                 && request.quantity() == existing.quantity()
                 && request.normalizedOrderType().equals(existing.orderType());
-        return sameInstrument && sameTerms && sameBuffer(request.bufferPercent(), existing.bufferPercent());
+        return sameInstrument && sameTerms && sameBuffer(request.bufferPercent(), existing.bufferPercent())
+                && sameBuffer(request.limitPrice(), existing.limitPrice())
+                && sameBuffer(request.takeProfitPrice(), existing.takeProfitPrice())
+                && sameBuffer(request.stopLossPrice(), existing.stopLossPrice());
+    }
+
+    static void validateExits(SubmitOrderRequest request, BigDecimal entry) {
+        if (request.takeProfitPrice() == null && request.stopLossPrice() == null) return;
+        if (entry == null || entry.signum() <= 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An entry price is required for exits");
+        boolean buy = "BUY".equals(request.normalizedSide());
+        if (request.takeProfitPrice() != null && (buy ? request.takeProfitPrice().compareTo(entry) <= 0 : request.takeProfitPrice().compareTo(entry) >= 0))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Take profit must be on the profitable side of entry");
+        if (request.stopLossPrice() != null && (buy ? request.stopLossPrice().compareTo(entry) >= 0 : request.stopLossPrice().compareTo(entry) <= 0))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stop loss must be on the loss side of entry");
     }
 
     /** Compares buffers by value, so 5 and 5.00 match; two absent buffers also match. */

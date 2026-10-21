@@ -59,7 +59,7 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
         return jdbcTemplate.query("""
                 SELECT o.order_id, o.account_id, o.instrument_id, i.symbol,
                        o.client_reference, o.side, o.quantity, o.order_type,
-                       o.status, o.submitted_at, o.buffer_percent
+                       o.status, o.submitted_at, o.buffer_percent, o.limit_price, o.take_profit_price, o.stop_loss_price
                 FROM orders o JOIN instruments i ON i.instrument_id = o.instrument_id
                 WHERE o.account_id = ? AND o.client_reference = ?
                 """, this::mapOrder, accountId, clientReference).stream().findFirst();
@@ -71,11 +71,11 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
         return jdbcTemplate.query("""
                 WITH inserted AS (
                 INSERT INTO orders(account_id, instrument_id, client_reference, side,
-                                   quantity, order_type, status, buffer_percent, reference_price)
-                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?)
+                                   quantity, order_type, status, buffer_percent, reference_price, limit_price, take_profit_price, stop_loss_price)
+                VALUES (?, ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?, ?, ?, ?)
                 ON CONFLICT (account_id, client_reference) DO NOTHING
                 RETURNING order_id, account_id, instrument_id, client_reference, side,
-                          quantity, order_type, status, submitted_at, buffer_percent
+                          quantity, order_type, status, submitted_at, buffer_percent, limit_price, take_profit_price, stop_loss_price
                 ), recorded AS (
                     INSERT INTO order_status_history(order_id, status, reason_code)
                     SELECT order_id, 'SUBMITTED', 'SUBMISSION_VALIDATED' FROM inserted
@@ -86,9 +86,9 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
                 rs.getObject("instrument_id", UUID.class), symbol,
                 rs.getObject("client_reference", UUID.class), rs.getString("side"),
                 rs.getLong("quantity"), rs.getString("order_type"), rs.getString("status"),
-                rs.getTimestamp("submitted_at").toInstant(), rs.getBigDecimal("buffer_percent")),
+                rs.getTimestamp("submitted_at").toInstant(), rs.getBigDecimal("buffer_percent"), rs.getBigDecimal("limit_price"), rs.getBigDecimal("take_profit_price"), rs.getBigDecimal("stop_loss_price")),
                 request.accountId(), instrumentId, request.clientReference(), request.normalizedSide(),
-                request.quantity(), request.normalizedOrderType(), request.bufferPercent(), referencePrice)
+                request.quantity(), request.normalizedOrderType(), request.bufferPercent(), referencePrice, request.limitPrice(), request.takeProfitPrice(), request.stopLossPrice())
                 .stream().findFirst();
     }
 
@@ -98,6 +98,6 @@ public class JdbcOrderSubmissionRepository implements OrderSubmissionRepository 
                 rs.getString("symbol"), rs.getObject("client_reference", UUID.class),
                 rs.getString("side"), rs.getLong("quantity"), rs.getString("order_type"),
                 rs.getString("status"), rs.getTimestamp("submitted_at").toInstant(),
-                rs.getBigDecimal("buffer_percent"));
+                rs.getBigDecimal("buffer_percent"), rs.getBigDecimal("limit_price"), rs.getBigDecimal("take_profit_price"), rs.getBigDecimal("stop_loss_price"));
     }
 }

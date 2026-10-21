@@ -14,6 +14,7 @@ def generate_price_path(
     volatility: float,
     periods: int,
     rng: np.random.Generator,
+    step_seconds: float = 60.0,
 ) -> np.ndarray:
     """Generate a positive price path using Geometric Brownian Motion.
     
@@ -47,10 +48,12 @@ def generate_price_path(
         raise ValueError("periods must be positive.")
     if volatility < 0:
         raise ValueError("volatility must be non-negative.")
+    if not np.isfinite(step_seconds) or step_seconds <= 0:
+        raise ValueError("step_seconds must be finite and positive.")
 
 
     minutes_per_year = 252 * 6.5 * 60  # Trading minutes in a year
-    time_step = 1 / minutes_per_year
+    time_step = (step_seconds / 60) / minutes_per_year
     
     shocks = rng.normal(0.0, 1.0, periods - 1)
     increments = (

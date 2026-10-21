@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
+const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 
@@ -69,6 +70,44 @@ function tradingDesk(t) {
   return desk;
 }
 
+test('chart keeps stock histories isolated and ignores late responses after switching stocks', async t => {
+  const desk = tradingDesk(t);
+  const now = Date.now();
+  const bars = price => Array.from({ length: 30 }, (_, i) => ({ at: now - (30 - i) * 60000, price }));
+  let finishOld;
+  desk.feed.client = {
+    closes: id => id === 'msft-uuid' ? new Promise(resolve => { finishOld = resolve; }) : Promise.resolve(bars(175)),
+    history: async () => [],
+  };
+  desk.choose(desk.quote('MSFT'));
+  desk.choose(desk.quote('AAPL'));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(desk.priceHistory()[0].price, 175);
+  finishOld(bars(420));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(desk.selected().symbol, 'AAPL');
+  assert.ok(desk.priceHistory().every(p => p.price < 200), 'MSFT history never reaches AAPL chart');
+  desk.feed.push(LISTED.map(([symbol, price]) => ({ symbol, price: symbol === 'AAPL' ? 180 : price, quotedAt: new Date(now + 5000).toISOString() })));
+  assert.equal(desk.priceHistory().at(-1).price, 180);
+  assert.equal(desk.selected().price, 180);
+  desk.feed.push(LISTED.map(([symbol, price]) => ({ symbol, price: symbol === 'AAPL' ? 170 : price, quotedAt: new Date(now - 10000).toISOString() })));
+  assert.equal(desk.priceHistory().at(-1).price, 180, 'older tick cannot overwrite the latest chart point');
+});
+
+test('late balance responses cannot replace a newly selected account portfolio', async t => {
+  const desk = tradingDesk(t);
+  desk.accountState.use([{ account_id: 'a', account_name: 'A' }]);
+  let finishA;
+  desk.portfolioClient = { load: id => id === 'a' ? new Promise(resolve => { finishA = resolve; }) : Promise.resolve({ cash: 300, holdings: [] }) };
+  const old = desk.refreshPortfolio();
+  assert.equal(desk.portfolioLoaded(), false);
+  desk.accountState.use([{ account_id: 'b', account_name: 'B' }]);
+  await desk.refreshPortfolio();
+  finishA({ cash: 9999, holdings: [] }); await old;
+  assert.equal(desk.portfolio(), 300);
+  assert.equal(desk.portfolioLoaded(), true);
+});
+
 test('screeners separate gainers and decliners and restore all quotes', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   desk.filter.set('Gainers');
@@ -93,10 +132,13 @@ test('choosing a symbol moves the ticket to it and clears stale search and error
   assert.equal(desk.page(), 'Overview');
 });
 
-test('the ticket starts at one share and offers market orders only (PS-06)', t => {
+test('the advanced ticket defaults to market with optional exits disabled', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   assert.equal(desk.quantity(), '1');
-  for (const removed of ['orderType', 'limitPrice', 'tif', 'takeProfit', 'stopLoss', 'fees', 'alerts', 'markets', 'news']) {
+  assert.equal(desk.orderType(), 'MARKET');
+  assert.equal(desk.takeProfitEnabled(), false);
+  assert.equal(desk.stopLossEnabled(), false);
+  for (const removed of ['tif', 'fees', 'alerts', 'markets', 'news']) {
     assert.equal(desk[removed], undefined, `${removed} has no backend and is gone`);
   }
 });
@@ -438,4 +480,136 @@ test('missing active account or stale instrument mapping prevents submission', a
   assert.match(desk.message(), /not available to trade/);
   assert.equal(desk.submitting(), false);
   assert.equal(calls, 0);
+});
+
+
+test('limit orders submit the selected price and both exit thresholds', async t => {
+  const desk = tradingDesk(t);
+  await desk.loadTradingData();
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('170'); desk.quantity.set('2');
+  desk.takeProfitEnabled.set(true); desk.takeProfit.set('190');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('160');
+  let request;
+  desk.orderSubmissionClient.submit = async value => { request = value; return { orderId: 'o1', status: 'SUBMITTED' }; };
+  desk.orderHistoryClient = new ScriptedOrderHistory([]);
+  await desk.confirmOrder();
+  assert.equal(request.orderType, 'LIMIT');
+  assert.equal(request.limitPrice, 170);
+  assert.equal(request.takeProfitPrice, 190);
+  assert.equal(request.stopLossPrice, 160);
+  assert.equal(desk.total(), 340);
+  assert.equal(desk.reward(), 40);
+  assert.equal(desk.risk(), 20);
+});
+
+test('exit validation reverses with sell entries and percentage conversion preserves prices', t => {
+  const desk = tradingDesk(t);
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100');
+  desk.takeProfitEnabled.set(true); desk.takeProfit.set('110');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('90');
+  assert.equal(desk.validate(), '');
+  desk.setExitUnit('percent');
+  assert.equal(desk.takeProfit(), '10.00');
+  assert.equal(desk.exitPrice('loss'), 90);
+  desk.side.set('Sell');
+  assert.equal(desk.exitPrice('profit'), 90);
+  assert.equal(desk.exitPrice('loss'), 110);
+  assert.equal(desk.validate(), '');
+  desk.setExitUnit('price'); desk.stopLoss.set('99');
+  assert.match(desk.validate(), /Stop loss must be above/);
+  desk.stopLossEnabled.set(false); desk.limitPrice.set('0');
+  assert.match(desk.validate(), /limit price/);
+});
+
+function advancedTicket(t, desk) {
+  const ticket = component(t, AdvancedTicket);
+  t.mock.method(ticket, 'desk', () => desk);
+  return ticket;
+}
+
+test('risk sizing explains each disabled state with an actionable reason', t => {
+  const desk = tradingDesk(t), ticket = advancedTicket(t, desk);
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100');
+  assert.match(ticket.sizingBlockReason(), /Turn on Stop loss/);
+  desk.stopLossEnabled.set(true);
+  assert.match(ticket.sizingBlockReason(), /Enter a stop-loss/);
+  desk.stopLoss.set('105');
+  assert.match(ticket.sizingBlockReason(), /below.*\$100.00/);
+  desk.stopLoss.set('95');
+  assert.match(ticket.sizingBlockReason(), /risk budget greater than zero/);
+  ticket.riskBudget.set('2');
+  assert.match(ticket.sizingBlockReason(), /\$5.00.*one share/);
+  ticket.riskBudget.set('50');
+  assert.equal(ticket.suggestedQuantity(), 10);
+  desk.buyingPower.set(20);
+  assert.match(ticket.sizingBlockReason(), /buying power cannot cover/);
+  desk.side.set('Sell'); desk.stopLoss.set('105'); desk.positions.set([]);
+  assert.match(ticket.sizingBlockReason(), /do not hold any AAPL/);
+  desk.positions.set([{ symbol: 'AAPL', quantity: 10 }]);
+  desk.feed.now.set(Date.now() + 120000);
+  assert.match(ticket.sizingBlockReason(), /quote is over a minute old/);
+});
+
+test('market ticket uses executable bid/ask and sizes from stop risk with cash and holding caps', t => {
+  const desk = tradingDesk(t);
+  const ticket = advancedTicket(t, desk);
+  desk.feed.push([{ symbol: 'AAPL', price: 100, bid: 99, ask: 101 }]);
+  assert.equal(desk.entryPrice(), 101);
+  assert.equal(desk.ticketQuote().spread, 2);
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('96'); ticket.riskBudget.set('100');
+  assert.equal(ticket.suggestedQuantity(), 20);
+  ticket.applyRiskSize(); assert.equal(desk.quantity(), '20');
+  desk.buyingPower.set(500);
+  assert.equal(ticket.suggestedQuantity(), 4);
+  desk.side.set('Sell'); desk.stopLoss.set('104');
+  assert.equal(desk.entryPrice(), 99);
+  assert.equal(ticket.suggestedQuantity(), 20);
+  desk.positions.set([{ symbol: 'AAPL', quantity: 3 }]);
+  assert.equal(ticket.suggestedQuantity(), 3);
+  desk.feed.now.set(Date.now() + 120000);
+  assert.equal(ticket.suggestedQuantity(), 0);
+});
+
+test('presets persist per account, replace by name, reload, and apply without reusing stock prices', async t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const values = new Map();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value),
+  } });
+  t.after(() => previous ? Object.defineProperty(globalThis, 'localStorage', previous) : delete globalThis.localStorage);
+  const desk = tradingDesk(t), ticket = advancedTicket(t, desk);
+  await desk.loadTradingData();
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100'); desk.quantity.set('10');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('98');
+  desk.takeProfitEnabled.set(true); desk.takeProfit.set('105');
+  ticket.presetName.set('Swing'); ticket.riskBudget.set('50'); ticket.savePreset();
+  assert.equal(ticket.presets().length, 1);
+  assert.equal(ticket.presets()[0].stopPercent, 2);
+  desk.quantity.set('5'); ticket.savePreset();
+  assert.equal(ticket.presets().length, 1);
+  const reloaded = advancedTicket(t, desk);
+  assert.equal(reloaded.presets()[0].quantity, 5);
+  desk.feed.push([{ symbol: 'AAPL', price: 200, bid: 199, ask: 201 }]);
+  reloaded.applyPreset(reloaded.presets()[0]);
+  assert.equal(desk.limitPrice(), '201.00');
+  assert.equal(desk.exitUnit(), 'percent');
+  assert.equal(desk.exitPrice('loss'), 196.98);
+  assert.equal(desk.submitting(), false);
+  desk.accountState.use([{ account_id: 'a2', account_status: 'ACTIVE', trading_enabled: true }]);
+  assert.equal(reloaded.presets().length, 0);
+  desk.accountState.use([{ account_id: 'a1', account_status: 'ACTIVE', trading_enabled: true }]);
+  reloaded.deletePreset(reloaded.presets()[0]);
+  assert.equal(reloaded.presets().length, 0);
+});
+
+test('presets report unavailable storage without claiming a save succeeded', async t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('Blocked'); } });
+  t.after(() => previous ? Object.defineProperty(globalThis, 'localStorage', previous) : delete globalThis.localStorage);
+  const desk = tradingDesk(t);
+  await desk.loadTradingData();
+  const ticket = advancedTicket(t, desk);
+  ticket.presetName.set('Default'); ticket.savePreset();
+  assert.match(ticket.presetMessage(), /could not be saved/);
+  assert.equal(ticket.presets().length, 0);
 });
