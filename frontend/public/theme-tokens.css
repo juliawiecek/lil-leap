@@ -319,6 +319,9 @@
   --allocation-outline: var(--text-muted);
 }
 
+/* SVG interpolates stop RGB even at zero alpha. Preserve the palette hue at the transparent
+ * endpoint so safe-mode area gradients have the same strength and fade as Off. A 0% color-mix
+ * with transparent discards that hue and darkens the gradient toward black instead. */
 :root[data-colour-mode="red-green"] {
   --text-tone-04: #a1a1a1;
   --stock-text-low: var(--stock-text-subtle);
@@ -330,7 +333,7 @@
   --loss: #ffad70;
   --warning: #f2d280;
   --loss-wash-01: color-mix(in srgb, var(--loss) 10%, transparent);
-  --loss-wash-02: color-mix(in srgb, var(--loss) 0%, transparent);
+  --loss-wash-02: rgb(from var(--loss) r g b / 0);
   --loss-wash-03: color-mix(in srgb, var(--loss) 28%, transparent);
   --gain-wash-01: color-mix(in srgb, var(--gain) 0%, transparent);
   --gain-wash-02: color-mix(in srgb, var(--gain) 28%, transparent);
@@ -401,7 +404,7 @@
   --loss-wash-20: color-mix(in srgb, var(--loss) 30%, transparent);
   --chart-loss: var(--loss);
   --gain-wash-27: color-mix(in srgb, var(--gain) 30%, transparent);
-  --gain-wash-28: color-mix(in srgb, var(--gain) 0%, transparent);
+  --gain-wash-28: rgb(from var(--gain) r g b / 0);
   --gain-wash-29: color-mix(in srgb, var(--gain) 40%, transparent);
   --gain-wash-30: color-mix(in srgb, var(--gain) 5.098%, transparent);
   --gain-wash-31: color-mix(in srgb, var(--gain) 6%, transparent);
@@ -433,7 +436,7 @@
   --loss: #ed83cc;
   --warning: #e9c2de;
   --loss-wash-01: color-mix(in srgb, var(--loss) 10%, transparent);
-  --loss-wash-02: color-mix(in srgb, var(--loss) 0%, transparent);
+  --loss-wash-02: rgb(from var(--loss) r g b / 0);
   --loss-wash-03: color-mix(in srgb, var(--loss) 28%, transparent);
   --gain-wash-01: color-mix(in srgb, var(--gain) 0%, transparent);
   --gain-wash-02: color-mix(in srgb, var(--gain) 28%, transparent);
@@ -504,7 +507,7 @@
   --loss-wash-20: color-mix(in srgb, var(--loss) 30%, transparent);
   --chart-loss: var(--loss);
   --gain-wash-27: color-mix(in srgb, var(--gain) 30%, transparent);
-  --gain-wash-28: color-mix(in srgb, var(--gain) 0%, transparent);
+  --gain-wash-28: rgb(from var(--gain) r g b / 0);
   --gain-wash-29: color-mix(in srgb, var(--gain) 40%, transparent);
   --gain-wash-30: color-mix(in srgb, var(--gain) 5.098%, transparent);
   --gain-wash-31: color-mix(in srgb, var(--gain) 6%, transparent);

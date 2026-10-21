@@ -2,6 +2,34 @@ import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
 import { auditTextContrast } from './colour-audit.mjs';
 
+async function expectGradientFade(chart, colour, bottomColour = colour) {
+  // Check pixels between the stops too: endpoint alpha checks miss a fade toward black.
+  const samples = await chart.evaluate(async node => {
+    const stops = [...node.querySelectorAll('linearGradient stop')];
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="100">
+      <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+        ${stops.map(stop => `<stop offset="${stop.getAttribute('offset')}" stop-color="${getComputedStyle(stop).stopColor}"/>`).join('')}
+      </linearGradient></defs><rect width="1" height="100" fill="url(#fade)"/></svg>`;
+    const image = new Image();
+    image.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = 1; canvas.height = 100;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0);
+    return [25, 50, 75].map(y => ({ y, pixel: [...context.getImageData(0, y, 1, 1).data] }));
+  });
+  for (const { y, pixel } of samples) {
+    // Preserve the intended palette colours through the fade, with the same
+    // 40%-to-transparent opacity profile in every palette.
+    colour.forEach((channel, index) => {
+      const expected = channel + (bottomColour[index] - channel) * (y + 0.5) / 100;
+      expect(Math.abs(pixel[index] - expected)).toBeLessThanOrEqual(6);
+    });
+    expect(Math.abs(pixel[3] - 102 * (1 - (y + 0.5) / 100))).toBeLessThanOrEqual(1);
+  }
+}
+
 test.beforeEach(async ({ page }, info) => {
   test.skip(info.project.name !== 'NextTrade', 'PS-27 belongs to the NextTrade trading application.');
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -86,6 +114,7 @@ test('palette changes recolour existing SVG paths, gradients and financial value
     painted.top.slice(0, 3).forEach((channel, index) => expect(Math.abs(channel - colour[index])).toBeLessThanOrEqual(1));
     expect(painted.top[3]).toBe(102);
     expect(painted.bottom[3]).toBe(0);
+    await expectGradientFade(chart, colour);
     expect(await element.evaluate(node => node.isConnected)).toBe(true);
     expect(await line.getAttribute('d')).toBe(original);
     expect(await chart.locator('.area').getAttribute('d')).toMatch(/^M/);
@@ -95,34 +124,60 @@ test('palette changes recolour existing SVG paths, gradients and financial value
   }
 });
 
-test('falling stock prices retain their label and switch the existing line to the selected loss palette', async ({ page }) => {
-  await colourFixture(page, 'ADVANCED');
-  await page.goto('/dashboard');
-  const dashboard = page.locator('app-retail-stock-dashboard');
-  await expect(dashboard.locator('.current-price')).toHaveText('$200.00', { timeout: 12000 });
-  const chart = dashboard.locator('app-stock-svg-chart svg');
-  const line = chart.locator('[data-line]');
-  // AAPL opens at 195 and trades at 200, so the loaded history is a gain: green and solid.
-  await expect(chart).toHaveAttribute('data-performance', 'gain');
-  await expect(chart).toHaveAttribute('aria-label', /Above session open/);
-  await expect(line).toHaveCSS('stroke', 'rgb(34, 197, 94)');
-  await expect(line).toHaveCSS('stroke-dasharray', 'none');
-  // MSFT opens at 200 and trades at 190, so selecting it must restyle the series as a loss.
-  await page.getByLabel('Search symbols or companies').fill('MSFT');
-  await page.locator('.search-results button').filter({ hasText: 'MSFT' }).click();
-  await expect(dashboard.locator('.current-price')).toHaveText('$190.00', { timeout: 12000 });
-  await expect(chart).toHaveAttribute('data-performance', 'loss');
-  await expect(chart).toHaveAttribute('aria-label', /Below session open/);
-  await expect(line).toHaveAttribute('d', /^M/);
-  const original = await line.getAttribute('d');
-  // A session loss is dashed and uses the palette's loss colour in every mode, Off included.
-  for (const [mode, colour] of [['red-green', 'rgb(255, 173, 112)'], ['blue-yellow', 'rgb(237, 131, 204)'], ['off', 'rgb(239, 68, 68)']]) {
-    await page.locator('html').evaluate((root, mode) => root.setAttribute('data-colour-mode', mode), mode);
-    await expect(line).toHaveCSS('stroke', colour);
-    await expect(line).toHaveCSS('stroke-dasharray', '6px, 4px');
-    await expect(line).toHaveAttribute('d', original);
-  }
-});
+for (const marketOpen of [true, false]) {
+  test(`falling stock prices retain their label and loss palette ${marketOpen ? 'during trading' : 'after market close'}`, async ({ page }) => {
+    await colourFixture(page, 'ADVANCED', { marketOpen });
+    await page.goto('/dashboard');
+    const dashboard = page.locator('app-retail-stock-dashboard');
+    await expect(dashboard.locator('.current-price')).toHaveText('$200.00', { timeout: 12000 });
+    const chart = dashboard.locator('app-stock-svg-chart svg');
+    const line = chart.locator('[data-line]');
+    // AAPL opens at 195 and trades at 200, so the loaded history is a gain: green and solid.
+    await expect(chart).toHaveAttribute('data-performance', 'gain');
+    await expect(chart).toHaveAttribute('aria-label', /Above session open/);
+    await expect(line).toHaveCSS('stroke', 'rgb(34, 197, 94)');
+    await expect(line).toHaveCSS('stroke-dasharray', 'none');
+    // MSFT opens at 200 and trades at 190, so selecting it must restyle the series as a loss.
+    await page.getByLabel('Search symbols or companies').fill('MSFT');
+    await page.locator('.search-results button').filter({ hasText: 'MSFT' }).click();
+    await expect(dashboard.locator('.current-price')).toHaveText('$190.00', { timeout: 12000 });
+    await expect(chart).toHaveAttribute('data-performance', 'loss');
+    await expect(chart).toHaveAttribute('aria-label', /Below session open/);
+    await expect(line).toHaveAttribute('d', /^M/);
+    const original = await line.getAttribute('d');
+    // A session loss is dashed and uses the palette's loss colour in every mode, Off included.
+    for (const [mode, colour] of [['red-green', 'rgb(255, 173, 112)'], ['blue-yellow', 'rgb(237, 131, 204)'], ['off', 'rgb(239, 68, 68)']]) {
+      await page.locator('html').evaluate((root, mode) => root.setAttribute('data-colour-mode', mode), mode);
+      await expect(line).toHaveCSS('stroke', colour);
+      await expect(line).toHaveCSS('stroke-dasharray', '6px, 4px');
+      await expect(line).toHaveAttribute('d', original);
+      await expectGradientFade(chart, colour.match(/\d+/g).map(Number), mode === 'off' ? [255, 122, 110] : undefined);
+    }
+  });
+}
+
+for (const tier of ['NOVICE', 'ADVANCED']) {
+  test(`${tier} closed market labels match the loss colour in every palette`, async ({ page }) => {
+    await colourFixture(page, tier, { marketOpen: false });
+    await page.goto('/dashboard');
+    const badges = page.locator(tier === 'ADVANCED'
+      ? '.market-status.closed, app-market-ticker .badge.closed'
+      : '.market-status > span.closed, app-market-ticker .badge.closed');
+    await expect(badges).toHaveCount(tier === 'ADVANCED' ? 1 : 2);
+    await expect(badges.first()).toContainText('Opens Thu 8:30 AM CT');
+    for (const [mode, colour] of [['off', 'rgb(255, 122, 110)'], ['red-green', 'rgb(255, 173, 112)'], ['blue-yellow', 'rgb(237, 131, 204)']]) {
+      await page.locator('html').evaluate((root, mode) => root.setAttribute('data-colour-mode', mode), mode);
+      for (const badge of await badges.all()) {
+        await expect(badge).toHaveCSS('color', colour);
+        await expect(badge.locator('i')).toHaveCSS('background-color', colour);
+      }
+    }
+    // Reload while closed: the labels and their colours must come from the new response too.
+    await page.reload();
+    await expect(badges).toHaveCount(tier === 'ADVANCED' ? 1 : 2);
+    for (const badge of await badges.all()) await expect(badge).toHaveCSS('color', 'rgb(255, 122, 110)');
+  });
+}
 
 test('both safe modes retain contrast on the guided dashboard and order controls at mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 1000 });
