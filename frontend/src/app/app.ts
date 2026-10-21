@@ -588,6 +588,8 @@ export class App implements AfterViewInit, OnDestroy {
     context.lineWidth = 1;
     context.beginPath();
     context.moveTo(x, highY);
+    context.lineTo(x, bodyTop);
+    context.moveTo(x, bodyTop + bodyHeight);
     context.lineTo(x, lowY);
     context.stroke();
     const rising = animatedClose >= candle.open;
@@ -595,14 +597,10 @@ export class App implements AfterViewInit, OnDestroy {
     context.shadowColor = rising ? this.candleGlow : 'transparent';
     context.shadowBlur = highlighted ? 5 : 0;
     context.fillStyle = color;
-    if (!rising && (document.documentElement.dataset['colourMode'] ?? 'off') !== 'off') {
+    if (rising) {
       context.strokeRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
     } else {
       context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
-    }
-    if (highlighted) {
-      context.fillStyle = this.riseColor;
-      context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.min(3, bodyHeight));
     }
     context.shadowBlur = 0;
     context.shadowColor = 'transparent';
@@ -678,10 +676,16 @@ export class App implements AfterViewInit, OnDestroy {
       context.lineWidth = mix(1, 0.4 * scaleX);
       context.beginPath();
       context.moveTo(x, mix(this.priceY(candle.high), 39 + target.high * scaleY));
+      context.lineTo(x, top);
+      context.moveTo(x, top + height);
       context.lineTo(x, mix(this.priceY(candle.low), 39 + target.low * scaleY));
       context.stroke();
       context.fillStyle = color;
-      context.fillRect(x - width / 2, top, width, height);
+      // The seeded walk and the SVG target disagree on direction, so the hollow/filled convention
+      // changes with the geometry at the midpoint rather than flipping on the first morph frame.
+      const falling = t < 0.5 ? candle.close < candle.open : target.falling;
+      if (falling) context.fillRect(x - width / 2, top, width, height);
+      else context.strokeRect(x - width / 2, top, width, height);
     }
     context.globalAlpha = 1;
   }

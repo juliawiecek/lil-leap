@@ -78,6 +78,9 @@ async function dashboard(t, sampleMs = 5000) {
     get gradient() {
       return fixture.nativeElement.querySelector('linearGradient stop');
     },
+    get chart() {
+      return fixture.nativeElement.querySelector('svg[data-performance]');
+    },
   };
 }
 test('sampled quotes update performance metrics while the area chart keeps its fixed emerald style', async (t) => {
@@ -98,14 +101,22 @@ test('sampled quotes update performance metrics while the area chart keeps its f
   assert.equal(d.gradient.getAttribute('stop-color'), 'var(--area-top)');
   assert.equal(
     d.fixture.nativeElement.querySelector('stop[offset="100%"]').getAttribute('stop-color'),
-    'var(--gain-wash-28)',
+    'var(--area-bottom)',
   );
+  // Above the open the series is a gain; the stylesheet keeps the tokens solid and green.
+  assert.equal(d.chart.getAttribute('data-performance'), 'gain');
   d.feed.next(tick(98, 5));
   d.sample();
+  // Crossing below the open flips the state on the live element, with no reload and no new element.
+  assert.equal(d.chart.getAttribute('data-performance'), 'loss');
+  assert.match(d.chart.getAttribute('aria-label'), /Below session open/);
   assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
   assert.equal(d.gradient.getAttribute('stop-color'), 'var(--area-top)');
   d.feed.next(tick(100, 10));
   d.sample();
+  // Back at the open counts as a gain for styling, while the label still says it is unchanged.
+  assert.equal(d.chart.getAttribute('data-performance'), 'gain');
+  assert.match(d.chart.getAttribute('aria-label'), /Unchanged from session open/);
   assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
   assert.equal(
     d.fixture.nativeElement.querySelector('[data-line]'),

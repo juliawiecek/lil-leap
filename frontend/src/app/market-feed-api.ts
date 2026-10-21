@@ -67,6 +67,25 @@ interface QuoteRow {
 export interface PricePoint {
   at: number;
   price: number;
+  /** Original OHLC metadata when supplied by the candle endpoint; raw quotes have none. */
+  candle?: PriceCandle;
+}
+
+export interface PriceCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  /** The current backend does not report traded volume. Never substitute quote counts. */
+  volume: number | null;
+}
+
+export function candleMetadata(row: { time: string; open?: unknown; high?: unknown; low?: unknown; close: unknown; volume?: unknown }): PriceCandle | undefined {
+  const time = Date.parse(row.time), open = Number(row.open), high = Number(row.high), low = Number(row.low), close = Number(row.close);
+  if (![time, open, high, low, close].every(Number.isFinite) || Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) return undefined;
+  const volume = row.volume === null || row.volume === undefined ? null : Number(row.volume);
+  return { time, open, high, low, close, volume: volume !== null && Number.isFinite(volume) && volume >= 0 ? volume : null };
 }
 
 export interface PriceTick {
@@ -128,7 +147,7 @@ export class MarketFeedClient {
    * 1d), oldest first, for the portfolio-value chart. A bar is dated by when it ends.
    */
   async closes(instrumentId: string, interval: string, limit: number, now = Date.now()): Promise<PricePoint[]> {
-    const rows = await this.#get<{ time: string; close: number | string }[]>(
+    const rows = await this.#get<{ time: string; close: number | string; open?: unknown; high?: unknown; low?: unknown; volume?: unknown }[]>(
       `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
     );
     if (!Array.isArray(rows)) {
@@ -138,7 +157,11 @@ export class MarketFeedClient {
     const width = BAR_MS[interval] ?? 0;
     return rows
       // The service dates a bar by its start; its close was taken at its end (or now, for the open bar).
-      .map((row) => ({ at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) }))
+      .map((row) => {
+        const point: PricePoint = { at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) };
+        const candle = candleMetadata(row);
+        return candle ? { ...point, candle } : point;
+      })
       .filter((point) => Number.isFinite(point.at) && point.price > 0)
       .sort((a, b) => a.at - b.at);
   }

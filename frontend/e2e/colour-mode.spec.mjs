@@ -90,7 +90,7 @@ test('palette changes recolour existing SVG paths, gradients and financial value
     expect(await line.getAttribute('d')).toBe(original);
     expect(await chart.locator('.area').getAttribute('d')).toMatch(/^M/);
     expect(await chart.locator('stop').first().evaluate(node => getComputedStyle(node).stopColor)).not.toBe('');
-    await expect(page.locator('.holdings-table')).toContainText('-');
+    await expect(page.locator('.holdings-table')).toContainText('−');
     await expect(page.locator('.holdings-table')).toContainText('+');
   }
 });
@@ -100,19 +100,26 @@ test('falling stock prices retain their label and switch the existing line to th
   await page.goto('/dashboard');
   const dashboard = page.locator('app-retail-stock-dashboard');
   await expect(dashboard.locator('.current-price')).toHaveText('$200.00', { timeout: 12000 });
+  const chart = dashboard.locator('app-stock-svg-chart svg');
+  const line = chart.locator('[data-line]');
+  // AAPL opens at 195 and trades at 200, so the loaded history is a gain: green and solid.
+  await expect(chart).toHaveAttribute('data-performance', 'gain');
+  await expect(chart).toHaveAttribute('aria-label', /Above session open/);
+  await expect(line).toHaveCSS('stroke', 'rgb(34, 197, 94)');
+  await expect(line).toHaveCSS('stroke-dasharray', 'none');
+  // MSFT opens at 200 and trades at 190, so selecting it must restyle the series as a loss.
   await page.getByLabel('Search symbols or companies').fill('MSFT');
   await page.locator('.search-results button').filter({ hasText: 'MSFT' }).click();
   await expect(dashboard.locator('.current-price')).toHaveText('$190.00', { timeout: 12000 });
-  const chart = dashboard.locator('app-stock-svg-chart svg');
   await expect(chart).toHaveAttribute('data-performance', 'loss');
   await expect(chart).toHaveAttribute('aria-label', /Below session open/);
-  const line = chart.locator('[data-line]');
   await expect(line).toHaveAttribute('d', /^M/);
   const original = await line.getAttribute('d');
-  for (const [mode, colour] of [['red-green', 'rgb(255, 173, 112)'], ['blue-yellow', 'rgb(237, 131, 204)'], ['off', 'rgb(34, 197, 94)']]) {
+  // A session loss is dashed and uses the palette's loss colour in every mode, Off included.
+  for (const [mode, colour] of [['red-green', 'rgb(255, 173, 112)'], ['blue-yellow', 'rgb(237, 131, 204)'], ['off', 'rgb(239, 68, 68)']]) {
     await page.locator('html').evaluate((root, mode) => root.setAttribute('data-colour-mode', mode), mode);
     await expect(line).toHaveCSS('stroke', colour);
-    await expect(line).toHaveCSS('stroke-dasharray', mode === 'off' ? 'none' : '6px, 4px');
+    await expect(line).toHaveCSS('stroke-dasharray', '6px, 4px');
     await expect(line).toHaveAttribute('d', original);
   }
 });

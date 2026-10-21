@@ -25,6 +25,7 @@ import {
   reducePoints,
   visiblePoints,
   EMERALD_AREA,
+  performanceState,
   type ChartBox,
   type ChartRange,
 } from './stock-chart-math';
@@ -267,11 +268,19 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   append(point: StockPriceTick): void {
     this.#viewport?.append(point);
   }
-  /** Safe palettes add a loss colour/dash; Off retains the existing emerald area style. */
+  /**
+   * Publishes the session verdict as `data-performance`; the stylesheet turns that into the
+   * palette's gain or loss colour, gradient and dash. Every palette gets both states.
+   */
   setPerformance(price: number, open: number | null, currency = 'USD'): void {
-    const known = open !== null && Number.isFinite(open) && open > 0;
-    this.performance.set(known ? (price < open ? 'loss' : 'gain') : 'neutral');
-    this.performanceText.set(known ? (price < open ? 'Below session open' : 'At or above session open') : 'Session comparison unavailable');
+    const state = performanceState(price, open);
+    this.performance.set(state);
+    // At-the-open counts as a gain for styling, but the label still says so plainly.
+    this.performanceText.set(
+      state === 'neutral' ? 'Session comparison unavailable'
+        : price === open ? 'Unchanged from session open'
+          : state === 'loss' ? 'Below session open' : 'Above session open',
+    );
     if (currency !== this.#currency) {
       this.#currency = currency;
       this.#format = new Intl.NumberFormat('en-US', { style: 'currency', currency });

@@ -37,7 +37,28 @@ test('Off preserves the established performance and blue action palette', () => 
   assert.equal(modes.off.gain, '#94c973');
   assert.equal(modes.off.loss, '#ff7a6e');
   assert.equal(modes.off['chart-gain'], '#22c55e');
+  assert.equal(modes.off['chart-loss'], '#ef4444');
   assert.equal(modes.off.buy, '#779ce8');
   assert.equal(modes.off['buy-light'], '#91b1f1');
   assert.equal(modes.off['buy-deep'], '#678bdb');
+});
+
+test('a session loss restyles the price series in every palette, Off included', () => {
+  const css = readFileSync(new URL('../public/theme-tokens.css', import.meta.url), 'utf8');
+  const rule = css.match(/(^|\n)([^\n{]*svg\[data-performance="loss"\])\s*\{([^}]*)\}/);
+  assert.ok(rule, 'the loss rule exists');
+  const [, , selector, body] = rule;
+  // The regression was this rule being scoped away from the default palette.
+  assert.doesNotMatch(selector, /data-colour-mode/, 'the loss state must not be palette-gated');
+  for (const declaration of [
+    '--area-line: var(--chart-loss)',
+    '--area-top: var(--chart-loss-fill)',
+    '--series-dash: 6 4',
+  ]) {
+    assert.ok(body.includes(declaration), `loss rule sets ${declaration}`);
+  }
+  // Each palette supplies its own gain and loss values, so nothing is hardcoded per palette.
+  for (const [mode, tokens] of Object.entries(modes)) {
+    assert.notEqual(tokens['chart-gain'], tokens['chart-loss'], `${mode}: gain and loss differ`);
+  }
 });

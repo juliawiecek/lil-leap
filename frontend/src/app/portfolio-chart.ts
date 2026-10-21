@@ -88,7 +88,7 @@ let nextPortfolioChartId = 0;
           [attr.viewBox]="viewBox"
           preserveAspectRatio="none"
           role="img"
-          [attr.data-performance]="tone() === 'down' ? 'loss' : 'gain'"
+          [attr.data-performance]="tone() === 'flat' ? 'neutral' : tone() === 'down' ? 'loss' : 'gain'"
           tabindex="0"
           [attr.aria-label]="summary()"
           (pointermove)="scrubAt($event)"
@@ -510,7 +510,8 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Up or down over the shown period: the colour of the line, the dot and the selected period. */
   readonly tone = computed(() => {
     const points = this.history();
-    return points.length >= 2 && points.at(-1)!.value < startValue(points) ? 'down' : 'up';
+    if (points.length < 2 || points.at(-1)!.value === startValue(points)) return 'flat';
+    return points.at(-1)!.value < startValue(points) ? 'down' : 'up';
   });
   /** The value scale, fitted to the values shown, so each move up or down is visible. */
   readonly scale = computed(() => valueScale(this.displayPoints().map((p) => p.value)));

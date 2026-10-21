@@ -1,3 +1,4 @@
+import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
@@ -20,7 +21,7 @@ import {
 import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { interval, Subject, startWith, takeUntil } from 'rxjs';
-import { closedMarketWarning, localOpeningTime, marketStatusText } from './market-status-api';
+import { closedMarketWarning, localOpeningTime, marketStatusLabel, marketStatusText } from './market-status-api';
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
 import { PriceProtectionSettings } from './price-protection-settings';
@@ -92,7 +93,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [
+  imports: [FinancialChange, 
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
     AccessibilitySettings, KeyboardShortcuts,
   ],
@@ -111,6 +112,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketStatus = computed(() => this.feed.status());
   readonly marketClock = signal(new Date());
   readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
+  /** The same text with Open/Closed spelled out once, for the dot beside it (PS-28). */
+  readonly marketStatusLine = computed(() => marketStatusLabel(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   readonly marketClosingSoon = computed(() => this.marketOpen() && !!this.marketStatus()?.nextClose);
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
@@ -195,6 +198,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     return {
       amount,
       moveText: amount === 0 ? 'flat' : `${amount > 0 ? 'up' : 'down'} ${money}`,
+      /** Decorative cue beside the wording, so the sentence still reads as prose (PS-28). */
+      moveArrow: amount > 0 ? '▲ ' : amount < 0 ? '▼ ' : '',
       symbol: best.change !== 0 ? best.symbol : '',
       change: best.change,
       changeText: `${best.change > 0 ? '+' : ''}${best.change.toFixed(2)}%`,

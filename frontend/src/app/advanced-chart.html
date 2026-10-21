@@ -5,10 +5,10 @@
 <section class="panel chart-panel" aria-label="Stock price chart">
   <div class="chart-toolbar">
     <span class="chart-company"><b>{{ desk().selected().symbol }}</b>{{ desk().selected().name }}</span
-    ><strong class="quote-price">@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</span>}</strong
+    ><strong class="quote-price">@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</app-price-flash>}</strong
     ><b [class.gain]="desk().selected().change > 0" [class.loss]="desk().selected().change < 0"
-      >{{ desk().selectedDayMove() > 0 ? '+' : '' }}{{ desk().selectedDayMove() | number: '1.2-2' }}
-      ({{ desk().selected().change > 0 ? '+' : '' }}{{ desk().selected().change | number: '1.2-2' }}%) today</b
+      ><app-financial-change [value]="desk().selectedDayMove()" unit="number" />
+      (<app-financial-change [value]="desk().selected().change" unit="percent" />) today</b
     >
     @if (desk().tradeMarks().length) {
       <p class="trade-summary">
@@ -34,62 +34,9 @@
       }
     </div>
   </div>
-  <div class="technical-chart">
-    <div class="price-pane">
-      <svg
-        viewBox="0 0 824 160"
-        preserveAspectRatio="none"
-        role="img"
-        [attr.aria-label]="desk().selected().symbol + ' ' + desk().period() + ' price chart'"
-      >
-        <defs>
-          <pattern id="pro-grid" width="112" height="30" patternUnits="userSpaceOnUse">
-            <path d="M112 0H0V30" fill="none" stroke="var(--surface-tone-17)" stroke-width=".65" />
-          </pattern>
-        </defs>
-        <rect width="824" height="160" fill="url(#pro-grid)" />
-        @if (desk().priceLine()) {
-          <path class="price-line" pathLength="1" [attr.d]="desk().priceLine()" fill="none" stroke="var(--gain)" stroke-width="2" vector-effect="non-scaling-stroke" />
-        }
-        @if (desk().averageCostY() !== null) {
-          <g class="average-cost">
-            <line x1="0" x2="824" [attr.y1]="desk().averageCostY()" [attr.y2]="desk().averageCostY()" stroke-dasharray="5 4" />
-            <text x="820" [attr.y]="desk().averageCostY()! - 4" text-anchor="end">
-              Avg cost {{ desk().averageCost() | currency }}
-            </text>
-          </g>
-        }
-        @for (mark of desk().plottedTrades(); track mark.at) {
-          <g class="trade-mark" [class.buy]="mark.side === 'BUY'" [class.sell]="mark.side === 'SELL'">
-            <title>{{ mark.label }}</title>
-            <path
-              [attr.d]="mark.side === 'BUY'
-                ? 'M' + mark.x + ' ' + (mark.y + 1) + 'l-6 10h12z'
-                : 'M' + mark.x + ' ' + (mark.y - 1) + 'l-6 -10h12z'"
-            />
-          </g>
-        }
-      </svg>
-      @if (desk().averageCostY() !== null) {
-        <span class="avg-cost-label" aria-hidden="true" [style.top.%]="desk().averageCostY()! / 1.6">Avg cost {{ desk().averageCost() | currency }}</span>
-      }
-      <div class="price-axis">
-        @for (price of desk().priceAxis(); track $index) {
-          <span>{{ price | number: '1.2-2' }}</span>
-        }
-      </div>
-    </div>
-    <div class="time-axis">
-      @for (time of desk().chartTimes(); track $index) {
-        <span>{{ time }}</span>
-      }
-    </div>
-    @if (!desk().priceLine()) {
-      <p class="chart-note">Collecting prices for {{ desk().selected().symbol || 'this stock' }}. The line appears as quotes arrive.</p>
-    } @else if (desk().historyStart(); as start) {
-      <p class="chart-note">Prices recorded since {{ start | date: 'MMM d, HH:mm' }}.</p>
-    }
-  </div>
+  <app-technical-chart [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
+  @if (!desk().priceLine()) { <p class="chart-note">Collecting recorded prices for {{ desk().selected().symbol }}.</p> }
+
 </section>
 </details>
 </div>

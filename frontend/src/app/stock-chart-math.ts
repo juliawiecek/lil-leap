@@ -17,20 +17,36 @@ export interface ChartPalette {
   line: string;
   top: string;
 }
-/** Rendering style is independent of the portfolio/quote performance indicators. */
+/**
+ * The area style. These are the gain tokens by default; `svg[data-performance="loss"]` in
+ * theme-tokens.css redefines them on the chart element, so the line colour, the gradient and the
+ * dash all follow the session verdict without the renderer touching a colour.
+ */
 export const EMERALD_AREA = {
   line: 'var(--area-line)',
   top: 'var(--area-top)',
-  bottom: 'var(--gain-wash-28)',
+  bottom: 'var(--area-bottom)',
 } as const;
 export const UP: ChartPalette = { line: 'var(--chart-gain)', top: 'var(--gain-wash-27)' };
 export const DOWN: ChartPalette = { line: 'var(--chart-loss)', top: 'var(--loss-wash-20)' };
 export const UNKNOWN: ChartPalette = { line: 'var(--chart-neutral)', top: 'var(--category-wash-11)' };
-export function performancePalette(price: number, open: number | null): ChartPalette {
+
+export type PerformanceState = 'gain' | 'loss' | 'neutral';
+
+/**
+ * The session verdict every renderer shares: a gain at or above the day's opening price, a loss
+ * below it, and neutral until the open is known. Comparing against the open — not the previous
+ * tick — is what stops a small downward tick from reading as a daily loss.
+ */
+export function performanceState(price: number, open: number | null): PerformanceState {
   if (open === null || !Number.isFinite(open) || open <= 0) {
-    return UNKNOWN;
+    return 'neutral';
   }
-  return price >= open ? UP : DOWN;
+  return price >= open ? 'gain' : 'loss';
+}
+
+export function performancePalette(price: number, open: number | null): ChartPalette {
+  return { gain: UP, loss: DOWN, neutral: UNKNOWN }[performanceState(price, open)];
 }
 export function validPrice(point: StockPriceTick): boolean {
   return (

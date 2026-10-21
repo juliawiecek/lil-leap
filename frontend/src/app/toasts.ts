@@ -1,4 +1,5 @@
 import { Component, Injectable, inject, output, signal } from '@angular/core';
+import { StatusBadge } from './status-badge';
 
 export type ToastKind = 'filled' | 'rejected' | 'info';
 
@@ -38,12 +39,13 @@ export class ToastService {
 /** Renders the toasts in the bottom-right corner; "View" asks the dashboard to open the orders list. */
 @Component({
   selector: 'app-toasts',
+  imports: [StatusBadge],
   template: `
     <section class="toasts" aria-live="polite" aria-label="Order updates">
       @for (toast of service.toasts(); track toast.id) {
         <div class="toast" [class.rejected]="toast.kind === 'rejected'" [attr.role]="toast.kind === 'rejected' ? 'alert' : 'status'">
           <div>
-            <strong>{{ toast.title }}</strong>
+            <strong><app-status-badge [value]="toast.kind" /> · {{ toast.title }}</strong>
             @if (toast.detail) {
               <p>{{ toast.detail }}</p>
             }

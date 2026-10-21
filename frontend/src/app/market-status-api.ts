@@ -46,6 +46,20 @@ export function marketStatusText(status: MarketStatus | null, now: Date, locale?
   return `Market closed · Opens ${when} CT`;
 }
 
+/**
+ * The header text with the state spelled out, so the status never rests on the coloured dot alone
+ * (PS-28). "Market closed · Opens Mon 8:30 AM CT" already names the state, so it is left alone
+ * rather than becoming "Closed · Market closed · …".
+ */
+export function marketStatusLabel(status: MarketStatus | null, now: Date, locale?: string): string {
+  const detail = marketStatusText(status, now, locale);
+  if (!status) {
+    return detail;
+  }
+  const word = status.open ? 'Open' : 'Closed';
+  return detail.toLowerCase().includes(word.toLowerCase()) ? detail : `${word} · ${detail}`;
+}
+
 /** Client for the exchange's open/closed status. */
 export class MarketStatusClient {
   readonly #tokens: AccessTokenSource;

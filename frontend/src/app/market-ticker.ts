@@ -1,5 +1,7 @@
+import { PriceFlash } from './price-flash';
+import { FinancialChange } from './financial-change';
 import { Component, OnDestroy, computed, inject, output } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
@@ -10,9 +12,9 @@ import { marketBadgeText } from './market-status-api';
  */
 @Component({
   selector: 'app-market-ticker',
-  imports: [CurrencyPipe, DecimalPipe],
+  imports: [FinancialChange, PriceFlash, CurrencyPipe],
   template: `
-    <div class="ticker" aria-label="Live prices">
+    <div class="ticker" aria-label="Live prices" aria-live="off">
       <span class="badge" [class.closed]="!feed.status()?.open" role="status">
         <i aria-hidden="true"></i>{{ badge() }}
       </span>
@@ -29,14 +31,10 @@ import { marketBadgeText } from './market-status-api';
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
-              @if (quote.direction) {
-                <span class="price-direction" aria-hidden="true">{{ quote.direction === 'up' ? '↑' : '↓' }}</span>
-                <span class="sr-only">Price {{ quote.direction === 'up' ? 'rose' : 'fell' }}</span>
-              }
               @if (quote.price) {
-                <span class="price">{{ quote.price | currency }}</span>
+                <app-price-flash [direction]="quote.direction"><span class="price">{{ quote.price | currency }}</span></app-price-flash>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
-                  {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                  <app-financial-change [value]="quote.change" unit="percent" />
                 </span>
                 @if (delayed(quote.quotedAt)) {
                   <em class="delayed">Price delayed</em>
@@ -62,13 +60,10 @@ import { marketBadgeText } from './market-status-api';
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
-              @if (quote.direction) {
-                <span class="price-direction" aria-hidden="true">{{ quote.direction === 'up' ? '↑' : '↓' }}</span>
-              }
               @if (quote.price) {
-                <span class="price">{{ quote.price | currency }}</span>
+                <app-price-flash [direction]="quote.direction"><span class="price">{{ quote.price | currency }}</span></app-price-flash>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
-                  {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                  <app-financial-change [value]="quote.change" unit="percent" />
                 </span>
                 @if (delayed(quote.quotedAt)) {
                   <em class="delayed">Price delayed</em>
