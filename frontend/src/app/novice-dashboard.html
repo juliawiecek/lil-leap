@@ -380,34 +380,38 @@
               </div>
               <div class="allocation-content">
                 <div class="allocation-donut" role="img" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
-                  <!-- A circle of circumference 100, so each arc's length is its percentage. -->
+                  <!-- A rounded progress arc follows the actual stock share over a full cash track. -->
                   <svg viewBox="0 0 42 42" aria-hidden="true">
                     <defs>
-                      <linearGradient id="allocation-stocks-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#3d78b5" />
-                        <stop offset="100%" stop-color="#79b8e8" />
+                      <linearGradient id="allocation-stocks-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="var(--periwinkle-light)" />
+                        <stop offset="100%" stop-color="var(--periwinkle-deep)" />
                       </linearGradient>
                     </defs>
-                    <circle class="ring cash" cx="21" cy="21" r="15.9155" />
+                    <circle class="allocation-track" cx="21" cy="21" r="15.9155" />
                     <circle
                       class="ring stocks"
                       cx="21"
                       cy="21"
                       r="15.9155"
+                      pathLength="100"
                       stroke="url(#allocation-stocks-gradient)"
                       [attr.stroke-dasharray]="stocksShare() + ' ' + (100 - stocksShare())"
+                      [attr.visibility]="stocksShare() > 0 ? 'visible' : 'hidden'"
                     />
                   </svg>
                   <div class="donut-center"><strong>{{ assetAllocation().total | currency }}</strong><span>Total</span></div>
                 </div>
                 <div class="allocation-legend">
-                  <div>
-                    <i class="asset-dot stocks"></i><span>Stocks<small>{{ assetAllocation().stocksValue | currency }}</small></span
+                  <div class="allocation-item">
+                    <i class="asset-dot stocks" aria-hidden="true"></i><span class="allocation-label">Stocks<small>{{ assetAllocation().stocksValue | currency }}</small></span
                     ><b>{{ assetAllocation().stocksPercent }}%</b>
+                    <span class="allocation-meter stocks-meter" aria-hidden="true"><span [style.width.%]="stocksShare()"></span></span>
                   </div>
-                  <div>
-                    <i class="asset-dot cash"></i><span>Cash<small>{{ assetAllocation().cashValue | currency }}</small></span
+                  <div class="allocation-item">
+                    <i class="asset-dot cash" aria-hidden="true"></i><span class="allocation-label">Cash<small>{{ assetAllocation().cashValue | currency }}</small></span
                     ><b>{{ assetAllocation().cashPercent }}%</b>
+                    <span class="allocation-meter cash-meter" aria-hidden="true"><span [style.width.%]="100 - stocksShare()"></span></span>
                   </div>
                 </div>
               </div>
