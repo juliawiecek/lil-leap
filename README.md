@@ -115,6 +115,7 @@ flowchart LR
     end
 
     db[("PostgreSQL 16<br/>nexttrade · :5432")]
+    replica[("Read-only replica<br/>reporting-db")]
 
     browser --> fe & ife
     fe -- "/auth/*, /rules/*" --> auth
@@ -122,13 +123,17 @@ flowchart LR
     fe -- "/api/holdings/*" --> holdings
     ife -- "/auth/*" --> auth
     ife -- "/api/*" --> insights
-    auth & orders & holdings & insights --> db
+    auth & orders & holdings --> db
+    db -. streaming replication .-> replica
+    insights --> replica
 ```
 
 Browsers only talk to the two nginx frontends; each proxies API paths to the
 right service on the Docker network, so every call is same-origin (no CORS).
-`auth` has no host port at all. Every service connects to Postgres as the
-restricted `app_user` role; the schema is owned by the admin role.
+`auth` has no host port at all. The trading services connect to Postgres as the
+restricted `app_user` role; the schema is owned by the admin role. Insights reads a
+streaming read-only replica as the SELECT-only `reporting_user`, so reporting never
+loads the main database (BR-16).
 
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
@@ -283,6 +288,7 @@ the optional Kafka services, which are added by
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
 | `db`                 | `postgres:16-alpine`| `5432`                        | Runs schema/seed scripts once, on an empty volume; has a `pg_isready` healthcheck |
+| `reporting-db`       | `postgres:16-alpine`| none                          | Read-only streaming replica of `db` for Insights ([start-reporting-replica.sh](db/start-reporting-replica.sh)) |
 | `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Orders service; `frontend` proxies `/api/orders/*` and `/api/*` here |
 | `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service; `frontend` proxies `/api/holdings/*` here |
 | `insights`           | `./insights`       | `8081` -> `8080`              | Reporting service (see [Architecture](#architecture)) |
@@ -295,11 +301,14 @@ the optional Kafka services, which are added by
 
 Important runtime behavior:
 
-- Services reach Postgres internally at `db:5432`; `orders`, `holdings`,
-  `insights` and `auth` all connect over the Docker network.
+- Services reach Postgres internally over the Docker network: `orders`, `holdings`
+  and `auth` at `db:5432`, `insights` at `reporting-db:5432`.
 - DB initialization scripts (`db/finalized-schema.sql`, `db/init-app-role.sh`,
   the seed file) only run on the **first** startup of an empty `db_data`
   volume — re-run them by clearing that volume (`docker compose down -v`).
+  An existing volume created without the replica needs the reporting role and
+  replication slot once before `reporting-db` can start:
+  `docker compose up -d db && docker compose exec -T db bash /docker-entrypoint-initdb.d/04-reporting.sh`.
 - Holdings writes a synthetic quote for every catalog stock every
   `QUOTE_INTERVAL_SECONDS` (default 2); set `QUOTE_GENERATOR_ENABLED=false` to stop it.
 

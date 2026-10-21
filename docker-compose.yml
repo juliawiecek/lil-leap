@@ -67,22 +67,31 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
+  # BR-16: reporting reads the read-only replica, never the main database, so it cannot load live trading.
   insights:
     build: ./insights
     environment:
-      <<: [*primary-database, *jwt]
+      <<: *jwt
       PORT: 8084
+      DB_HOST: reporting-db
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: reporting_user
+      DB_APP_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
     depends_on:
-      db: {condition: service_healthy}
+      reporting-db: {condition: service_healthy}
 
   db:
     image: postgres:16-alpine
+    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10", "-c", "max_slot_wal_keep_size=1GB"]
     environment:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-main_password}
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
       # Same key as auth, so seeded SSNs decrypt like registered ones (05-test-users.sql).
       SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
     healthcheck:
@@ -95,11 +104,34 @@ services:
       - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
+      - ./db/init-reporting.sh:/docker-entrypoint-initdb.d/04-reporting.sh:ro
       # Dev/demo test logins (TS-DB-04). Never mount this in a production compose file.
       - ./db/seeds/002_test_users.sql:/docker-entrypoint-initdb.d/05-test-users.sql:ro
       # Demo clients and trade book matching insights' reports/trades.csv. Dev/demo only.
       - ./db/seeds/003_demo_trading_activity.sql:/docker-entrypoint-initdb.d/06-demo-trading-activity.sql:ro
 
+  # Streaming read-only copy of db for Insights (db/start-reporting-replica.sh).
+  reporting-db:
+    image: postgres:16-alpine
+    entrypoint: ["bash", "/usr/local/bin/start-reporting-replica.sh"]
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      PRIMARY_DB_HOST: db
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=\"$$REPORTING_DB_PASSWORD\" psql -h 127.0.0.1 -U reporting_user -d nexttrade -tAc 'SELECT pg_is_in_recovery()' | grep -qx t"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - reporting_data:/var/lib/postgresql/data
+      - ./db/start-reporting-replica.sh:/usr/local/bin/start-reporting-replica.sh:ro
+
 volumes:
   db_data:
+  reporting_data:
   password_reset_outbox:
