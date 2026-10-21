@@ -535,7 +535,7 @@
 svg[data-performance="loss"] {
   --area-line: var(--chart-loss);
   --area-top: var(--chart-loss-fill);
-  --area-bottom: transparent;
+  --area-bottom: var(--loss-wash-02);
   --series-dash: 6 4;
 }
 html[data-colour-mode]:not([data-colour-mode="off"]) .switch { border: 1px solid var(--control-border); }
