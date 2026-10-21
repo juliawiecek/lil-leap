@@ -1,0 +1,53 @@
+/* PS-28: shared non-colour cues and preference-only contrast adaptations. */
+.split-legend span::before { content: ''; display: inline-block; width: 12px; height: 8px; margin-right: 5px; border: 1px solid var(--allocation-outline); vertical-align: baseline; }
+/* The swatches must read as the segments they label, so they take the bar's own tones
+   (advanced-dashboard.flat.scss) rather than a gain/cash colour the bar never uses. */
+.split-legend span:first-child::before { background: var(--text-tone-05); }
+.split-legend span:last-child::before { background: var(--surface-tone-23); }
+.tick app-financial-change { white-space: nowrap; }
+
+/* Use the same hollow-up / filled-down convention on the decorative landing candles. */
+html .login-candles rect { fill: none !important; stroke: var(--gain) !important; stroke-width: 1; }
+html .login-candles .falling rect { fill: var(--candle-loss) !important; stroke: var(--candle-loss) !important; }
+html .login-candles path { stroke-width: 1; }
+
+@media (prefers-contrast: more) {
+  html body :is(.panel, .summary-card, .allocation-panel, .portfolio-panel, .a11y-card, .toast, dialog, .dashboard-shell) { border-color: var(--control-border) !important; }
+  html body :is(button, input, select, textarea, .switch) { border: 1px solid var(--control-border) !important; }
+  html body :is(button, input, select, textarea, a, [tabindex]):focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 3px; }
+  html body :is(button[aria-pressed=true], button.selected, button.active) { outline: 1px solid var(--control-border); outline-offset: -3px; }
+  html body :is(.line, [data-line], .indicator-line, .wick, .candle-body, .volume-bar) { stroke-width: 2 !important; }
+  html body :is(.axis, .price-axis, .chart-times, .chart-conventions) { color: var(--text) !important; fill: var(--text) !important; }
+  html body :disabled { border-style: dashed; }
+}
+
+@media (forced-colors: active) {
+  html, body { background: Canvas; color: CanvasText; }
+  html body :is(button, input, select, textarea, .switch) { border: 1px solid ButtonText !important; background: ButtonFace !important; color: ButtonText !important; }
+  html body :is(.panel, .summary-card, .allocation-panel, .portfolio-panel, .a11y-card, .toast, dialog, .dashboard-shell) { border: 1px solid CanvasText !important; background: Canvas !important; box-shadow: none !important; }
+  html body :is(button, input, select, textarea, a, [tabindex]):focus-visible { outline: 3px solid Highlight !important; outline-offset: 3px; }
+  html body :is(button[aria-pressed=true], button.selected, button.active) { border: 2px solid Highlight !important; text-decoration: underline; }
+  html body :disabled { color: GrayText !important; border-color: GrayText !important; border-style: dashed !important; opacity: 1; }
+  html body :is(.gain, .loss, .positive, .negative, app-financial-change) { color: CanvasText !important; }
+  html body :is(.badge i, .market-status i) { border: 1px solid CanvasText; background: CanvasText; }
+  html body .closed i { border-radius: 0; background: Canvas; }
+  html body :is(.line, [data-line], .price-line, .indicator-line, .label-leader, .average-line, .selection, .cursor, .baseline, [data-crosshair], .wick, .candle-body, .volume-bar) { stroke: CanvasText !important; opacity: 1 !important; filter: none !important; }
+  html body :is(.line, [data-line], .price-line, .indicator-line, .label-leader, .average-line, .selection, .wick) { fill: none !important; }
+  html body :is(.area, [data-area]) { fill: none !important; }
+  html body :is(.dot, [data-marker]) { stroke: CanvasText !important; }
+  html body :is(.axis text, .indicator-label, .price-axis, .chart-times) { color: CanvasText !important; fill: CanvasText !important; }
+  html body :is(.indicator-label path, .indicator-legend path, .trade-marker) { stroke: CanvasText !important; }
+  html body .trade-marker { fill: CanvasText !important; }
+  html body :is(.candle.up .candle-body, .volume-bar.up) { fill: Canvas !important; }
+  html body :is(.candle.down .candle-body, .candle.flat .candle-body) { fill: CanvasText !important; }
+  html body .hatch-line { stroke: CanvasText !important; }
+  html body .allocation-boundary { stroke: CanvasText !important; }
+  html body .allocation-track { stroke: Canvas !important; }
+  html body .ring.stocks { stroke: CanvasText !important; filter: none; }
+  html body #allocation-stocks-pattern path { stroke: Canvas !important; }
+  html body :is(.asset-dot.stocks, .stocks-meter > span, .split-bar .equities, .split-legend span:first-child::before) { background-image: none !important; border: 3px double CanvasText !important; }
+  html body :is(.asset-dot.cash, .cash-meter > span, .split-bar .cash, .split-legend span:last-child::before) { border: 1px dashed CanvasText !important; }
+  html .login-candles rect { fill: Canvas !important; stroke: CanvasText !important; }
+  html .login-candles .falling rect { fill: CanvasText !important; }
+  html .login-candles path { stroke: CanvasText !important; }
+}

@@ -216,26 +216,29 @@ export type BriefingSource = () => Promise<Omit<BriefingSnapshot, 'since'> & { a
   styles: [
     `
       :host { position: relative; display: inline-block; }
-      .briefing-button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid #2c3d45;
-        border-radius: 999px; background: #0f191d; color: #e9f3ee; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-      .briefing-button:hover { border-color: #4d6a75; }
-      .briefing-button:focus-visible { outline: 2px solid #8ee6a8; outline-offset: 2px; }
+      .briefing-button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px;
+        border: 1px solid var(--surface-tone-02); border-radius: 999px; background: var(--surface-tone-03); color: var(--text);
+        font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+      .briefing-button:hover { border-color: var(--surface-tone-01); }
+      .briefing-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       .briefing-button svg { width: 16px; height: 16px; }
-      .briefing-button.speaking { border-color: #51d88c; color: #8ee6a8; }
+      .briefing-button.speaking { border-color: var(--gain); color: var(--gain); }
       .briefing-panel { position: absolute; z-index: 70; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 32px)); padding: 14px;
-        border: 1px solid #2c3d45; border-radius: 10px; background: #0d171b; color: #e9f3ee; box-shadow: 0 18px 44px #000a; font-size: 13px; }
+        border: 1px solid var(--surface-tone-02); border-radius: 10px; background: var(--surface-raised); color: var(--text);
+        box-shadow: 0 18px 44px var(--shadow-92); font-size: 13px; }
       .panel-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
       .panel-actions { display: flex; gap: 6px; }
-      .panel-actions button { min-height: 30px; padding: 0 10px; border: 1px solid #2c3d45; border-radius: 6px; background: #13232a;
-        color: inherit; font: inherit; cursor: pointer; }
-      .panel-actions button:focus-visible, select:focus-visible { outline: 2px solid #8ee6a8; outline-offset: 2px; }
+      .panel-actions button { min-height: 30px; padding: 0 10px; border: 1px solid var(--surface-tone-02); border-radius: 6px;
+        background: var(--surface-tone-03); color: inherit; font: inherit; cursor: pointer; }
+      .panel-actions button:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       ol { display: grid; gap: 6px; margin: 12px 0; padding: 0; list-style: none; line-height: 1.5; }
-      li { padding: 4px 8px; border-left: 3px solid transparent; border-radius: 4px; color: #c8d2dc; }
-      li.current { border-left-color: #51d88c; background: #12301f; color: #fff; }
-      .note { margin: 12px 0; color: #c8d2dc; }
-      .controls { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid #22323a; }
-      label { display: grid; gap: 4px; color: #aebaca; font-size: 12px; }
-      select { min-height: 30px; padding: 0 8px; border: 1px solid #2c3d45; border-radius: 6px; background: #13232a; color: #e9f3ee; font: inherit; }
+      li { padding: 4px 8px; border-left: 3px solid transparent; border-radius: 4px; color: var(--text-muted); }
+      li.current { border-left-color: var(--gain); background: var(--gain-wash-07); color: var(--text); }
+      .note { margin: 12px 0; color: var(--text-muted); }
+      .controls { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid var(--surface-tone-04); }
+      label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
+      select { min-height: 30px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: var(--background);
+        color: var(--text); font: inherit; }
     `,
   ],
 })

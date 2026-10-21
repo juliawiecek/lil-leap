@@ -4,69 +4,69 @@
    Look and feel only; loads after advanced-dashboard.refresh.scss.
    ========================================================================== */
 @keyframes nt-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.5); }
-  70% { box-shadow: 0 0 0 5px rgba(148, 201, 115, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+  0% { box-shadow: 0 0 0 0 var(--gain-wash-06); }
+  70% { box-shadow: 0 0 0 5px var(--gain-wash-01); }
+  100% { box-shadow: 0 0 0 0 var(--gain-wash-01); }
 }
-:host { background: #0a0a0a; --line: #232323; }
+:host { background: var(--surface-tone-20); --line: var(--surface-tone-22); }
 h2 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
 
 /* Sidebar */
-.pro-sidebar { padding: 18px 10px 14px; border-right-color: #232323; background: #0a0a0a; }
+.pro-sidebar { padding: 18px 10px 14px; border-right-color: var(--surface-tone-22); background: var(--surface-tone-20); }
 .pro-logo { font-size: 15px; letter-spacing: -0.01em; }
 .pro-sidebar nav { gap: 1px; margin-top: 26px; }
 .pro-sidebar nav button { height: 36px; padding: 0 10px; border-left: 2px solid transparent; border-radius: 0 4px 4px 0; font-size: 13.5px; }
-.pro-sidebar nav button:hover { background: #161616; }
-.pro-sidebar nav button.active { border-left-color: #ededed; background: #1a1a1a; }
+.pro-sidebar nav button:hover { background: var(--surface-raised); }
+.pro-sidebar nav button.active { border-left-color: var(--text-tone-03); background: var(--surface-tone-18); }
 .pro-sidebar nav app-dashboard-icon { width: 16px; height: 16px; }
-.sidebar-help { border-top-color: #232323; }
+.sidebar-help { border-top-color: var(--surface-tone-22); }
 .sidebar-help button { min-height: 34px; border-radius: 4px; font-size: 13px; }
-.sidebar-help button:hover { background: #161616; }
+.sidebar-help button:hover { background: var(--surface-raised); }
 
 /* Header: solid, no blur; market status sits with the account controls */
-.pro-topbar { height: 56px; padding: 0 16px; border-bottom-color: #232323; background: #0a0a0a; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.pro-search { flex: 0 1 460px; width: auto; min-width: 180px; height: 34px; padding: 0 12px; border-color: #262626; border-radius: 4px; background: #111111; }
+.pro-topbar { height: 56px; padding: 0 16px; border-bottom-color: var(--surface-tone-22); background: var(--surface-tone-20); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.pro-search { flex: 0 1 460px; width: auto; min-width: 180px; height: 34px; padding: 0 12px; border-color: var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-03); }
 .pro-search input { font-size: 13.5px; }
-.search-results { top: 40px; border-radius: 6px; background: #111111; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); }
+.search-results { top: 40px; border-radius: 6px; background: var(--surface-tone-03); box-shadow: 0 16px 40px var(--shadow-12); }
 .header-actions { gap: 14px; }
-.market-status { display: inline-flex; align-items: center; gap: 7px; color: #94c973; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.market-status { display: inline-flex; align-items: center; gap: 7px; color: var(--gain); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .market-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
-.market-status.closed { color: #e2b65a; }
+.market-status.closed { color: var(--warning); }
 .market-status.closed i { animation: none; }
-.header-actions .tier-badge { height: 24px; padding: 0 8px; border-color: #303030; border-radius: 3px; background: none; color: #a1a1a1; }
-.notification-button { width: 32px; height: 32px; border-color: #262626; border-radius: 4px; background: none; color: #a1a1a1; }
-.notification-button:hover { background: #1a1a1a; color: #ededed; }
-.notification-button i { top: 6px; right: 7px; width: 6px; height: 6px; box-shadow: 0 0 0 2px #0a0a0a; }
-.notification-popover { top: 40px; border-radius: 6px; background: #111111; }
-.avatar { width: 32px; height: 32px; background: #262626; color: #ededed; font-size: 13px; }
-.avatar:hover { background: #303030; }
-.header-actions app-account-switcher { --switcher-panel: #111111; --switcher-border: #262626; --switcher-field: #0a0a0a; }
-:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger { height: 34px; padding-inline: 10px; border-color: #262626; border-radius: 4px; background: #111111; }
+.header-actions .tier-badge { height: 24px; padding: 0 8px; border-color: var(--surface-tone-28); border-radius: 3px; background: none; color: var(--text-tone-02); }
+.notification-button { width: 32px; height: 32px; border-color: var(--surface-tone-17); border-radius: 4px; background: none; color: var(--text-tone-02); }
+.notification-button:hover { background: var(--surface-tone-18); color: var(--text-tone-03); }
+.notification-button i { top: 6px; right: 7px; width: 6px; height: 6px; box-shadow: 0 0 0 2px var(--surface-tone-20); }
+.notification-popover { top: 40px; border-radius: 6px; background: var(--surface-tone-03); }
+.avatar { width: 32px; height: 32px; background: var(--surface-tone-17); color: var(--text-tone-03); font-size: 13px; }
+.avatar:hover { background: var(--surface-tone-28); }
+.header-actions app-account-switcher { --switcher-panel: var(--surface-tone-03); --switcher-border: var(--surface-tone-17); --switcher-field: var(--surface-tone-20); }
+:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger { height: 34px; padding-inline: 10px; border-color: var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-03); }
 :host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger:hover,
-:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger[aria-expanded='true'] { border-color: #4a4a4a; }
+:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger[aria-expanded='true'] { border-color: var(--surface-tone-29); }
 :host ::ng-deep .pro-topbar app-account-switcher .account-menu { border-radius: 6px; }
 :host ::ng-deep .pro-topbar app-account-switcher .account-row,
 :host ::ng-deep .pro-topbar app-account-switcher .menu-action { border-radius: 4px; }
-:host ::ng-deep .pro-topbar app-account-switcher .account-row.current { background: #202020; }
-:host ::ng-deep .pro-topbar app-account-switcher .account-dialog { border-radius: 8px; background: #111111; }
+:host ::ng-deep .pro-topbar app-account-switcher .account-row.current { background: var(--surface-tone-06); }
+:host ::ng-deep .pro-topbar app-account-switcher .account-dialog { border-radius: 8px; background: var(--surface-tone-03); }
 
 /* Panels: separate cards, small gaps, 8px corners, flat surface */
 .pro-content { padding: 12px 12px 40px; }
 .pro-grid, .bottom-panels { gap: 10px; }
-.panel { border-color: #1e1e1e; border-radius: 8px; background: #111111; box-shadow: none; animation: none; }
-.panel:hover { border-color: #1e1e1e; }
-.panel-heading, .market-panel .panel-heading, .bottom-panels .panel-heading { height: 41px; padding: 0 16px; border-bottom-color: #232323; }
-.text-link { color: #a1a1a1; font-size: 12.5px; }
-.text-link:hover { color: #ededed; }
+.panel { border-color: var(--surface-tone-19); border-radius: 8px; background: var(--surface-tone-03); box-shadow: none; animation: none; }
+.panel:hover { border-color: var(--surface-tone-19); }
+.panel-heading, .market-panel .panel-heading, .bottom-panels .panel-heading { height: 41px; padding: 0 16px; border-bottom-color: var(--surface-tone-22); }
+.text-link { color: var(--text-tone-02); font-size: 12.5px; }
+.text-link:hover { color: var(--text-tone-03); }
 .service-banner { border-radius: 6px; }
 
 /* Summary tiles */
 .summary-metrics { gap: 10px; }
 .summary-metrics > div,
 .summary-metrics > div:first-child,
-.summary-metrics > div:last-child { border-color: #1e1e1e; border-radius: 8px; background: #111111; }
-.summary-metrics > div:hover { border-color: #1e1e1e; }
-.summary-panel h1 { color: #a1a1a1; font-size: 12px; }
+.summary-metrics > div:last-child { border-color: var(--surface-tone-19); border-radius: 8px; background: var(--surface-tone-03); }
+.summary-metrics > div:hover { border-color: var(--surface-tone-19); }
+.summary-panel h1 { color: var(--text-tone-02); font-size: 12px; }
 .summary-metrics strong { letter-spacing: -0.01em; }
 .summary-metrics .main-value strong { font-size: 32px; line-height: 1.1; letter-spacing: -0.02em; }
 .summary-metrics .main-value > span,
@@ -77,66 +77,66 @@ h2 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
 .primary-button { min-height: 40px; border-radius: 4px; }
 .primary-button:hover { box-shadow: none; }
 .primary-button:active { transform: none; }
-.secondary-button { border-color: #3a3a3a; border-radius: 4px; }
+.secondary-button { border-color: var(--surface-tone-23); border-radius: 4px; }
 
 /* Tables, tabs, positions */
-td { border-top-color: #1c1c1c; font-size: 13px; }
-tbody tr:hover, .watch-table tr.selected { background: #181818; }
-.watch-table tr.selected td:first-child { box-shadow: inset 2px 0 0 #ededed; }
-.watch-panel > select { border-color: #262626; border-radius: 4px; }
-.panel-tabs { height: 41px; border-bottom-color: #232323; }
+td { border-top-color: var(--surface-tone-27); font-size: 13px; }
+tbody tr:hover, .watch-table tr.selected { background: var(--surface-tone-30); }
+.watch-table tr.selected td:first-child { box-shadow: inset 2px 0 0 var(--text-tone-03); }
+.watch-panel > select { border-color: var(--surface-tone-17); border-radius: 4px; }
+.panel-tabs { height: 41px; border-bottom-color: var(--surface-tone-22); }
 .panel-tabs button { font-size: 13px; }
-.panel-tabs .active { border-color: #ededed; }
+.panel-tabs .active { border-color: var(--text-tone-03); }
 .positions-table td { height: 46px; }
-.trade-label { border: 1px solid #3a3a3a; border-radius: 3px; background: #111111; color: #ededed; font-weight: 700; }
-.weight-bar { height: 4px; border-radius: 0; background: #262626; }
-.weight-bar i { border-radius: 0; background: #a1a1a1; opacity: 1; }
-.list-tabs { display: flex; gap: 2px; margin: 0; padding: 0 8px; border: 0; border-bottom: 1px solid #232323; border-radius: 0; background: none; }
-.list-tabs button { min-height: 40px; margin-bottom: -1px; padding: 0 10px; border-bottom: 2px solid transparent; border-radius: 0; color: #7a7a7a; font-size: 13px; }
-.list-tabs button.active { border-bottom-color: #ededed; background: none; color: #ededed; }
+.trade-label { border: 1px solid var(--surface-tone-23); border-radius: 3px; background: var(--surface-tone-03); color: var(--text-tone-03); font-weight: 700; }
+.weight-bar { height: 4px; border-radius: 0; background: var(--surface-tone-17); }
+.weight-bar i { border-radius: 0; background: var(--text-tone-02); opacity: 1; }
+.list-tabs { display: flex; gap: 2px; margin: 0; padding: 0 8px; border: 0; border-bottom: 1px solid var(--surface-tone-22); border-radius: 0; background: none; }
+.list-tabs button { min-height: 40px; margin-bottom: -1px; padding: 0 10px; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-tone-04); font-size: 13px; }
+.list-tabs button.active { border-bottom-color: var(--text-tone-03); background: none; color: var(--text-tone-03); }
 .market-tabs { gap: 2px; padding: 0; border: 0; border-radius: 0; background: none; }
-.market-tabs button { min-height: 26px; border-radius: 3px; color: #7a7a7a; font-size: 12.5px; }
-.market-tabs button:hover { background: #1a1a1a; color: #ededed; }
-.market-tabs .active, .market-tabs .active:hover { background: #262626; color: #ededed; }
+.market-tabs button { min-height: 26px; border-radius: 3px; color: var(--text-tone-04); font-size: 12.5px; }
+.market-tabs button:hover { background: var(--surface-tone-18); color: var(--text-tone-03); }
+.market-tabs .active, .market-tabs .active:hover { background: var(--surface-tone-17); color: var(--text-tone-03); }
 
 /* Market overview */
 .heat-map { gap: 2px; }
 .heat-tile { min-height: 56px; padding: 9px 10px; border-radius: 2px; transition: filter 0.12s ease; }
 .heat-tile::before { opacity: clamp(0.08, calc(var(--heat, 0) * 0.15 + 0.08), 0.32); }
 .heat-tile:hover { transform: none; filter: brightness(1.12); }
-.heat-tile.gain span { color: #cfe6bf; }
-.heat-tile.loss span { color: #ffc9c2; }
-.sector-list > div, .mover-row { border-bottom-color: #1c1c1c; }
-.sector-bar { height: 4px; border-radius: 0; background: #232323; }
+.heat-tile.gain span { color: var(--text-tone-08); }
+.heat-tile.loss span { color: var(--loss-tone-04); }
+.sector-list > div, .mover-row { border-bottom-color: var(--surface-tone-27); }
+.sector-bar { height: 4px; border-radius: 0; background: var(--surface-tone-22); }
 .sector-bar i { border-radius: 0; }
 
 /* Portfolio summary card */
-.exposure-panel { border-color: #1e1e1e; background: #111111; }
+.exposure-panel { border-color: var(--surface-tone-19); background: var(--surface-tone-03); }
 .summary-total { font-size: 24px; letter-spacing: -0.02em; }
 .split-bar { gap: 1px; height: 6px; border-radius: 0; background: none; }
-.split-bar .equities { background: #d4d4d4; }
-.split-bar .cash { background: #3a3a3a; }
+.split-bar .equities { background: var(--text-tone-05); }
+.split-bar .cash { background: var(--surface-tone-23); }
 
 /* Dialogs */
-dialog { border-color: #303030; border-radius: 8px; background: #111111; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); }
+dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: var(--surface-tone-03); box-shadow: 0 24px 60px var(--shadow-12); }
 .dialog-heading h2 { font-size: 18px; letter-spacing: -0.01em; }
 .order-action-btn { border-radius: 4px; }
 
 /* Activity lists inside the advanced dashboard (the shared feed keeps its own look elsewhere) */
-:host ::ng-deep .pro-shell app-activity-feed .kind-switch { padding: 2px; border-color: #262626; border-radius: 4px; background: #0a0a0a; }
-:host ::ng-deep .pro-shell app-activity-feed .kind-switch button { min-height: 26px; border-radius: 3px; color: #7a7a7a; }
-:host ::ng-deep .pro-shell app-activity-feed .kind-switch button.active { background: #262626; color: #ededed; }
+:host ::ng-deep .pro-shell app-activity-feed .kind-switch { padding: 2px; border-color: var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-20); }
+:host ::ng-deep .pro-shell app-activity-feed .kind-switch button { min-height: 26px; border-radius: 3px; color: var(--text-tone-04); }
+:host ::ng-deep .pro-shell app-activity-feed .kind-switch button.active { background: var(--surface-tone-17); color: var(--text-tone-03); }
 :host ::ng-deep .pro-shell app-activity-feed .activity-filters input,
 :host ::ng-deep .pro-shell app-activity-feed .clear-filters,
 :host ::ng-deep .pro-shell app-activity-feed .view-all,
 :host ::ng-deep .pro-shell app-activity-feed .activity-item .actions button { border-radius: 4px; }
-:host ::ng-deep .pro-shell app-activity-feed .activity-item { border-bottom-color: #1c1c1c; }
-:host ::ng-deep .pro-shell app-activity-feed .activity-item:hover { background: #181818; }
-:host ::ng-deep .pro-shell app-activity-feed .activity-item time { color: #7a7a7a; }
-:host ::ng-deep .pro-shell app-activity-feed .activity-item .what small { color: #a1a1a1; }
+:host ::ng-deep .pro-shell app-activity-feed .activity-item { border-bottom-color: var(--surface-tone-27); }
+:host ::ng-deep .pro-shell app-activity-feed .activity-item:hover { background: var(--surface-tone-30); }
+:host ::ng-deep .pro-shell app-activity-feed .activity-item time { color: var(--text-tone-04); }
+:host ::ng-deep .pro-shell app-activity-feed .activity-item .what small { color: var(--text-tone-02); }
 :host ::ng-deep .pro-shell app-activity-feed .status,
-:host ::ng-deep .pro-shell app-activity-feed .status.filled { padding: 0; border-radius: 0; background: none; color: #a1a1a1; }
-:host ::ng-deep .pro-shell app-activity-feed .status.rejected { background: none; color: #ff7a6e; }
+:host ::ng-deep .pro-shell app-activity-feed .status.filled { padding: 0; border-radius: 0; background: none; color: var(--text-tone-02); }
+:host ::ng-deep .pro-shell app-activity-feed .status.rejected { background: none; color: var(--loss); }
 
 /* Responsive: re-apply the sizes the earlier breakpoints set */
 @media (max-width: 1500px) {
@@ -157,22 +157,22 @@ dialog { border-color: #303030; border-radius: 8px; background: #111111; box-sha
 
 /* Backdrop: a faint neutral grid behind the cards (header and sidebar stay solid). */
 :host {
-  background-color: #0a0a0a;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-color: var(--surface-tone-20);
+  background-image: linear-gradient(to right, var(--text-wash-07) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--text-wash-07) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 /* Portfolio value tile: a thin line along the top, green when up today, red when down. */
-.summary-metrics > div.main-value.day-up { box-shadow: inset 0 2px 0 #94c973; }
-.summary-metrics > div.main-value.day-down { box-shadow: inset 0 2px 0 #ff7a6e; }
+.summary-metrics > div.main-value.day-up { box-shadow: inset 0 2px 0 var(--gain); }
+.summary-metrics > div.main-value.day-down { box-shadow: inset 0 2px 0 var(--loss); }
 
 /* Live price flash: a number briefly lights green or red when its price moves. */
 .tick { display: inline-block; margin: -1px -4px; padding: 1px 4px; border-radius: 3px; }
 .tick-up { animation: nt-tick-up 1.2s ease-out; }
 .tick-down { animation: nt-tick-down 1.2s ease-out; }
-@keyframes nt-tick-up { from { background-color: rgba(148, 201, 115, 0.28); } to { background-color: rgba(148, 201, 115, 0); } }
-@keyframes nt-tick-down { from { background-color: rgba(255, 122, 110, 0.28); } to { background-color: rgba(255, 122, 110, 0); } }
+@keyframes nt-tick-up { from { background-color: var(--gain-wash-02); } to { background-color: var(--gain-wash-01); } }
+@keyframes nt-tick-down { from { background-color: var(--loss-wash-03); } to { background-color: var(--loss-wash-02); } }
 @media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }
 
 /* Recent activity card: aligned to the card's 16px edge, two lines per row
@@ -189,24 +189,24 @@ dialog { border-color: #303030; border-radius: 8px; background: #111111; box-sha
 }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what { grid-area: what; gap: 3px; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what b { font-size: 13.5px; font-weight: 700; }
-:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what small { margin: 0; color: #a1a1a1; font-size: 12.5px; }
+:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what small { margin: 0; color: var(--text-tone-02); font-size: 12.5px; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .amount { grid-area: amount; font-size: 13.5px; font-weight: 700; }
-:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item time { grid-area: time; grid-column: auto; justify-self: end; color: #7a7a7a; font-size: 12px; }
+:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item time { grid-area: time; grid-column: auto; justify-self: end; color: var(--text-tone-04); font-size: 12px; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .actions { grid-area: auto; grid-column: 1 / -1; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item:last-child { border-bottom: 0; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .view-all { margin: 6px 16px 14px; }
-.panel, .table-scroll, .sector-list { scrollbar-width: thin; scrollbar-color: #303030 transparent; }
+.panel, .table-scroll, .sector-list { scrollbar-width: thin; scrollbar-color: var(--surface-tone-28) transparent; }
 
 /* Activity page: filters in one tidy bar, rows on the card's 16px edge,
    status sitting beside the amount instead of floating mid-row. */
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed { font-size: 13px; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters { align-items: flex-end; gap: 12px; margin: 0; padding: 14px 16px; border-bottom: 1px solid #232323; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters label { gap: 5px; color: #7a7a7a; font-size: 12px; font-weight: 600; opacity: 1; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input { height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid #262626; border-radius: 4px; background: #0a0a0a; color: #ededed; font-size: 13px; color-scheme: dark; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input:focus { border-color: #4a4a4a; outline: none; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters { align-items: flex-end; gap: 12px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--surface-tone-22); }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters label { gap: 5px; color: var(--text-tone-04); font-size: 12px; font-weight: 600; opacity: 1; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input { height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-20); color: var(--text-tone-03); font-size: 13px; color-scheme: dark; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input:focus { border-color: var(--surface-tone-29); outline: none; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .kind-switch { height: 32px; box-sizing: border-box; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .clear-filters { height: 32px; padding: 0 12px; border-color: #303030; color: #a1a1a1; font-weight: 700; }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .clear-filters:hover { color: #ededed; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .clear-filters { height: 32px; padding: 0 12px; border-color: var(--surface-tone-28); color: var(--text-tone-02); font-weight: 700; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .clear-filters:hover { color: var(--text-tone-03); }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-message { margin: 12px 16px; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-item { grid-template-columns: 170px minmax(0, 1fr) 90px 130px; gap: 16px; padding: 12px 16px; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-item time { font-size: 12.5px; }
@@ -247,5 +247,5 @@ dialog { border-color: #303030; border-radius: 8px; background: #111111; box-sha
 }
 
 /* Sign out, at the foot of the sidebar under a thin divider. */
-.sidebar-help button.sign-out { margin-top: 6px; border-top: 1px solid #1c1c1c; border-radius: 0 0 4px 4px; padding-top: 2px; }
-.sidebar-help button.sign-out:hover { color: #ededed; }
+.sidebar-help button.sign-out { margin-top: 6px; border-top: 1px solid var(--surface-tone-27); border-radius: 0 0 4px 4px; padding-top: 2px; }
+.sidebar-help button.sign-out:hover { color: var(--text-tone-03); }

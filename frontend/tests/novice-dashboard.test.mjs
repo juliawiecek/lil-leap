@@ -528,6 +528,11 @@ test('the header counts down to the market close from the shared market status',
   assert.equal(desk.marketOpen(), true);
   assert.equal(desk.marketText(), 'Market closes in 2h 14m');
   assert.equal(desk.closedWarning(), '');
+  assert.equal(desk.marketStatusLine(), 'Open · Market closes in 2h 14m');
   desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
   assert.equal(desk.marketText(), 'Market closes in 1h 0m');
+  // The far-off closed wording already names the state; it must not gain a second "Closed ·".
+  feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-20T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
+  assert.match(desk.marketStatusLine(), /^Market closed · Opens /);
+  assert.equal(desk.marketStatusLine().match(/closed/gi).length, 1);
 });

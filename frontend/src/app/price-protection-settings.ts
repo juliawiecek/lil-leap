@@ -87,26 +87,26 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
       .setting-label small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
       .segmented {
         display: inline-flex; align-items: center; gap: 2px; padding: 3px;
-        border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--line); border-radius: 8px; background: var(--shadow-99);
       }
       .segmented button {
         min-width: 48px; height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: none;
         color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
       }
-      .segmented button:hover { color: #f2f0e9; }
-      .segmented button.selected { background: var(--protection-selected-bg, #f2efe6); color: var(--protection-selected-text, #0b0c0b); }
+      .segmented button:hover { color: var(--text); }
+      .segmented button.selected { background: var(--protection-selected-bg, var(--accent)); color: var(--protection-selected-text, var(--on-accent)); }
       .segmented .custom {
         display: inline-flex; align-items: center; gap: 2px; height: 32px; margin-left: 2px; padding: 0 10px;
         border-left: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600;
       }
       .segmented .custom.selected {
         background: var(--protection-selected-bg, transparent);
-        color: var(--protection-selected-text, #f2f0e9);
+        color: var(--protection-selected-text, var(--text));
         border-radius: 6px;
       }
       .segmented .custom.selected input { color: inherit; }
       .custom input {
-        width: 56px; padding: 0; border: 0; background: none; color: #f2f0e9; font: inherit; text-align: right; outline: none;
+        width: 56px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: right; outline: none;
       }
       .custom input::placeholder { color: var(--muted); }
       .overrides { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -119,22 +119,22 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
         width: 22px; height: 22px; border: 0; border-radius: 4px; background: none;
         color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer;
       }
-      .chip button:hover { color: #f2f0e9; background: rgba(255, 255, 255, 0.06); }
+      .chip button:hover { color: var(--text); background: var(--text-wash-14); }
       .add-override { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
       select, .percent-field {
         height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px;
-        background-color: rgba(0, 0, 0, 0.25); color: inherit; font-size: 13px; font-weight: 600; color-scheme: dark;
+        background-color: var(--shadow-99); color: inherit; font-size: 13px; font-weight: 600; color-scheme: dark;
       }
       .percent-field { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
-      .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: #f2f0e9; font: inherit; text-align: right; outline: none; }
+      .percent-field input { width: 34px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: right; outline: none; }
       .add {
         height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: none;
-        color: #f2f0e9; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+        color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
       }
       .add:hover { border-color: var(--muted); }
       input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
       input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
-      .message { margin: 10px 0 0; color: #e2b65a; font-size: 12px; }
+      .message { margin: 10px 0 0; color: var(--warning); font-size: 12px; }
       .sr-only {
         position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
         clip-path: inset(50%); white-space: nowrap; border: 0;

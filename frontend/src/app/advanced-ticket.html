@@ -39,7 +39,7 @@
       />
       <div class="cost-summary">
         <div>
-          <span>Live price</span>@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</span>}
+          <span>Live price</span>@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</app-price-flash>}
         </div>
         <div>
           <strong>Estimated total</strong><strong>{{ desk().total() | currency }}</strong>

@@ -89,6 +89,7 @@ let nextPortfolioChartId = 0;
           [attr.viewBox]="viewBox"
           preserveAspectRatio="none"
           role="img"
+          [attr.data-performance]="tone() === 'flat' ? 'neutral' : tone() === 'down' ? 'loss' : 'gain'"
           tabindex="0"
           [attr.aria-label]="summary()"
           (pointermove)="scrubAt($event)"
@@ -181,8 +182,8 @@ let nextPortfolioChartId = 0;
       :host {
         display: block;
         margin-top: 14px;
-        --up: #22c55e;
-        --down: #22c55e;
+        --up: var(--chart-gain);
+        --down: var(--chart-gain);
       }
       .chart {
         position: relative;
@@ -208,7 +209,8 @@ let nextPortfolioChartId = 0;
       /* Never reveal the path with a dash animation: the endpoint must always be connected. */
       .line {
         fill: none;
-        stroke: var(--tone);
+        stroke: var(--area-line);
+        stroke-dasharray: var(--series-dash);
         stroke-width: 2;
         stroke-linejoin: round;
         stroke-linecap: round;
@@ -216,21 +218,21 @@ let nextPortfolioChartId = 0;
         shape-rendering: geometricPrecision;
       }
       .baseline {
-        stroke: #3a4038;
+        stroke: var(--surface-tone-58);
         stroke-width: 1;
         stroke-dasharray: 1 5;
         stroke-linecap: round;
         vector-effect: non-scaling-stroke;
       }
       .cursor {
-        stroke: #a4a79e;
+        stroke: var(--text-muted);
         stroke-width: 1;
         vector-effect: non-scaling-stroke;
       }
       /* A round, non-scaling stroke keeps the dot circular in the responsive SVG. */
       .dot {
         fill: none;
-        stroke: var(--tone);
+        stroke: var(--area-line);
         stroke-width: 7;
         stroke-linecap: round;
         vector-effect: non-scaling-stroke;
@@ -242,7 +244,7 @@ let nextPortfolioChartId = 0;
         align-items: center;
         gap: 6px;
         margin: 0 0 14px;
-        color: #7e8279;
+        color: var(--text-subtle);
         font-size: 11px;
       }
       .day-window span {
@@ -250,33 +252,33 @@ let nextPortfolioChartId = 0;
       }
       .day-window button {
         padding: 5px 9px;
-        border: 1px solid #2c312b;
+        border: 1px solid var(--surface-tone-10);
         border-radius: 6px;
         background: transparent;
-        color: #a4a79e;
+        color: var(--text-muted);
         font: inherit;
         cursor: pointer;
       }
       .day-window button[aria-pressed='true'] {
-        color: #f2f0e9;
-        background: #242823;
+        color: var(--text);
+        background: var(--surface-tone-101);
       }
       .day-window button:focus-visible {
-        outline: 2px solid #f2efe6;
+        outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
       .chart-note.delayed {
-        color: #e2b65a;
+        color: var(--warning);
       }
       .cursor-time {
         position: absolute;
         top: -26px;
         transform: translateX(-50%);
         padding: 4px 10px;
-        border: 1px solid #2c312b;
+        border: 1px solid var(--surface-tone-10);
         border-radius: 8px;
-        background: rgba(20, 23, 20, 0.95);
-        color: #f2f0e9;
+        background: var(--surface-wash-100);
+        color: var(--text);
         font-size: 12px;
         font-weight: 600;
         white-space: nowrap;
@@ -286,7 +288,7 @@ let nextPortfolioChartId = 0;
         display: grid;
         place-items: center;
         height: 300px;
-        color: #7e8279;
+        color: var(--text-subtle);
         font-size: 13px;
       }
       .periods {
@@ -296,9 +298,9 @@ let nextPortfolioChartId = 0;
         gap: 2px;
         margin-top: 16px;
         padding: 4px;
-        border: 1px solid #1f231f;
+        border: 1px solid var(--surface-tone-08);
         border-radius: 12px;
-        background: rgba(7, 7, 7, 0.6);
+        background: var(--surface-wash-16);
         --tone: var(--up);
       }
       .periods.down {
@@ -311,7 +313,7 @@ let nextPortfolioChartId = 0;
         border: 0;
         border-radius: 9px;
         background: transparent;
-        color: #7e8279;
+        color: var(--text-subtle);
         font: inherit;
         font-size: 13px;
         font-weight: 700;
@@ -321,19 +323,19 @@ let nextPortfolioChartId = 0;
           color 0.15s;
       }
       .periods button:hover {
-        color: #f2f0e9;
+        color: var(--text);
       }
       .periods button.selected {
-        background: #f2efe6;
-        color: #0b0c0b;
+        background: var(--accent);
+        color: var(--on-accent);
       }
       .periods button:focus-visible {
-        outline: 2px solid #f2efe6;
+        outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
       .chart-note {
         margin: 8px 0 0;
-        color: #7e8279;
+        color: var(--text-subtle);
         font-size: 12px;
       }
       @media (max-width: 600px) {
@@ -512,7 +514,8 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Up or down over the shown period: the colour of the line, the dot and the selected period. */
   readonly tone = computed(() => {
     const points = this.history();
-    return points.length >= 2 && points.at(-1)!.value < startValue(points) ? 'down' : 'up';
+    if (points.length < 2 || points.at(-1)!.value === startValue(points)) return 'flat';
+    return points.at(-1)!.value < startValue(points) ? 'down' : 'up';
   });
   /** The value scale, fitted to the values shown, so each move up or down is visible. */
   readonly scale = computed(() => valueScale(this.displayPoints().map((p) => p.value)));

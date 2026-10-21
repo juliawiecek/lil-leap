@@ -51,11 +51,9 @@
             [class.filled]="item.status === 'FILLED'"
             [class.rejected]="item.status === 'REJECTED'"
             [class.cancelled]="item.status === 'CANCELLED'"
-            >{{ statusLabel(item.status) }}</span
+            ><app-status-badge [value]="item.status" /></span
           >
-          <span class="amount" [class.gain]="(item.amount ?? 0) > 0" [class.loss]="(item.amount ?? 0) < 0">{{
-            item.amount === null ? '—' : money(item.amount, true)
-          }}</span>
+          <span class="amount" [class.gain]="(item.amount ?? 0) > 0" [class.loss]="(item.amount ?? 0) < 0"><app-financial-change [value]="item.amount" unit="currency" /></span>
           @if (canCancel(item)) {
             <span class="actions">
               @if (confirming() === item.orderId) {

@@ -1,3 +1,5 @@
+import { StatusBadge } from './status-badge';
+import { FinancialChange } from './financial-change';
 import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { OrderHistoryRow } from './order-history-api';
@@ -20,6 +22,7 @@ export const CANCELLABLE: ReadonlySet<string> = new Set(['SUBMITTED', 'ACCEPTED'
  */
 @Component({
   selector: 'app-activity-feed',
+  imports: [FinancialChange, StatusBadge],
   templateUrl: './activity-feed.html',
   styleUrl: './activity-feed.scss',
   host: { '[class.compact]': 'compact()' },

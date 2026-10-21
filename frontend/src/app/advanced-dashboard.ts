@@ -1,3 +1,5 @@
+import { PriceFlash } from './price-flash';
+import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
@@ -99,7 +101,7 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [
+  imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
     AccessibilitySettings, KeyboardShortcuts, BriefingButton,
   ],
@@ -496,9 +498,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }
       // Bars sit on fixed boundaries; the last point is the open bar while it is dated after this bar's start.
       if (last && barMs && last.at > Math.floor(at / barMs) * barMs) {
-        return [...points.slice(0, -1), { at, price: quote.price }];
+        const candle = last.candle ? { ...last.candle, close: quote.price, high: Math.max(last.candle.high, quote.price), low: Math.min(last.candle.low, quote.price), volume: null } : undefined;
+        return [...points.slice(0, -1), { at, price: quote.price, ...(candle ? { candle } : {}) }];
       }
-      return [...points, { at, price: quote.price }];
+      const candle = barMs && last?.candle ? { time: Math.floor(at / barMs) * barMs, open: quote.price, high: quote.price, low: quote.price, close: quote.price, volume: null } : undefined;
+      return [...points, { at, price: quote.price, ...(candle ? { candle } : {}) }];
     });
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */

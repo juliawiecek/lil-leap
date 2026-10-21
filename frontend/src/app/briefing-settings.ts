@@ -35,15 +35,16 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-bu
   `,
   styles: [
     `
-      .card { display: grid; gap: 14px; padding: 14px 20px; border: 1px solid #262926; border-radius: 8px; background: #111111; }
+      .card { display: grid; gap: 14px; padding: 14px 20px; border: 1px solid var(--surface-tone-04); border-radius: 8px; background: var(--surface-tone-03); }
       .card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .card-text b { font-size: 14px; font-weight: 600; }
-      .card-text small { max-width: 56ch; color: #a4a79e; font-size: 12.5px; line-height: 1.5; }
-      kbd { padding: 0 5px; border: 1px solid #3a3f38; border-radius: 4px; font: inherit; font-weight: 700; }
+      .card-text small { max-width: 56ch; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+      kbd { padding: 0 5px; border: 1px solid var(--surface-tone-02); border-radius: 4px; font: inherit; font-weight: 700; }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
-      label { display: grid; gap: 4px; color: #a4a79e; font-size: 12px; }
-      select { min-height: 32px; padding: 0 8px; border: 1px solid #3a3f38; border-radius: 8px; background: #0b0c0b; color: #f2f0e9; font: inherit; }
-      select:focus-visible { outline: 2px solid #f2efe6; outline-offset: 2px; }
+      label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
+      select { min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);
+        color: var(--text); font: inherit; }
+      select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       @media (max-width: 480px) { .card { padding-inline: 12px; } }
     `,
   ],

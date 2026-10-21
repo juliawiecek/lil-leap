@@ -116,22 +116,22 @@
             <div class="summary-metrics">
               <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '▲ ' : dayGain() < 0 ? '▼ ' : '' }}{{ dayGain() | currency }} ({{ dayGainPercent() | number: '1.2-2' }}%) <small>Today</small></span>
+                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
               </div>
               <div>
                 <span>Buying Power</span
                 ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
               </div>
               <div>
-                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
-                ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0">{{ dayGainPercent() > 0 ? '+' : '' }}{{ dayGainPercent() | number: '1.2-2' }}%</b>
+                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></strong
+                ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></b>
               </div>
               <div>
                 <span>Total Return</span
                 ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                  >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                  ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
                 ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                  >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b
+                  ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></b
                 >
               </div>
               <div>
@@ -191,21 +191,20 @@
                           </button>
                           <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
                         </td>
-                        <td>@for (t of [tickOf(p.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</span>}</td>
+                        <td>@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</app-price-flash>}</td>
                         <td
                           [class.gain]="quote(p.symbol).change > 0"
                           [class.loss]="quote(p.symbol).change < 0"
                         >
-                          {{ quote(p.symbol).change > 0 ? '+' : ''
-                          }}{{ quote(p.symbol).change | number: '1.2-2' }}%
+                          <app-financial-change [value]="quote(p.symbol).change" unit="percent" />
                         </td>
                         <td>{{ p.quantity }}</td>
                         <td>{{ p.value | currency }}</td>
                         <td [class.gain]="p.day > 0" [class.loss]="p.day < 0">
-                          {{ p.day > 0 ? '+' : '' }}{{ p.day | currency }}
+                          <app-financial-change [value]="p.day" unit="currency" />
                         </td>
                         <td [class.gain]="p.total > 0" [class.loss]="p.total < 0">
-                          {{ p.total > 0 ? '+' : '' }}{{ p.total | currency }}
+                          <app-financial-change [value]="p.total" unit="currency" />
                         </td>
                         <td>
                           <span class="weight-cell">{{ p.weight | number: '1.1-1' }}%<span class="weight-bar" aria-hidden="true"><i [style.width.%]="p.weight"></i></span></span>
@@ -246,19 +245,19 @@
                   <div>
                     <span>Day P&amp;L</span
                     ><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"
-                      >{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
+                      ><app-financial-change [value]="dayGain()" unit="currency" /></strong
                     >
                   </div>
                   <div>
                     <span>Total Return</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                      ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
                     >
                   </div>
                   <div>
                     <span>Return %</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</strong
+                      ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></strong
                     >
                   </div>
                 </div>
@@ -322,9 +321,9 @@
                           <b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ q.sector }}</small>
                         </button>
                       </td>
-                      <td>@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | number: '1.2-2' }}</span>}</td>
+                      <td>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | number: '1.2-2' }}</app-price-flash>}</td>
                       <td [class.gain]="q.change > 0" [class.loss]="q.change < 0">
-                        {{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%
+                        <app-financial-change [value]="q.change" unit="percent" />
                       </td>
                       <td class="muted">{{ q.sector }}</td>
                     </tr>
@@ -343,8 +342,8 @@
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
-                  >@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</span>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
-                    >{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</strong
+                  >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
+                    ><app-financial-change [value]="q.change" unit="percent" /></strong
                   >
                 </button>
               } @empty {
@@ -358,7 +357,7 @@
                     ><span class="sector-bar"
                       ><i [style.width.%]="s.width" [class.negative-bar]="s.change < 0"></i></span
                     ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
-                      >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
+                      ><app-financial-change [value]="s.change" unit="percent" /></b
                     >
                   </div>
                 } @empty {
@@ -383,7 +382,7 @@
                     [style.--heat]="q.change < 0 ? -q.change : q.change"
                     (click)="choose(q)"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</span>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
@@ -410,7 +409,7 @@
                     ><span class="sector-bar"
                       ><i [style.width.%]="s.width" [class.negative-bar]="s.change < 0"></i></span
                     ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
-                      >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
+                      ><app-financial-change [value]="s.change" unit="percent" /></b
                     >
                   </div>
                 } @empty {
@@ -422,8 +421,8 @@
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
-                  >@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</span>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
-                    >{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</strong
+                  >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
+                    ><app-financial-change [value]="q.change" unit="percent" /></strong
                   >
                 </button>
               }
@@ -458,13 +457,13 @@
                   </div>
                   <div>
                     <span>Day P&amp;L</span
-                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</b
-                    ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0">{{ dayGainPercent() > 0 ? '+' : '' }}{{ dayGainPercent() | number: '1.2-2' }}%</small>
+                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></b
+                    ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></small>
                   </div>
                   <div>
                     <span>Total Return</span
-                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0">{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</b
-                    ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0">{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</small>
+                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" unit="currency" /></b
+                    ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
                   </div>
                 </div>
                 <div class="split-bar" role="img" [attr.aria-label]="'Equities ' + exposure().equitiesPercent + '%, Cash ' + exposure().cashPercent + '%'">
