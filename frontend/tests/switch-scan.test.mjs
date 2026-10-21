@@ -119,16 +119,16 @@ test('inside a group, "Go back?" is offered every 30 seconds wherever the ring i
   assert.equal(describe(engine.current()), 'group:Trade');
 });
 
-test('an unanswered offer gives way after one step, and the ring carries on where it was', (t) => {
+test('an unanswered offer gives way after one step, and the ring carries on with the next item', (t) => {
   const engine = setup(t, { backEveryMs: 30000, pauseEveryMs: 0 });
   choose(engine, 'group:Trade');
-  engine.next();
-  const before = describe(engine.current());
+  assert.equal(describe(engine.current()), 'control:Buy');
   engine.next(Date.now() + 31000);
   assert.equal(engine.prompt, 'back');
+  assert.equal(describe(engine.current()), 'control:Buy', 'the offer shows in place of a step');
   engine.next(Date.now() + 31500);
   assert.equal(engine.prompt, null);
-  assert.equal(describe(engine.current()), before, 'back on the same item, not skipped ahead');
+  assert.equal(describe(engine.current()), 'control:Number of shares', 'on to the next item, so a long item is never re-read in a loop');
   engine.next(Date.now() + 32000);
   assert.equal(engine.prompt, null, 'not offered again until another 30 seconds pass');
 });
@@ -240,7 +240,7 @@ test('the timer waits for the ring to finish reading, but never stalls on a stuc
   spoken.at(-1).onend();
   t.mock.timers.tick(700);
   assert.equal(describe(engine.current()), 'group:Trade');
-  t.mock.timers.tick(5600);
+  t.mock.timers.tick(9100);
   assert.notEqual(describe(engine.current()), 'group:Trade', 'moves on after the speech wait runs out');
 });
 

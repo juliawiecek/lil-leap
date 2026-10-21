@@ -40,6 +40,7 @@ import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
+import { spokenCompany } from './briefing';
 import { SwitchScanService } from './switch-scan';
 
 /** How often the portfolio-value chart re-reads its history. */
@@ -226,6 +227,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartHistory = signal<ValuePoint[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
+  /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
+  readonly spokenStock = spokenCompany;
   /** The last chart summary said aloud, for screen readers (a polite live region). */
   readonly chartAnnouncement = signal('');
   readonly #switchScan = inject(SwitchScanService, { optional: true });

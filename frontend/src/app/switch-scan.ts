@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { accessibilityStore } from './accessibility';
+import { speakable } from './speech-text';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff
@@ -54,8 +55,17 @@ const DEFAULT_SCAN: ScanSettings = {
 const CYCLES_BEFORE_BACK = 2;
 /** Spoken items are read a little faster than the briefing, since they are short. */
 const SPEECH_RATE = 1.1;
-/** The ring waits for an item to be read out, but never longer than this if the speech engine stalls. */
-const MAX_SPEECH_WAIT_MS = 5000;
+/**
+ * The longest the ring waits for a sentence. It normally moves on when the browser says the
+ * sentence has finished; this cap only matters if the speech engine stalls. Generous on purpose:
+ * Chrome can take a few seconds to start, and reads amounts like "$24,550.68" slowly.
+ */
+export function speechTime(text: string): number {
+  return Math.min(MIN_SPEECH_MS + (text.length * MS_PER_CHARACTER) / SPEECH_RATE, MAX_SPEECH_MS);
+}
+const MIN_SPEECH_MS = 4000;
+const MS_PER_CHARACTER = 150;
+const MAX_SPEECH_MS = 30000;
 
 /** Saved settings, or the defaults when nothing valid is stored. */
 export function parseScanSettings(saved: unknown): ScanSettings {
@@ -168,8 +178,11 @@ export function screenBox(el: Element): { left: number; top: number; width: numb
   return { left, top, width: right - left, height: bottom - top };
 }
 
-/** The name a person would use for an element: its label, aria-label, group name or text. */
-export function scanLabel(el: HTMLElement): string {
+/**
+ * The name a person would use for an element: its label, aria-label, group name or text. Short
+ * names (`max`) suit announcements like "Buy selected."; the ring reads the whole thing.
+ */
+export function scanLabel(el: HTMLElement, max = 80): string {
   const aria = el.getAttribute('aria-label') ?? el.getAttribute('data-scan-group');
   if (aria) {
     return aria;
@@ -177,13 +190,22 @@ export function scanLabel(el: HTMLElement): string {
   const labelled = el.getAttribute('aria-labelledby');
   const byId = labelled ? el.ownerDocument.getElementById(labelled)?.textContent : '';
   const fieldLabel = (el as HTMLInputElement).labels?.[0]?.textContent;
-  const text = byId || fieldLabel || el.textContent || (el as HTMLInputElement).placeholder || el.getAttribute('title') || '';
-  return text.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Control';
+  const text = byId || fieldLabel || shownText(el) || (el as HTMLInputElement).placeholder || el.getAttribute('title') || '';
+  return text.replace(/\s+/g, ' ').trim().slice(0, max) || 'Control';
 }
 
-/** What the ring says on a control: its name, plus its state or value when it has one. */
+/**
+ * Text as it is laid out: lines shown one under the other ("All in one company" above "Every
+ * invested dollar …") are read as sentences, not glued together as "companyEvery".
+ */
+function shownText(el: HTMLElement): string {
+  const lines = (el.innerText || el.textContent || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines.map((line, i) => (i < lines.length - 1 && !/[.!?:,]$/.test(line) ? `${line}.` : line)).join(' ');
+}
+
+/** What the ring says on a control: its whole name, plus its state or value when it has one. */
 export function spokenItem(el: HTMLElement): string {
-  const label = scanLabel(el);
+  const label = scanLabel(el, Number.POSITIVE_INFINITY);
   const field = el as HTMLInputElement;
   if (el.tagName === 'INPUT' && field.type === 'checkbox') {
     return `${label}, ${field.checked ? 'on' : 'off'}`;
@@ -227,7 +249,8 @@ export class ScanEngine {
   #bar: HTMLElement | null = null;
   /** The ring's own sentence being read, so the ring knows when it is talking and never cuts off the briefing. */
   #utterance: SpeechSynthesisUtterance | null = null;
-  #spokeAt = 0;
+  /** When what the ring is saying should be finished; it waits until then before moving on. */
+  #speechUntil = 0;
   /** The item last read out, so a redraw does not read it again. */
   #spokenKey: unknown = null;
   /** An announcement was just read; the next item waits for it instead of cutting it off. */
@@ -366,21 +389,16 @@ export class ScanEngine {
 
   /**
    * Moves the ring to the next item; after a few unanswered passes, leaves the group. When an offer
-   * is due ("Go back?", "Pause?") it shows for one step instead, then the ring carries on from
-   * where it was.
+   * is due ("Go back?", "Pause?") it shows for one step instead; left unanswered, the ring carries
+   * on with the next item (not the one before the offer, which was already read out).
    */
   next(now = Date.now()): void {
     if (!this.#running || this.#paused) {
       return;
     }
-    if (this.#prompt) {
-      this.#prompt = null;
-      this.#spokenKey = null;
-      this.#announce('');
-      this.#render();
-      return;
-    }
-    const due = this.#duePrompt(now);
+    const offered = this.#prompt;
+    this.#prompt = null;
+    const due = offered ? null : this.#duePrompt(now);
     if (due) {
       this.#prompt = due;
       if (due === 'back') {
@@ -419,7 +437,7 @@ export class ScanEngine {
       this.#index = 0;
       this.#cycles = 0;
       this.#spokenKey = null;
-      this.#announce('Scanning resumed.');
+      this.#announce('Scanning again.');
       this.#render();
       this.#restartTimer();
       return;
@@ -436,7 +454,8 @@ export class ScanEngine {
       this.#spokenKey = null;
     } else if (item.kind === 'pause') {
       this.#paused = true;
-      this.#announce('Scanning paused. Press the switch to resume.');
+      // "Resume" is read like the noun résumé, so it is never used.
+      this.#announce(`Paused. Press ${this.key === 'Space' ? 'space' : 'Enter'} to continue.`);
     } else if (item.kind === 'group') {
       this.#stack.push(item.el);
       this.#index = 0;
@@ -631,7 +650,8 @@ export class ScanEngine {
     const options = [...select.options].filter((o) => !o.disabled);
     for (let i = 0; i < options.length; i += 5) {
       const chunk = options.slice(i, i + 5);
-      const text = (o: HTMLOptionElement) => o.textContent?.trim() ?? o.value;
+      // An option can carry a spoken name ("Apple") alongside what it shows ("AAPL · Apple Inc.").
+      const text = (o: HTMLOptionElement) => o.getAttribute('aria-label') ?? o.textContent?.trim() ?? o.value;
       const row = this.#padRow(pad, chunk.length > 1 ? `${text(chunk[0])} to ${text(chunk.at(-1)!)}` : text(chunk[0]));
       for (const option of chunk) {
         this.#padButton(row, text(option), text(option), () => {
@@ -908,8 +928,10 @@ export class ScanEngine {
     this.#queueNext = false;
   }
 
-  #say(text: string, queue: boolean): void {
+  #say(raw: string, queue: boolean): void {
     const synth = globalThis.speechSynthesis;
+    // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
+    const text = this.#picker ? raw : speakable(raw);
     if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
       return;
     }
@@ -930,13 +952,15 @@ export class ScanEngine {
     utterance.onend = done;
     utterance.onerror = done;
     this.#utterance = utterance;
-    this.#spokeAt = Date.now();
+    // A queued sentence starts after the one being read, so the ring waits for both.
+    const from = queue ? Math.max(Date.now(), this.#speechUntil) : Date.now();
+    this.#speechUntil = from + speechTime(text);
     synth.speak(utterance);
   }
 
-  /** The ring is still reading an item out, so it should not move on yet. */
+  /** The ring is still reading something out (until the browser says it finished), so it waits. */
   #talking(): boolean {
-    return !!this.#utterance && Date.now() - this.#spokeAt < MAX_SPEECH_WAIT_MS;
+    return !!this.#utterance && Date.now() < this.#speechUntil;
   }
 
   #restartTimer(): void {

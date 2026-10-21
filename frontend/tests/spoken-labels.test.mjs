@@ -4,6 +4,36 @@ import { render } from './dom-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { PERIOD_NAMES, chartSummary, spokenChange } = await import('../src/app/chart-speech.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
+const { STOCK_NAMES, speakable, stockName } = await import('../src/app/speech-text.ts');
+const { speechTime } = await import('../src/app/switch-scan.ts');
+
+test('all 33 listed stocks have spoken names, so no symbol is ever spelled out', () => {
+  assert.equal(Object.keys(STOCK_NAMES).length, 33);
+  assert.equal(stockName('googl'), 'Google');
+  assert.equal(stockName('AMZN'), 'Amazon');
+  assert.equal(stockName('ZZZZ'), null);
+});
+
+test('symbols, arrows and bullets are not read literally', () => {
+  assert.equal(speakable('Sign out ↗'), 'Sign out');
+  assert.equal(speakable('Novice demo account ••B3B9$24,550.68 available'), 'Novice demo account, ending in B3B9, $24,550.68 available');
+  assert.equal(speakable('AMZN'), 'Amazon');
+  assert.equal(speakable('Buy 2 GOOGL · about $450.09 · fills at up to $459.09'), 'Buy 2 Google, about $450.09, fills at up to $459.09');
+  assert.equal(speakable('BAC and BA'), 'Bank of America and Boeing', 'longer symbols are not cut short');
+  assert.equal(speakable('★ Saved'), 'Saved');
+  assert.equal(speakable('◀ Back'), 'Back');
+  assert.equal(speakable('Price protection 2%'), 'Price protection 2%');
+  assert.equal(speakable('Loading…'), 'Loading');
+  assert.equal(speakable('Open · Closes 3:00 PM CT'), 'Open, Closes 3:00 PM CT', 'other capitals are left alone');
+});
+
+test('if the speech engine never says it finished, the ring still moves on, later for longer sentences', () => {
+  const short = speechTime('Buy');
+  const summary = speechTime('1 month. When you first added money you had $25,000.00. Now you have $25,000.63, unchanged.');
+  assert.ok(short >= 4000 && short < 5000, `a word: about 4 s at most (${short} ms)`);
+  assert.ok(summary > 15000, `a chart summary is never cut at 5 seconds (${summary} ms)`);
+  assert.equal(speechTime('x'.repeat(5000)), 30000, 'never held longer than 30 s');
+});
 
 test('changes are said in words with two decimals, since daily moves are small', () => {
   assert.equal(spokenChange(1.254), 'up 1.25 percent');

@@ -84,13 +84,19 @@ test('amounts, percents and durations are worded the way people say them', () =>
 });
 
 test('company names drop legal suffixes', () => {
+  // Listed stocks by their everyday names.
   assert.equal(spokenCompany('Apple Inc.', 'AAPL'), 'Apple');
-  assert.equal(spokenCompany('NVIDIA Corporation', 'NVDA'), 'NVIDIA');
-  assert.equal(spokenCompany('Amazon.com, Inc.', 'AMZN'), 'Amazon.com');
-  assert.equal(spokenCompany('Alphabet Inc. Class A', 'GOOGL'), 'Alphabet');
-  assert.equal(spokenCompany('', 'XYZ'), 'XYZ');
+  assert.equal(spokenCompany('NVIDIA Corporation', 'NVDA'), 'Nvidia');
+  assert.equal(spokenCompany('Amazon.com, Inc.', 'AMZN'), 'Amazon');
+  assert.equal(spokenCompany('Alphabet Inc.', 'GOOGL'), 'Google');
   assert.equal(spokenCompany('The Boeing Company', 'BA'), 'Boeing');
+  // Anything else with its legal suffix dropped.
+  assert.equal(spokenCompany('Acme Widgets, Inc.', 'ACME'), 'Acme Widgets');
+  assert.equal(spokenCompany('Example Holdings Corp.', 'EXH'), 'Example');
+  assert.equal(spokenCompany('Sample Co Class B', 'SMPL'), 'Sample');
+  assert.equal(spokenCompany('The Widget Company', 'WDGT'), 'Widget');
   assert.equal(spokenCompany('The Trade Desk', 'TTD'), 'The Trade Desk', '"The" stays when it is part of the name');
+  assert.equal(spokenCompany('', 'XYZ'), 'XYZ');
 });
 
 test('the market sentence says when it closes or opens', () => {
@@ -129,7 +135,7 @@ test('a full briefing reads the market, portfolio, mover, orders and buying powe
     'Good afternoon.',
     'The market is open and closes in 2 hours and 14 minutes.',
     'Your portfolio is worth about $24,500, up $186, or 0.8 percent, since you bought.',
-    'Your biggest mover today is NVIDIA, down 3.1 percent.',
+    'Your biggest mover today is Nvidia, down 3.1 percent.',
     'One order changed today.',
     'You bought 2 shares of Apple at $182.',
     'You have $10,000 in buying power.',

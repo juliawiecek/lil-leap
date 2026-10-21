@@ -1,4 +1,5 @@
 import type { MarketStatus } from './market-status-api';
+import { stockName } from './speech-text';
 
 /**
  * Spoken market briefing: turns what the dashboard already shows into a few short sentences
@@ -93,20 +94,32 @@ export function spokenDuration(ms: number): string {
 }
 
 /**
- * A company name as people say it: "Apple Inc." becomes "Apple" and "The Boeing Company" becomes
- * "Boeing". Falls back to the symbol.
+ * A company name as people say it: listed stocks by their everyday name ("GOOGL" is "Google"),
+ * others with the legal suffix dropped ("Acme Holdings Inc." becomes "Acme"). Falls back to the symbol.
  */
 export function spokenCompany(name: string, symbol: string): string {
-  let short = name
-    .replace(/[,.]?\s+(Inc|Corp|Corporation|Company|Co|Ltd|Limited|plc|Holdings|Group|Class [A-Z])\.?$/i, '')
-    .replace(/[,.]?\s+(Inc|Corp|Corporation|Company|Co|Ltd|Limited|plc)\.?$/i, '')
-    .trim();
-  // "The" reads naturally only with the full legal name ("The Boeing Company", but "Boeing").
-  if (short !== name.trim()) {
-    short = short.replace(/^The\s+(?=\S)/i, '');
+  const known = stockName(symbol);
+  if (known) {
+    return known;
   }
+  let words = name.split(' ').filter(Boolean);
+  const bare = (word: string) => word.replaceAll(',', '').replaceAll('.', '').toLowerCase();
+  const full = words.length;
+  if (words.length > 2 && bare(words.at(-2)!) === 'class' && /^[A-Z]$/.test(words.at(-1)!)) {
+    words = words.slice(0, -2);
+  }
+  while (words.length > 1 && LEGAL_SUFFIXES.has(bare(words.at(-1)!))) {
+    words = words.slice(0, -1);
+  }
+  // "The" reads naturally only with the full legal name ("The Acme Company", but "Acme").
+  if (words.length < full && words.length > 1 && bare(words[0]) === 'the') {
+    words = words.slice(1);
+  }
+  const short = words.join(' ').replace(/[,.]$/, '');
   return short || symbol;
 }
+
+const LEGAL_SUFFIXES = new Set(['inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'plc', 'holdings', 'group', 'incorporated']);
 
 /** The market sentence: when it closes if open, or when it opens if closed. */
 export function marketSentence(market: MarketStatus | null, now: Date, locale?: string): string {
