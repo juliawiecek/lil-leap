@@ -39,6 +39,29 @@ function chart(t, reduced = false, seconds = 60) {
 // Node has no native frame scheduler; tests drive every frame explicitly.
 globalThis.requestAnimationFrame ??= () => 0;
 globalThis.cancelAnimationFrame ??= () => {};
+test('resize refreshes the existing range, reduced motion finishes updates, and destroyed history stays inert', (t) => {
+  const c = chart(t);
+  c.viewport.setHistory([
+    { time: START, price: 100 },
+    { time: START + 5, price: 105 },
+  ]);
+  const range = c.last.range;
+  c.viewport.refresh();
+  assert.equal(c.last.range, range);
+  c.viewport.append({ time: START + 10, price: 110 });
+  c.viewport.finishAnimation();
+  assert.equal(c.frames.size, 0);
+  assert.equal(c.last.range.reveal, START + 10);
+  c.viewport.pause();
+  c.viewport.finishAnimation();
+  assert.equal(c.frames.size, 0);
+  c.viewport.destroy();
+  const last = c.last;
+  c.viewport.setHistory([{ time: START + 100, price: 999 }]);
+  c.viewport.refresh();
+  assert.equal(c.last, last);
+});
+
 test('both viewport edges and Y scale ease smoothly while true historical values are untouched', (t) => {
   const c = chart(t);
   c.viewport.append({ time: START, price: 100 });

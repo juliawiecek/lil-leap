@@ -97,8 +97,11 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
     AccessibilitySettings, KeyboardShortcuts,
   ],
   templateUrl: './novice-dashboard.html',
-  styleUrls: ['./novice-dashboard.scss', './novice-dashboard.refresh.scss', './novice-settings.scss'],
+  
+    
+  styleUrls: ['./novice-dashboard.scss', './novice-dashboard.refresh.scss', './novice-settings.scss', './novice-allocation.scss'],
   host: { '(document:keydown)': 'onShortcutKey($event)' },
+
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
@@ -292,13 +295,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     const range = this.chartSpan();
     const session = range?.session;
-    let live = this.chartLive().filter((p) => p.at >= history[0].at && (!session || p.at <= session.close));
+    // Quotes keep arriving outside order-execution hours. Keep their actual times instead of
+    // moving the closing point's price while its timestamp (and the viewport) stays frozen.
+    let live = this.chartLive().filter((p) => p.at >= history[0].at);
     if (range && !session) {
       // Longer periods space points evenly, so live values are kept one per price bar, as the history is.
       live = lastPerBar(live, barStep(range).ms);
     }
     if (!live.length) {
-      return [...history.slice(0, -1), { at: history.at(-1)!.at, value: this.portfolioValue() }];
+      return history;
     }
     return [...history.filter((p) => p.at < live[0].at), ...live];
   });
@@ -672,6 +677,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       ].filter((e) => Number.isFinite(e.at));
       const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
       const range = chartRange(this.chartPeriod(), now, fundedAt(account?.created_at, cash), session);
+      if (this.chartPeriod() === '1D') {
+        // The demo quote feed runs after the regular session too; market hours gate fills,
+        // not the history we display. Include those recorded quotes on reload as well.
+        range.end = now;
+      }
       const prices = await this.#closes([...new Set(fills.map((f) => f.symbol))], range, now);
       if (request !== this.#chartRequest || this.destroyed) {
         return;

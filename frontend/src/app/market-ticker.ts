@@ -92,8 +92,8 @@ import { marketBadgeText } from './market-status-api';
       .badge { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 4px 10px 4px 0; border-radius: 999px;
         background: transparent; color: #94c973; font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
-      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); } 100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); } }
-      .badge.closed { color: #e2b65a; }
+      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+      .badge.closed { color: var(--market-status-accent, #e2b65a); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
       button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;

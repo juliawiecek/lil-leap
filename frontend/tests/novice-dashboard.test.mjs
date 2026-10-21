@@ -149,15 +149,39 @@ test('every live value is added to the line, so its dips and rises stay instead 
   assert.deepEqual(desk.chartPoints().map((p) => p.value), [20000, 19000, 19100], 'a reload keeps the live values it covers');
   feed.push(listed());
   assert.equal(desk.chartPoints().length, 4, 'each price update adds a point, even with only cash');
-  // 1D: a live value after the session's close is left off; it shows above the chart.
+  // Market closure gates executions, not the continuously running demo quote feed.
   const session = { open: loaded - 3600000, close: loaded + 500 };
   desk.chartHistory.set([{ at: loaded - 3600000, value: 20000 }, { at: loaded, value: 20000 }]);
   desk.chartSpan.set({ start: session.open, end: loaded, fromOpening: false, session });
-  assert.ok(desk.chartPoints().every((p) => p.at <= session.close));
+  assert.equal(desk.chartPoints().at(-1).at, desk.chartLive().at(-1).at);
+  assert.ok(desk.chartPoints().at(-1).at > session.close);
+  assert.deepEqual(desk.chartPoints().slice(0, 2), desk.chartHistory(), 'closing history keeps its original values and times');
+  desk.chartLive.set([]);
+  assert.deepEqual(desk.chartPoints(), desk.chartHistory(), 'without a new observation, live balances cannot rewrite the closing price');
+  desk.chartLive.set(times.slice(-2).map((at, i) => ({ at, value: [19000, 19100][i] })));
   // Longer periods keep one live value per price bar, as the history has.
   desk.chartSpan.set({ start: loaded - 7 * 86400000, end: loaded, fromOpening: false });
   assert.equal(desk.chartPoints().length, 3, 'the history, then only the latest of the live values in their hour');
   assert.equal(desk.chartPoints().at(-1).value, desk.portfolioValue());
+  desk.ngOnDestroy();
+});
+
+test('reloading the day after close includes recorded after-hours quotes', async t => {
+  const now = Date.parse('2026-10-20T21:30:00Z');
+  t.mock.method(Date, 'now', () => now);
+  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 900, holdings: [] }], chart: true });
+  desk.cashActivityClient = { list: async () => [{ occurredAt: '2026-10-19T13:00:00Z', amount: 1000 }] };
+  desk.orderHistoryClient = { list: async () => [historyRow('FILLED', {
+    quantity: 1, filledQuantity: 1, fillPrice: 100, filledAt: '2026-10-20T14:00:00Z',
+  })] };
+  feed.client = { closes: async () => [
+    { at: Date.parse('2026-10-20T19:30:00Z'), price: 110 },
+    { at: Date.parse('2026-10-20T21:29:00Z'), price: 115 },
+  ] };
+  await desk.loadChart();
+  assert.equal(desk.chartSpan().session.close, Date.parse('2026-10-20T20:00:00Z'));
+  assert.equal(desk.chartSpan().end, now);
+  assert.ok(desk.chartHistory().some(p => p.at === Date.parse('2026-10-20T21:29:00Z') && p.value === 1015));
   desk.ngOnDestroy();
 });
 
@@ -219,6 +243,10 @@ test('the allocation ring is the real share in stocks', async t => {
   assert.equal(desk.stocksShare().toFixed(2), ((13691.76 / 20111.94) * 100).toFixed(2));
   desk.applyPortfolio({ cash: 100, holdings: [] });
   assert.equal(desk.stocksShare(), 0);
+  desk.applyPortfolio({ cash: 0, holdings: [holding('AAPL', 1, 100)] });
+  assert.equal(desk.stocksShare(), 100);
+  desk.applyPortfolio({ cash: 9999, holdings: [holding('AAPL', 1, 1)] });
+  assert.ok(desk.stocksShare() > 0 && desk.stocksShare() < 1, 'small allocations retain their real share');
   desk.applyPortfolio({ cash: 0, holdings: [] });
   assert.equal(desk.stocksShare(), 0, 'an empty account draws no arc');
 });
