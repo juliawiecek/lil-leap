@@ -8,8 +8,9 @@ import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, ErrorHandler, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { SafeErrorHandler } from './safe-error-handler';
-import { provideAccessibility } from './accessibility';
+import { provideAccessibility, provideAccessibilityStartup } from './accessibility';
 import { provideColourMode } from './colour-mode';
+import { SwitchScanService } from './switch-scan';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,6 +20,9 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AppSessionService).initialize()),
     provideAccessibility(),
     provideColourMode(),
+    // Switch control resumes straight after a reload when it was left on, and Alt+S starts it
+    // from any page, sign-in included (PS-19).
+    provideAccessibilityStartup(() => inject(SwitchScanService).listenForShortcut()),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },

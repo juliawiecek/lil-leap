@@ -5,6 +5,10 @@ import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
+import { spokenCompany } from './briefing';
+import { spokenChange } from './chart-speech';
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 /**
  * Live ticker strip for both dashboards (TS-14.7 AC2, PS-02): the market's open/closed badge and
@@ -28,6 +32,7 @@ import { marketBadgeText } from './market-status-api';
               type="button"
               [class.flash-up]="quote.direction === 'up'"
               [class.flash-down]="quote.direction === 'down'"
+              [attr.aria-label]="spoken(quote)"
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
@@ -125,6 +130,16 @@ export class MarketTicker implements OnDestroy {
 
   delayed(quotedAt: string): boolean {
     return isDelayed(quotedAt, this.feed.now());
+  }
+
+  /** How a price reads aloud and to screen readers: "Apple, $224.52, up 0.40 percent". */
+  spoken(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    const company = spokenCompany(quote.name, quote.symbol);
+    if (!quote.price) {
+      return `${company}, price not available yet`;
+    }
+    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
+    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
   }
 
   ngOnDestroy(): void {
