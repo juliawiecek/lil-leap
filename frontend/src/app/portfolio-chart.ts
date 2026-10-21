@@ -24,6 +24,7 @@ import {
   valueScale,
 } from './portfolio-history';
 import { centralTime } from './app-time';
+import { PERIOD_NAMES } from './chart-speech';
 import {
   EMERALD_AREA,
   chartPaths,
@@ -158,6 +159,7 @@ let nextPortfolioChartId = 0;
           type="button"
           [class.selected]="period() === item"
           [attr.aria-pressed]="period() === item"
+          [attr.aria-label]="periodNames[item]"
           (click)="periodChange.emit(item)"
         >
           {{ item }}
@@ -502,6 +504,8 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   }
 
   readonly periods = CHART_PERIODS;
+  /** Spoken names for the period buttons ("1 month", not "1M"). */
+  readonly periodNames = PERIOD_NAMES;
   readonly width = WIDTH;
   readonly height = HEIGHT;
   /** Index of the point under the cursor, or -1. */

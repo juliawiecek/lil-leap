@@ -317,6 +317,23 @@
   --series-dash: none;
   --allocation-pattern-ink: var(--category-tone-07);
   --allocation-outline: var(--text-muted);
+  /* Audio briefing and switch-control palette (PS-18, PS-19). */
+  --briefing-border: #2c3d45;
+  --briefing-surface: #0f191d;
+  --briefing-border-hover: #4d6a75;
+  --briefing-focus: #8ee6a8;
+  --briefing-active: #51d88c;
+  --briefing-panel: #0d171b;
+  --briefing-control: #13232a;
+  --briefing-text: #c8d2dc;
+  --briefing-active-surface: #12301f;
+  --briefing-divider: #22323a;
+  --briefing-text-muted: #aebaca;
+  --scan-accent: #ffd84d;
+  --scan-glow: #ffd84d88;
+  --scan-wash: #ffd84d14;
+  --scan-surface: #15140c;
+  --scan-text: #fff3c4;
 }
 
 :root[data-colour-mode="red-green"] {
@@ -523,6 +540,18 @@
   --chart-2: #8cdbbd;
   --chart-3: var(--loss);
   --chart-4: #dce4e2;
+}
+
+/* New controls share the active accessibility palette while Off retains their original colours. */
+:root:is([data-colour-mode="red-green"], [data-colour-mode="blue-yellow"]) {
+  --briefing-focus: var(--gain);
+  --briefing-active: var(--gain);
+  --briefing-active-surface: color-mix(in srgb, var(--gain) 12%, var(--surface));
+  --scan-accent: var(--warning);
+  --scan-glow: color-mix(in srgb, var(--warning) 53.3333%, transparent);
+  --scan-wash: color-mix(in srgb, var(--warning) 7.8431%, transparent);
+  --scan-surface: color-mix(in srgb, var(--warning) 6%, var(--surface));
+  --scan-text: var(--text);
 }
 
 /*

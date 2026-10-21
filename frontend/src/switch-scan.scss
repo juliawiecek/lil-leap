@@ -1,0 +1,116 @@
+/*
+ * Switch control (switch-scan.ts, PS-19). The engine adds these elements itself, to the page or to
+ * the open dialog, so their styles are global. Kept apart from styles.scss so colour work there and
+ * switch control never edit the same file.
+ */
+.scan-ring {
+  position: fixed;
+  box-sizing: border-box;
+  z-index: 2147483000;
+  border: 4px solid var(--scan-accent);
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px var(--mask-ink), 0 0 22px 4px var(--scan-glow);
+  /* No glide: the ring is redrawn every frame on its item, so it stays exactly on moving prices. */
+  pointer-events: none;
+}
+.scan-ring.group {
+  border-style: dashed;
+  background: var(--scan-wash);
+}
+.scan-ring[hidden],
+.scan-chip[hidden] {
+  display: none;
+}
+.scan-chip {
+  position: fixed;
+  z-index: 2147482999;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--scan-accent);
+  color: var(--surface-tone-03);
+  font: 700 14px/1.2 var(--font-ui);
+  pointer-events: none;
+}
+.scan-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.scan-bar {
+  position: fixed;
+  z-index: 2147482998;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--scan-accent);
+  border-radius: 999px;
+  background: var(--scan-surface);
+  color: var(--scan-text);
+  font: 600 12px/1.2 var(--font-ui);
+}
+.scan-bar button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--scan-accent);
+  color: var(--surface-tone-03);
+  font: inherit;
+  cursor: pointer;
+}
+.scan-pad {
+  position: fixed;
+  z-index: 2147482990;
+  left: 50%;
+  bottom: 24px;
+  display: grid;
+  gap: 8px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 16px;
+  transform: translateX(-50%);
+  border: 2px solid var(--scan-accent);
+  border-radius: 14px;
+  background: var(--briefing-panel);
+  color: var(--text-tone-68);
+  box-shadow: 0 24px 60px var(--shadow-47);
+  font-family: var(--font-ui);
+}
+.scan-pad-title {
+  color: var(--briefing-text-muted);
+  font-size: 13px;
+}
+.scan-pad-value {
+  display: block;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--briefing-control);
+  font: 600 24px/1.2 var(--font-mono);
+}
+.scan-pad-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 10px;
+}
+.scan-pad-row button {
+  flex: 1;
+  min-height: 48px;
+  border: 1px solid var(--briefing-border);
+  border-radius: 8px;
+  background: var(--briefing-control);
+  color: inherit;
+  font: 600 18px/1 var(--font-ui);
+  cursor: pointer;
+}
+@media (forced-colors: active) {
+  .scan-ring {
+    border-color: Highlight;
+  }
+}

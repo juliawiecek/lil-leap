@@ -1,5 +1,7 @@
 import { Component, inject, output } from '@angular/core';
 import { ColourModeStore } from './colour-mode';
+import { BriefingSettingsCard } from './briefing-settings';
+import { SwitchScanSettings } from './switch-scan-settings';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds
@@ -9,8 +11,9 @@ import { ColourModeStore } from './colour-mode';
  */
 @Component({
   selector: 'app-accessibility-settings',
+  imports: [BriefingSettingsCard, SwitchScanSettings],
   template: `
-    <section class="a11y" aria-labelledby="accessibility-settings-title">
+    <section class="a11y" aria-labelledby="accessibility-settings-title" data-scan-group="Accessibility">
       <div class="a11y-intro">
         <h2 id="accessibility-settings-title">Accessibility</h2>
         <p>
@@ -33,6 +36,8 @@ import { ColourModeStore } from './colour-mode';
           </div>
         </fieldset>
         <!-- Feature cards (PS-18, PS-19, PS-21, PS-22, PS-27) go here, one per feature. -->
+        <app-briefing-settings />
+        <app-switch-scan-settings />
         <div class="a11y-card">
           <span class="a11y-text"
             ><b>Keyboard shortcuts</b><small>Every shortcut NextTrade understands. Press <kbd>?</kbd> anywhere to open the list.</small></span
