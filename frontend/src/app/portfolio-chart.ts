@@ -114,16 +114,15 @@ let nextPortfolioChartId = 0;
               <rect x="0" y="0" [attr.width]="width" [attr.height]="height" />
             </clipPath>
           </defs>
+          <!-- Animation owns geometry; change detection must not overwrite an in-flight frame. -->
           <g [attr.clip-path]="'url(#' + clipId + ')'">
-            <path class="area" [attr.d]="areaPath()" [attr.fill]="'url(#' + gradientId + ')'" />
+            <path class="area" [attr.fill]="'url(#' + gradientId + ')'" />
             <line
               class="baseline"
               x1="0"
               [attr.x2]="width"
-              [attr.y1]="baselineY()"
-              [attr.y2]="baselineY()"
             />
-            <path class="line" [attr.d]="path()" />
+            <path class="line" />
           </g>
           @if (active(); as point) {
             <line
@@ -137,7 +136,7 @@ let nextPortfolioChartId = 0;
           @if (active(); as point) {
             <path class="dot" [attr.d]="'M' + point.x + ',' + point.y + ' l0,0'" />
           } @else {
-            <path class="dot endpoint" [attr.d]="'M' + end().x + ',' + end().y + ' l0,0'" />
+            <path class="dot endpoint" />
           }
         </svg>
         @if (active(); as point) {
@@ -394,7 +393,11 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
           history = this.history();
         const scale = this.scale(),
           timed = this.timed();
-        const key = `${this.period()}:${this.dayView()}`;
+        const key = `${this.period()}:${this.dayView()}:${this.range()?.start ?? ''}`;
+        if (previousKey && previousKey !== key && this.#inspection() !== null) {
+          this.endScrub();
+          return;
+        }
         if (!svg || displayed.length < 2) {
           this.#animation?.cancel();
           previousSvg = undefined;
@@ -462,12 +465,14 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly periodChange = output<ChartPeriod>();
   /** The point under the cursor, or null when the cursor leaves the chart. */
   readonly scrub = output<ValuePoint | null>();
+  /** Freeze both observations and coordinates while inspecting; incoming data stays buffered. */
+  readonly #inspection = signal<readonly ValuePoint[] | null>(null);
 
   /** Ignore malformed observations before constructing a path; do not mutate input history. */
   readonly history = computed(() =>
     [
       ...new Map(
-        this.points()
+        (this.#inspection() ?? this.points())
           .filter((p) => Number.isFinite(p.at) && Number.isFinite(p.value))
           .map((p) => [p.at, p]),
       ).values(),
@@ -627,11 +632,18 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   endScrub(): void {
     if (this.#active() !== -1) {
       this.#active.set(-1);
+      this.#inspection.set(null);
       this.scrub.emit(null);
     }
   }
 
   #select(index: number): void {
+    if (index < 0 || index >= this.placed().length) {
+      return;
+    }
+    if (this.#inspection() === null) {
+      this.#inspection.set(this.history());
+    }
     if (index !== this.#active()) {
       this.#active.set(index);
       const point = this.placed()[index];

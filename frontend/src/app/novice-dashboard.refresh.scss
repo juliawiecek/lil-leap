@@ -5,12 +5,17 @@
    ========================================================================== */
 @keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes nt-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.55); }
-  70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(119, 156, 232, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(119, 156, 232, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(119, 156, 232, 0); }
 }
 :host {
-  --allocation-stocks: #5e9ed4;
+  --periwinkle: #779ce8;
+  --periwinkle-light: #91b1f1;
+  --periwinkle-deep: #678bdb;
+  --market-status-accent: var(--periwinkle-light);
+  --market-status-pulse: rgba(119, 156, 232, 0.55);
+  --allocation-stocks: var(--periwinkle);
   --allocation-cash: #68645e;
   background-color: #070707;
   background-image: radial-gradient(ellipse at center, rgba(7, 7, 7, 0.65), transparent 75%),
@@ -81,15 +86,12 @@ app-market-ticker {
 .page-heading { margin-bottom: 28px; align-items: flex-end; }
 .greeting { margin-bottom: 4px; font-size: 14px; font-weight: 500; letter-spacing: 0; }
 .market-status { gap: 14px; font-size: 13px; }
-.market-status > span:first-child { padding: 6px 12px; border-radius: 999px; background: rgba(148, 201, 115, 0.09); color: #94c973; font-weight: 700; }
-.market-status > span:first-child.open { background: rgba(148, 201, 115, 0.09); color: #94c973; }
-.market-status > span:first-child.closing-soon { background: rgba(79, 143, 207, 0.12); color: #79b8e8; }
-.market-status > span:first-child.closed { background: rgba(226, 182, 90, 0.1); color: #e2b65a; }
+.market-status > span:first-child { padding: 6px 12px; border-radius: 999px; background: rgba(119, 156, 232, 0.12); color: var(--market-status-accent); font-weight: 700; }
 .market-status > span + span { padding-left: 0; border-left: 0; }
 .market-status i { width: 7px; height: 7px; animation: nt-pulse 2.4s ease-out infinite; }
-.market-status .open i { background: #94c973; animation: nt-pulse 2.4s ease-out infinite; }
-.market-status .closing-soon i { background: #79b8e8; animation: none; }
-.market-status .closed i { background: #e2b65a; animation: none; }
+.market-status .open i { background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
+.market-status .closing-soon i { background: currentColor; animation: none; }
+.market-status .closed i { background: currentColor; animation: none; }
 .overview-grid { gap: 28px; grid-template-columns: minmax(0, 1.84fr) minmax(330px, 1fr); }
 .overview-grid.single-column { grid-template-columns: minmax(0, 1fr); }
 .primary-column { gap: 28px; }
@@ -263,21 +265,22 @@ th { color: #7e8279; font-weight: 600; }
 .tolerance-field:focus-within { border-color: #4a5048; box-shadow: 0 0 0 4px rgba(242, 239, 230, 0.06); }
 .detail-dialog .tolerance-field input { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: #f2f0e9; font: inherit; text-align: right; outline: none; }
 
-/* Buy is blue, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
+/* Buy uses the allocation's periwinkle, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
    and on its Review / Confirm button. Sell on the card is outlined so it doesn't shout. */
-.trade-actions .green-button { border-color: #5e9ed4; background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
-.trade-actions .green-button:hover { border-color: #79b8e8; background: linear-gradient(135deg, #4a88c6, #8bc7f2); box-shadow: 0 10px 30px rgba(79, 143, 207, 0.2); }
+/* Keep an opaque base beneath gradients so switching to the solid hover fill never fades through black. */
+.trade-actions .green-button { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: #101329; }
+.trade-actions .green-button:hover { border-color: var(--periwinkle-light); background: var(--periwinkle-light); box-shadow: 0 10px 30px rgba(119, 156, 232, 0.2); }
 .trade-actions > button:last-child { border: 1px solid #ff7a6e; background: transparent; color: #ff7a6e; }
 .trade-actions > button:last-child:hover { border-color: #ff7a6e; background: rgba(255, 122, 110, 0.1); color: #ff8f85; }
-.side-picker button:first-child.selected { background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
+.side-picker button:first-child.selected { background: linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: #101329; }
 .side-picker button:last-child.selected { background: linear-gradient(135deg, #c94f55, #ff8a7d); color: #21090b; }
-.green-button.submit-trade { border-color: #5e9ed4; background: linear-gradient(135deg, #3d78b5, #79b8e8); color: #07111d; }
-.green-button.submit-trade:hover { border-color: #79b8e8; background: linear-gradient(135deg, #4a88c6, #8bc7f2); box-shadow: 0 10px 30px rgba(79, 143, 207, 0.2); }
+.green-button.submit-trade { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: #101329; }
+.green-button.submit-trade:hover { border-color: var(--periwinkle-light); background: var(--periwinkle-light); box-shadow: 0 10px 30px rgba(119, 156, 232, 0.2); }
 .green-button.submit-trade.sell { border-color: #ff7a6e; background: linear-gradient(135deg, #c94f55, #ff8a7d); color: #21090b; }
 .green-button.submit-trade.sell:hover { border-color: #ff9b91; background: linear-gradient(135deg, #da5b60, #ff9b91); box-shadow: 0 10px 30px rgba(255, 122, 110, 0.2); }
 
 /* Category colours match the donut and asset-class legends. */
-.asset-dot.stocks, .stocks { background: linear-gradient(135deg, #3d78b5, #79b8e8); }
+.asset-dot.stocks, .stocks { background: linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); }
 .asset-dot.cash, .cash { background: var(--allocation-cash); }
 
 /* Overview greeting with today's summary sentence. */

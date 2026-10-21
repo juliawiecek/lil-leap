@@ -210,3 +210,57 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   assert.equal(chart.labelLeft(), 0);
   assert.equal(fixture.nativeElement.querySelector('svg'), null);
 });
+
+test('portfolio updates have one animation owner and inspection buffers new points without moving history', async (t) => {
+  environment(t);
+  const now = Date.parse('2026-10-20T21:30:00Z');
+  const points = Array.from({ length: 121 }, (_, i) => ({
+    at: now - 7200000 + i * 60000,
+    value: 5000 + Math.sin(i) * 2,
+  }));
+  const fixture = await render(t, PortfolioChart, { points });
+  const chart = fixture.componentInstance;
+  const svg = fixture.nativeElement.querySelector('svg');
+  const line = svg.querySelector('.line');
+  const area = svg.querySelector('.area');
+  const original = line.getAttribute('d');
+  fixture.componentRef.setInput('points', [...points, { at: now + 5000, value: 5001 }]);
+  fixture.detectChanges();
+  // The new point is clipped at the old viewport until animation advances; Angular must
+  // not overwrite that frame with the completed target coordinates.
+  const origin = line.getAttribute('d');
+  assert.notEqual(origin, chart.path());
+  fixture.detectChanges();
+  assert.equal(line.getAttribute('d'), origin);
+  animateFrame(performance.now() + 1000);
+  const completed = line.getAttribute('d');
+  assert.notEqual(completed, original);
+  assert.ok(area.getAttribute('d').startsWith(completed));
+  const endpoint = svg.querySelector('.endpoint').getAttribute('d').match(/^M([\d.]+),([\d.]+) l0,0$/);
+  assert.equal(Number(endpoint[1]), 800);
+  assert.ok(Math.abs(Number(endpoint[2]) - chart.end().y) < 1e-9);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));
+  fixture.detectChanges();
+  animateFrame(performance.now() + 1000);
+  const inspected = line.getAttribute('d');
+  const selected = { ...chart.active() };
+  fixture.componentRef.setInput('points', [...points, { at: now + 5000, value: 5001 }, { at: now + 10000, value: 5010 }]);
+  fixture.detectChanges();
+  animateFrame(performance.now() + 1000);
+  assert.equal(line.getAttribute('d'), inspected);
+  assert.deepEqual(chart.active(), selected);
+  svg.dispatchEvent(new browser.PointerEvent('pointerleave'));
+  fixture.detectChanges();
+  animateFrame(performance.now() + 1000);
+  assert.equal(chart.active(), null);
+  assert.equal(chart.history().at(-1).at, now + 10000);
+  assert.notEqual(line.getAttribute('d'), inspected);
+  assert.ok(area.getAttribute('d').startsWith(line.getAttribute('d')));
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));
+  fixture.detectChanges();
+  fixture.componentRef.setInput('period', '1W');
+  fixture.componentRef.setInput('points', [{ at: now - 86400000, value: 1000 }, { at: now, value: 1100 }]);
+  fixture.detectChanges();
+  assert.equal(chart.active(), null, 'changing periods ends inspection of the previous history');
+  assert.equal(chart.history().at(-1).value, 1100);
+});
