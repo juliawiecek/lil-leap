@@ -95,7 +95,7 @@ import { marketBadgeText } from './market-status-api';
         background: transparent; color: var(--gain); font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
       @keyframes live { 0% { box-shadow: 0 0 0 0 var(--gain-wash-09); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-      .badge.closed { color: var(--market-status-accent, var(--warning)); }
+      .badge.closed { color: var(--loss); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
       button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;
