@@ -90,9 +90,9 @@ import { marketBadgeText } from './market-status-api';
       .tape-window:hover .tape, .tape-window:focus-within .tape { animation-play-state: paused; }
       @keyframes tape-scroll { to { transform: translateX(-50%); } }
       .badge { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 4px 10px 4px 0; border-radius: 999px;
-        background: transparent; color: var(--market-status-accent, #94c973); font-weight: 700; white-space: nowrap; }
+        background: transparent; color: #94c973; font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
-      @keyframes live { 0% { box-shadow: 0 0 0 0 var(--market-status-pulse, rgba(148, 201, 115, .55)); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
       .badge.closed { color: var(--market-status-accent, #e2b65a); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
