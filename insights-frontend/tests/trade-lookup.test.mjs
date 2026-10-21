@@ -145,7 +145,7 @@ test('the rendered page shows the outcome, the record checks and every step in p
   assert.deepEqual(steps, ['Submitted', 'Order accepted', 'Filled', 'Buy', 'Buy', 'Filled']);
   assert.equal(fixture.componentInstance.sourceLabel('CASH'), 'Cash movement');
   assert.deepEqual([...host.querySelectorAll('thead th')].map((th) => th.textContent.trim()),
-    ['Recorded (UTC)', 'Record', 'Step', 'Details'], 'no "By" column');
+    ['Recorded (CT)', 'Record', 'Step', 'Details'], 'no "By" column');
   const cells = [...host.querySelectorAll('tbody tr')].map((row) =>
     [...row.children[3].querySelectorAll('span')].map((span) => span.textContent.replace(/\s+/g, ' ').trim()));
   assert.deepEqual(cells[1], ['Status Accepted'], 'audit payloads are opened into labelled fields');
@@ -160,7 +160,7 @@ test('audit payloads show labelled, formatted fields and hide internal identifie
       attemptNumber: 1, referencePrice: 220, tolerancePct: 2, limitPrice: 224.4, actualPrice: 225.32 }) } };
   assert.deepEqual(instance.fields(decision).map(({ label, value }) => `${label}: ${value}`), [
     'Price offered: $225.32', 'Bid: $225.30', 'Ask: $225.32', 'Price at submission: $220.00',
-    'Worst accepted: $224.40', 'Tolerance: 2%', 'Attempt: 1', 'Quote time: 14:02:05 UTC',
+    'Worst accepted: $224.40', 'Tolerance: 2%', 'Attempt: 1', 'Quote time: 09:02:05 CT',
   ]);
   const cancelled = { source: 'AUDIT', type: 'ORDER_CANCELLED', actor: 'USER', occurredAt: at(3),
     details: { payload: '{"previousStatus":"PENDING","cancelledBy":"user-uuid"}' } };

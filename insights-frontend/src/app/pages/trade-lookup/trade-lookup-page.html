@@ -38,9 +38,9 @@
           <dt>Shares moved</dt>
           <dd>{{ c.sharesChange ?? '–' }}</dd>
           <dt>First recorded</dt>
-          <dd>{{ c.firstAt ? (c.firstAt | date: 'MMM d, y, HH:mm:ss' : 'UTC') + ' UTC' : '–' }}</dd>
+          <dd>{{ c.firstAt ? centralStamp(c.firstAt) + ' CT' : '–' }}</dd>
           <dt>Last recorded</dt>
-          <dd>{{ c.lastAt ? (c.lastAt | date: 'MMM d, y, HH:mm:ss' : 'UTC') + ' UTC' : '–' }}</dd>
+          <dd>{{ c.lastAt ? centralStamp(c.lastAt) + ' CT' : '–' }}</dd>
         </dl>
       </section>
       <section class="panel" aria-labelledby="checks-title">
@@ -76,7 +76,7 @@
         <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
         <thead>
           <tr>
-            <th>Recorded (UTC)</th>
+            <th>Recorded (CT)</th>
             <th>Record</th>
             <th>Step</th>
             <th>Details</th>
@@ -85,7 +85,7 @@
         <tbody>
           @for (event of trade.events; track $index) {
             <tr>
-              <td>{{ event.occurredAt | date: 'MMM d, y, HH:mm:ss' : 'UTC' }}</td>
+              <td>{{ centralStamp(event.occurredAt) }}</td>
               <td>{{ sourceLabel(event.source) }}</td>
               <td>{{ typeLabel(event.type) }}</td>
               <td class="details-cell">

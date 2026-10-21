@@ -21,7 +21,7 @@ export class Login {
   readonly message = signal('');
   readonly passwordVisible = signal(false);
   /** Words on the moving band at the top; NextTrade shows index prices there. */
-  readonly tape = ['Insights', 'Trading activity', 'Client accounts', 'Reports', 'Trade lookup', 'Audit trail', 'US equities'];
+  readonly tape = ['Trading activity', 'Orders & fills', 'Client accounts', 'Reports', 'Trade lookup', 'Audit trail', 'US equities'];
   /** The same decorative candlestick chart NextTrade draws behind its sign-in. */
   readonly candles = Array.from({ length: 44 }, (_, index) => {
     const progress = index / 43;

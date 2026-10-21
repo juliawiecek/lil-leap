@@ -1,21 +1,90 @@
-<app-page-heading title="Insights" [subtitle]="subtitle()" />
-@if (error()) {
-  <p class="error" role="alert">{{ error() }}</p>
-}
-<section class="kpi-grid" aria-label="Today's trading summary" [attr.aria-busy]="loading()">
-  <app-kpi-tile label="Active accounts" icon="users" note="Placed an order today" testId="summary-accounts" [value]="count(summary()?.accounts)" />
-  <app-kpi-tile label="Orders" icon="orders" note="Submitted today" testId="summary-orders" [value]="count(summary()?.orders)" />
-  <app-kpi-tile label="Fills" icon="chart" note="Executed today" testId="summary-fills" [value]="count(summary()?.fills)" />
-  <app-kpi-tile label="Traded value" icon="coins" note="Filled today · USD" testId="summary-value" [value]="money(summary()?.gross_executed_value)" />
+<section class="glance" aria-label="Today at a glance" [attr.aria-busy]="loading()">
+  <div class="glance-head">
+    <div>
+      <h1>{{ greeting() }}</h1>
+      <p class="subtitle">{{ subtitle() }}</p>
+    </div>
+    @if (summary(); as s) {
+      <p class="sentence">
+        <b class="mono">{{ count(s.fills) }}</b> fills from <b class="mono">{{ count(s.orders) }}</b> orders so far@if (ranked()[0]; as leader) {, and <b>{{ leader.instrument }}</b> leads}.
+      </p>
+    }
+  </div>
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+  <div class="glance-body">
+    <div class="hero">
+      <span class="hero-label">Traded value today</span>
+      <div class="hero-figure">
+        <b data-testid="summary-value">{{ valueParts().whole }}<span>{{ valueParts().cents }}</span></b>
+        <span class="hero-note">avg <span class="mono">{{ averageFill() }}</span> per fill</span>
+      </div>
+      @if (tradesToday()) {
+        <div class="hero-chart">
+          <app-insights-chart [points]="cumulativePoints()" label="Trades so far today, hour by hour, Central time" prefix="" />
+          <span class="hero-caption">Trades so far today, hour by hour</span>
+        </div>
+      } @else {
+        <p class="hero-empty">No trades yet today. The line fills in as trades execute.</p>
+      }
+    </div>
+    <dl class="stats">
+      <div>
+        <dt>Fills <small>Executed today</small></dt>
+        <dd class="mono fills" data-testid="summary-fills">{{ count(summary()?.fills) }}</dd>
+      </div>
+      <div>
+        <dt>Orders <small>Submitted today</small></dt>
+        <dd class="mono orders" data-testid="summary-orders">{{ count(summary()?.orders) }}</dd>
+      </div>
+      <div class="rate">
+        <dt>Fill rate <small>Fills ÷ orders</small></dt>
+        <dd class="mono">{{ fillRate() }}</dd>
+        <span class="rate-bar" aria-hidden="true"><i [style.width.%]="fillRatio()"></i></span>
+      </div>
+      <div>
+        <dt>Active accounts <small>Placed an order today</small></dt>
+        <dd class="mono" data-testid="summary-accounts">{{ count(summary()?.accounts) }}</dd>
+      </div>
+    </dl>
+  </div>
 </section>
-<div class="two-columns">
-  <section class="panel" aria-labelledby="trend-title">
-    <div class="panel-heading">
-      <h2 id="trend-title">Trades by hour today</h2>
-      <span class="muted">{{ count(tradesToday()) }} trades · New York time</span>
+
+@if (ranked().length) {
+  <div class="tape" aria-label="Most traded today">
+    <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
+    <div class="tape-window">
+      <div class="tape-track">
+        @for (copy of [0, 1]; track copy) {
+          <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
+            @for (row of ranked(); track row.instrument) {
+              <li><b>{{ row.instrument }}</b><span class="mono">{{ count(row.tradeCount) }}</span> trades</li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<div class="sections">
+  <section class="area" aria-labelledby="trend-title">
+    <div class="area-heading">
+      <h2 id="trend-title">Trades by hour</h2>
+      <span class="muted">{{ count(tradesToday()) }} trades · Central time</span>
     </div>
     @if (tradesToday()) {
-      <app-insights-chart [points]="trendPoints()" label="Trades per hour today, New York time" prefix="" />
+      <div class="bars" role="img" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' trades.'">
+        @for (bar of bars(); track bar.hour) {
+          <div class="bar-col" [class.now]="bar.now" [title]="bar.hour + ' · ' + bar.count + ' trades'">
+            <span class="bar-count">{{ bar.count || '' }}</span>
+            <span class="bar" [style.height.%]="bar.height"></span>
+            <span class="bar-hour">{{ bar.labelled ? bar.hour.slice(0, 2) : '' }}</span>
+          </div>
+        }
+      </div>
+      <p class="area-note">Busiest so far: <span class="mono">{{ busiestHour() }}</span>, {{ count(busiest()?.tradeCount) }} trades. The current hour is shown in green.</p>
     } @else {
       <div class="empty">
         <app-dashboard-icon name="chart" />
@@ -24,37 +93,53 @@
       </div>
     }
   </section>
-  <section class="panel" aria-labelledby="top-title">
-    <div class="panel-heading">
+
+  <section class="area" aria-labelledby="top-title">
+    <div class="area-heading">
       <h2 id="top-title">Top traded today</h2>
-      <span class="muted">By number of trades</span>
+      <span class="muted">Share of today’s trades</span>
     </div>
-    <div class="table-wrap">
-      <table>
-        <caption class="sr-only">Most traded stocks today</caption>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Stock</th>
-            <th class="numeric">Trades</th>
-            <th class="bar-cell"><span class="sr-only">Share of the busiest stock</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of top(); track row.instrument; let i = $index) {
+    <div class="top-body">
+      @if (ranked().length) {
+        <div class="ring" aria-hidden="true">
+          <svg viewBox="0 0 42 42">
+            <circle class="ring-track" cx="21" cy="21" r="15.9155" />
+            @for (arc of arcs(); track $index) {
+              <circle cx="21" cy="21" r="15.9155" [attr.stroke]="arc.color" [attr.stroke-dasharray]="arc.dash" [attr.stroke-dashoffset]="arc.offset" />
+            }
+          </svg>
+          <span><b class="mono">{{ topShare() }}%</b><small>top {{ arcs().length }}</small></span>
+        </div>
+      }
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Most traded stocks today</caption>
+          <thead>
             <tr>
-              <td class="muted">{{ i + 1 }}</td>
-              <td><strong>{{ row.instrument }}</strong></td>
-              <td class="numeric">{{ count(row.tradeCount) }}</td>
-              <td class="bar-cell"><span class="bar" [style.width.%]="(row.tradeCount / topMax()) * 100"></span></td>
+              <th>#</th>
+              <th>Stock</th>
+              <th class="numeric">Trades</th>
+              <th class="share-cell"><span class="sr-only">Share of today's trades</span></th>
+              <th class="numeric">Share</th>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="4" class="empty">No trades yet today.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (row of ranked(); track row.instrument; let i = $index) {
+              <tr>
+                <td class="muted mono">{{ i + 1 }}</td>
+                <td><i class="swatch" [style.background]="row.color"></i><strong>{{ row.instrument }}</strong></td>
+                <td class="numeric mono">{{ count(row.tradeCount) }}</td>
+                <td class="share-cell"><span class="share-bar"><i [style.width.%]="(row.tradeCount / topMax()) * 100" [style.background]="row.color"></i></span></td>
+                <td class="numeric mono muted">{{ row.share.toFixed(1) }}%</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty">No trades yet today.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </div>

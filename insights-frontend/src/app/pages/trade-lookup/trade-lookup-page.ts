@@ -1,5 +1,5 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TRADE_TRAIL, type TradeEvent, type TradeTrailResponse } from '../../trade-trail';
@@ -38,6 +38,11 @@ const FIELDS: Record<string, { label: string; kind: Kind }> = {
 /** Identifiers that mean nothing to a reader, or point at a person; the step itself is enough. */
 const HIDDEN = new Set(['fillId', 'quoteId', 'cancelledBy', 'currency']);
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 });
+/** Times in Insights are Central (the team is in Texas). */
+const CENTRAL_STAMP = new Intl.DateTimeFormat('en-US', {
+  month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago',
+});
+const CENTRAL_CLOCK = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
 
 /** Plain names for where each step was recorded. */
 const SOURCES: Record<string, string> = {
@@ -54,7 +59,7 @@ const SOURCES: Record<string, string> = {
  */
 @Component({
   selector: 'app-trade-lookup-page',
-  imports: [DatePipe, DecimalPipe, DashboardIcon, PageHeading],
+  imports: [DecimalPipe, DashboardIcon, PageHeading],
   templateUrl: './trade-lookup-page.html',
   styleUrl: './trade-lookup-page.scss',
 })
@@ -123,6 +128,11 @@ export class TradeLookupPage implements OnDestroy {
     }
   }
 
+  /** A recorded time as "Oct 19, 2026, 09:01:00" in Central time. */
+  centralStamp(value: string | number | Date | null | undefined): string {
+    const time = value === null || value === undefined ? null : new Date(value);
+    return time && !Number.isNaN(time.getTime()) ? CENTRAL_STAMP.format(time) : '–';
+  }
   sourceLabel(source: string): string {
     return SOURCES[source] ?? source;
   }
@@ -168,7 +178,7 @@ export class TradeLookupPage implements OnDestroy {
         return Number.isFinite(number) ? `${number}%` : String(value);
       case 'time': {
         const time = new Date(String(value));
-        return Number.isNaN(time.getTime()) ? String(value) : time.toISOString().slice(11, 19) + ' UTC';
+        return Number.isNaN(time.getTime()) ? String(value) : CENTRAL_CLOCK.format(time) + ' CT';
       }
       case 'code':
         return this.typeLabel(String(value));
