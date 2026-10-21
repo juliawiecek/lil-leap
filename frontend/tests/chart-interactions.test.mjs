@@ -209,6 +209,11 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   assert.equal(chart.end().value, 0);
   assert.equal(chart.labelLeft(), 0);
   assert.equal(fixture.nativeElement.querySelector('svg'), null);
+  const scrubbed = [];
+  chart.scrub.subscribe((point) => scrubbed.push(point));
+  chart.scrubKey(new browser.KeyboardEvent('keydown', { key: 'Home' }));
+  assert.equal(chart.active(), null, 'an empty chart has no point to inspect');
+  assert.deepEqual(scrubbed, []);
 });
 
 test('portfolio updates have one animation owner and inspection buffers new points without moving history', async (t) => {
