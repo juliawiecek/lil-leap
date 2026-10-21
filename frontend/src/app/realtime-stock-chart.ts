@@ -36,7 +36,7 @@ import { samplePrices, samplingInterval, type ChartSampleMs } from './stock-char
         height: 280px;
       }
       p {
-        color: #aeb9c8;
+        color: var(--text-tone-06);
         font-size: 13px;
       }
     `,

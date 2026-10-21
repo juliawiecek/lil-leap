@@ -18,7 +18,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #94c973;
+  outline: 2px solid var(--gain);
   outline-offset: 2px;
 }
 h2,
@@ -32,13 +32,13 @@ h2 {
   color: var(--green);
 }
 .loss {
-  color: #ff7a6e;
+  color: var(--loss);
 }
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: linear-gradient(130deg, #11111180, #111111a0);
+  background: linear-gradient(130deg, var(--surface-wash-26), var(--surface-wash-25));
 }
 .order-ticket {
   grid-column: 2;
@@ -56,14 +56,14 @@ h2 {
 .ticket-tabs button {
   padding: 9px 0;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
 .ticket-tabs button.active {
-  color: #ededed;
+  color: var(--text-tone-03);
   font-weight: 600;
-  border-color: #94c973;
+  border-color: var(--gain);
 }
 .ticket-body {
   padding: 12px 11px;
@@ -75,7 +75,7 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border-radius: 5px;
-  background: #1e1e1e;
+  background: var(--surface-tone-19);
   margin-bottom: 12px;
 }
 .side-switch button {
@@ -84,16 +84,16 @@ h2 {
   border-radius: 4px;
 }
 .side-switch .active {
-  color: #121a0f;
+  color: var(--surface-tone-09);
   font-weight: 600;
-  background: linear-gradient(#94c973, #94c973);
+  background: linear-gradient(var(--gain), var(--gain));
 }
 .ticket-body form > label,
 .ticket-body > label {
   display: block;
   margin: 10px 0 3px;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .ticket-body input:not([type='checkbox']),
 .ticket-body select {
@@ -101,19 +101,19 @@ h2 {
   min-width: 0;
   height: 29px;
   padding: 0 10px;
-  background: linear-gradient(#1a1a1a, #111111);
-  border: 1px solid #303030;
+  background: linear-gradient(var(--surface-tone-18), var(--surface-tone-03));
+  border: 1px solid var(--surface-tone-28);
   border-radius: 5px;
   font-size: 12px;
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .symbol-select {
   display: flex;
   align-items: center;
   height: 29px;
-  border: 1px solid #303030;
+  border: 1px solid var(--surface-tone-28);
   border-radius: 5px;
-  background: #111111;
+  background: var(--surface-tone-03);
 }
 .symbol-select select {
   width: 76px;
@@ -154,16 +154,16 @@ h2 {
   width: 15px;
   height: 15px;
   margin: 0;
-  border: 1px solid #5c5c5c;
+  border: 1px solid var(--surface-tone-32);
   border-radius: 3px;
-  background: #111111;
+  background: var(--surface-tone-03);
 }
 .bracket-toggles input:checked {
   appearance: auto;
-  accent-color: #94c973;
+  accent-color: var(--gain);
 }
 .cost-summary {
-  border: 1px solid #262626;
+  border: 1px solid var(--surface-tone-17);
   border-radius: 5px;
   padding: 10px 12px;
   margin: 14px 0;
@@ -176,7 +176,7 @@ h2 {
   font-size: 12px;
 }
 .cost-summary > div > span:first-child {
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .cost-summary strong {
   font-size: 12px;
@@ -186,25 +186,25 @@ h2 {
   min-height: 32px;
   padding: 7px 14px;
   border-radius: 5px;
-  background: linear-gradient(#94c973, #94c973);
-  color: #121a0f;
+  background: linear-gradient(var(--gain), var(--gain));
+  color: var(--surface-tone-09);
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #94c973;
+  border: 1px solid var(--gain);
 }
 .review-button {
   width: 100%;
 }
 .secondary-button {
   padding: 8px 12px;
-  border: 1px solid #3a3a3a;
-  background: #1e1e1e;
+  border: 1px solid var(--surface-tone-23);
+  background: var(--surface-tone-19);
   border-radius: 5px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .ticket-message {
   display: block;
-  color: #94c973;
+  color: var(--gain);
   line-height: 1.6;
   margin-top: 10px;
 }
@@ -250,10 +250,10 @@ h2 {
 .ticket-warning {
   margin: 8px 0 0;
   padding: 7px 9px;
-  border: 1px solid #3a3220;
+  border: 1px solid var(--warning-tone-02);
   border-radius: 5px;
-  background: #17130a;
-  color: #e2b65a;
+  background: var(--surface-tone-48);
+  color: var(--warning);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -342,31 +342,31 @@ h2 {
    right of the desk, beside the chart.
    ========================================================================== */
 @keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.panel { border-color: #303030; border-radius: 20px; background: radial-gradient(90% 50% at 100% 0%, rgba(237, 237, 237, 0.06), transparent 70%), #111111; box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8); animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both; }
+.panel { border-color: var(--surface-tone-28); border-radius: 20px; background: radial-gradient(90% 50% at 100% 0%, var(--text-wash-12), transparent 70%), var(--surface-tone-03); box-shadow: 0 30px 60px -30px var(--shadow-47); animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both; }
 .order-ticket { grid-column: 9 / -1; grid-row: 2; }
 .ticket-body { max-height: none; padding: 16px 18px 18px; }
-.side-switch { gap: 3px; margin-bottom: 4px; padding: 3px; border: 1px solid #262626; border-radius: 12px; background: rgba(10, 10, 10, 0.6); }
-.side-switch button { height: 38px; border-radius: 9px; color: #a1a1a1; font-size: 14px; font-weight: 800; }
-.side-switch button.active:first-child { background: #94c973; color: #0b130a; }
-.side-switch button.active:last-child { background: #ff7a6e; color: #1a0805; }
-.ticket-body form > label, .ticket-body > label { margin: 14px 0 6px; color: #a1a1a1; font-size: 12px; font-weight: 600; }
-.ticket-body input:not([type='checkbox']), .ticket-body select { height: 44px; padding: 0 12px; border-color: #262626; border-radius: 12px; background: #0a0a0a; font-size: 15px; font-weight: 600; }
-.ticket-body input:not([type='checkbox']):focus { border-color: #4a4a4a; box-shadow: 0 0 0 4px rgba(237, 237, 237, 0.06); outline: none; }
-.symbol-select { height: 44px; border-color: #262626; border-radius: 12px; background: #0a0a0a; }
+.side-switch { gap: 3px; margin-bottom: 4px; padding: 3px; border: 1px solid var(--surface-tone-17); border-radius: 12px; background: var(--surface-wash-21); }
+.side-switch button { height: 38px; border-radius: 9px; color: var(--text-tone-02); font-size: 14px; font-weight: 800; }
+.side-switch button.active:first-child { background: var(--gain); color: var(--surface-tone-46); }
+.side-switch button.active:last-child { background: var(--loss); color: var(--surface-tone-45); }
+.ticket-body form > label, .ticket-body > label { margin: 14px 0 6px; color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+.ticket-body input:not([type='checkbox']), .ticket-body select { height: 44px; padding: 0 12px; border-color: var(--surface-tone-17); border-radius: 12px; background: var(--surface-tone-20); font-size: 15px; font-weight: 600; }
+.ticket-body input:not([type='checkbox']):focus { border-color: var(--surface-tone-29); box-shadow: 0 0 0 4px var(--text-wash-12); outline: none; }
+.symbol-select { height: 44px; border-color: var(--surface-tone-17); border-radius: 12px; background: var(--surface-tone-20); }
 .symbol-select select { width: 90px; height: 42px; border: 0; background: transparent; font-weight: 800; }
-.symbol-select > span { color: #a1a1a1; font-size: 13px; }
-.ticket-note { margin: 10px 0 0; color: #7a7a7a; font-size: 12.5px; line-height: 1.5; }
-.cost-summary { margin: 14px 0; padding: 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
+.symbol-select > span { color: var(--text-tone-02); font-size: 13px; }
+.ticket-note { margin: 10px 0 0; color: var(--text-tone-04); font-size: 12.5px; line-height: 1.5; }
+.cost-summary { margin: 14px 0; padding: 14px; border: 0; border-radius: 12px; background: var(--text-wash-18); }
 .cost-summary > div { font-size: 13px; }
-.cost-summary > div > span:first-child { color: #a1a1a1; }
-.cost-summary > div:last-child { margin-top: 6px; padding-top: 9px; border-top: 1px dashed #2a2a2a; }
+.cost-summary > div > span:first-child { color: var(--text-tone-02); }
+.cost-summary > div:last-child { margin-top: 6px; padding-top: 9px; border-top: 1px dashed var(--surface-tone-44); }
 .cost-summary > div:last-child strong { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
 .cost-summary strong { font-size: 13.5px; font-weight: 700; }
-.primary-button { min-height: 50px; border: 1px solid #ededed; border-radius: 13px; background: #ededed; color: #0a0a0a; font-size: 15px; font-weight: 800; transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
-.primary-button:hover { background: #ffffff; box-shadow: 0 12px 30px rgba(237, 237, 237, 0.14); }
+.primary-button { min-height: 50px; border: 1px solid var(--text-tone-03); border-radius: 13px; background: var(--text-tone-03); color: var(--surface-tone-20); font-size: 15px; font-weight: 800; transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
+.primary-button:hover { background: var(--white); box-shadow: 0 12px 30px var(--text-wash-13); }
 .primary-button:active { transform: scale(0.985); }
-.secondary-button { border-color: #3a3a3a; border-radius: 12px; background: transparent; color: #ededed; }
-.ticket-message { color: #d4d4d4; font-size: 13px; }
+.secondary-button { border-color: var(--surface-tone-23); border-radius: 12px; background: transparent; color: var(--text-tone-03); }
+.ticket-message { color: var(--text-tone-05); font-size: 13px; }
 .ticket-warning { border-radius: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .panel { animation: none; }
@@ -379,41 +379,41 @@ h2 {
 }
 
 /* Price protection: one compact field, so the ticket's input styling doesn't swallow it. */
-.protection-row { gap: 14px; margin: 12px 0; padding: 12px 14px; border-color: #262626; border-radius: 12px; }
+.protection-row { gap: 14px; margin: 12px 0; padding: 12px 14px; border-color: var(--surface-tone-17); border-radius: 12px; }
 .protection-copy span { font-size: 13px; font-weight: 600; }
-.protection-copy b { color: #ededed; font-weight: 800; }
-.protection-row .text-link { color: #d4d4d4; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #4a4a4a; }
-.protection-row .text-link:hover { color: #ffffff; }
-.tolerance-field { gap: 4px; height: 38px; padding: 0 12px; border: 1px solid #303030; border-radius: 10px; background: #0a0a0a; color: #a1a1a1; font-size: 14px; font-weight: 700; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-.tolerance-field:focus-within { border-color: #4a4a4a; box-shadow: 0 0 0 4px rgba(237, 237, 237, 0.06); }
-.ticket-body .tolerance-field input:not([type='checkbox']) { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: #ededed; font: inherit; text-align: right; outline: none; }
+.protection-copy b { color: var(--text-tone-03); font-weight: 800; }
+.protection-row .text-link { color: var(--text-tone-05); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--surface-tone-29); }
+.protection-row .text-link:hover { color: var(--white); }
+.tolerance-field { gap: 4px; height: 38px; padding: 0 12px; border: 1px solid var(--surface-tone-28); border-radius: 10px; background: var(--surface-tone-20); color: var(--text-tone-02); font-size: 14px; font-weight: 700; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.tolerance-field:focus-within { border-color: var(--surface-tone-29); box-shadow: 0 0 0 4px var(--text-wash-12); }
+.ticket-body .tolerance-field input:not([type='checkbox']) { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text-tone-03); font: inherit; text-align: right; outline: none; }
 
 /* Middle ground (flatter, sharper): 4px controls, ruled cost lines, no glow. */
-.panel { border-color: #1e1e1e; border-radius: 8px; background: #111111; box-shadow: none; animation: none; }
+.panel { border-color: var(--surface-tone-19); border-radius: 8px; background: var(--surface-tone-03); box-shadow: none; animation: none; }
 .ticket-body { padding: 14px 18px 16px; }
-.side-switch { gap: 2px; padding: 2px; border-color: #262626; border-radius: 4px; background: #0a0a0a; }
+.side-switch { gap: 2px; padding: 2px; border-color: var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-20); }
 .side-switch button { height: 34px; border-radius: 3px; font-size: 13.5px; }
 .ticket-body form > label, .ticket-body > label { margin: 12px 0 5px; }
-.ticket-body input:not([type='checkbox']), .ticket-body select { height: 38px; padding: 0 10px; border-color: #262626; border-radius: 4px; font-size: 14px; }
-.ticket-body input:not([type='checkbox']):focus { border-color: #4a4a4a; box-shadow: none; }
-.symbol-select { height: 38px; border-color: #262626; border-radius: 4px; }
+.ticket-body input:not([type='checkbox']), .ticket-body select { height: 38px; padding: 0 10px; border-color: var(--surface-tone-17); border-radius: 4px; font-size: 14px; }
+.ticket-body input:not([type='checkbox']):focus { border-color: var(--surface-tone-29); box-shadow: none; }
+.symbol-select { height: 38px; border-color: var(--surface-tone-17); border-radius: 4px; }
 .symbol-select select { height: 36px; }
-.cost-summary { margin: 12px 0; padding: 0; border: 0; border-top: 1px solid #232323; border-radius: 0; background: none; }
-.cost-summary > div { padding: 9px 0; border-bottom: 1px solid #1c1c1c; }
+.cost-summary { margin: 12px 0; padding: 0; border: 0; border-top: 1px solid var(--surface-tone-22); border-radius: 0; background: none; }
+.cost-summary > div { padding: 9px 0; border-bottom: 1px solid var(--surface-tone-27); }
 .cost-summary > div:last-child { margin-top: 0; padding: 10px 0 0; border-top: 0; border-bottom: 0; }
 .primary-button { min-height: 42px; border-radius: 4px; font-size: 14px; }
 .primary-button:hover { box-shadow: none; }
 .primary-button:active { transform: none; }
 .secondary-button { border-radius: 4px; }
 .ticket-warning { border-radius: 4px; }
-.protection-row { padding: 10px 12px; border-color: #262626; border-radius: 4px; background: none; }
-.tolerance-field { height: 30px; padding: 0 8px; border-color: #303030; border-radius: 3px; font-size: 13.5px; }
-.tolerance-field:focus-within { border-color: #4a4a4a; box-shadow: none; }
+.protection-row { padding: 10px 12px; border-color: var(--surface-tone-17); border-radius: 4px; background: none; }
+.tolerance-field { height: 30px; padding: 0 8px; border-color: var(--surface-tone-28); border-radius: 3px; font-size: 13.5px; }
+.tolerance-field:focus-within { border-color: var(--surface-tone-29); box-shadow: none; }
 
 /* Live price flash: a number briefly lights green or red when its price moves. */
 .tick { display: inline-block; margin: -1px -4px; padding: 1px 4px; border-radius: 3px; }
 .tick-up { animation: nt-tick-up 1.2s ease-out; }
 .tick-down { animation: nt-tick-down 1.2s ease-out; }
-@keyframes nt-tick-up { from { background-color: rgba(148, 201, 115, 0.28); } to { background-color: rgba(148, 201, 115, 0); } }
-@keyframes nt-tick-down { from { background-color: rgba(255, 122, 110, 0.28); } to { background-color: rgba(255, 122, 110, 0); } }
+@keyframes nt-tick-up { from { background-color: var(--gain-wash-02); } to { background-color: var(--gain-wash-01); } }
+@keyframes nt-tick-down { from { background-color: var(--loss-wash-03); } to { background-color: var(--loss-wash-02); } }
 @media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }

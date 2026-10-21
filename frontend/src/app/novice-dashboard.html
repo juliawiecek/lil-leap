@@ -96,11 +96,11 @@
             <h1 class="greeting-title">{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
             @if (daySummary(); as day) {
               @if (showBalance() && day.symbol) {
-                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0">{{ day.moveText }}</b> today, and <b>{{ day.symbol }}</b> is your best mover <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">({{ day.changeText }})</span>.</p>
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today, and <b>{{ day.symbol }}</b> is your best mover <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">(<app-financial-change [value]="day.change" />)</span>.</p>
               } @else if (showBalance()) {
-                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0">{{ day.moveText }}</b> today.</p>
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today.</p>
               } @else if (day.symbol) {
-                <p class="day-summary"><b>{{ day.symbol }}</b> is your best mover today <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">({{ day.changeText }})</span>.</p>
+                <p class="day-summary"><b>{{ day.symbol }}</b> is your best mover today <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">(<app-financial-change [value]="day.change" />)</span>.</p>
               }
             }
           } @else {
@@ -109,7 +109,7 @@
           }
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
+          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
@@ -139,7 +139,7 @@
                     }
                   </div>
                   <div class="portfolio-gain" [class.up]="headerChange().amount > 0" [class.down]="headerChange().amount < 0">
-                    <strong>{{ showBalance() ? headerChangeText() : '••••••' }}</strong
+                    <strong>@if (showBalance()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { •••••• }</strong
                     ><span>{{ headerChange().label }}</span>
                   </div>
                 </div>
@@ -167,15 +167,11 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">{{
-                    showBalance() ? ((todayReturn() > 0 ? '+' : '') + (todayReturn() | currency) + ' (' + (todayReturnPercent() | number: '1.2-2') + '%)') : '••••••'
-                  }}</strong>
+                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
                 <div>
                   <span>Total return</span
-                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">{{
-                    showBalance() ? ((totalReturn() > 0 ? '+' : '') + (totalReturn() | currency) + ' (' + (totalReturnPercent() | number: '1.2-2') + '%)') : '••••••'
-                  }}</strong>
+                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
               </div>
             </section>
@@ -250,14 +246,11 @@
                           </td>
                           <td>{{ holding.average | currency }}</td>
                           <td [class.positive]="holding.today > 0" [class.negative]="holding.today < 0">
-                            {{ holding.today > 0 ? '+' : '' }}{{ holding.today | currency
-                            }}<span>{{ holding.change > 0 ? '+' : '' }}{{ holding.change | number: '1.2-2' }}%</span>
+                            <app-financial-change [value]="holding.today" unit="currency" /><span><app-financial-change [value]="holding.change" unit="percent" /></span>
                           </td>
                           <td [class.positive]="holding.total > 0" [class.negative]="holding.total < 0">
-                            {{ holding.total > 0 ? '+' : '' }}{{ holding.total | currency
-                            }}<span
-                              >{{ holding.totalPercent > 0 ? '+' : ''
-                              }}{{ holding.totalPercent | number: '1.2-2' }}%</span
+                            <app-financial-change [value]="holding.total" unit="currency" /><span
+                              ><app-financial-change [value]="holding.totalPercent" unit="percent" /></span
                             >
                           </td>
                           <td>
@@ -457,7 +450,7 @@
                       </td>
                       <td>{{ quote.price | currency }}</td>
                       <td [class.positive]="quote.change > 0" [class.negative]="quote.change < 0">
-                        {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                        <app-financial-change [value]="quote.change" unit="percent" />
                       </td>
                     </tr>
                   } @empty {

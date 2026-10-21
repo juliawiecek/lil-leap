@@ -1,3 +1,4 @@
+import { FinancialChange } from './financial-change';
 import { CurrencyPipe, DecimalPipe, NgClass, isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -224,7 +225,7 @@ function currentSessionOpen(
 @Component({
   selector: 'app-retail-stock-dashboard',
   standalone: true,
-  imports: [NgClass, CurrencyPipe, DecimalPipe, StockSvgChart],
+  imports: [FinancialChange, NgClass, CurrencyPipe, DecimalPipe, StockSvgChart],
   templateUrl: './stock-dashboard.component.html',
   styleUrl: './stock-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

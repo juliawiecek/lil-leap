@@ -9,6 +9,7 @@ import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, ErrorHandler, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { SafeErrorHandler } from './safe-error-handler';
 import { provideAccessibility } from './accessibility';
+import { provideColourMode } from './colour-mode';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -17,6 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAppInitializer(() => inject(AppSessionService).initialize()),
     provideAccessibility(),
+    provideColourMode(),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },

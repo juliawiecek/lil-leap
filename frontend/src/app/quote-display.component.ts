@@ -81,9 +81,9 @@ import { FormatAgePipe } from './format-age.pipe';
   styles: [`
     .quote-display {
       padding: 1rem;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-paper);
       border-radius: 4px;
-      background-color: #fafafa;
+      background-color: var(--surface-paper);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
@@ -92,20 +92,20 @@ import { FormatAgePipe } from './format-age.pipe';
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
-      border-bottom: 2px solid #e0e0e0;
+      border-bottom: 2px solid var(--border-paper);
       padding-bottom: 0.5rem;
     }
 
     .quote-header h3 {
       margin: 0;
       font-size: 1.25rem;
-      color: #333;
+      color: var(--text-ink);
     }
 
     .symbol {
       font-weight: bold;
       font-size: 1.1rem;
-      color: #0066cc;
+      color: var(--link-ink);
     }
 
     .loading-state,
@@ -116,14 +116,14 @@ import { FormatAgePipe } from './format-age.pipe';
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
-      color: #666;
+      color: var(--text-ink-muted);
     }
 
     .spinner {
       width: 30px;
       height: 30px;
-      border: 3px solid #e0e0e0;
-      border-top: 3px solid #0066cc;
+      border: 3px solid var(--border-paper);
+      border-top: 3px solid var(--link-ink);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin-bottom: 1rem;
@@ -135,7 +135,7 @@ import { FormatAgePipe } from './format-age.pipe';
     }
 
     .error-message {
-      color: #d32f2f;
+      color: var(--loss-ink);
       margin: 0.5rem 0;
       text-align: center;
     }
@@ -143,8 +143,8 @@ import { FormatAgePipe } from './format-age.pipe';
     .retry-button {
       margin-top: 1rem;
       padding: 0.5rem 1.5rem;
-      background-color: #0066cc;
-      color: white;
+      background-color: var(--link-ink);
+      color: var(--white);
       border: none;
       border-radius: 4px;
       cursor: pointer;
@@ -152,7 +152,7 @@ import { FormatAgePipe } from './format-age.pipe';
     }
 
     .retry-button:hover {
-      background-color: #0052a3;
+      background-color: var(--link-ink-hover);
     }
 
     .quote-content {
@@ -171,14 +171,14 @@ import { FormatAgePipe } from './format-age.pipe';
       display: flex;
       flex-direction: column;
       padding: 0.75rem;
-      background-color: white;
+      background-color: var(--white);
       border-radius: 4px;
-      border-left: 3px solid #0066cc;
+      border-left: 3px solid var(--link-ink);
     }
 
     .price-item label {
       font-size: 0.85rem;
-      color: #666;
+      color: var(--text-ink-muted);
       font-weight: 600;
       margin-bottom: 0.25rem;
     }
@@ -186,13 +186,13 @@ import { FormatAgePipe } from './format-age.pipe';
     .price {
       font-size: 1.25rem;
       font-weight: bold;
-      color: #333;
+      color: var(--text-ink);
       font-family: 'Courier New', monospace;
     }
 
     .price.main {
       font-size: 1.5rem;
-      color: #0066cc;
+      color: var(--link-ink);
     }
 
     .quote-metadata {
@@ -200,9 +200,9 @@ import { FormatAgePipe } from './format-age.pipe';
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 1rem;
       padding: 1rem;
-      background-color: white;
+      background-color: var(--white);
       border-radius: 4px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-paper);
       font-size: 0.9rem;
     }
 
@@ -217,12 +217,12 @@ import { FormatAgePipe } from './format-age.pipe';
     .timestamp label,
     .time-label {
       font-weight: 600;
-      color: #666;
+      color: var(--text-ink-muted);
       font-size: 0.8rem;
     }
 
     .quote-metadata span:not(.badge):not(.time-label) {
-      color: #333;
+      color: var(--text-ink);
       font-family: 'Courier New', monospace;
     }
 
@@ -237,9 +237,9 @@ import { FormatAgePipe } from './format-age.pipe';
     }
 
     .badge.synthetic {
-      background-color: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffc107;
+      background-color: var(--warning-tone-04);
+      color: var(--warning-ink);
+      border: 1px solid var(--warning-tone-03);
     }
 
     .quote-display.loading {
@@ -247,7 +247,7 @@ import { FormatAgePipe } from './format-age.pipe';
     }
 
     .quote-display.error {
-      border-color: #d32f2f;
+      border-color: var(--loss-ink);
     }
   `]
 })

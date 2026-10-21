@@ -1,11 +1,14 @@
+import { PriceFlash } from './price-flash';
+import { TechnicalChart } from './technical-chart';
+import { FinancialChange } from './financial-change';
 import { Component, computed, input } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import type { AdvancedDashboard } from './advanced-dashboard';
 import { StockDashboardComponent } from './stock-dashboard.component';
 
 @Component({
   selector: 'app-advanced-chart',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, StockDashboardComponent],
+  imports: [FinancialChange, PriceFlash, TechnicalChart, CurrencyPipe, StockDashboardComponent],
   templateUrl: './advanced-chart.html',
   styleUrl: './advanced-chart.scss',
 })

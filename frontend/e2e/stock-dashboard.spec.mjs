@@ -130,7 +130,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     expect(requests.every((row) => row.authorized)).toBe(true);
     await expect(dashboard.locator('app-stock-svg-chart [data-line]')).toHaveAttribute(
       'stroke',
-      '#22c55e',
+      'var(--area-line)',
     );
     await expect(dashboard.locator('app-stock-svg-chart [data-line]')).toHaveAttribute(
       'stroke-width',
@@ -138,11 +138,20 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     );
     await expect(dashboard.locator('app-stock-svg-chart stop').first()).toHaveAttribute(
       'stop-color',
-      'rgba(34, 197, 94, 0.4)',
+      'var(--area-top)',
     );
     await expect(dashboard.locator('app-stock-svg-chart stop').last()).toHaveAttribute(
       'stop-color',
-      'rgba(34, 197, 94, 0.0)',
+      'var(--area-bottom)',
+    );
+    // MSFT is below its open here, so the series carries the loss dash as well as the loss colour.
+    await expect(dashboard.locator('app-stock-svg-chart svg')).toHaveAttribute(
+      'data-performance',
+      'loss',
+    );
+    await expect(dashboard.locator('app-stock-svg-chart [data-line]')).toHaveCSS(
+      'stroke-dasharray',
+      '6px, 4px',
     );
     expect(await dashboard.locator('canvas').count()).toBe(0);
     const chart = dashboard.locator('app-stock-svg-chart svg');
@@ -303,11 +312,11 @@ test('portfolio day chart keeps its whole line connected to the endpoint on load
   await expect(chart.locator('linearGradient')).toHaveAttribute('gradientUnits', 'userSpaceOnUse');
   await expect(chart.locator('linearGradient stop').first()).toHaveAttribute(
     'stop-color',
-    'rgba(34, 197, 94, 0.4)',
+    'var(--area-top)',
   );
   await expect(chart.locator('linearGradient stop').last()).toHaveAttribute(
     'stop-color',
-    'rgba(34, 197, 94, 0.0)',
+    'var(--area-bottom)',
   );
   await expect(chart.locator('path.area')).toHaveAttribute('d', /Z$/);
   expect(await line.evaluate((element) => getComputedStyle(element).stroke)).toBe(

@@ -124,10 +124,10 @@ test('password visibility, recovery, and bfcache return check the idle deadline'
 
 test('canvas startup transitions directly to login without a centered logo phase', async t => {
   const calls = [];
-  const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect'].map(name =>
+  const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect', 'strokeRect'].map(name =>
     [name, (...args) => calls.push([name, ...args])]));
   t.mock.method(browser.HTMLCanvasElement.prototype, 'getContext', () => context);
-  t.mock.method(browser, 'matchMedia', () => ({ matches: true }));
+  t.mock.method(browser, 'matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
   const { fixture, app } = await setup(t);
   assert.equal(fixture.nativeElement.querySelector('#brand-lockup'), null);
   animateFrame(performance.now() + 32);
@@ -136,6 +136,7 @@ test('canvas startup transitions directly to login without a centered logo phase
   assert.equal(document.body.classList.contains('brand-phase'), false);
   assert.ok(fixture.nativeElement.querySelector('#brand-lockup'));
   assert.ok(calls.some(([name]) => name === 'fillRect'));
+  assert.ok(calls.some(([name]) => name === 'strokeRect'), 'up candles have hollow outlined bodies');
   assert.ok(calls.every(call => call.slice(1).every(Number.isFinite)));
   assert.ok(app.volumeBars().length >= 34 && app.volumeBars().length <= 72);
   app.onResize(); assert.ok(calls.filter(([name]) => name === 'setTransform').length >= 2);
@@ -144,9 +145,9 @@ test('canvas startup transitions directly to login without a centered logo phase
 });
 
 test('opening candles finish morphing before the login form is revealed', async t => {
-  const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect'].map(name => [name, () => {}]));
+  const context = Object.fromEntries(['setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fillRect', 'strokeRect'].map(name => [name, () => {}]));
   t.mock.method(browser.HTMLCanvasElement.prototype, 'getContext', () => context);
-  t.mock.method(browser, 'matchMedia', () => ({ matches: false }));
+  t.mock.method(browser, 'matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
   const { fixture, app } = await setup(t);
   app.reveal = 1;
   const start = performance.now();

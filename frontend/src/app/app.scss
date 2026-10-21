@@ -2,13 +2,13 @@
 
 :root {
       color-scheme: dark;
-      --grid-fine: rgba(255, 255, 255, 0.06);
-      --grid-major: rgba(255, 255, 255, 0.12);
+      --grid-fine: var(--text-wash-14);
+      --grid-major: var(--text-wash-34);
     }
 
 body:has(.settings-page) {
-  --grid-fine: rgba(255, 255, 255, 0.024);
-  --grid-major: rgba(255, 255, 255, 0.055);
+  --grid-fine: var(--text-wash-46);
+  --grid-major: var(--text-wash-45);
 }
 
     * {
@@ -22,15 +22,15 @@ body:has(.settings-page) {
       margin: 0;
       overflow: hidden;
       background:
-        radial-gradient(circle at 78% 26%, rgba(255, 255, 255, 0.035), transparent 29%),
-        radial-gradient(ellipse at 42% 62%, rgba(255, 255, 255, 0.032), transparent 46%),
-        linear-gradient(145deg, #070707 0%, #070707 48%, #070707 100%);
+        radial-gradient(circle at 78% 26%, var(--text-wash-24), transparent 29%),
+        radial-gradient(ellipse at 42% 62%, var(--text-wash-44), transparent 46%),
+        linear-gradient(145deg, var(--background) 0%, var(--background) 48%, var(--background) 100%);
     }
 
     body {
       position: relative;
       isolation: isolate;
-      color: #f2f0e9;
+      color: var(--text);
       font-family: var(--font-ui);
     }
 
@@ -42,10 +42,10 @@ body:has(.settings-page) {
       z-index: 0;
       pointer-events: none;
       opacity: 0.07;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.28) 0.45px, transparent 0.6px);
+      background-image: radial-gradient(var(--text-wash-43) 0.45px, transparent 0.6px);
       background-size: 5px 5px;
-      mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
-      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      mask-image: linear-gradient(to bottom, transparent, var(--mask-ink) 18%, var(--mask-ink) 82%, transparent);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-ink) 18%, var(--mask-ink) 82%, transparent);
     }
 
     /* Fine trading-chart grid with a second, slightly stronger major grid. */
@@ -63,8 +63,8 @@ body:has(.settings-page) {
         24px 24px,
         120px 120px,
         120px 120px;
-      mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
-      -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, rgba(0, 0, 0, 0.72) 72%, transparent 100%);
+      mask-image: radial-gradient(ellipse at center, var(--mask-ink) 30%, var(--shadow-65) 72%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse at center, var(--mask-ink) 30%, var(--shadow-65) 72%, transparent 100%);
       transition: opacity 900ms ease;
     }
 
@@ -75,8 +75,8 @@ body:has(.settings-page) {
       pointer-events: none;
       opacity: 0.72;
       background:
-        radial-gradient(ellipse at 76% 28%, rgba(148, 201, 115, 0.07), transparent 28%),
-        linear-gradient(112deg, transparent 34%, rgba(255, 255, 255, 0.018) 48%, transparent 62%);
+        radial-gradient(ellipse at 76% 28%, var(--gain-wash-18), transparent 28%),
+        linear-gradient(112deg, transparent 34%, var(--text-wash-42) 48%, transparent 62%);
       animation: ambient-shift 12s ease-in-out infinite alternate;
     }
 
@@ -89,14 +89,14 @@ body:has(.settings-page) {
       overflow: hidden;
       pointer-events: none;
       padding: 10px 0 9px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(7, 7, 7, 0.82);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--text-wash-41);
+      background: var(--surface-wash-70);
+      box-shadow: 0 10px 30px var(--shadow-69);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       opacity: 0.84;
-      mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
-      -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+      mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 97%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 97%, transparent);
       transition: opacity 700ms ease;
     }
 
@@ -107,7 +107,7 @@ body:has(.settings-page) {
       right: 0;
       bottom: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(148, 201, 115, 0.24), rgba(255, 255, 255, 0.14), transparent);
+      background: linear-gradient(90deg, transparent, var(--gain-wash-17), var(--text-wash-40), transparent);
     }
 
     .tape-track {
@@ -115,7 +115,7 @@ body:has(.settings-page) {
       width: max-content;
       gap: 52px;
       white-space: nowrap;
-      color: rgba(242, 240, 233, 0.9);
+      color: var(--text-wash-39);
       font-family: var(--font-mono);
       font-size: 12px;
       font-weight: 500;
@@ -126,11 +126,11 @@ body:has(.settings-page) {
     }
 
     .tape-track .up {
-      color: #94c973;
+      color: var(--gain);
     }
 
     .tape-track .divider {
-      color: rgba(255, 255, 255, 0.42);
+      color: var(--text-wash-38);
     }
 
     .volume-field {
@@ -145,8 +145,8 @@ body:has(.settings-page) {
       gap: clamp(5px, 0.72vw, 11px);
       pointer-events: none;
       opacity: 0.26;
-      mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
-      -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0.64) 56%, transparent);
+      mask-image: linear-gradient(to top, var(--mask-ink), var(--shadow-68) 56%, transparent);
+      -webkit-mask-image: linear-gradient(to top, var(--mask-ink), var(--shadow-68) 56%, transparent);
       transition: opacity 700ms ease;
     }
 
@@ -155,13 +155,13 @@ body:has(.settings-page) {
       max-width: 7px;
       min-width: 1px;
       height: var(--bar-height);
-      background: rgba(242, 240, 233, 0.42);
+      background: var(--text-wash-27);
       transform-origin: bottom;
       animation: volume-breathe var(--bar-speed) ease-in-out var(--bar-delay) infinite alternate;
     }
 
     .volume-bar.accent {
-      background: rgba(148, 201, 115, 0.72);
+      background: var(--gain-wash-12);
     }
 
     .market-scan {
@@ -174,7 +174,7 @@ body:has(.settings-page) {
       pointer-events: none;
       opacity: 0.32;
       transform: skewX(-8deg);
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.035), transparent);
+      background: linear-gradient(90deg, transparent, var(--text-wash-24), transparent);
       filter: blur(7px);
       animation: market-scan 17s linear infinite;
     }
@@ -222,9 +222,9 @@ body:has(.settings-page) {
       z-index: 2;
       pointer-events: none;
       background:
-        radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.58) 100%),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.84) 0%, transparent 7%, transparent 93%, rgba(0, 0, 0, 0.84) 100%),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, transparent 12%, transparent 88%, rgba(0, 0, 0, 0.72) 100%);
+        radial-gradient(ellipse at center, transparent 45%, var(--shadow-67) 100%),
+        linear-gradient(90deg, var(--shadow-66) 0%, transparent 7%, transparent 93%, var(--shadow-66) 100%),
+        linear-gradient(180deg, var(--shadow-65) 0%, transparent 12%, transparent 88%, var(--shadow-65) 100%);
     }
 
     .signin-stock-background {
@@ -233,7 +233,7 @@ body:has(.settings-page) {
       z-index: 3;
       pointer-events: none;
       opacity: 0.15;
-      mask-image: linear-gradient(180deg, transparent, #000 18%, #000 85%, transparent);
+      mask-image: linear-gradient(180deg, transparent, var(--mask-ink) 18%, var(--mask-ink) 85%, transparent);
 
       svg {
         display: block;
@@ -243,12 +243,12 @@ body:has(.settings-page) {
 
       .signin-stock-line {
         fill: none;
-        stroke: #94c973;
+        stroke: var(--gain);
         stroke-width: 2;
         stroke-linejoin: round;
         stroke-linecap: round;
         vector-effect: non-scaling-stroke;
-        filter: drop-shadow(0 0 7px rgba(148, 201, 115, 0.45));
+        filter: drop-shadow(0 0 7px var(--gain-wash-14));
       }
     }
 
@@ -285,8 +285,8 @@ body:has(.settings-page) {
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, -50%);
-      background: linear-gradient(90deg, transparent, rgba(242, 240, 233, 0.95), rgba(148, 201, 115, 0.9), transparent);
-      box-shadow: 0 0 24px rgba(148, 201, 115, 0.18);
+      background: linear-gradient(90deg, transparent, var(--text-wash-37), var(--gain-wash-16), transparent);
+      box-shadow: 0 0 24px var(--gain-wash-15);
     }
 
     .brand-lockup {
@@ -318,7 +318,7 @@ body:has(.settings-page) {
       place-items: center;
       border: 0;
       background: transparent;
-      filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.32));
+      filter: drop-shadow(0 16px 28px var(--shadow-64));
       overflow: visible;
       transition: width 950ms cubic-bezier(0.22, 1, 0.36, 1), height 950ms cubic-bezier(0.22, 1, 0.36, 1);
     }
@@ -364,7 +364,7 @@ body:has(.settings-page) {
     }
 
     .brand-name .brand-accent {
-      color: #94c973;
+      color: var(--gain);
       font-weight: 610;
       margin-left: 1.5px;
     }
@@ -403,7 +403,7 @@ body:has(.settings-page) {
       display: inline-flex;
       align-items: center;
       gap: 9px;
-      color: rgba(242, 240, 233, 0.48);
+      color: var(--text-wash-36);
       font: 500 12px/1 var(--font-mono);
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -415,8 +415,8 @@ body:has(.settings-page) {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #94c973;
-      box-shadow: 0 0 12px rgba(148, 201, 115, 0.45);
+      background: var(--gain);
+      box-shadow: 0 0 12px var(--gain-wash-14);
     }
 
     .auth-content {
@@ -437,7 +437,7 @@ body:has(.settings-page) {
       align-items: center;
       gap: 12px;
       margin-bottom: 22px;
-      color: #7e8279;
+      color: var(--text-subtle);
       font: 600 12px/1 var(--font-mono);
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -449,13 +449,13 @@ body:has(.settings-page) {
       content: '';
       width: 30px;
       height: 1px;
-      background: #94c973;
+      background: var(--gain);
     }
 
     .auth-copy h1 {
       max-width: 620px;
       margin: 0;
-      color: #f2f0e9;
+      color: var(--text);
       font-size: clamp(48px, 6vw, 82px);
       font-weight: 540;
       line-height: 1.04;
@@ -463,14 +463,14 @@ body:has(.settings-page) {
     }
 
     .auth-copy h1 em {
-      color: #94c973;
+      color: var(--gain);
       font-style: normal;
     }
 
     .auth-copy > p {
       max-width: 500px;
       margin: 26px 0 0;
-      color: rgba(242, 240, 233, 0.56);
+      color: var(--text-wash-35);
       font-size: 16px;
       line-height: 1.65;
     }
@@ -478,10 +478,10 @@ body:has(.settings-page) {
     .auth-panel {
       position: relative;
       padding: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--text-wash-34);
       border-radius: 14px;
-      background: linear-gradient(145deg, rgba(12, 12, 12, 0.94), rgba(7, 7, 7, 0.91));
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      background: linear-gradient(145deg, var(--surface-wash-63), var(--surface-wash-62));
+      box-shadow: 0 28px 80px var(--shadow-59), inset 0 1px 0 var(--text-wash-24);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
     }
@@ -493,8 +493,8 @@ body:has(.settings-page) {
       left: 28px;
       width: 82px;
       height: 1px;
-      background: #94c973;
-      box-shadow: 0 0 16px rgba(148, 201, 115, 0.25);
+      background: var(--gain);
+      box-shadow: 0 0 16px var(--gain-wash-13);
     }
 
     .auth-panel h2 {
@@ -507,7 +507,7 @@ body:has(.settings-page) {
 
     .auth-subtitle {
       margin: 0 0 24px;
-      color: rgba(242, 240, 233, 0.46);
+      color: var(--text-wash-33);
       font-size: 14px;
       line-height: 1.55;
     }
@@ -517,9 +517,9 @@ body:has(.settings-page) {
       grid-template-columns: 1fr 1fr;
       margin-bottom: 24px;
       padding: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.09);
+      border: 1px solid var(--text-wash-25);
       border-radius: 9px;
-      background: rgba(255, 255, 255, 0.025);
+      background: var(--text-wash-32);
     }
 
     .auth-tab {
@@ -527,16 +527,16 @@ body:has(.settings-page) {
       border: 0;
       border-radius: 6px;
       background: transparent;
-      color: #a4a79e;
+      color: var(--text-muted);
       font: 600 13px/1 var(--font-ui);
       cursor: pointer;
       transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
     }
 
     .auth-tab.active {
-      background: rgba(255, 255, 255, 0.16);
-      color: #ffffff;
-      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.2);
+      background: var(--text-wash-31);
+      color: var(--white);
+      box-shadow: 0 5px 18px var(--shadow-61);
     }
 
     .field-group {
@@ -556,7 +556,7 @@ body:has(.settings-page) {
     }
 
     .field-group label {
-      color: rgba(242, 240, 233, 0.72);
+      color: var(--text-wash-30);
       font-size: 14px;
       font-weight: 500;
     }
@@ -565,7 +565,7 @@ body:has(.settings-page) {
       padding: 0;
       border: 0;
       background: none;
-      color: #7e8279;
+      color: var(--text-subtle);
       font: inherit;
       font-size: 12px;
       text-decoration: none;
@@ -580,11 +580,11 @@ body:has(.settings-page) {
       width: 100%;
       height: 48px;
       padding: 0 14px;
-      border: 1px solid rgba(255, 255, 255, 0.11);
+      border: 1px solid var(--text-wash-29);
       border-radius: 8px;
       outline: none;
-      background: rgba(0, 0, 0, 0.28);
-      color: #f2f0e9;
+      background: var(--shadow-60);
+      color: var(--text);
       font: 500 14px/1 var(--font-ui);
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
       font-size: 16px;
@@ -592,13 +592,13 @@ body:has(.settings-page) {
     }
 
     .field-group input::placeholder {
-      color: rgba(242, 240, 233, 0.25);
+      color: var(--text-wash-28);
     }
 
     .field-group input:focus {
-      border-color: rgba(148, 201, 115, 0.72);
-      background: rgba(0, 0, 0, 0.42);
-      box-shadow: 0 0 0 3px rgba(148, 201, 115, 0.09);
+      border-color: var(--gain-wash-12);
+      background: var(--shadow-59);
+      box-shadow: 0 0 0 3px var(--gain-wash-08);
     }
 
     .password-toggle {
@@ -608,7 +608,7 @@ body:has(.settings-page) {
       padding: 4px;
       border: 0;
       background: transparent;
-      color: rgba(242, 240, 233, 0.42);
+      color: var(--text-wash-27);
       font: 600 12px/1 var(--font-mono);
       letter-spacing: 0;
       cursor: pointer;
@@ -618,8 +618,8 @@ body:has(.settings-page) {
     }
 
     .password-toggle:focus-visible {
-      color: #f2f0e9;
-      outline: 1px solid #94c973;
+      color: var(--text);
+      outline: 1px solid var(--gain);
       outline-offset: 3px;
     }
 
@@ -627,18 +627,18 @@ body:has(.settings-page) {
       width: 100%;
       min-height: 49px;
       margin-top: 5px;
-      border: 1px solid #94c973;
+      border: 1px solid var(--gain);
       border-radius: 8px;
-      background: #94c973;
-      color: #070707;
+      background: var(--gain);
+      color: var(--background);
       font: 700 14px/1 var(--font-ui);
       cursor: pointer;
       transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
     }
 
     .primary-action:hover {
-      background: #94c973;
-      box-shadow: 0 10px 28px rgba(148, 201, 115, 0.16);
+      background: var(--gain);
+      box-shadow: 0 10px 28px var(--gain-wash-11);
       transform: translateY(-1px);
     }
 
@@ -649,7 +649,7 @@ body:has(.settings-page) {
     .form-status {
       min-height: 16px;
       margin: 14px 0 0;
-      color: #7e8279;
+      color: var(--text-subtle);
       font-size: 12px;
       text-align: center;
       line-height: 1.5;
@@ -660,7 +660,7 @@ body:has(.settings-page) {
       justify-content: space-between;
       align-items: center;
       gap: 20px;
-      color: rgba(242, 240, 233, 0.28);
+      color: var(--text-wash-26);
       font-size: 12px;
       letter-spacing: 0;
     }
@@ -932,11 +932,11 @@ body.auth-phase .brand-name { font-size: 34px; line-height: 1.05; }
 
 
 
-.password-checklist { margin: 0 0 18px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; background: rgba(148, 201, 115,.04); font-size: 12px; line-height: 1.6; }
-.password-checklist p { margin: 0 0 8px; color: #d6d4cc; }
+.password-checklist { margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--text-wash-25); border-radius: 8px; background: var(--gain-wash-10); font-size: 12px; line-height: 1.6; }
+.password-checklist p { margin: 0 0 8px; color: var(--text-tone-19); }
 .password-checklist ul { display: grid; gap: 5px; list-style: none; margin: 0; padding: 0; }
-.password-checklist li { display: flex; align-items: center; gap: 8px; color: #7e8279; }
-.password-checklist li.met { color: #94c973; }
+.password-checklist li { display: flex; align-items: center; gap: 8px; color: var(--text-subtle); }
+.password-checklist li.met { color: var(--gain); }
 .password-checklist li > span:first-child { width: 14px; text-align: center; }
 
 .auth-copy h1 .headline-period { margin-left: 0.06em; }
