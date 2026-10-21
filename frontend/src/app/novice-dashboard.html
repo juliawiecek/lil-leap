@@ -358,6 +358,7 @@
                   <app-price-protection-settings [symbols]="listedSymbols()" />
                 </div>
               </div>
+              <app-accessibility-settings (openShortcuts)="openModal('shortcuts')" />
               <footer class="settings-session">
                 <div>
                   <h2>Session</h2>
@@ -483,7 +484,9 @@
             ? 'Asset allocation'
             : modal() === 'help'
               ? 'Help & support'
-              : 'Details'
+              : modal() === 'shortcuts'
+                ? 'Keyboard shortcuts'
+                : 'Details'
       }}
     </h2>
     <button type="button" class="icon-button" aria-label="Close dialog" (click)="closeModal()">
@@ -583,6 +586,8 @@
       Spreading investments across asset classes can help manage concentration. Review how your
       stock holdings are spread across companies and sectors.
     </p>
+  } @else if (modal() === 'shortcuts') {
+    <app-keyboard-shortcuts />
   } @else {
     <p>
       Search for a company to open its trade ticket. Use Portfolio to view holdings and Activity to

@@ -36,6 +36,8 @@ import {
   CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
+import { AccessibilitySettings } from './accessibility-settings';
+import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -90,9 +92,13 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
 
 @Component({
   selector: 'app-novice-dashboard',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart],
+  imports: [
+    CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
+    AccessibilitySettings, KeyboardShortcuts,
+  ],
   templateUrl: './novice-dashboard.html',
   styleUrls: ['./novice-dashboard.scss', './novice-dashboard.refresh.scss', './novice-settings.scss'],
+  host: { '(document:keydown)': 'onShortcutKey($event)' },
 })
 export class NoviceDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
@@ -381,6 +387,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   closeModal(): void {
     this.dialog()?.nativeElement.close();
+  }
+  /** "?" opens Keyboard Shortcuts from anywhere, unless another dialog is already open (PS-17). */
+  onShortcutKey(event: KeyboardEvent): void {
+    if (isShortcutsKey(event) && !this.dialog()?.nativeElement.open) {
+      event.preventDefault();
+      this.openModal('shortcuts');
+    }
   }
   onDialogClick(event: MouseEvent): void {
     if (event.target === this.dialog()?.nativeElement) {
