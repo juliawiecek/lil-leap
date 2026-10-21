@@ -93,20 +93,20 @@ test('sampled quotes update performance metrics while the area chart keeps its f
     d.fixture.nativeElement.querySelector('.performance-badge').textContent,
     /\+\$4\.00/,
   );
-  assert.equal(d.line.getAttribute('stroke'), '#22c55e');
+  assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
   assert.equal(d.line.getAttribute('stroke-width'), '2');
-  assert.equal(d.gradient.getAttribute('stop-color'), 'rgba(34, 197, 94, 0.4)');
+  assert.equal(d.gradient.getAttribute('stop-color'), 'var(--area-top)');
   assert.equal(
     d.fixture.nativeElement.querySelector('stop[offset="100%"]').getAttribute('stop-color'),
-    'rgba(34, 197, 94, 0.0)',
+    'var(--gain-wash-28)',
   );
   d.feed.next(tick(98, 5));
   d.sample();
-  assert.equal(d.line.getAttribute('stroke'), '#22c55e');
-  assert.equal(d.gradient.getAttribute('stop-color'), 'rgba(34, 197, 94, 0.4)');
+  assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
+  assert.equal(d.gradient.getAttribute('stop-color'), 'var(--area-top)');
   d.feed.next(tick(100, 10));
   d.sample();
-  assert.equal(d.line.getAttribute('stroke'), '#22c55e');
+  assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
   assert.equal(
     d.fixture.nativeElement.querySelector('[data-line]'),
     d.line,
@@ -122,7 +122,7 @@ test('missing baseline stays unknown and older/invalid quotes cannot replace the
   d.sample();
   assert.equal(d.fixture.componentInstance.asset().price, 101);
   assert.equal(d.fixture.componentInstance.asset().change, null);
-  assert.equal(d.line.getAttribute('stroke'), '#22c55e');
+  assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
 });
 test('duplicate quotes stay quiet while changes to quote metadata still render', async (t) => {
   const d = await dashboard(t);
@@ -198,7 +198,7 @@ test('history loads with its initial performance theme and keyboard inspection f
     ],
   });
   d.sample();
-  assert.equal(d.line.getAttribute('stroke'), '#22c55e');
+  assert.equal(d.line.getAttribute('stroke'), 'var(--area-line)');
   const path = d.line.getAttribute('d'),
     svg = d.fixture.nativeElement.querySelector('app-stock-svg-chart svg');
   svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));

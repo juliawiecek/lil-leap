@@ -44,12 +44,12 @@
       >
         <defs>
           <pattern id="pro-grid" width="112" height="30" patternUnits="userSpaceOnUse">
-            <path d="M112 0H0V30" fill="none" stroke="#262626" stroke-width=".65" />
+            <path d="M112 0H0V30" fill="none" stroke="var(--surface-tone-17)" stroke-width=".65" />
           </pattern>
         </defs>
         <rect width="824" height="160" fill="url(#pro-grid)" />
         @if (desk().priceLine()) {
-          <path class="price-line" pathLength="1" [attr.d]="desk().priceLine()" fill="none" stroke="#94c973" stroke-width="2" vector-effect="non-scaling-stroke" />
+          <path class="price-line" pathLength="1" [attr.d]="desk().priceLine()" fill="none" stroke="var(--gain)" stroke-width="2" vector-effect="non-scaling-stroke" />
         }
         @if (desk().averageCostY() !== null) {
           <g class="average-cost">

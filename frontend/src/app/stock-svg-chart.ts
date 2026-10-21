@@ -57,7 +57,8 @@ const TIME = new Intl.DateTimeFormat('en-US', {
       height="100%"
       tabindex="0"
       role="img"
-      [attr.aria-label]="label() + '. Use arrow keys to explore prices; Escape to return to live.'"
+      [attr.data-performance]="performance()"
+      [attr.aria-label]="label() + '. ' + performanceText() + '. Use arrow keys to explore prices; Escape to return to live.'"
     >
       <defs>
         <linearGradient
@@ -80,6 +81,7 @@ const TIME = new Intl.DateTimeFormat('en-US', {
           fill="none"
           [attr.stroke]="palette.line"
           stroke-width="2"
+          style="stroke-dasharray: var(--series-dash)"
           vector-effect="non-scaling-stroke"
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -90,12 +92,12 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         <path
           data-crosshair
           fill="none"
-          stroke="#8a9991"
+          stroke="var(--text-tone-65)"
           stroke-opacity=".5"
           stroke-width="1"
           stroke-dasharray="3 5"
         />
-        <circle data-marker r="4" [attr.fill]="palette.line" stroke="#0b1210" stroke-width="2" />
+        <circle data-marker r="4" [attr.fill]="palette.line" stroke="var(--surface-tone-102)" stroke-width="2" />
       </g>
       <g class="axis" aria-hidden="true">
         <text data-price="0" />
@@ -127,7 +129,7 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         outline-offset: -3px;
       }
       .axis {
-        fill: #8a9991;
+        fill: var(--text-tone-65);
         font:
           10px Inter,
           ui-sans-serif,
@@ -140,10 +142,10 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         left: 16px;
         max-width: calc(100% - 32px);
         padding: 7px 10px;
-        border: 1px solid #33443b;
+        border: 1px solid var(--surface-tone-104);
         border-radius: 8px;
-        background: #132019;
-        color: #e2e8f0;
+        background: var(--surface-tone-103);
+        color: var(--text-tone-66);
         font:
           12px Inter,
           ui-sans-serif,
@@ -154,7 +156,7 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         position: absolute;
         inset: 40% 16px auto;
         text-align: center;
-        color: #8a9991;
+        color: var(--text-tone-65);
         font:
           13px Inter,
           ui-sans-serif,
@@ -169,6 +171,8 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly emptyLabel = input('No prices available yet');
   readonly palette = EMERALD_AREA;
   readonly empty = signal(true);
+  readonly performance = signal<'gain' | 'loss' | 'neutral'>('neutral');
+  readonly performanceText = signal('Session comparison unavailable');
   readonly gradientId = `stock-gradient-${++nextChartId}`;
   readonly clipId = `stock-clip-${nextChartId}`;
   private readonly svg = viewChild.required<ElementRef<SVGSVGElement>>('svg');
@@ -263,8 +267,11 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   append(point: StockPriceTick): void {
     this.#viewport?.append(point);
   }
-  /** Keep the integration contract; performance remains in the parent metrics, not the chart color. */
-  setPerformance(_price: number, _open: number | null, currency = 'USD'): void {
+  /** Safe palettes add a loss colour/dash; Off retains the existing emerald area style. */
+  setPerformance(price: number, open: number | null, currency = 'USD'): void {
+    const known = open !== null && Number.isFinite(open) && open > 0;
+    this.performance.set(known ? (price < open ? 'loss' : 'gain') : 'neutral');
+    this.performanceText.set(known ? (price < open ? 'Below session open' : 'At or above session open') : 'Session comparison unavailable');
     if (currency !== this.#currency) {
       this.#currency = currency;
       this.#format = new Intl.NumberFormat('en-US', { style: 'currency', currency });

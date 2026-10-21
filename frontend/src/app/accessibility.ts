@@ -1,4 +1,6 @@
 import { EnvironmentProviders, InjectionToken, Injectable, inject, makeEnvironmentProviders, provideAppInitializer, signal } from '@angular/core';
+import { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
+export { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
 
 /**
  * One place for every accessibility setting (PS-17): briefing, switch control, voice mode,
@@ -6,7 +8,6 @@ import { EnvironmentProviders, InjectionToken, Injectable, inject, makeEnvironme
  * single entry in this browser. Nothing is stored until a feature is turned on, so every feature
  * starts off; blocked storage means defaults for this visit, never an error.
  */
-export const ACCESSIBILITY_STORAGE_KEY = 'nexttrade.accessibility';
 
 /** The sections the accessibility tickets own (PS-18, PS-19, PS-21, PS-22, PS-27). */
 export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'colourMode' | 'livePrices';

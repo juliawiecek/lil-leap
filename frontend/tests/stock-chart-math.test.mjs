@@ -62,10 +62,10 @@ test('sampling emits the actual latest price and timestamp, rejects late/invalid
   assert.throws(() => samplingInterval(1000), RangeError);
 });
 test('neutral performance is green; down/up colors always derive from the official open', () => {
-  assert.equal(performancePalette(100, 100).line, '#22c55e');
-  assert.equal(performancePalette(99, 100).line, '#ef4444');
-  assert.equal(performancePalette(101, 100).top, 'rgba(34, 197, 94, 0.3)');
-  assert.equal(performancePalette(102, null).line, '#94a3b8');
+  assert.equal(performancePalette(100, 100).line, 'var(--chart-gain)');
+  assert.equal(performancePalette(99, 100).line, 'var(--chart-loss)');
+  assert.equal(performancePalette(101, 100).top, 'var(--gain-wash-27)');
+  assert.equal(performancePalette(102, null).line, 'var(--chart-neutral)');
 });
 test('time coordinates respect irregular spacing and line/area paths share exact vertices', () => {
   assert.equal(mapX(125, range, box), 35);

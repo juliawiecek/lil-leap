@@ -19,13 +19,13 @@ export interface ChartPalette {
 }
 /** Rendering style is independent of the portfolio/quote performance indicators. */
 export const EMERALD_AREA = {
-  line: '#22c55e',
-  top: 'rgba(34, 197, 94, 0.4)',
-  bottom: 'rgba(34, 197, 94, 0.0)',
+  line: 'var(--area-line)',
+  top: 'var(--area-top)',
+  bottom: 'var(--gain-wash-28)',
 } as const;
-export const UP: ChartPalette = { line: '#22c55e', top: 'rgba(34, 197, 94, 0.3)' };
-export const DOWN: ChartPalette = { line: '#ef4444', top: 'rgba(239, 68, 68, 0.3)' };
-export const UNKNOWN: ChartPalette = { line: '#94a3b8', top: 'rgba(148, 163, 184, 0.12)' };
+export const UP: ChartPalette = { line: 'var(--chart-gain)', top: 'var(--gain-wash-27)' };
+export const DOWN: ChartPalette = { line: 'var(--chart-loss)', top: 'var(--loss-wash-20)' };
+export const UNKNOWN: ChartPalette = { line: 'var(--chart-neutral)', top: 'var(--category-wash-11)' };
 export function performancePalette(price: number, open: number | null): ChartPalette {
   if (open === null || !Number.isFinite(open) || open <= 0) {
     return UNKNOWN;

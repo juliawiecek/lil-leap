@@ -29,6 +29,10 @@ import { marketBadgeText } from './market-status-api';
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
+              @if (quote.direction) {
+                <span class="price-direction" aria-hidden="true">{{ quote.direction === 'up' ? '↑' : '↓' }}</span>
+                <span class="sr-only">Price {{ quote.direction === 'up' ? 'rose' : 'fell' }}</span>
+              }
               @if (quote.price) {
                 <span class="price">{{ quote.price | currency }}</span>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
@@ -58,6 +62,9 @@ import { marketBadgeText } from './market-status-api';
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
+              @if (quote.direction) {
+                <span class="price-direction" aria-hidden="true">{{ quote.direction === 'up' ? '↑' : '↓' }}</span>
+              }
               @if (quote.price) {
                 <span class="price">{{ quote.price | currency }}</span>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
@@ -83,33 +90,33 @@ import { marketBadgeText } from './market-status-api';
       :host { display: block; }
       .ticker { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0; font-size: 12.5px; }
       .tape-window { flex: 1; min-width: 0; overflow: hidden;
-        -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); }
+        -webkit-mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 95%, transparent); mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 95%, transparent); }
       .tape { display: flex; width: max-content; }
       .tape ul { padding-right: 4px; }
       .tape.moving { animation-name: tape-scroll; animation-timing-function: linear; animation-iteration-count: infinite; }
       .tape-window:hover .tape, .tape-window:focus-within .tape { animation-play-state: paused; }
       @keyframes tape-scroll { to { transform: translateX(-50%); } }
       .badge { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 4px 10px 4px 0; border-radius: 999px;
-        background: transparent; color: #94c973; font-weight: 700; white-space: nowrap; }
+        background: transparent; color: var(--gain); font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
-      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-      .badge.closed { color: var(--market-status-accent, #e2b65a); }
+      @keyframes live { 0% { box-shadow: 0 0 0 0 var(--gain-wash-09); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+      .badge.closed { color: var(--market-status-accent, var(--warning)); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
       button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;
-        color: #a4a79e; font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
-      button strong { color: #f2f0e9; font-weight: 700; }
+        color: var(--text-muted); font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
+      button strong { color: var(--text); font-weight: 700; }
       .change { font-weight: 600; }
-      button:hover { background: #161616; }
+      button:hover { background: var(--surface-raised); }
       .price { font-variant-numeric: tabular-nums; }
-      .change.up { color: var(--green, #94c973); }
-      .change.down { color: #ff7a6e; }
-      .muted, .change { color: var(--muted, #a4a79e); }
-      .delayed { padding: 0 5px; border-radius: 4px; background: #211b0e; color: #e2b65a; font-style: normal; font-size: 12px; }
+      .change.up { color: var(--green, var(--gain)); }
+      .change.down { color: var(--loss); }
+      .muted, .change { color: var(--muted, var(--text-muted)); }
+      .delayed { padding: 0 5px; border-radius: 4px; background: var(--surface-tone-14); color: var(--warning); font-style: normal; font-size: 12px; }
       .flash-up { animation: flash-up 1.2s ease-out; }
       .flash-down { animation: flash-down 1.2s ease-out; }
-      @keyframes flash-up { from { background: rgba(148, 201, 115, .2); } to { background: transparent; } }
-      @keyframes flash-down { from { background: rgba(255, 122, 110, .2); } to { background: transparent; } }
+      @keyframes flash-up { from { background: var(--gain-wash-20); } to { background: transparent; } }
+      @keyframes flash-down { from { background: var(--loss-wash-08); } to { background: transparent; } }
       @media (prefers-reduced-motion: reduce) { .flash-up, .flash-down, .badge i, .tape.moving { animation: none; } .tape-window { overflow-x: auto; scrollbar-width: none; } }
     `,
   ],

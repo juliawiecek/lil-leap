@@ -59,17 +59,17 @@ export class ToastService {
   styles: [
     `
       .toasts { position: fixed; z-index: 60; right: 16px; bottom: 16px; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); }
-      .toast { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid #2e4424;
-        border-left: 4px solid #94c973; border-radius: 8px; background: #121a0f; color: #c6e2b2; box-shadow: 0 16px 40px #0008;
+      .toast { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--gain-tone-22);
+        border-left: 4px solid var(--gain); border-radius: 8px; background: var(--surface-tone-09); color: var(--gain-tone-21); box-shadow: 0 16px 40px var(--shadow-40);
         font-size: 12px; animation: enter 0.2s ease-out; }
-      .toast.rejected { border-color: #4a2a24; border-left-color: #ff7a6e; background: #1e0f0d; }
+      .toast.rejected { border-color: var(--loss-tone-15); border-left-color: var(--loss); background: var(--surface-tone-105); }
       strong { display: block; font-size: 13px; }
-      p { margin: 4px 0 0; color: #d6d4cc; line-height: 1.5; }
+      p { margin: 4px 0 0; color: var(--text-tone-19); line-height: 1.5; }
       .actions { display: flex; align-items: flex-start; gap: 6px; }
       button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-      .view { color: #c6e2b2; font-weight: 600; }
-      .rejected .view { color: #ffb4ab; }
-      .close { font-size: 16px; line-height: 1; color: #a4a79e; }
+      .view { color: var(--gain-tone-21); font-weight: 600; }
+      .rejected .view { color: var(--loss-tone-06); }
+      .close { font-size: 16px; line-height: 1; color: var(--text-muted); }
       @keyframes enter { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
       @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
     `,

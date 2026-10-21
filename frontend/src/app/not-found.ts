@@ -14,13 +14,13 @@ import { RouterLink } from '@angular/router';
     </main>
   `,
   styles: [`
-    :host { display: grid; min-height: 100vh; place-items: center; background: #0c0c0c; color: #f2f0e9; font-family: inherit; }
+    :host { display: grid; min-height: 100vh; place-items: center; background: var(--surface); color: var(--text); font-family: inherit; }
     .not-found { max-width: 440px; padding: 32px 16px; text-align: center; }
-    .code { margin: 0; color: #94c973; font-size: 14px; font-weight: 700; letter-spacing: .2em; }
+    .code { margin: 0; color: var(--gain); font-size: 14px; font-weight: 700; letter-spacing: .2em; }
     h1 { margin: 8px 0 12px; font-size: 28px; }
-    p { margin: 0 0 24px; color: #a4a79e; line-height: 1.5; }
-    a { display: inline-block; padding: 10px 18px; border-radius: 8px; background: #94c973; color: #0c0c0c; font-weight: 600; text-decoration: none; }
-    a:focus-visible { outline: 2px solid #f2f0e9; outline-offset: 3px; }
+    p { margin: 0 0 24px; color: var(--text-muted); line-height: 1.5; }
+    a { display: inline-block; padding: 10px 18px; border-radius: 8px; background: var(--gain); color: var(--surface); font-weight: 600; text-decoration: none; }
+    a:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
   `],
 })
 export class NotFound {}
