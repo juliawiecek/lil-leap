@@ -24,6 +24,9 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
 - `novice-learn.test.mjs`: quiz completion, stored progress, topic selection,
   unavailable storage, and compound-growth calculations.
 - `investor-profile.test.mjs`: conditional fields, review masking, and emitted answers.
+- `accessibility.test.mjs`: PS-17 settings store (off by default, one entry, reloads,
+  blocked storage, startup hooks), the Accessibility section on both Settings pages,
+  and the Keyboard Shortcuts list and `?` key.
 - `app.test.mjs`: rendered signup/sign-in flows, registration, errors, session
   actions, password visibility, canvas drawing, and lifecycle cleanup.
 - `display-components.test.mjs`: rendered dashboard selection, sign-out,
