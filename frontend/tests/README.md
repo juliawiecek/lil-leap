@@ -27,6 +27,12 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
 - `accessibility.test.mjs`: PS-17 settings store (off by default, one entry, reloads,
   blocked storage, startup hooks), the Accessibility section on both Settings pages,
   and the Keyboard Shortcuts list and `?` key.
+- `briefing.test.mjs`: PS-18 spoken briefing wording (amounts, market times, movers,
+  orders since the last briefing, hidden balances), speech playback, Alt+B, repeat
+  timing, the Settings card, and each account's last briefing kept across reloads.
+- `switch-scan.test.mjs`: PS-19 switch control groups, Back/Pause, keypads for number,
+  text and dropdown fields, dialogs, re-rendered pages, the switch key, reading items
+  aloud, and settings kept in the Accessibility settings store.
 - `app.test.mjs`: rendered signup/sign-in flows, registration, errors, session
   actions, password visibility, canvas drawing, and lifecycle cleanup.
 - `display-components.test.mjs`: rendered dashboard selection, sign-out,

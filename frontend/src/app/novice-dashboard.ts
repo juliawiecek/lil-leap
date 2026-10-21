@@ -38,6 +38,7 @@ import {
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { BriefingButton, BriefingSource } from './briefing-button';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -94,7 +95,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   selector: 'app-novice-dashboard',
   imports: [
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
   ],
   templateUrl: './novice-dashboard.html',
   
@@ -116,6 +117,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketText = computed(() => marketStatusText(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   readonly marketClosingSoon = computed(() => this.marketOpen() && !!this.marketStatus()?.nextClose);
+  /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
+  readonly marketKnownOpen = computed(() => this.marketStatus()?.open ?? null);
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.marketStatus(), this.marketClock()));
   /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
@@ -808,6 +811,39 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   viewOrders(): void {
     this.navigate('Activity');
   }
+
+  /**
+   * What the spoken briefing reads (PS-18): the portfolio as shown, today's move of each holding
+   * from the live feed, and this account's orders. A failed order load leaves orders out.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    const accountId = this.selectedAccount()?.account_id;
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.holdings();
+    return {
+      accountId,
+      now,
+      market: this.marketStatus(),
+      balanceHidden: !this.showBalance(),
+      total: this.portfolioValue(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((h) => ({ symbol: h.symbol, name: h.name, dayChangePercent: live.get(h.symbol)?.change ?? null })),
+      orders,
+      pricesDelayed: held.some((h) => {
+        const quote = live.get(h.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
 
   /**
    * Shows the feed's latest prices, re-values holdings at the latest bids (PS-10: no separate

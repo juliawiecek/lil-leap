@@ -31,6 +31,7 @@ import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { BriefingButton, BriefingSource } from './briefing-button';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -100,7 +101,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
@@ -195,6 +196,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly overviewList = signal<'Watchlist' | 'Movers' | 'Sectors'>('Watchlist');
   readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
+  readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
   /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
   tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
     const live = this.feed.quotes().find((q) => q.symbol === symbol);
@@ -516,6 +519,42 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   viewOrders(): void {
     this.navigate('Activity');
   }
+  /**
+   * What the spoken briefing reads (PS-18): the summary panel's figures, today's move of each
+   * position from the live feed, and this account's orders. A failed order load leaves orders out.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    const accountId = this.selectedAccount()?.account_id;
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.positions();
+    return {
+      accountId,
+      now,
+      market: this.feed.status(),
+      balanceHidden: this.privateBalance(),
+      total: this.portfolio(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((p) => ({
+        symbol: p.symbol,
+        name: live.get(p.symbol)?.name ?? p.symbol,
+        dayChangePercent: live.get(p.symbol)?.change ?? null,
+      })),
+      orders,
+      pricesDelayed: held.some((p) => {
+        const quote = live.get(p.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
   navigate(page: string): void {
     this.page.set(page);
     this.routing?.go(page);

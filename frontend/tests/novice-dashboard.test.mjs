@@ -447,6 +447,32 @@ test('the ticket follows live prices, flags a stale quote, and reviews in one li
   assert.equal(desk.activeTab(), 'Activity');
 });
 
+test('the spoken briefing reads the portfolio as shown, live moves and this account\'s orders (PS-18)', async t => {
+  const fill = historyRow('FILLED', { fillPrice: 176.5, filledQuantity: 2, filledAt: new Date().toISOString() });
+  const { desk, feed } = await tradingDesk(t);
+  feed.push(listed().map((q) => ({ ...q, change: q.symbol === 'NVDA' ? 2.5 : 0.4 })));
+  let asked;
+  desk.orderHistoryClient = { list: async (filters) => { asked = filters; return [fill]; } };
+  const snapshot = await desk.briefingSource();
+  assert.equal(asked.accountId, 'acct-1');
+  assert.equal(snapshot.accountId, 'acct-1', 'so this account remembers its own last briefing');
+  assert.equal(snapshot.total, desk.portfolioValue());
+  assert.equal(snapshot.gain, desk.totalReturn());
+  assert.equal(snapshot.buyingPower, 6420.18);
+  const cost = samplePortfolio.holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
+  assert.ok(Math.abs(snapshot.gainPercent - (desk.totalReturn() / cost) * 100) < 0.01, 'percent of what the shares cost');
+  assert.deepEqual(snapshot.holdings.map((h) => [h.symbol, h.dayChangePercent]), [['AAPL', 0.4], ['MSFT', 0.4], ['NVDA', 2.5]]);
+  assert.deepEqual(snapshot.orders, [fill]);
+  assert.equal(snapshot.balanceHidden, false);
+  assert.equal(snapshot.pricesDelayed, false);
+
+  desk.showBalance.set(false);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+});
+
 test('an order still running past the tracking limit points the user to Activity', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('ACCEPTED')]] });
   await desk.trackOrder('o1', Date.now() - ORDER_TRACK_LIMIT_MS);

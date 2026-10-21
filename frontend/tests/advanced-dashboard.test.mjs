@@ -403,6 +403,24 @@ test('search and chart periods update the displayed data', t => {
   assert.equal(desk.bottomTab(), 'Positions');
 });
 
+test('the spoken briefing reads the summary panel, live moves and orders (PS-18)', async t => {
+  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
+  desk.applyPortfolio({ cash: 1000, holdings: [{ instrumentId: 'nvda-uuid', symbol: 'NVDA', instrumentName: 'NVIDIA', quantity: 2, averageCost: 800 }] });
+  const rows = [{ orderId: 'o1', symbol: 'NVDA', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: new Date().toISOString(), fillPrice: 800, filledQuantity: 2, filledAt: new Date().toISOString() }];
+  desk.orderHistoryClient = { list: async () => rows };
+  const snapshot = await desk.briefingSource();
+  assert.equal(snapshot.total, desk.portfolio());
+  assert.equal(snapshot.gainPercent, desk.totalReturnPercent());
+  assert.equal(snapshot.buyingPower, 1000);
+  assert.deepEqual(snapshot.holdings, [{ symbol: 'NVDA', name: 'NVIDIA Corporation', dayChangePercent: 2.36 }]);
+  assert.deepEqual(snapshot.orders, rows);
+  desk.privateBalance.set(true);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, []);
+});
+
 test('review creates a fresh order reference and backdrop closes only the dialog', t => {
   const desk = tradingDesk(t);
   let opened = 0, closed = 0;
