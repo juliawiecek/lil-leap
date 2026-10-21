@@ -781,6 +781,14 @@ CREATE OR REPLACE VIEW v_trade_audit_events AS
     FROM audit_log
     WHERE related_order_id IS NOT NULL;
 
+-- BR-15: Who placed a trade, for Trade lookup in Insights. Only a trader's id, name and email, so the
+-- reporting role can read it without access to credentials or other personal data.
+CREATE OR REPLACE VIEW v_trade_clients AS
+    SELECT u.user_id, p.first_name, p.last_name, u.email
+    FROM users u
+    LEFT JOIN customer_profiles p ON p.user_id = u.user_id
+    WHERE u.user_role = 'TRADER';
+
 -- BR-03: Active sessions per user
 CREATE OR REPLACE VIEW v_active_sessions AS
     SELECT

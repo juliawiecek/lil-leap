@@ -4,6 +4,8 @@ BEGIN;
 SET LOCAL ROLE reporting_user;
 SELECT COUNT(*) FROM orders;
 SELECT COUNT(*) FROM holdings;
+-- Trade lookup reads who placed a trade through this view, never from users itself.
+SELECT COUNT(*) FROM v_trade_clients;
 DO $$
 BEGIN
     BEGIN

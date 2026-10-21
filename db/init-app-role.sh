@@ -71,7 +71,8 @@ psql -v ON_ERROR_STOP=1 \
         v_latest_quotes,
         v_active_sessions,
         v_trader_tier_eligibility,
-        v_trade_audit_events
+        v_trade_audit_events,
+        v_trade_clients
     TO :"app_user";
 
     -- audit_log is append-only: application may SELECT and INSERT, never UPDATE/DELETE.

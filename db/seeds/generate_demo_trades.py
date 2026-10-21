@@ -1,11 +1,10 @@
 """Generate the demo seed data and the matching insights reporting CSV.
 
-One deterministic trade book feeds four committed files, so they never drift:
+One deterministic trade book feeds three committed files, so they never drift:
 
   db/seeds/001_us_equity_instruments.sql      instrument universe (fixed ids)
   db/seeds/003_demo_trading_activity.sql      demo clients, accounts and trade book
   insights/src/main/resources/reports/trades.csv  BR-16 report dataset (every seeded fill)
-  insights/src/main/resources/reports/trade-events.csv  every recorded step of those fills (Trade lookup)
 
 Instrument markets and reference prices come from the quote catalog
 (nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv), so seeded
@@ -15,7 +14,7 @@ The SQL book is relative: day offset 0 is the UTC day the database is seeded.
 The CSV is the same book anchored at ANCHOR_DATE. Re-anchor it with --anchor.
 
 Usage (from the repository root, standard library only):
-  python db/seeds/generate_demo_trades.py            regenerate all four files
+  python db/seeds/generate_demo_trades.py            regenerate all three files
   python db/seeds/generate_demo_trades.py --check    fail if a committed file is stale
 """
 from __future__ import annotations
@@ -23,7 +22,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import json
 import random
 import sys
 import uuid
@@ -57,7 +55,6 @@ COMMON_STOCKS = _load_catalog()
 INSTRUMENTS_SQL = REPO / "db/seeds/001_us_equity_instruments.sql"
 TRADES_SQL = REPO / "db/seeds/003_demo_trading_activity.sql"
 TRADES_CSV = REPO / "insights/src/main/resources/reports/trades.csv"
-EVENTS_CSV = REPO / "insights/src/main/resources/reports/trade-events.csv"
 
 ANCHOR_DATE = date(2026, 10, 16)
 SEED = 20261016
@@ -596,39 +593,6 @@ def render_csv(trades: list[Trade]) -> str:
     return CSV_HEADER + "\n" + "".join(",".join(csv_value(v) for v in row) + "\n" for _, row in rows)
 
 
-EVENTS_HEADER = "order_id,occurred_at,source,type,actor,details"
-
-
-def render_events(trades_csv: str) -> str:
-    """Every recorded step of each fill in trades.csv, as 002/003 write them to the database.
-
-    A seeded order is submitted at t, accepted at t+1s and filled at t+2s (the CSV's filled_at), when
-    its fill, cash and holding movements and audit entries are written. Steps at the same instant are
-    ordered status, audit, fill, cash, holding, like Trade lookup used to read them from the database.
-    """
-    rows = []
-    for fill in csv.DictReader(trades_csv.splitlines()):
-        filled = datetime.strptime(fill["filled_at"], "%Y-%m-%dT%H:%M:%SZ")
-        at = lambda seconds: (filled + timedelta(seconds=seconds - 2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        qty, price, side = int(fill["filled_quantity"]), fill["execution_price"], fill["side"]
-        cash = money(Decimal(qty) * Decimal(price)) * (-1 if side == "BUY" else 1)
-        amounts = {"quantity": qty, "executionPrice": price, "cashDelta": f"{cash:.2f}"}
-        steps = [
-            (0, "STATUS", "SUBMITTED", "", {"reasonCode": "SUBMISSION_VALIDATED"}),
-            (1, "STATUS", "ACCEPTED", "", {"reasonCode": "ORDER_ACCEPTED"}),
-            (2, "STATUS", "FILLED", "", {"reasonCode": "EXECUTION_SUCCESS"}),
-            (2, "AUDIT", "ORDER_FILLED", "SYSTEM", amounts),
-            (2, "AUDIT", "SETTLEMENT_COMPLETED", "SYSTEM", amounts),
-            (2, "FILL", "FILLED", "", {"quantity": qty, "price": price, "quoteTimestamp": at(1)}),
-            (2, "CASH", side, "", {"amount": f"{cash:.2f}", "currency": "USD", "settledAt": at(2)}),
-            (2, "HOLDING", side, "", {"quantityChange": qty if side == "BUY" else -qty, "costBasis": price}),
-        ]
-        for seconds, source, kind, actor, details in steps:
-            rows.append([fill["order_id"], at(seconds), source, kind, actor,
-                         json.dumps(details, separators=(",", ":"))])
-    return EVENTS_HEADER + "\n" + "".join(",".join(csv_value(v) for v in row) + "\n" for row in rows)
-
-
 def main() -> int:
     global ANCHOR_DATE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -646,7 +610,6 @@ def main() -> int:
         INSTRUMENTS_SQL: render_instruments_sql(),
         TRADES_SQL: render_trades_sql(trades),
         TRADES_CSV: trades_csv,
-        EVENTS_CSV: render_events(trades_csv),
     }
     stale = [path for path, text in outputs.items()
              if not path.exists() or path.read_text(encoding="utf-8") != text]

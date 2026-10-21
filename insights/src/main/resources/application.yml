@@ -9,7 +9,7 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       missing-topics-fatal: false
-  # Dashboard endpoints read fills from the DB; report downloads, the Clients page and Trade lookup read reports/trades.csv (Trade lookup also reports/trade-events.csv).
+  # Dashboard endpoints read fills from the DB; Trade lookup reads the database; report downloads and the Clients page read reports/trades.csv.
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexttrade}
     username: ${DB_APP_USERNAME:app_user}

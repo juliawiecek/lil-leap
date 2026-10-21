@@ -1,6 +1,6 @@
 # Reporting dataset
 
-`trades.csv` is the standalone mock source used by BR-16 report generation and the Clients page. It is intentionally separate from the live database so neither competes with trading workloads.
+`trades.csv` is the standalone mock source used by BR-16 report generation and the Clients page. Trade lookup reads the trading database instead. It is intentionally separate from the live database so neither competes with trading workloads.
 
 ## Columns
 
@@ -25,21 +25,6 @@
 | `side` | Indicates buy or sell activity for context | `orders.side` | All report generators |
 | `filled_quantity` | Base quantity used to compute traded volume | `fills.filled_quantity` | All report generators |
 | `execution_price` | Price used to compute traded value / notional | `fills.execution_price` | All report generators |
-
-## Recorded steps (`trade-events.csv`)
-
-Trade lookup shows every recorded step of a fill from `trade-events.csv`: eight rows per fill in `trades.csv`,
-matching what the `002` and `003` seeds write to `order_status_history`, `audit_log`, `fills`, `cash_transactions`
-and `holding_movements` for the same order.
-
-| Column | Meaning |
-| --- | --- |
-| `order_id` | The order, as in `trades.csv` |
-| `occurred_at` | When the step was recorded: submitted 2 seconds before the fill, accepted 1 second before, the rest at the fill time |
-| `source` | `STATUS`, `AUDIT`, `FILL`, `CASH` or `HOLDING`: the record it mirrors |
-| `type` | The status, audit event type, or movement type (`BUY`/`SELL`) |
-| `actor` | `SYSTEM` for audit entries, otherwise empty |
-| `details` | The record's own fields as JSON, for example `reasonCode`, `quantity`, `price`, `amount`, `quantityChange` |
 
 ## Endpoint mapping
 

@@ -7,9 +7,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * One trade as the reporting dataset ({@code reports/trades.csv}) records it: the fill, the account
- * and client it belongs to, and every recorded step ({@code reports/trade-events.csv}). The dataset
- * holds filled orders only.
+ * One filled trade as the trading database records it: the fill, the account and client it belongs to,
+ * and every recorded step.
  *
  * @param orderId the trade's order id
  * @param filledAt execution time
