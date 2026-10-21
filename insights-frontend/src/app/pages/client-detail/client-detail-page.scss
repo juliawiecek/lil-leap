@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #a6e4ac;
+  font-size: 12px;
+  text-decoration: none;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+.badges {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.tabs {
+  margin-bottom: 20px;
+}
+.hint {
+  margin: -6px 0 16px;
+  font-size: 12px;
+}
+.order-link {
+  color: #a6e4ac;
+  font-size: 12px;
+}
+.mono {
+  font-size: 12px;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -1,6 +1,6 @@
 # Reporting dataset
 
-`trades.csv` is the standalone mock source used by BR-16 report generation. It is intentionally separate from the live database so report generation never competes with trading workloads.
+`trades.csv` is the standalone mock source used by BR-16 report generation and the Clients page. It is intentionally separate from the live database so neither competes with trading workloads.
 
 ## Columns
 
@@ -15,14 +15,31 @@
 | `asset_class` | Lets reports distinguish equities, FX, and crypto | `instruments.asset_class` | Instrument report |
 | `market_code` | Distinguishes venue or market source for the instrument | `instruments.market_code` | Instrument report |
 | `user_id` | Identifies the client behind the trade | `users.user_id` | Client segment and activity reports |
-| `client_email` | Human-readable client identifier | `users.email` | Client segment and activity reports |
+| `client_email` | Human-readable client identifier | `users.email` | Client segment and activity reports, Clients page |
+| `client_name` | Client's first and last name | `customer_profiles.first_name`, `last_name` | Clients page |
 | `account_id` | Trading account identifier | `accounts.account_id` | Client segment and activity reports |
-| `account_number` | Human-readable trading account number | `accounts.account_number` | Client segment and activity reports |
+| `account_number` | Human-readable trading account number | `accounts.account_number` | Client segment and activity reports, Clients page |
+| `account_name` | Account label | `accounts.account_name` | Clients page |
 | `account_status` | Shows whether the account is active, blocked, etc. | `accounts.account_status` | Client segment report |
 | `trader_level` | Business segment used for client grouping | `accounts.trader_level` | Client segment report |
 | `side` | Indicates buy or sell activity for context | `orders.side` | All report generators |
 | `filled_quantity` | Base quantity used to compute traded volume | `fills.filled_quantity` | All report generators |
 | `execution_price` | Price used to compute traded value / notional | `fills.execution_price` | All report generators |
+
+## Recorded steps (`trade-events.csv`)
+
+Trade lookup shows every recorded step of a fill from `trade-events.csv`: eight rows per fill in `trades.csv`,
+matching what the `002` and `003` seeds write to `order_status_history`, `audit_log`, `fills`, `cash_transactions`
+and `holding_movements` for the same order.
+
+| Column | Meaning |
+| --- | --- |
+| `order_id` | The order, as in `trades.csv` |
+| `occurred_at` | When the step was recorded: submitted 2 seconds before the fill, accepted 1 second before, the rest at the fill time |
+| `source` | `STATUS`, `AUDIT`, `FILL`, `CASH` or `HOLDING`: the record it mirrors |
+| `type` | The status, audit event type, or movement type (`BUY`/`SELL`) |
+| `actor` | `SYSTEM` for audit entries, otherwise empty |
+| `details` | The record's own fields as JSON, for example `reasonCode`, `quantity`, `price`, `amount`, `quantityChange` |
 
 ## Endpoint mapping
 
@@ -31,7 +48,7 @@
 - `GET /reports/generate/client-segment-report`
   - Aggregates by `trader_level`.
 - `GET /reports/generate/trading-activity-report`
-  - Aggregates by UTC `filled_at` date and hour.
+  - Aggregates by `filled_at` date and hour in New York time (`America/New_York`).
 
 ## Notes
 

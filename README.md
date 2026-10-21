@@ -70,7 +70,6 @@ covered and missed lines; open it from a local clone, since GitHub shows HTML as
 | NextTrade UI (Angular) | 212 | 96.4% | 91.6% | [c8](coverage-reports/nexttrade-ui/index.html) |
 | Insights UI (Angular) | 48 | 100% | 96.9% | [c8](coverage-reports/insights-ui/index.html) |
 | Session package (shared) | 70 | 98.6% | 94.3% | [c8](coverage-reports/session-core/index.html) |
-| Data pipeline (Python) | 85 | 92.3% | 82.3% | [pytest-cov](coverage-reports/data-pipeline/index.html) |
 | **All code** | **1,136** | **94.7%** | **90.4%** | [summary](coverage-reports/README.md) |
 
 Target: 70% per component. 👉 **[How to regenerate, and what SonarQube counts →](docs/coverage/README.md)**
@@ -82,12 +81,11 @@ lil-leap/
 |- auth/                 # NestJS Identity Service: register, login, refresh/logout, password reset,
 |                        #   server-assigned trader tier, OpenAPI spec (openapi.json)
 |- nextTrade-orders/     # Spring Boot: order submission, execution, settlement, history, cash
-|- nextTrade-holdings/   # Spring Boot: holdings service
+|- nextTrade-holdings/   # Spring Boot: holdings service, quote reads and live synthetic quotes
 |- insights/             # Spring Boot: portfolio, order submission, instruments,
 |                        #   market data
 |- frontend/             # Angular: NextTrade trading app (nginx, :4200)
 |- insights-frontend/    # Angular: Insights reporting app (nginx, :4201)
-|- data-pipeline/        # Python/Flask quote-service: synthetic quotes -> Postgres
 |- kafka/                # Kafka broker image and topic setup
 |- db/                   # Schema, migrations, seeds, app-role script, SQL tests, ER diagram
 |- docs/                 # api/, coverage/ (generated reports), architecture/ (ADRs), stories/, javadoc/
@@ -114,7 +112,6 @@ flowchart LR
         orders["orders<br/>Spring Boot · :8082"]
         holdings["holdings<br/>Spring Boot · :8083"]
         insights["insights<br/>Spring Boot · :8081"]
-        quotes["quote-service<br/>Python / Flask · :8084"]
     end
 
     db[("PostgreSQL 16<br/>nexttrade · :5432")]
@@ -125,7 +122,7 @@ flowchart LR
     fe -- "/api/holdings/*" --> holdings
     ife -- "/auth/*" --> auth
     ife -- "/api/*" --> insights
-    auth & orders & holdings & insights & quotes --> db
+    auth & orders & holdings & insights --> db
 ```
 
 Browsers only talk to the two nginx frontends; each proxies API paths to the
@@ -137,9 +134,8 @@ restricted `app_user` role; the schema is owned by the admin role.
 |---|---|---|---|
 | `auth` | NestJS 10 + TypeORM | none (via nginx) | Registration, login, refresh-token rotation and logout; password reset (reset emails are written as `.eml` files to the `password_reset_outbox` volume, because the VM has no network); assigns the trader tier; `GET /rules/tier-eligibility`. See [auth/README.md](auth/README.md). |
 | `orders` | Spring Boot 3.3.4 | 8082 | Order submission, execution against live quotes, atomic settlement of cash and holdings, order history and cash balances; publishes terminal order events to Kafka. |
-| `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service. |
+| `holdings` | Spring Boot 3.3.4 | 8083 | Holdings service; also serves quote reads and generates the live synthetic quotes (every 2s, Geometric Brownian Motion) that orders fill against. |
 | `insights` | Spring Boot 3.3.4 | 8081 | Client financials/portfolio, order submission, instrument lookup, market data. |
-| `quote-service` | Python 3.12 + Flask | 8084 | Generates synthetic quotes and ingests them into Postgres continuously. |
 | `kafka` | Apache Kafka + ZooKeeper (Confluent 7.5) | 9092, 29092 | Optional event broker; when the Kafka Compose override is enabled, the shared `order-events` topic serves the Orders producer and three Insights consumer groups. See [Kafka Order Events](#kafka-order-events). |
 | `db` | PostgreSQL 16 | 5432 | Schema from `db/finalized-schema.sql`, role from `db/init-app-role.sh`. |
 
@@ -201,7 +197,6 @@ For broker commands and local setup details, see [kafka/README.md](kafka/README.
 | Security       | Spring Security + JJWT / bcryptjs + JWT | Password hashing + Bearer JWT auth              |
 | Database       | PostgreSQL 16 + `pgcrypto`              | UUID keys and SSN encryption in DB              |
 | Frontend       | Angular 22 + TypeScript                 | Two standalone Angular apps                     |
-| Data           | Python 3.12 + Flask + NumPy + Pandas    | Synthetic quote generation pipeline             |
 | Messaging      | Apache Kafka + ZooKeeper                | Shared order lifecycle events fan out to three Insights consumers |
 | DevOps         | Docker, Docker Compose, Jenkins         | Container builds and CI automation              |
 
@@ -294,7 +289,6 @@ the optional Kafka services, which are added by
 | `auth`               | `./auth`           | none (`3000` internal)        | Identity Service; reached only via the frontends' nginx (`/auth/*`, `/rules/*`) |
 | `frontend`           | `./frontend`       | `4200` -> `80`                | nginx: serves the NextTrade app, proxies to `auth`, `orders`, `holdings` |
 | `insights-frontend`  | `./insights-frontend` | `4201` -> `80`              | nginx: serves the Insights app, proxies to `auth`, `insights` |
-| `quote-service`      | `./data-pipeline`  | `${QUOTE_SERVICE_PORT:-8084}` -> `8080` | Waits for `db`'s healthcheck before starting |
 | `zookeeper`          | `confluentinc/cp-zookeeper:7.5.0` | `2181`          | Coordination for the Kafka broker; has a readiness healthcheck |
 | `kafka`              | `./kafka`          | `9092`, `29092` (host access) | Event broker; waits for `zookeeper` to be healthy |
 | `kafka-topics`       | `confluentinc/cp-kafka:7.5.0` | none            | One-off job that creates the `order-events` topic once `kafka` is healthy |
@@ -302,12 +296,12 @@ the optional Kafka services, which are added by
 Important runtime behavior:
 
 - Services reach Postgres internally at `db:5432`; `orders`, `holdings`,
-  `insights`, `auth`, and `quote-service` all connect over the Docker network.
+  `insights` and `auth` all connect over the Docker network.
 - DB initialization scripts (`db/finalized-schema.sql`, `db/init-app-role.sh`,
   the seed file) only run on the **first** startup of an empty `db_data`
   volume — re-run them by clearing that volume (`docker compose down -v`).
-- `quote-service` waits for `db`'s healthcheck to pass before starting; the
-  other services only wait for `db` to start, not for it to be ready.
+- Holdings writes a synthetic quote for every catalog stock every
+  `QUOTE_INTERVAL_SECONDS` (default 2); set `QUOTE_GENERATOR_ENABLED=false` to stop it.
 
 ## Jenkins Pipeline (CI)
 
@@ -321,9 +315,7 @@ Important runtime behavior:
 6. **Unit Tests - insights-service** - `mvn clean verify` against `insights/pom.xml`
 7. **Publish Coverage - nextTrade-orders** - archives the JaCoCo report from `nextTrade-orders/target/site/jacoco/`
 8. **Publish Coverage - nextTrade-holdings** - archives the JaCoCo report from `nextTrade-holdings/target/site/jacoco/`
-9. **Run Python Tests With Coverage** - runs `pytest` with coverage for `data-pipeline/` inside a `python:3.12-slim` container
-10. **Archive Python Coverage** - archives `data-pipeline/htmlcov/` and `coverage.xml`
-11. **Build Compose Services** - `docker compose build`
+9. **Build Compose Services** - `docker compose build`
 
 Notes:
 
@@ -556,14 +548,6 @@ cd insights-frontend
 npm test
 ```
 
-### Data Pipeline (Pytest)
-
-```bat
-cd data-pipeline
-python -m pip install -r requirements.txt
-pytest
-```
-
 ### Code Coverage
 
 How to generate the report for every service, and the latest figures:
@@ -575,7 +559,6 @@ How to generate the report for every service, and the latest figures:
 | `nextTrade-holdings` | JaCoCo     | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
 | `insights`           | JaCoCo     | `cd insights && mvn clean verify`           | `insights/target/site/jacoco/index.html`           |
 | `auth`               | Jest       | `cd auth && npm run test:cov`               | `auth/coverage/lcov-report/index.html`             |
-| `data-pipeline`      | pytest-cov | see [docs/coverage](docs/coverage/README.md#quote-service-pytest-cov) | `data-pipeline/htmlcov/index.html` |
 | `frontend`           | c8         | `cd frontend && npm run test:coverage`      | `frontend/coverage/index.html`                     |
 | `insights-frontend`  | c8         | `cd insights-frontend && npm run test:coverage` | `insights-frontend/coverage/index.html`        |
 | `shared/session-core` | c8        | `cd shared/session-core && npm run test:coverage` | `shared/session-core/coverage/lcov-report/index.html` |
@@ -583,7 +566,7 @@ How to generate the report for every service, and the latest figures:
 JaCoCo's `report` goal is bound to Maven's `verify` phase, not `test` — plain
 `mvn clean test` (as used elsewhere in this README for quick feedback) does
 not produce a coverage report; use `mvn clean verify` when you need one.
-Jenkins archives every service's coverage report (JaCoCo, Jest, c8 and pytest-cov) as
+Jenkins archives every service's coverage report (JaCoCo, Jest and c8) as
 build artifacts on each run (see [Jenkins Pipeline (CI)](#jenkins-pipeline-ci)).
 
 ## Javadocs
@@ -639,19 +622,17 @@ python -m http.server 8000 --directory docs/javadoc
 Then visit <http://localhost:8000/>. GitHub's repository viewer displays HTML source;
 use a local browser or static web server to browse the rendered documentation.
 
-## Data Pipeline
+## Synthetic Quotes
 
-`data-pipeline/` generates reproducible synthetic US-equity quotes for
-offline/dev use and can run as a continuous ingestion service
-(`quote-service` in Docker Compose).
+Holdings generates the live synthetic US-equity quotes (there is no separate quote
+service). Every `QUOTE_INTERVAL_SECONDS` it takes two one-minute Geometric Brownian
+Motion steps from each stock's start price and stores the result, tagged
+`SYNTHETIC_GBM`. `QUOTE_SEED` makes the sequence reproducible.
 
 Key files:
 
-- `data-pipeline/src/generate_quotes.py`
-- `data-pipeline/src/quote_provider.py`
-- `data-pipeline/src/service_runner.py`
-- `data-pipeline/src/app.py`
-- `data-pipeline/tests/`
+- `nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv` - stocks, start prices, drift and volatility (also read by `db/seeds/generate_demo_trades.py`)
+- `nextTrade-holdings/src/main/java/com/neueda/leap/marketdata/generation/` - price model and scheduled job
 
 ## Notes for Production Hardening
 

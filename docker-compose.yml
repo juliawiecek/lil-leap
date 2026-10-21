@@ -1,4 +1,4 @@
-# Diagram ports: Holdings 8080, Identity 8081, Orders 8082, Quotes 8083, Insights 8084.
+# Diagram ports: Holdings 8080, Identity 8081, Orders 8082, Insights 8084 (Holdings also generates quotes).
 # Services stay internal; the gateway serves both clients on 4200/4201.
 x-primary-database: &primary-database
   DB_HOST: db
@@ -18,7 +18,7 @@ services:
       - ./gateway/proxy-headers.conf:/etc/nginx/routes/proxy-headers.conf:ro
       - ./gateway/http-trading.conf:/etc/nginx/listeners/trading.conf:ro
       - ./gateway/http-reporting.conf:/etc/nginx/listeners/reporting.conf:ro
-    depends_on: [frontend, insights-frontend, auth, holdings, orders, quote-service, insights]
+    depends_on: [frontend, insights-frontend, auth, holdings, orders, insights]
 
   frontend:
     build:
@@ -51,6 +51,9 @@ services:
     environment:
       <<: [*primary-database, *jwt]
       PORT: 8080
+      # Holdings also generates the live synthetic quotes orders fill against.
+      QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-2}
+      QUOTE_SEED: ${QUOTE_SEED:-42}
     depends_on:
       db: {condition: service_healthy}
 
@@ -63,22 +66,6 @@ services:
       NEXTTRADE_MARKET_RESPECT_HOURS: ${NEXTTRADE_MARKET_RESPECT_HOURS:-true}
     depends_on:
       db: {condition: service_healthy}
-
-  quote-service:
-    build: ./data-pipeline
-    environment:
-      <<: *primary-database
-      PORT: 8083
-      QUOTE_PROVIDER: postgres
-      QUOTE_INTERVAL_SECONDS: ${QUOTE_INTERVAL_SECONDS:-2}
-      QUOTE_PERIODS: ${QUOTE_PERIODS:-10}
-      QUOTE_SEED: ${QUOTE_SEED:-42}
-      QUOTE_RETENTION_DAYS: ${QUOTE_RETENTION_DAYS:-0}
-      QUOTE_INGEST_CONTINUOUS: "true"
-    command: ["python", "-m", "src.service_runner"]
-    depends_on:
-      db: {condition: service_healthy}
-    restart: unless-stopped
 
   insights:
     build: ./insights

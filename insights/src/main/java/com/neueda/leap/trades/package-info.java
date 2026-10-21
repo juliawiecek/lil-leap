@@ -1,5 +1,5 @@
 /**
- * Trade investigation for trading operations staff (BR-15): an order's full recorded trail, read
- * from the reporting replica so investigations never load the trading database.
+ * Trade lookup for trading operations staff (BR-15): one trade's fill and the client behind it, read
+ * from the reporting dataset ({@code reports/trades.csv}) so lookups never load the trading database.
  */
 package com.neueda.leap.trades;

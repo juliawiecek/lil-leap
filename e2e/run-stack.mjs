@@ -88,7 +88,7 @@ try {
     if (failed || interrupted) {
       try {
         await run([...compose, 'ps', '--all']);
-        for (const service of ['gateway', 'frontend', 'insights-frontend', 'auth', 'holdings', 'orders', 'quote-service', 'insights']) {
+        for (const service of ['gateway', 'frontend', 'insights-frontend', 'auth', 'holdings', 'orders', 'insights']) {
           console.error(`Last container log lines: ${service}`);
           await run([...compose, 'logs', '--no-color', '--tail', '30', service]);
         }

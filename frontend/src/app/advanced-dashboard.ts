@@ -29,6 +29,8 @@ import { PriceProtectionSettings } from './price-protection-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
+import { AccessibilitySettings } from './accessibility-settings';
+import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -96,9 +98,13 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings],
+  imports: [
+    CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
+    AccessibilitySettings, KeyboardShortcuts,
+  ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
+  host: { '(document:keydown)': 'onShortcutKey($event)' },
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
   // The four API clients are assigned from tradingClients() in the constructor.
@@ -528,6 +534,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   closeModal(): void {
     this.dialog()?.nativeElement.close();
+  }
+  /** "?" opens Keyboard Shortcuts from anywhere, unless another dialog is already open (PS-17). */
+  onShortcutKey(event: KeyboardEvent): void {
+    if (isShortcutsKey(event) && !this.dialog()?.nativeElement.open) {
+      event.preventDefault();
+      this.openModal('shortcuts');
+    }
   }
   backdrop(event: MouseEvent): void {
     if (event.target === this.dialog()?.nativeElement) {

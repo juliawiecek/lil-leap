@@ -15,7 +15,6 @@ rather than the rendered page.
 | NextTrade UI (Angular) | c8 | 212 | 96.4% | 91.6% | [nexttrade-ui/index.html](nexttrade-ui/index.html) |
 | Insights UI (Angular) | c8 | 48 | 100% | 96.9% | [insights-ui/index.html](insights-ui/index.html) |
 | Session package (shared Angular/TS) | c8 | 70 | 98.6% | 94.3% | [session-core/index.html](session-core/index.html) |
-| Data pipeline (Python) | pytest-cov | 85 | 92.3% | 82.3% | [data-pipeline/index.html](data-pipeline/index.html) |
 | **All code** | | **1,136** | **94.7%** (10,780 / 11,380) | **90.4%** (2,627 / 2,906) | |
 
 Every component is above the 70% coverage target. "Postgres-only" tests need a disposable

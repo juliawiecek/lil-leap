@@ -8,5 +8,5 @@ export const PAGE_PATHS: Record<string, string> = {
   'Trade lookup': '/trades',
 };
 export function safeReturnUrl(value: string): string | null {
-  return sharedReturnUrl(value, PAGE_PATHS, ['trades']);
+  return sharedReturnUrl(value, PAGE_PATHS, ['trades', 'clients']);
 }

@@ -1,6 +1,105 @@
-<app-page-heading title="Clients" subtitle="Every trading account, its trader level, cash and recent trades." />
-<section class="panel empty">
-  <app-dashboard-icon name="users" />
-  <h2>No client accounts to show yet</h2>
-  <p>Trading accounts will appear here with their status, cash and trades. Client names and emails are never shown.</p>
+<app-page-heading title="Clients" subtitle="Every trading account in the reporting dataset, who owns it, its trader level and trades." />
+<form class="filter-bar" role="search" method="get" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
+  <label class="grow"
+    >Search<input
+      #searchBox
+      name="search"
+      type="search"
+      autocomplete="off"
+      spellcheck="false"
+      [placeholder]="operations() ? 'Account, client name or email, or a full order ID' : 'Account, client name or email'"
+      [value]="filters().search"
+      (input)="search($any($event.target).value)"
+  /></label>
+  <label
+    >Trader level<select name="level" [value]="filters().level" (change)="update({ level: $any($event.target).value })">
+      <option value="">All levels</option>
+      <option value="NOVICE">Novice</option>
+      <option value="ADVANCED">Advanced</option>
+    </select></label
+  >
+  <label
+    >Status<select name="status" [value]="filters().status" (change)="update({ status: $any($event.target).value })">
+      <option value="">All statuses</option>
+      <option value="ACTIVE">Active</option>
+      <option value="PENDING">Pending</option>
+      <option value="BLOCKED">Blocked</option>
+      <option value="CLOSED">Closed</option>
+    </select></label
+  >
+  @if (filtered()) {
+    <button type="button" (click)="clear()">Clear filters</button>
+  }
+</form>
+@if (operations()) {
+  <p class="hint muted">Looking for an order? Paste its order ID above to find the account, or open an account's Orders tab.</p>
+}
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+<section class="panel" aria-labelledby="clients-title" [attr.aria-busy]="loading()">
+  <div class="panel-heading">
+    <h2 id="clients-title">Trading accounts</h2>
+    <span class="muted" aria-live="polite">{{ loading() ? 'Loading…' : range() }}</span>
+  </div>
+  @if (result(); as page) {
+    @if (page.content.length) {
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Trading accounts; select a column heading to sort</caption>
+          <thead>
+            <tr>
+              @for (column of columns; track column.key) {
+                <th [class.numeric]="column.numeric" [attr.aria-sort]="sortState(column.key)">
+                  <button type="button" class="sort" (click)="sortBy(column.key, column.first)">
+                    {{ column.label }}<span aria-hidden="true">{{ sortState(column.key) === 'ascending' ? ' ↑' : sortState(column.key) === 'descending' ? ' ↓' : '' }}</span>
+                  </button>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (client of page.content; track client.accountId) {
+              <tr>
+                <td>
+                  <a class="account-link" [routerLink]="['/clients', client.accountId]" queryParamsHandling="preserve">{{ client.accountNumber }}</a>
+                </td>
+                <td><strong>{{ client.clientName }}</strong><small>{{ client.email }}</small></td>
+                <td>{{ client.accountName }}</td>
+                <td>{{ label(client.traderLevel) }}</td>
+                <td>
+                  <span class="badge" [class.rejected]="client.status === 'BLOCKED' || client.status === 'CLOSED'" [class.neutral]="client.status === 'PENDING'">{{ label(client.status) }}</span>
+                </td>
+                <td class="numeric">{{ money(client.tradedValue) }}</td>
+                <td class="numeric">{{ count(client.tradeCount) }}</td>
+                <td>{{ dayTime(client.lastTradeAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (page.totalPages > 1) {
+        <nav class="pager" aria-label="Pages of accounts">
+          <button type="button" [disabled]="page.page === 0" (click)="goToPage(page.page - 1)">Previous</button>
+          <span>Page {{ page.page + 1 }} of {{ page.totalPages }}</span>
+          <button type="button" [disabled]="page.page + 1 >= page.totalPages" (click)="goToPage(page.page + 1)">Next</button>
+        </nav>
+      }
+    } @else {
+      <div class="empty">
+        <app-dashboard-icon name="users" />
+        <h2>{{ filtered() ? 'No accounts match these filters' : 'No client accounts yet' }}</h2>
+        <p>{{ filtered() ? 'Try a different search, level or status.' : 'Accounts appear here once the reporting dataset has their trades.' }}</p>
+        @if (filtered()) {
+          <button type="button" (click)="clear()">Clear filters</button>
+        }
+      </div>
+    }
+  } @else if (!loading() && !error()) {
+    <div class="empty">
+      <app-dashboard-icon name="users" />
+      <h2>No client accounts to show</h2>
+      <p>Trading accounts will appear here with their owner, status and trades.</p>
+    </div>
+  }
 </section>

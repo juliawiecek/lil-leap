@@ -8,37 +8,34 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.UUID;
 
-/** Trade investigation API for trading operations staff (BR-15, TS-03.5). */
+/** Trade lookup for trading operations staff (BR-15, TS-03.5), from the reporting dataset. */
 @RestController
 @RequestMapping("/trades")
 @PreAuthorize("hasRole('OPERATIONS')")
 public class TradeController {
-    private final TradeTrailRepository trails;
+    private final TradeLookup trades;
 
     /**
-     * Creates the trade investigation endpoints.
+     * Creates the trade lookup endpoint.
      *
-     * @param trails the shared trade trail
+     * @param trades trades in the reporting dataset
      */
-    public TradeController(TradeTrailRepository trails) {
-        this.trails = trails;
+    public TradeController(TradeLookup trades) {
+        this.trades = trades;
     }
 
     /**
-     * Returns the raw, chronological event list behind a trade's lifecycle (TS-16.1b).
+     * Returns one trade: its fill and the account and client behind it.
      *
      * @param id the trade's order id
-     * @return every recorded step, oldest first, and whether any audit rows exist yet
-     * @throws ResponseStatusException 404 when no such trade exists
+     * @return the trade
+     * @throws ResponseStatusException 404 when the dataset has no such trade
      */
-    @GetMapping("/{id}/events")
-    public TradeEventsResponse events(@PathVariable UUID id) {
-        List<TradeEvent> events = trails.trail(id)
+    @GetMapping("/{id}")
+    public TradeRecord trade(@PathVariable UUID id) {
+        return trades.find(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No trade found with id " + id));
-        boolean audited = events.stream().anyMatch(event -> "AUDIT".equals(event.source()));
-        return new TradeEventsResponse(id, audited, events);
     }
 }

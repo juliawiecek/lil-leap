@@ -508,6 +508,7 @@
               </button>
             </div>
             <app-price-protection-settings [symbols]="listedSymbols()" />
+            <app-accessibility-settings (openShortcuts)="openModal('shortcuts')" />
             <button type="button" class="secondary-button" (click)="signOut.emit()">
               Sign out ↗
             </button>
@@ -574,9 +575,7 @@
       <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
-    <p><kbd>Tab</kbd> Move between controls.</p>
-    <p><kbd>Enter</kbd> Activate the focused control or review an order.</p>
-    <p><kbd>Esc</kbd> Close a dialog or clear search.</p>
+    <app-keyboard-shortcuts />
   } @else {
     <p>
       Select a symbol from the watchlist to link its chart and order ticket. Configure the order,

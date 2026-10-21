@@ -13,6 +13,13 @@ spring:
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
+# Live synthetic prices for every catalog stock (replaces the retired Python quote service).
+marketdata:
+  quotes:
+    generator:
+      enabled: ${QUOTE_GENERATOR_ENABLED:true}
+      interval-seconds: ${QUOTE_INTERVAL_SECONDS:2}
+      seed: ${QUOTE_SEED:42}
 server:
   port: ${PORT:8080}
   servlet:

@@ -10,7 +10,6 @@ Auth (NestJS)                 153                   91.6%     81.9%
 NextTrade UI (Angular)        212                   96.4%     91.6%
 Insights UI (Angular)          48                  100.0%     96.9%
 Session package (shared)       70                   98.6%     94.3%
-Data pipeline (Python)         85                   92.3%     82.3%
 ----------------------------  --------------------  --------  --------
 All code                     1136                   94.7%     90.4%
 

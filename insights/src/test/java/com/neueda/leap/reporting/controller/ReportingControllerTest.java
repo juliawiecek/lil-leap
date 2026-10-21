@@ -163,8 +163,24 @@ class ReportingControllerTest {
                         """));
     }
 
+    @Test
+    void buySellBalanceReportReturnsCsvDownload() throws Exception {
+        when(reportingService.generateBuySellBalanceReport(OCTOBER)).thenReturn(csvResponse(
+                "buy-sell-balance-report.csv",
+                """
+                instrument_symbol,instrument_name,asset_class,market_code,buy_trade_count,sell_trade_count,buy_quantity,sell_quantity,net_quantity,buy_notional,sell_notional,net_notional
+                KO,The Coca-Cola Company,COMMON_STOCK,NYSE,4,0,727,0,727,49295.24,0.00,49295.24
+                """));
+
+        mvc.perform(asAnalyst(inOctober(get("/reports/generate/buy-sell-balance-report"))))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("buy-sell-balance-report.csv")))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("KO,The Coca-Cola Company")));
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report"})
+    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report", "buy-sell-balance-report"})
     void reportsRequireBothDates(String report) throws Exception {
         mvc.perform(asAnalyst(get("/reports/generate/" + report)))
                 .andExpect(status().isBadRequest())
@@ -177,7 +193,7 @@ class ReportingControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report"})
+    @ValueSource(strings = {"instrument-report", "client-segment-report", "trading-activity-report", "buy-sell-balance-report"})
     void reportsRejectMalformedAndInvertedDates(String report) throws Exception {
         mvc.perform(asAnalyst(get("/reports/generate/" + report)
                         .param("startDate", "10/01/2026").param("endDate", "2026-10-31")))

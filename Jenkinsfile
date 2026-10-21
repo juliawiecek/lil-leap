@@ -109,7 +109,7 @@ pipeline {
     }
 
     stage('Tests') {
-      // The four groups share nothing, so they run side by side. Maven builds stay in one
+      // The three groups share nothing, so they run side by side. Maven builds stay in one
       // group because they share ~/.m2, and both frontends need the built session package.
       parallel {
         stage('Java services') {
@@ -241,25 +241,6 @@ pipeline {
             }
           }
         }
-
-        stage('Run Python Tests With Coverage') {
-          steps {
-            sh '''
-              docker run --rm \
-                --user "$(id -u):$(id -g)" \
-                -v "$WORKSPACE:$WORKSPACE" \
-                -w "$WORKSPACE/data-pipeline" \
-                python:3.12-slim \
-                sh -ec 'python -m venv /tmp/python-venv
-                /tmp/python-venv/bin/python -m pip install --no-cache-dir -r requirements-coverage.txt
-                /tmp/python-venv/bin/python -m pytest -v \
-                --cov=src \
-                --cov-report=term-missing \
-                --cov-report=html:htmlcov \
-                --cov-report=xml:coverage.xml'
-            '''
-          }
-        }
       }
     }
 
@@ -270,8 +251,6 @@ pipeline {
             'nextTrade-orders/target/site/jacoco/**',
             'nextTrade-holdings/target/site/jacoco/**',
             'insights/target/site/jacoco/**',
-            'data-pipeline/htmlcov/**',
-            'data-pipeline/coverage.xml',
             'auth/coverage/**',
             'frontend/coverage/**',
             'insights-frontend/coverage/**',

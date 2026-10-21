@@ -23,7 +23,7 @@ public interface ReportingService {
     OverviewDto getOverview();
 
     /**
-     * Returns the most actively traded instruments for the current UTC day.
+     * Returns the most actively traded instruments for today&apos;s New York trading day.
      *
      * @return instruments ordered by today&apos;s trade count descending
      */
@@ -32,14 +32,14 @@ public interface ReportingService {
     /**
      * Returns the current-day hourly trading activity trend.
      *
-     * @return one entry for each UTC hour of the current day, including zero-count hours
+     * @return one entry for each New York hour of today, including zero-count hours
      */
     List<ClientActivityTrendDto> getClientActivityTrend();
 
     /**
      * Returns the downloadable CSV report aggregated by instrument.
      *
-     * @param range UTC calendar days whose trades are included
+     * @param range New York trading days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
     ResponseEntity<Resource> generateInstrumentReport(ReportDateRange range);
@@ -47,7 +47,7 @@ public interface ReportingService {
     /**
      * Returns the downloadable CSV report aggregated by client segment.
      *
-     * @param range UTC calendar days whose trades are included
+     * @param range New York trading days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
     ResponseEntity<Resource> generateClientSegmentReport(ReportDateRange range);
@@ -55,8 +55,16 @@ public interface ReportingService {
     /**
      * Returns the downloadable CSV report aggregated by trading activity.
      *
-     * @param range UTC calendar days whose trades are included
+     * @param range New York trading days whose trades are included
      * @return downloadable CSV attachment generated from the reporting dataset
      */
     ResponseEntity<Resource> generateTradingActivityReport(ReportDateRange range);
+
+    /**
+     * Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.
+     *
+     * @param range New York trading days whose trades are included
+     * @return downloadable CSV attachment generated from the reporting dataset
+     */
+    ResponseEntity<Resource> generateBuySellBalanceReport(ReportDateRange range);
 }
