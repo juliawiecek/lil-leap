@@ -5,7 +5,7 @@ import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { PERIOD_NAMES, chartSummary, spokenChange } = await import('../src/app/chart-speech.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
 const { STOCK_NAMES, speakable, stockName } = await import('../src/app/speech-text.ts');
-const { speechTime } = await import('../src/app/switch-scan.ts');
+const { speechTime, spokenItem } = await import('../src/app/switch-scan.ts');
 
 test('all 33 listed stocks have spoken names, so no symbol is ever spelled out', () => {
   assert.equal(Object.keys(STOCK_NAMES).length, 33);
@@ -90,8 +90,17 @@ test('each price on the tape is named by what it shows, and switch control says 
     const shown = [...button.querySelectorAll('strong, .price, .change [aria-hidden="true"]')].map((el) => el.textContent).join(' ');
     assert.equal(bare(labels[i]), bare(shown));
   });
-  assert.deepEqual(labels.map(speakable), ['Apple, $224.52, +0.40%', 'Boeing, $214.93, −1.25%', 'Coca-Cola, $61.20, 0.00%', 'NEW, price not available yet']);
+  // Switch control's voice reads data-speak: company names and the move in words.
+  assert.deepEqual(buttons.map((b) => b.getAttribute('data-speak')), [
+    'Apple, $224.52, up 0.40 percent',
+    'Boeing, $214.93, down 1.25 percent',
+    'Coca-Cola, $61.20, unchanged',
+    'New Listing, price not available yet',
+  ]);
+  assert.equal(spokenItem(buttons[0]), 'Apple, $224.52, up 0.40 percent');
   feed.quotes.set(feed.quotes().map((q) => ({ ...q, quotedAt: new Date(Date.now() - 10 * 60000).toISOString() })));
   fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('ul button').getAttribute('aria-label'), /, Price delayed$/);
+  const first = fixture.nativeElement.querySelector('ul button');
+  assert.match(first.getAttribute('aria-label'), /, Price delayed$/);
+  assert.match(first.getAttribute('data-speak'), /, price delayed$/);
 });

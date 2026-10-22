@@ -12,33 +12,34 @@ Date: 22 October 2026. Story: PS-20 (NEXT-240), with a reduced scope for demo da
 - Account: the demo novice account. Viewport 1440×1000, Edge, reduced motion, default colour mode.
 - Pages scanned: Sign in; on the novice dashboard, Overview, Portfolio, Activity and Settings; the
   trade dialog (Buy in "Ready to trade"); the Keyboard Shortcuts dialog (`?`).
-- Gate: any serious or critical violation fails the run, except the documented exceptions below.
+- Gate: any serious or critical violation fails the run. There are no exceptions.
   Full results go to `frontend/test-results/a11y/axe-summary.json`.
 
 ## Before and after
 
 Counts are rule violations found on each page, with the number of affected elements in brackets.
 
-| Impact   | Before   | After                          |
-|----------|----------|--------------------------------|
-| Critical | 1 (1)    | 0                              |
-| Serious  | 5 (62)   | 2 (37), both documented exceptions |
-| Moderate | 0        | 0                              |
-| Minor    | 0        | 0                              |
+| Impact   | Before   | After |
+|----------|----------|-------|
+| Critical | 1 (1)    | 0     |
+| Serious  | 5 (62)   | 0     |
+| Moderate | 0        | 0     |
+| Minor    | 0        | 0     |
 
-Elements with serious or critical problems that are not documented exceptions: **63 before, 0 after**.
+Elements with serious or critical problems on the sign-in page and the novice dashboard:
+**63 before, 0 after.**
 
 By page and rule:
 
-| Page                      | Before                                         | After                                     |
-|---------------------------|------------------------------------------------|-------------------------------------------|
-| Sign in                   | critical `aria-valid-attr-value` (1)            | none                                      |
-| Overview                  | serious `label-content-name-mismatch` (11)      | 5 (exception: chart period buttons)       |
-| Portfolio                 | serious `label-content-name-mismatch` (7)       | none                                      |
-| Activity                  | serious `label-content-name-mismatch` (6)       | none                                      |
-| Settings                  | serious `label-content-name-mismatch` (6)       | none                                      |
-| Trade dialog              | serious `label-content-name-mismatch` (32)      | 32 (exception: stock options)             |
-| Keyboard Shortcuts dialog | could not be opened: `?` did nothing             | none                                      |
+| Page                      | Before                                         | After |
+|---------------------------|------------------------------------------------|-------|
+| Sign in                   | critical `aria-valid-attr-value` (1)            | none  |
+| Overview                  | serious `label-content-name-mismatch` (11)      | none  |
+| Portfolio                 | serious `label-content-name-mismatch` (7)       | none  |
+| Activity                  | serious `label-content-name-mismatch` (6)       | none  |
+| Settings                  | serious `label-content-name-mismatch` (6)       | none  |
+| Trade dialog              | serious `label-content-name-mismatch` (32)      | none  |
+| Keyboard Shortcuts dialog | could not be opened: `?` did nothing             | none  |
 
 Moderate and minor are 0 because these WCAG tags do not include axe's best-practice rules
 (`region`, `landmark-*`, `page-has-heading-one`). Those were checked by hand, under "Page structure"
@@ -48,11 +49,16 @@ below.
 
 - **Sign in: critical.** The Sign in and Create account tabs pointed `aria-controls` at
   `#auth-form`, which did not exist. The form now has that id (`app.html`).
-- **Price tape: serious, on every page.** Each ticker button showed "AAPL $224.86 0.00%" but was
-  named "Apple, $224.86, unchanged", so speech-input users could not say what they saw (WCAG 2.5.3,
-  Label in Name). The name is now the visible text in the same order: "AAPL, $224.86, 0.00%"
-  (`market-ticker.ts`). Switch control still says "Apple", because everything it reads goes through
-  `speakable()`.
+- **Names that match the screen, words for the voice kept apart: serious, on every page.** Buttons
+  were named in words meant for switch control's voice ("Apple, $224.86, unchanged" on a button
+  showing "AAPL $224.86 0.00%", "1 day" on "1D", "Apple" on "AAPL · Apple Inc."), so speech-input
+  users could not say what they saw (WCAG 2.5.3, Label in Name). Now each accessible name is the
+  visible text, and the spoken words live in a separate `data-speak` attribute that switch control
+  reads first (`switch-scan.ts` `spokenItem` and its dropdown picker). So the price tape is named
+  "AAPL, $224.86, 0.00%" but heard as "Apple, $224.86, unchanged"; the chart buttons are named "1D"
+  but heard as "1 day"; the trade dialog's stock options and the holdings buttons are heard as
+  "Apple" (`market-ticker.ts`, `portfolio-chart.ts`, `novice-dashboard.html`). This also fixed
+  `spokenStock(symbol, name)` being called with its arguments the wrong way round.
 - **Holdings table: serious.** The stock button was named "AAPL" but showed "AAPL Apple Inc.". It now
   takes its name from its text, and a space keeps "AAPL" and "Apple Inc." apart
   (`novice-dashboard.html`).
@@ -79,28 +85,28 @@ below.
 
 ## Still open, and why
 
-1. **Trade dialog stock options (32, serious, `label-content-name-mismatch`).** Each option shows
-   "AAPL · Apple Inc." but its `aria-label` is only a spoken name, which the switch control picker
-   reads and shows (PS-23, `switch-scan.ts`). Removing the label would change the picker, and
-   another teammate is working on that file today. Fix: the picker builds the spoken name itself
-   with `speakable()`, and then the option `aria-label` can go. While checking this I also found
-   that `spokenStock(q.symbol, q.name)` passes its arguments the wrong way round
-   (`spokenCompany` takes name, symbol), so the label is currently "AAPL", not "Apple".
-2. **Portfolio chart period buttons (5, serious, `label-content-name-mismatch`).** They show "1D",
-   "1W", … but are named "1 day", "1 week", … They are in `portfolio-chart.ts`, which is Julia's file.
-   Fix: a name that contains the visible text, for example "1D, 1 day", or no `aria-label` with a
-   visually hidden expansion instead.
-3. **Advanced dashboard: not scanned.** No advanced demo account was available. The spec scans it
-   without gating when `A11Y_ADVANCED_EMAIL` and `A11Y_ADVANCED_PASSWORD` are set. The skip link,
-   `main` id, sidebar name and titles are already in place there too.
-4. Not in today's scope: real tab semantics for the ticket tabs, 200% and 320px zoom, the iPhone
+1. **Advanced dashboard (scanned, not gating; it is still being built).** With
+   `A11Y_ADVANCED_EMAIL` and `A11Y_ADVANCED_PASSWORD` set, the spec scans Overview, Portfolio,
+   Activity, Markets and Settings without failing the run. Each page has one serious finding,
+   `color-contrast` (see "For Julia" below), and Overview also has `scrollable-region-focusable`: the
+   sector list scrolls but cannot be reached by keyboard (needs `tabindex="0"` and a name). The skip
+   link, `main` id, sidebar name and titles are already in place there.
+2. Not in today's scope: real tab semantics for the ticket tabs, 200% and 320px zoom, the iPhone
    Switch Control recording, the NVDA script, the Insights app, and Jenkins changes. The axe spec is
    not in Jenkins yet, because it needs the live services. It is kept out of `npm run test:e2e`.
 
 ## For Julia: contrast
 
-axe found **no colour-contrast violations** on the scanned pages in the default colour mode.
-Other colour modes were not scanned.
+axe found **no colour-contrast violations** on the sign-in page and the novice dashboard in the
+default colour mode. Other colour modes were not scanned.
+
+On the **advanced dashboard** it found two failing pairs, both just under the 4.5:1 minimum for
+small text:
+
+- `#7a7a7a` on `#111111` (4.39:1): the summary panel's small labels (`.summary-metrics span`,
+  `.main-value small`) and the ticket note (`.ticket-note`). `#7a7a7a` is `--text-tone-04`.
+- `#62748e` on `#0b1210` (3.97:1): the price chart's window label, hint and footer
+  (`.chart-window`, `.chart-hint`, the chart `footer`).
 
 axe could not decide some elements, mostly text over gradient backgrounds, so they need a manual
 check. The spec lists them under `contrastToCheck` in `axe-summary.json`:

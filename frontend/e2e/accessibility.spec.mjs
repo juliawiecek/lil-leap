@@ -15,19 +15,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
  */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING = new Set(['serious', 'critical']);
-/** Findings that cannot be fixed in this story, each with its reason (see the report). */
-const KNOWN_EXCEPTIONS = [
-  {
-    rule: 'label-content-name-mismatch',
-    target: /^option\[value=/,
-    reason: 'Trade dialog stock options carry a spoken name for the switch control picker (PS-23, switch-scan.ts).',
-  },
-  {
-    rule: 'label-content-name-mismatch',
-    target: /^button\[aria-label="\d+ (day|week|month|year)s?"\]$/,
-    reason: 'Portfolio chart period buttons show "1D" but are named "1 day" (portfolio-chart.ts, owned by the colour/chart work).',
-  },
-];
+/**
+ * Findings that cannot be fixed in this story, each with its reason (see the report). None today:
+ * words meant only for switch control's voice ("1 day", "Apple") live in data-speak, so every
+ * accessible name matches what is on screen.
+ */
+const KNOWN_EXCEPTIONS = [];
 // The password stays out of the repository: pass A11Y_PASSWORD (and A11Y_EMAIL for another account).
 const novice = {
   email: process.env.A11Y_EMAIL ?? 'demo-novice@nexttrade.local',

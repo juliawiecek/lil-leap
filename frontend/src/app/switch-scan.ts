@@ -203,9 +203,13 @@ function shownText(el: HTMLElement): string {
   return lines.map((line, i) => (i < lines.length - 1 && !/[.!?:,]$/.test(line) ? `${line}.` : line)).join(' ');
 }
 
-/** What the ring says on a control: its whole name, plus its state or value when it has one. */
+/**
+ * What the ring says on a control: its whole name, plus its state or value when it has one. An
+ * element can carry words meant for speech in data-speak ("1 month" on a button showing "1M"),
+ * kept apart from its accessible name, which must match what is on screen (WCAG 2.5.3).
+ */
 export function spokenItem(el: HTMLElement): string {
-  const label = scanLabel(el, Number.POSITIVE_INFINITY);
+  const label = el.getAttribute('data-speak') || scanLabel(el, Number.POSITIVE_INFINITY);
   const field = el as HTMLInputElement;
   if (el.tagName === 'INPUT' && field.type === 'checkbox') {
     return `${label}, ${field.checked ? 'on' : 'off'}`;
@@ -651,7 +655,7 @@ export class ScanEngine {
     for (let i = 0; i < options.length; i += 5) {
       const chunk = options.slice(i, i + 5);
       // An option can carry a spoken name ("Apple") alongside what it shows ("AAPL · Apple Inc.").
-      const text = (o: HTMLOptionElement) => o.getAttribute('aria-label') ?? o.textContent?.trim() ?? o.value;
+      const text = (o: HTMLOptionElement) => o.getAttribute('data-speak') || o.textContent?.trim() || o.value;
       const row = this.#padRow(pad, chunk.length > 1 ? `${text(chunk[0])} to ${text(chunk.at(-1)!)}` : text(chunk[0]));
       for (const option of chunk) {
         this.#padButton(row, text(option), text(option), () => {

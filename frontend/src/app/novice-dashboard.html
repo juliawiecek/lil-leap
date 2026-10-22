@@ -74,7 +74,8 @@
         <button
           type="button"
           class="profile-avatar"
-          aria-label="Account settings"
+          [attr.aria-label]="(name() || 'A').slice(0, 1).toUpperCase() + ' account settings'"
+          data-speak="Account settings"
           title="Account settings"
           (click)="navigate('Settings')"
         >
@@ -220,6 +221,7 @@
                             <button
                               class="holding-symbol"
                               type="button"
+                              [attr.data-speak]="spokenStock(holding.name, holding.symbol)"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
                               <span class="company-logo" [class]="'company-logo ' + holding.logo">
@@ -506,7 +508,7 @@
       <label for="novice-stock">Stock</label
       ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
         @for (q of tradableQuotes(); track q.symbol) {
-          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol" [attr.aria-label]="spokenStock(q.symbol, q.name)">
+          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol" [attr.data-speak]="spokenStock(q.name, q.symbol)">
             {{ q.symbol }} · {{ q.name }}
           </option>
         }

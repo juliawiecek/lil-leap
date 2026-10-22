@@ -5,6 +5,8 @@ import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
+import { spokenCompany } from './briefing';
+import { spokenChange } from './chart-speech';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -31,6 +33,7 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
               [class.flash-up]="quote.direction === 'up'"
               [class.flash-down]="quote.direction === 'down'"
               [attr.aria-label]="spoken(quote)"
+              [attr.data-speak]="spokenWords(quote)"
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
@@ -143,6 +146,19 @@ export class MarketTicker implements OnDestroy {
     const change = describeChange(quote.change).visual.replace(/^[^\d+−]+/, '');
     const delayed = this.delayed(quote.quotedAt) ? ', Price delayed' : '';
     return `${quote.symbol}, ${USD.format(quote.price)}, ${change}${delayed}`;
+  }
+
+  /**
+   * What switch control says aloud (data-speak): the company and the move in words, "Apple,
+   * $224.52, up 0.40 percent". Kept apart from the button's name above, which must match the screen.
+   */
+  spokenWords(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    const company = spokenCompany(quote.name, quote.symbol);
+    if (!quote.price) {
+      return `${company}, price not available yet`;
+    }
+    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
+    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
   }
 
   ngOnDestroy(): void {
