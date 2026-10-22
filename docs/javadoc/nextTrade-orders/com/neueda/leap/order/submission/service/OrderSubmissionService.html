@@ -106,10 +106,11 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)" class="member-name-link">OrderSubmissionService</a><wbr>(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService,com.neueda.leap.order.submission.audit.SubmissionAuditRepository)" class="member-name-link">OrderSubmissionService</a><wbr>(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
  <a href="../../service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a>&nbsp;sufficiency,
  <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments,
- <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices)</code></div>
+ <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices,
+ <a href="../audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a>&nbsp;audit)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 </div>
@@ -131,6 +132,13 @@ loadScripts(document, 'script');</script>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
  <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Submits an order under a fresh request id; see <a href="#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)"><code>submit(UUID, SubmitOrderRequest, UUID)</code></a>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
+ <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Submits an order after authentication, ownership, eligibility and resource checks.</div>
 </div>
 </div>
@@ -151,12 +159,13 @@ loadScripts(document, 'script');</script>
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)">
+<section class="detail" id="&lt;init&gt;(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService,com.neueda.leap.order.submission.audit.SubmissionAuditRepository)">
 <h3>OrderSubmissionService</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">OrderSubmissionService</span><wbr><span class="parameters">(<a href="../repository/OrderSubmissionRepository.html" title="interface in com.neueda.leap.order.submission.repository">OrderSubmissionRepository</a>&nbsp;repository,
  <a href="../../service/OrderSufficiencyService.html" title="class in com.neueda.leap.order.service">OrderSufficiencyService</a>&nbsp;sufficiency,
  <a href="../../../instrument/service/InstrumentService.html" title="class in com.neueda.leap.instrument.service">InstrumentService</a>&nbsp;instruments,
- <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices)</span></div>
+ <a href="../../execution/quote/IndicativePriceService.html" title="class in com.neueda.leap.order.execution.quote">IndicativePriceService</a>&nbsp;prices,
+ <a href="../audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a>&nbsp;audit)</span></div>
 <div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
@@ -164,6 +173,7 @@ loadScripts(document, 'script');</script>
 <dd><code>sufficiency</code> - cash and holdings validation service</dd>
 <dd><code>instruments</code> - current metadata shared with the instrument catalog API</dd>
 <dd><code>prices</code> - latest stored quote, recorded as the order's reference price for price protection</dd>
+<dd><code>audit</code> - records every rule checked, and refused submissions (TS-15.5)</dd>
 </dl>
 </section>
 </li>
@@ -181,15 +191,35 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="annotations">@Transactional
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></span>&nbsp;<span class="element-name">submit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
  <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</span></div>
-<div class="block">Submits an order after authentication, ownership, eligibility and resource checks.
- An identical retry of an existing account/client-reference pair returns its original
- order before business rules are rechecked; a retry that changes the order is a conflict.
- Concurrent duplicate inserts resolve the same way.
- Cash and shares are checked but are not reserved by this operation.</div>
+<div class="block">Submits an order under a fresh request id; see <a href="#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)"><code>submit(UUID, SubmitOrderRequest, UUID)</code></a>.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>authenticatedUserId</code> - user identifier from the authenticated principal</dd>
 <dd><code>request</code> - non-null request that has passed Bean Validation at the API boundary</dd>
+<dt>Returns:</dt>
+<dd>submission result indicating whether a new row was created</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)">
+<h3>submit</h3>
+<div class="member-signature"><span class="annotations">@Transactional
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></span>&nbsp;<span class="element-name">submit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
+ <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</span></div>
+<div class="block">Submits an order after authentication, ownership, eligibility and resource checks.
+ An identical retry of an existing account/client-reference pair returns its original
+ order before business rules are rechecked; a retry that changes the order is a conflict.
+ Concurrent duplicate inserts resolve the same way.
+ Cash and shares are checked but are not reserved by this operation.
+ Every rule checked is recorded under <code>requestId</code>: with the order when it is accepted, and
+ in its own transaction before the refusal is returned when it is not (TS-15.5).</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>authenticatedUserId</code> - user identifier from the authenticated principal</dd>
+<dd><code>request</code> - non-null request that has passed Bean Validation at the API boundary</dd>
+<dd><code>requestId</code> - the id returned to the client as <code>X-Request-Id</code></dd>
 <dt>Returns:</dt>
 <dd>submission result indicating whether a new row was created</dd>
 <dt>Throws:</dt>

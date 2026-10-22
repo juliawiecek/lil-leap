@@ -58,6 +58,11 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Stable rejection reasons for account and instrument trading rules.</div>
 </div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.audit">com.neueda.leap.order.submission.audit</a></div>
+<div class="col-last odd-row-color">
+<div class="block">The audit record of each order submission: a request id per submission and the outcome of every
+ trading rule it was checked against, including for refused orders (BR-05, BR-14, TS-15.5).</div>
+</div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
@@ -95,6 +100,24 @@ the order they are declared.</div>
 <div class="col-second even-row-color"><code><a href="../OrderRuleException.html#%3Cinit%3E(com.neueda.leap.order.rules.OrderRuleException.Reason)" class="member-name-link">OrderRuleException</a><wbr>(<a href="../OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a>&nbsp;reason)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates a <code>OrderRuleException</code> with the supplied dependencies.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.audit">
+<h2>Uses of <a href="../OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a> in <a href="../../submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a></h2>
+<div class="caption"><span>Methods in <a href="../../submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a> with parameters of type <a href="../OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>void</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">RuleChecks.</span><code><a href="../../submission/audit/RuleChecks.html#require(java.lang.String,boolean,com.neueda.leap.order.rules.OrderRuleException.Reason)" class="member-name-link">require</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;rule,
+ boolean&nbsp;met,
+ <a href="../OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a>&nbsp;reason)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Records the rule, refusing the submission when it is not met.</div>
 </div>
 </div>
 </section>

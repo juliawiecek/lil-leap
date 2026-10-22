@@ -54,21 +54,42 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.cancel">com.neueda.leap.order.cancel</a></div>
 <div class="col-last even-row-color">
+<div class="block">Client cancellation of an order that is still waiting to execute (PS-14).</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Caller-scoped reads of a single order's detail and current status.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-last even-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.security">com.neueda.leap.security</a></div>
+<div class="col-last odd-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
 </div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
+<li>
+<section class="detail" id="com.neueda.leap.order.cancel">
+<h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../order/cancel/package-summary.html">com.neueda.leap.order.cancel</a></h2>
+<div class="caption"><span>Methods in <a href="../../order/cancel/package-summary.html">com.neueda.leap.order.cancel</a> with parameters of type <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../order/query/OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderCancellationController.</span><code><a href="../../order/cancel/OrderCancellationController.html#cancel(com.neueda.leap.security.JwtPrincipal,java.util.UUID)" class="member-name-link">cancel</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Cancels the caller's waiting order.</div>
+</div>
+</div>
+</section>
+</li>
 <li>
 <section class="detail" id="com.neueda.leap.order.query">
 <h2>Uses of <a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a> in <a href="../../order/query/package-summary.html">com.neueda.leap.order.query</a></h2>
@@ -101,8 +122,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../../order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionController.</span><code><a href="../../order/submission/controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
- @Valid <a href="../../order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionController.</span><code><a href="../../order/submission/controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit</a><wbr>(<a href="../JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ @Valid <a href="../../order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
 </div>

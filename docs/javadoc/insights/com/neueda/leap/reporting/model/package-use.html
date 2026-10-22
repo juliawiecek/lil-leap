@@ -58,6 +58,14 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">REST error mapping that avoids exposing sensitive exception details.</div>
 </div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.reporting.model">com.neueda.leap.reporting.model</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Validated value objects shared by the reporting service and repositories.</div>
+</div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.reporting.service">com.neueda.leap.reporting.service</a></div>
+<div class="col-last even-row-color">
+<div class="block">Reporting use cases built on the read-only reporting repository.</div>
+</div>
 </div>
 <section class="package-uses">
 <ul class="block-list">
@@ -70,6 +78,33 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color"><a href="class-use/InvalidReportDateRangeException.html#com.neueda.leap.common.exception">InvalidReportDateRangeException</a></div>
 <div class="col-last even-row-color">
 <div class="block">Raised when a report is requested with an invalid date range.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.reporting.model">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.reporting.model</a> used by <a href="package-summary.html">com.neueda.leap.reporting.model</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/MarketDay.html#com.neueda.leap.reporting.model">MarketDay</a></div>
+<div class="col-last even-row-color">
+<div class="block">One US trading day: midnight to midnight in New York, where NYSE and Nasdaq trade.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.reporting.service">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.reporting.model</a> used by <a href="../service/package-summary.html">com.neueda.leap.reporting.service</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/ReportDateRange.html#com.neueda.leap.reporting.service">ReportDateRange</a></div>
+<div class="col-last even-row-color">
+<div class="block">Inclusive calendar-date range for a report, interpreted as New York trading days
+ (see <a href="MarketDay.html" title="class in com.neueda.leap.reporting.model"><code>MarketDay</code></a>), so reports agree with the Insights page.</div>
 </div>
 </div>
 </section>

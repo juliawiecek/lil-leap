@@ -119,6 +119,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/execution/OrderExecutionWorker.Claim.html#param-attempt"><code>attempt</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html#ATTRIBUTE" class="member-name-link">ATTRIBUTE</a> - Static variable in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></dt>
+<dd>
+<div class="block">Request attribute holding the id as a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link"><code>UUID</code></a>.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:B">B</h2>
 <dl class="index">
@@ -147,6 +151,14 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:C">C</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationController.html#cancel(com.neueda.leap.security.JwtPrincipal,java.util.UUID)" class="member-name-link">cancel(JwtPrincipal, UUID)</a> - Method in class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationController.html" title="class in com.neueda.leap.order.cancel">OrderCancellationController</a></dt>
+<dd>
+<div class="block">Cancels the caller's waiting order.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationService.html#cancel(java.util.UUID,java.util.UUID)" class="member-name-link">cancel(UUID, UUID)</a> - Method in class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationService.html" title="class in com.neueda.leap.order.cancel">OrderCancellationService</a></dt>
+<dd>
+<div class="block">Cancels the order if it belongs to the caller and is still waiting to execute.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementPart.html#CASH_TRANSACTION" class="member-name-link">CASH_TRANSACTION</a> - Enum constant in enum class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></dt>
 <dd>
 <div class="block">The cash ledger row, paired with the change to the cash balance.</div>
@@ -160,6 +172,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/execution/cash/CashMovementAdapter.html" class="type-name-link" title="interface in com.neueda.leap.order.execution.cash">CashMovementAdapter</a> - Interface in <a href="com/neueda/leap/order/execution/cash/package-summary.html">com.neueda.leap.order.execution.cash</a></dt>
 <dd>
 <div class="block">Settlement-only cash movements (TS-10.2b).</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#%3Cinit%3E(java.lang.String,boolean,java.lang.String)" class="member-name-link">Check(String, boolean, String)</a> - Constructor for record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>Check</code> record class.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutionWorker.Claim.html#%3Cinit%3E(java.util.UUID,long)" class="member-name-link">Claim(UUID, long)</a> - Constructor for record class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutionWorker.Claim.html" title="class in com.neueda.leap.order.execution">OrderExecutionWorker.Claim</a></dt>
 <dd>
@@ -217,6 +233,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Order submission, validation, durable execution and atomic settlement.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/cancel/package-summary.html">com.neueda.leap.order.cancel</a> - package com.neueda.leap.order.cancel</dt>
+<dd>
+<div class="block">Client cancellation of an order that is still waiting to execute (PS-14).</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/package-summary.html">com.neueda.leap.order.execution</a> - package com.neueda.leap.order.execution</dt>
 <dd>
 <div class="block">Durable database claims, transactional execution contracts and scheduled polling.</div>
@@ -250,6 +270,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/settlement/package-summary.html">com.neueda.leap.order.settlement</a> - package com.neueda.leap.order.settlement</dt>
 <dd>
 <div class="block">Settlement integrity checks and operator recovery for fills whose settlement was only partly applied.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a> - package com.neueda.leap.order.submission.audit</dt>
+<dd>
+<div class="block">The audit record of each order submission: a request id per submission and the outcome of every
+ trading rule it was checked against, including for refused orders (BR-05, BR-14, TS-15.5).</div>
 </dd>
 <dt><a href="com/neueda/leap/order/submission/controller/package-summary.html">com.neueda.leap.order.submission.controller</a> - package com.neueda.leap.order.submission.controller</dt>
 <dd>
@@ -306,6 +331,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the full detail of one of the caller's orders.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html#doFilterInternal(jakarta.servlet.http.HttpServletRequest,jakarta.servlet.http.HttpServletResponse,jakarta.servlet.FilterChain)" class="member-name-link">doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/neueda/leap/security/JwtAuthenticationFilter.html#doFilterInternal(jakarta.servlet.http.HttpServletRequest,jakarta.servlet.http.HttpServletResponse,jakarta.servlet.FilterChain)" class="member-name-link">doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)</a> - Method in class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security">JwtAuthenticationFilter</a></dt>
 </dl>
 <h2 class="title" id="I:E">E</h2>
@@ -367,6 +394,14 @@ loadScripts(document, 'script');</script>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementResult.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementResult.html" title="class in com.neueda.leap.order.settlement">SettlementResult</a></dt>
+<dd>
+<div class="block">Indicates whether some other object is "equal to" this one.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Indicates whether some other object is "equal to" this one.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
 <dd>
 <div class="block">Indicates whether some other object is "equal to" this one.</div>
 </dd>
@@ -489,6 +524,10 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:F">F</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html#fail(java.lang.String,java.lang.String)" class="member-name-link">fail(String, String)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></dt>
+<dd>
+<div class="block">Records a failed rule.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Result.html#filled()" class="member-name-link">filled()</a> - Static method in record class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></dt>
 <dd>
 <div class="block">Creates a fill result.</div>
@@ -648,6 +687,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Rejects invalid payloads without rendering or logging rejected values.</div>
 </dd>
+<dt><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html#handleOrderCancellation(com.neueda.leap.order.cancel.OrderCancellationException)" class="member-name-link">handleOrderCancellation(OrderCancellationException)</a> - Method in class com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></dt>
+<dd>
+<div class="block">Refuses to cancel an order that is executing or already finished (PS-14).</div>
+</dd>
 <dt><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html#handleOrderNotFound(com.neueda.leap.order.query.OrderNotFoundException)" class="member-name-link">handleOrderNotFound(OrderNotFoundException)</a> - Method in class com.neueda.leap.common.exception.<a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></dt>
 <dd>
 <div class="block">Reports an unknown or unowned order identically, so other users' order ids are not revealed.</div>
@@ -716,6 +759,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Returns a hash code value for this object.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Returns a hash code value for this object.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.order.submission.dto.<a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
@@ -739,6 +790,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/security/JwtPrincipal.html#hashCode()" class="member-name-link">hashCode()</a> - Method in record class com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></dt>
 <dd>
 <div class="block">Returns a hash code value for this object.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html#HEADER" class="member-name-link">HEADER</a> - Static variable in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></dt>
+<dd>
+<div class="block">Response header carrying the submission's request id.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementPart.html#HOLDING_MOVEMENT" class="member-name-link">HOLDING_MOVEMENT</a> - Enum constant in enum class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></dt>
 <dd>
@@ -1021,13 +1076,17 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Kafka-backed publisher for terminal order lifecycle events.</div>
 </dd>
-<dt><a href="com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String)" class="member-name-link">KafkaOrderLifecycleEventPublisher(JdbcTemplate, KafkaTemplate&lt;String, String&gt;, ObjectMapper, String)</a> - Constructor for class com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.html" title="class in com.neueda.leap.order.execution.event">KafkaOrderLifecycleEventPublisher</a></dt>
+<dt><a href="com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String,boolean)" class="member-name-link">KafkaOrderLifecycleEventPublisher(JdbcTemplate, KafkaTemplate&lt;String, String&gt;, ObjectMapper, String, boolean)</a> - Constructor for class com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/KafkaOrderLifecycleEventPublisher.html" title="class in com.neueda.leap.order.execution.event">KafkaOrderLifecycleEventPublisher</a></dt>
 <dd>
 <div class="block">Creates the publisher.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:L">L</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html#list()" class="member-name-link">list()</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></dt>
+<dd>
+<div class="block">Returns the checks so far.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html#LOCATION_RESTRICTED" class="member-name-link">LOCATION_RESTRICTED</a> - Enum constant in enum class com.neueda.leap.order.rules.<a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></dt>
 <dd>
 <div class="block">The client's location is not permitted to trade the requested instrument.</div>
@@ -1108,6 +1167,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates the controller.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html#message()" class="member-name-link">message()</a> - Method in enum class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></dt>
+<dd>
+<div class="block">Returns the client-facing message.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html#message()" class="member-name-link">message()</a> - Method in enum class com.neueda.leap.order.rules.<a href="com/neueda/leap/order/rules/OrderRuleException.Reason.html" title="enum class in com.neueda.leap.order.rules">OrderRuleException.Reason</a></dt>
 <dd>
 <div class="block">Returns the fixed client-safe rule explanation.</div>
@@ -1186,9 +1249,45 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/service/OrderSubmissionResult.html#param-order"><code>order</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html#ORDER_EXECUTING" class="member-name-link">ORDER_EXECUTING</a> - Enum constant in enum class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></dt>
+<dd>
+<div class="block">The execution worker holds the order right now.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html#ORDER_NOT_CANCELLABLE" class="member-name-link">ORDER_NOT_CANCELLABLE</a> - Enum constant in enum class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></dt>
+<dd>
+<div class="block">The order already finished: filled, rejected or cancelled.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementPart.html#ORDER_STATUS" class="member-name-link">ORDER_STATUS</a> - Enum constant in enum class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></dt>
 <dd>
 <div class="block">The order marked FILLED with its status history entry.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationController.html" class="type-name-link" title="class in com.neueda.leap.order.cancel">OrderCancellationController</a> - Class in <a href="com/neueda/leap/order/cancel/package-summary.html">com.neueda.leap.order.cancel</a></dt>
+<dd>
+<div class="block"><code>POST /orders/{id}/cancel</code>: the order's owner cancels it while it is still waiting (PS-14).</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationController.html#%3Cinit%3E(com.neueda.leap.order.cancel.OrderCancellationService)" class="member-name-link">OrderCancellationController(OrderCancellationService)</a> - Constructor for class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationController.html" title="class in com.neueda.leap.order.cancel">OrderCancellationController</a></dt>
+<dd>
+<div class="block">Creates the controller.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.html" class="type-name-link" title="class in com.neueda.leap.order.cancel">OrderCancellationException</a> - Exception Class in <a href="com/neueda/leap/order/cancel/package-summary.html">com.neueda.leap.order.cancel</a></dt>
+<dd>
+<div class="block">An order that exists and belongs to the caller but can no longer be cancelled; reported as HTTP 409.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.html#%3Cinit%3E(com.neueda.leap.order.cancel.OrderCancellationException.Reason)" class="member-name-link">OrderCancellationException(OrderCancellationException.Reason)</a> - Constructor for exception class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.html" title="class in com.neueda.leap.order.cancel">OrderCancellationException</a></dt>
+<dd>
+<div class="block">Creates the exception.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" class="type-name-link" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a> - Enum Class in <a href="com/neueda/leap/order/cancel/package-summary.html">com.neueda.leap.order.cancel</a></dt>
+<dd>
+<div class="block">Why the cancellation was refused.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationService.html" class="type-name-link" title="class in com.neueda.leap.order.cancel">OrderCancellationService</a> - Class in <a href="com/neueda/leap/order/cancel/package-summary.html">com.neueda.leap.order.cancel</a></dt>
+<dd>
+<div class="block">Cancels a caller's order while it is still waiting to execute (PS-14).</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationService.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">OrderCancellationService(JdbcTemplate)</a> - Constructor for class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationService.html" title="class in com.neueda.leap.order.cancel">OrderCancellationService</a></dt>
+<dd>
+<div class="block">Creates the service.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/query/OrderDetailResponse.html" class="type-name-link" title="class in com.neueda.leap.order.query">OrderDetailResponse</a> - Record Class in <a href="com/neueda/leap/order/query/package-summary.html">com.neueda.leap.order.query</a></dt>
 <dd>
@@ -1364,7 +1463,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Authorizes account ownership and validates trading rules before persisting an idempotent submission.</div>
 </dd>
-<dt><a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService)" class="member-name-link">OrderSubmissionService(OrderSubmissionRepository, OrderSufficiencyService, InstrumentService, IndicativePriceService)</a> - Constructor for class com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></dt>
+<dt><a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html#%3Cinit%3E(com.neueda.leap.order.submission.repository.OrderSubmissionRepository,com.neueda.leap.order.service.OrderSufficiencyService,com.neueda.leap.instrument.service.InstrumentService,com.neueda.leap.order.execution.quote.IndicativePriceService,com.neueda.leap.order.submission.audit.SubmissionAuditRepository)" class="member-name-link">OrderSubmissionService(OrderSubmissionRepository, OrderSufficiencyService, InstrumentService, IndicativePriceService, SubmissionAuditRepository)</a> - Constructor for class com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></dt>
 <dd>
 <div class="block">Creates a <code>OrderSubmissionService</code> with the supplied dependencies.</div>
 </dd>
@@ -1419,6 +1518,14 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:P">P</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html#pass(java.lang.String)" class="member-name-link">pass(String)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></dt>
+<dd>
+<div class="block">Records a passed rule.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#passed()" class="member-name-link">passed()</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/audit/RuleChecks.Check.html#param-passed"><code>passed</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html#PENDING" class="member-name-link">PENDING</a> - Enum constant in enum class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></dt>
 <dd>
 <div class="block">Execution is deferred; no trade effects may be committed.</div>
@@ -1515,6 +1622,10 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:R">R</h2>
 <dl class="index">
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.html#reason()" class="member-name-link">reason()</a> - Method in exception class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.html" title="class in com.neueda.leap.order.cancel">OrderCancellationException</a></dt>
+<dd>
+<div class="block">Returns why the cancellation was refused.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Result.html#reason()" class="member-name-link">reason()</a> - Method in record class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/execution/OrderExecutor.Result.html#param-reason"><code>reason</code></a> record component.</div>
@@ -1539,9 +1650,23 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/query/OrderStatusResponse.html#param-reasonCode"><code>reasonCode</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#reasonCode()" class="member-name-link">reasonCode()</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/audit/RuleChecks.Check.html#param-reasonCode"><code>reasonCode</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/query/OrderStatusResponse.html#reasonText()" class="member-name-link">reasonText()</a> - Method in record class com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/query/OrderStatusResponse.html#param-reasonText"><code>reasonText</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html#recordAccepted(java.util.UUID,java.util.UUID,java.util.UUID,java.util.UUID,java.util.List)" class="member-name-link">recordAccepted(UUID, UUID, UUID, UUID, List&lt;RuleChecks.Check&gt;)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a></dt>
+<dd>
+<div class="block">Records the rules an accepted order passed, in the caller's transaction, so the order and its
+ checks are stored together or not at all.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html#recordRefused(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.util.List)" class="member-name-link">recordRefused(UUID, SubmitOrderRequest, UUID, String, List&lt;RuleChecks.Check&gt;)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a></dt>
+<dd>
+<div class="block">Records a refused submission and the rules it was checked against, in its own transaction,
+ so the record survives the refusal.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementController.html#recover(java.lang.String)" class="member-name-link">recover(String)</a> - Method in class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementController.html" title="class in com.neueda.leap.order.settlement">SettlementController</a></dt>
 <dd>
@@ -1571,6 +1696,15 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Finds every incomplete settlement and records each one in the audit log, once until it is recovered.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" class="type-name-link" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a> - Class in <a href="com/neueda/leap/order/submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a></dt>
+<dd>
+<div class="block">Gives each order submission a request id, returned as <code>X-Request-Id</code> whether the order is
+ accepted or refused, so a refused order can be looked up in the audit log (TS-15.5).</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html#%3Cinit%3E()" class="member-name-link">RequestIdFilter()</a> - Constructor for class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></dt>
+<dd>
+<div class="block">Creates the filter; Spring registers it.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Result.html#requeue(java.lang.String)" class="member-name-link">requeue(String)</a> - Static method in record class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Result.html" title="class in com.neueda.leap.order.execution">OrderExecutor.Result</a></dt>
 <dd>
 <div class="block">Creates a result that puts the order back in the queue.</div>
@@ -1578,6 +1712,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.Action.html#REQUEUE" class="member-name-link">REQUEUE</a> - Enum constant in enum class com.neueda.leap.order.execution.quote.<a href="com/neueda/leap/order/execution/quote/ExecutionQuoteDecision.Action.html" title="enum class in com.neueda.leap.order.execution.quote">ExecutionQuoteDecision.Action</a></dt>
 <dd>
 <div class="block">Retry quote selection on a later attempt.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html#require(java.lang.String,boolean,com.neueda.leap.order.rules.OrderRuleException.Reason)" class="member-name-link">require(String, boolean, OrderRuleException.Reason)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></dt>
+<dd>
+<div class="block">Records the rule, refusing the submission when it is not met.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/execution/JdbcOrderExecutor.html#requireHoldingsProjection()" class="member-name-link">requireHoldingsProjection()</a> - Method in class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/JdbcOrderExecutor.html" title="class in com.neueda.leap.order.execution">JdbcOrderExecutor</a></dt>
 <dd>
@@ -1602,6 +1740,22 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html#rollback(java.util.UUID)" class="member-name-link">rollback(UUID)</a> - Method in class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.order.settlement">SettlementRecoveryService</a></dt>
 <dd>
 <div class="block">Rolls back a settlement that has not changed any balance: removes the fill and rejects its order.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#rule()" class="member-name-link">rule()</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/audit/RuleChecks.Check.html#param-rule"><code>rule</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html" class="type-name-link" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a> - Class in <a href="com/neueda/leap/order/submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a></dt>
+<dd>
+<div class="block">The trading rules one submission was checked against, in the order they ran (BR-05, BR-14).</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.html#%3Cinit%3E()" class="member-name-link">RuleChecks()</a> - Constructor for class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></dt>
+<dd>
+<div class="block">Creates an empty record of checks.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" class="type-name-link" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a> - Record Class in <a href="com/neueda/leap/order/submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a></dt>
+<dd>
+<div class="block">One rule's outcome.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:S">S</h2>
@@ -1668,6 +1822,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/settlement/SettlementResult.html#param-settlementId"><code>settlementId</code></a> record component.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#settlementId()" class="member-name-link">settlementId()</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/settlement/SettlementStatusResponse.html#param-settlementId"><code>settlementId</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/settlement/SettlementIntegrityCheck.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementIntegrityCheck</a> - Class in <a href="com/neueda/leap/order/settlement/package-summary.html">com.neueda.leap.order.settlement</a></dt>
 <dd>
 <div class="block">Looks for partly applied settlements at startup and on a schedule (TS-10.3 AC1), so a broken
@@ -1697,6 +1855,16 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Defensive copy so the result cannot change after it is returned.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" class="type-name-link" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a> - Record Class in <a href="com/neueda/leap/order/settlement/package-summary.html">com.neueda.leap.order.settlement</a></dt>
+<dd>
+<div class="block">Ledger-derived settlement state for one trade/order.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#%3Cinit%3E(java.util.UUID,java.lang.String,java.util.UUID)" class="member-name-link">SettlementStatusResponse(UUID, String, UUID)</a> - Constructor for record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Creates an instance of a <code>SettlementStatusResponse</code> record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html#shouldNotFilter(jakarta.servlet.http.HttpServletRequest)" class="member-name-link">shouldNotFilter(HttpServletRequest)</a> - Method in class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="com/neueda/leap/order/execution/event/OrderLifecycleEvent.html#side()" class="member-name-link">side()</a> - Method in record class com.neueda.leap.order.execution.event.<a href="com/neueda/leap/order/execution/event/OrderLifecycleEvent.html" title="class in com.neueda.leap.order.execution.event">OrderLifecycleEvent</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/execution/event/OrderLifecycleEvent.html#param-side"><code>side</code></a> record component.</div>
@@ -1753,6 +1921,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the HTTP status for the response.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/settlement/SettlementStatusResponse.html#param-status"><code>status</code></a> record component.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html#status()" class="member-name-link">status()</a> - Method in record class com.neueda.leap.order.submission.dto.<a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html#param-status"><code>status</code></a> record component.</div>
@@ -1765,15 +1937,36 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Describes the market at a moment in time.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementController.html#status(java.util.UUID)" class="member-name-link">status(UUID)</a> - Method in class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementController.html" title="class in com.neueda.leap.order.settlement">SettlementController</a></dt>
+<dd>
+<div class="block">Returns the ledger-derived settlement state for an order/trade.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html#status(java.util.UUID)" class="member-name-link">status(UUID)</a> - Method in class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.order.settlement">SettlementRecoveryService</a></dt>
+<dd>
+<div class="block">Derives the settlement state from one primary database snapshot.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/query/OrderStatusResponse.html#statusChangedAt()" class="member-name-link">statusChangedAt()</a> - Method in record class com.neueda.leap.order.query.<a href="com/neueda/leap/order/query/OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/query/OrderStatusResponse.html#param-statusChangedAt"><code>statusChangedAt</code></a> record component.</div>
 </dd>
-<dt><a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit(JwtPrincipal, SubmitOrderRequest)</a> - Method in class com.neueda.leap.order.submission.controller.<a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html" title="class in com.neueda.leap.order.submission.controller">OrderSubmissionController</a></dt>
+<dt><a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html" class="type-name-link" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a> - Class in <a href="com/neueda/leap/order/submission/audit/package-summary.html">com.neueda.leap.order.submission.audit</a></dt>
+<dd>
+<div class="block">Records every submission decision in <code>audit_log</code> (BR-05, BR-14, TS-15.5): a
+ <code>RULE_CHECKED</code> row per rule, and for a refused order a <code>SUBMISSION_REFUSED</code> row.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">SubmissionAuditRepository(JdbcTemplate)</a> - Constructor for class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a></dt>
+<dd>
+<div class="block">Creates the repository.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit(JwtPrincipal, SubmitOrderRequest, UUID)</a> - Method in class com.neueda.leap.order.submission.controller.<a href="com/neueda/leap/order/submission/controller/OrderSubmissionController.html" title="class in com.neueda.leap.order.submission.controller">OrderSubmissionController</a></dt>
 <dd>
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit(UUID, SubmitOrderRequest)</a> - Method in class com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></dt>
+<dd>
+<div class="block">Submits an order under a fresh request id; see <a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)"><code>OrderSubmissionService.submit(UUID, SubmitOrderRequest, UUID)</code></a>.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit(UUID, SubmitOrderRequest, UUID)</a> - Method in class com.neueda.leap.order.submission.service.<a href="com/neueda/leap/order/submission/service/OrderSubmissionService.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionService</a></dt>
 <dd>
 <div class="block">Submits an order after authentication, ownership, eligibility and resource checks.</div>
 </dd>
@@ -1884,6 +2077,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Returns a string representation of this record class.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.order.submission.audit.<a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></dt>
+<dd>
+<div class="block">Returns a string representation of this record class.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html#toString()" class="member-name-link">toString()</a> - Method in record class com.neueda.leap.order.submission.dto.<a href="com/neueda/leap/order/submission/dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a></dt>
 <dd>
 <div class="block">Returns a string representation of this record class.</div>
@@ -1915,6 +2116,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/submission/repository/InstrumentTradingProfile.html#tradable()" class="member-name-link">tradable()</a> - Method in record class com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/InstrumentTradingProfile.html" title="class in com.neueda.leap.order.submission.repository">InstrumentTradingProfile</a></dt>
 <dd>
 <div class="block">Returns the value of the <a href="./com/neueda/leap/order/submission/repository/InstrumentTradingProfile.html#param-tradable"><code>tradable</code></a> record component.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html#tradeId()" class="member-name-link">tradeId()</a> - Method in record class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></dt>
+<dd>
+<div class="block">Returns the value of the <a href="./com/neueda/leap/order/settlement/SettlementStatusResponse.html#param-tradeId"><code>tradeId</code></a> record component.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/submission/repository/AccountTradingProfile.html#traderLevel()" class="member-name-link">traderLevel()</a> - Method in record class com.neueda.leap.order.submission.repository.<a href="com/neueda/leap/order/submission/repository/AccountTradingProfile.html" title="class in com.neueda.leap.order.submission.repository">AccountTradingProfile</a></dt>
 <dd>
@@ -1956,6 +2161,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Validates a bearer token and extracts the caller's identity.</div>
 </dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></dt>
 <dd>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
@@ -1983,6 +2192,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="com/neueda/leap/order/settlement/SettlementPart.html#valueOf(java.lang.String)" class="member-name-link">valueOf(String)</a> - Static method in enum class com.neueda.leap.order.settlement.<a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></dt>
 <dd>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
+</dd>
+<dt><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html#values()" class="member-name-link">values()</a> - Static method in enum class com.neueda.leap.order.cancel.<a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum class, in
+the order they are declared.</div>
 </dd>
 <dt><a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html#values()" class="member-name-link">values()</a> - Static method in enum class com.neueda.leap.order.execution.<a href="com/neueda/leap/order/execution/OrderExecutor.Outcome.html" title="enum class in com.neueda.leap.order.execution">OrderExecutor.Outcome</a></dt>
 <dd>
