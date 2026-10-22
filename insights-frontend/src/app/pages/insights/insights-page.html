@@ -3,10 +3,14 @@
     <div>
       <h1>{{ greeting() }}</h1>
       <p class="subtitle">{{ subtitle() }}</p>
+      @if (updatedAt(); as at) {
+        <p class="updated"><i aria-hidden="true"></i>Live · updated {{ at }}</p>
+      }
     </div>
     @if (summary(); as s) {
       <p class="sentence">
-        <b class="mono">{{ count(s.fills) }}</b> fills from <b class="mono">{{ count(s.orders) }}</b> orders so far@if (ranked()[0]; as leader) {, and <b>{{ leader.instrument }}</b> leads}.
+        <span class="lead-in">So far today</span>
+        <span><b class="mono">{{ count(s.fills) }}</b> {{ plural(s.fills, 'fill') }} from <b class="mono">{{ count(s.orders) }}</b> {{ plural(s.orders, 'order') }}@if (ranked()[0]; as leader) {<span class="sep" aria-hidden="true">·</span><b>{{ leader.instrument }}</b> most traded}</span>
       </p>
     }
   </div>
@@ -15,37 +19,41 @@
   }
   <div class="glance-body">
     <div class="hero">
-      <span class="hero-label">Traded value today</span>
+      <span class="hero-label">Trades today</span>
       <div class="hero-figure">
-        <b data-testid="summary-value">{{ valueParts().whole }}<span>{{ valueParts().cents }}</span></b>
-        <span class="hero-note">avg <span class="mono">{{ averageFill() }}</span> per fill</span>
+        <b data-testid="summary-trades">{{ count(tradesToday()) }}</b>
+        @if (tradesToday()) {
+          <span class="hero-note"><span class="mono up">+{{ count(thisHour()) }}</span> this hour</span>
+        }
       </div>
       @if (tradesToday()) {
         <div class="hero-chart">
-          <app-insights-chart [points]="cumulativePoints()" label="Trades so far today, hour by hour, Central time" prefix="" />
-          <span class="hero-caption">Trades so far today, hour by hour</span>
+          <app-insights-chart [points]="cumulativePoints()" [height]="210" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
         </div>
       } @else {
         <p class="hero-empty">No trades yet today. The line fills in as trades execute.</p>
       }
     </div>
     <dl class="stats">
-      <div>
-        <dt>Fills <small>Executed today</small></dt>
-        <dd class="mono fills" data-testid="summary-fills">{{ count(summary()?.fills) }}</dd>
+      <div class="value">
+        <dt>Traded value</dt>
+        <dd class="figure money" data-testid="summary-value">{{ valueParts().whole }}<span class="cents">{{ valueParts().cents }}</span></dd>
+        <dd class="note">avg <span class="mono">{{ averageFill() }}</span> per fill</dd>
       </div>
-      <div>
-        <dt>Orders <small>Submitted today</small></dt>
-        <dd class="mono orders" data-testid="summary-orders">{{ count(summary()?.orders) }}</dd>
+      <div class="pair-left">
+        <dt>Orders</dt>
+        <dd class="figure" data-testid="summary-orders">{{ count(summary()?.orders) }}</dd>
+        <dd class="note">Submitted today</dd>
+      </div>
+      <div class="pair-right">
+        <dt>Active accounts</dt>
+        <dd class="figure" data-testid="summary-accounts">{{ count(summary()?.accounts) }}</dd>
+        <dd class="note">Placed an order today</dd>
       </div>
       <div class="rate">
-        <dt>Fill rate <small>Fills ÷ orders</small></dt>
-        <dd class="mono">{{ fillRate() }}</dd>
-        <span class="rate-bar" aria-hidden="true"><i [style.width.%]="fillRatio()"></i></span>
-      </div>
-      <div>
-        <dt>Active accounts <small>Placed an order today</small></dt>
-        <dd class="mono" data-testid="summary-accounts">{{ count(summary()?.accounts) }}</dd>
+        <dt>Fill rate</dt>
+        <dd class="figure">{{ fillRate() }}</dd>
+        <dd class="note"><span class="rate-bar" aria-hidden="true"><i [style.width.%]="fillRatio()"></i></span>Fills ÷ orders</dd>
       </div>
     </dl>
   </div>
@@ -54,12 +62,12 @@
 @if (ranked().length) {
   <div class="tape" aria-label="Most traded today">
     <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
-    <div class="tape-window">
-      <div class="tape-track">
-        @for (copy of [0, 1]; track copy) {
+    <div class="tape-window" [class.still]="ranked().length < 4">
+      <div class="tape-track" [class.still]="ranked().length < 4">
+        @for (copy of ranked().length < 4 ? [0] : [0, 1]; track copy) {
           <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
             @for (row of ranked(); track row.instrument) {
-              <li><b>{{ row.instrument }}</b><span class="mono">{{ count(row.tradeCount) }}</span> trades</li>
+              <li><b>{{ row.instrument }}</b><span class="mono">{{ count(row.tradeCount) }}</span> {{ plural(row.tradeCount, 'trade') }}<span class="share mono">{{ row.share.toFixed(0) }}%</span></li>
             }
           </ul>
         }
@@ -77,10 +85,10 @@
     @if (tradesToday()) {
       <div class="bars" role="img" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' trades.'">
         @for (bar of bars(); track bar.hour) {
-          <div class="bar-col" [class.now]="bar.now" [title]="bar.hour + ' · ' + bar.count + ' trades'">
+          <div class="bar-col" [class.now]="bar.now" [title]="bar.label + ' · ' + bar.count + ' ' + plural(bar.count, 'trade')">
             <span class="bar-count">{{ bar.count || '' }}</span>
             <span class="bar" [style.height.%]="bar.height"></span>
-            <span class="bar-hour">{{ bar.labelled ? bar.hour.slice(0, 2) : '' }}</span>
+            <span class="bar-hour">{{ bar.labelled ? bar.label : '' }}</span>
           </div>
         }
       </div>

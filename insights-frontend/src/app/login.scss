@@ -105,6 +105,7 @@
 .candles {
   fill: #94c973;
   stroke: #94c973;
+  opacity: 0.7;
 }
 .candles .falling {
   fill: #3f4a3a;
@@ -194,7 +195,7 @@
   display: flex;
   gap: 18px;
   margin: 0;
-  color: #5f645c;
+  color: #858980;
   font-size: 12px;
 }
 
@@ -204,8 +205,8 @@
   box-sizing: border-box;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  padding: 36px clamp(28px, 4.5vw, 72px) 32px;
-  background: #0d0d0d;
+  padding: 36px clamp(28px, 3.5vw, 56px) 32px;
+  background: #090909;
 }
 .auth-top {
   display: flex;
@@ -240,13 +241,14 @@
   flex-wrap: wrap;
   padding-top: 16px;
   border-top: 1px solid #1a1a1a;
-  color: #5f645c;
+  color: #858980;
   font-size: 12px;
 }
 .auth-body {
   align-self: center;
+  justify-self: center;
   width: 100%;
-  max-width: 500px;
+  max-width: 460px;
   animation: login-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
 }
 .auth h2 {
@@ -256,9 +258,25 @@
   letter-spacing: -0.03em;
 }
 .auth-subtitle {
-  margin: 8px 0 32px;
+  margin: 8px 0 0;
   color: #a4a79e;
   font-size: 15px;
+}
+/* The header line from the app's pages: a hairline with a short NextTrade-green segment on the left. */
+.auth-heading {
+  position: relative;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #1f231f;
+}
+.auth-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 72px;
+  height: 2px;
+  background: #94c973;
 }
 form {
   display: flex;
@@ -280,11 +298,11 @@ form {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 0 8px 0 14px;
+  min-height: 52px;
+  padding: 0 8px 0 16px;
   border: 1px solid #262626;
   border-radius: 6px;
-  background: #0a0a0a;
+  background: #050505;
   transition: border-color 0.15s ease;
 }
 .input-shell:hover {
@@ -301,6 +319,29 @@ form {
   background: transparent;
   color: #f2f0e9;
   font: 500 15px var(--font-ui);
+}
+/* Keep browser autofill from painting the boxes pale blue or yellow. */
+.input-shell input:-webkit-autofill,
+.input-shell input:-webkit-autofill:hover,
+.input-shell input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #050505 inset;
+  -webkit-text-fill-color: #f2f0e9;
+  caret-color: #f2f0e9;
+  transition: background-color 9999s ease-out 0s;
+}
+.input-shell.invalid {
+  border-color: #a94a40;
+}
+.field-error,
+.field-hint {
+  margin: 0;
+  font-size: 12.5px;
+}
+.field-error {
+  color: #ff9c92;
+}
+.field-hint {
+  color: #e2b65a;
 }
 .input-shell input::placeholder {
   color: #62675f;
@@ -320,16 +361,21 @@ form {
 .form-status {
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid #5a2f2a;
-  border-radius: 8px;
-  background: rgba(255, 122, 110, 0.08);
+  border: 1px solid #4a2723;
+  border-left: 2px solid #ff7a6e;
+  border-radius: 4px;
+  background: #120a09;
   color: #ffb4ab;
   font-size: 13px;
   line-height: 1.5;
 }
 .primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   margin-top: 8px;
-  min-height: 48px;
+  min-height: 52px;
   border: 0;
   border-radius: 6px;
   background: #94c973;
@@ -344,6 +390,28 @@ form {
 .primary-action:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(11, 19, 10, 0.3);
+  border-top-color: #0b130a;
+  border-radius: 50%;
+  animation: login-spin 0.8s linear infinite;
+}
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.forgot {
+  margin: 4px 0 0;
+  color: #7e8279;
+  font-size: 12.5px;
+  text-align: center;
+}
+.input-shell input:focus-visible {
+  outline: none;
 }
 .password-toggle:focus-visible,
 .primary-action:focus-visible {
@@ -396,6 +464,7 @@ form {
   .backdrop-chart svg,
   .copy,
   .auth-body,
+  .spinner,
   .tape-track,
   .tape-group .live i {
     animation: none;

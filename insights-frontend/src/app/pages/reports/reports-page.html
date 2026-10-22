@@ -1,16 +1,46 @@
-<header class="page-head">
-  <div>
-    <h1>Reports</h1>
-    <p class="lede">Trading reports by instrument, client segment and trading activity, as CSV.</p>
-  </div>
-  <div class="segmented" role="tablist" aria-label="Report type">
-    @for (tab of ['Standard Reports', 'Scheduled Reports']; track tab) {
-      <button type="button" role="tab" [attr.aria-selected]="reportTab() === tab" [class.active]="reportTab() === tab" (click)="reportTab.set(tab)">
-        {{ tab === 'Standard Reports' ? 'Standard' : 'Scheduled' }}
-      </button>
-    }
-  </div>
-</header>
+<section class="band" aria-labelledby="reports-heading">
+  <h1 id="reports-heading">Reports</h1>
+  <p class="lede">Executed trades by fill time, exported as CSV.</p>
+  <fieldset class="period">
+    <legend class="sr-only">Reporting period (inclusive)</legend>
+    <label class="field"
+      ><span class="sr-only">Start date</span><input
+        type="date"
+        name="reportStart"
+        required
+        data-testid="report-start"
+        [max]="reportEnd() || today"
+        [attr.aria-invalid]="!!reportDateError()"
+        [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
+        [ngModel]="reportStart()"
+        (ngModelChange)="reportStart.set($event ?? '')" /></label
+    ><span class="arrow" aria-hidden="true">→</span
+    ><label class="field"
+      ><span class="sr-only">End date</span><input
+        type="date"
+        name="reportEnd"
+        required
+        data-testid="report-end"
+        [min]="reportStart()"
+        [max]="today"
+        [attr.aria-invalid]="!!reportDateError()"
+        [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
+        [ngModel]="reportEnd()"
+        (ngModelChange)="reportEnd.set($event ?? '')"
+    /></label>
+    <div class="presets" role="group" aria-label="Quick ranges">
+      @for (preset of presets; track preset.label) {
+        <button type="button" [class.active]="isPreset(preset.days)" [attr.aria-pressed]="isPreset(preset.days)" (click)="usePreset(preset.days)">{{ preset.label }}</button>
+      }
+    </div>
+    <span class="period-note"><span class="mono">{{ rangeDays() }}</span> days · dates inclusive · max 366 days</span>
+  </fieldset>
+  @if (reportDateError()) {
+    <p id="report-date-error" class="field-error" role="alert" data-testid="report-date-error">
+      {{ reportDateError() }}
+    </p>
+  }
+</section>
 
 @if (notice()) {
   <output class="toast">
@@ -18,105 +48,69 @@
   </output>
 }
 
-@if (reportTab() === 'Scheduled Reports') {
-  <section class="surface quiet">
-    <span class="quiet-icon"><app-dashboard-icon name="calendar" /></span>
-    <h2>No scheduled reports</h2>
-    <p>Your scheduled reports will appear here.</p>
-    <button type="button" class="secondary" (click)="reportTab.set('Standard Reports')">View available reports</button>
-  </section>
-} @else {
-  <div class="layout">
-    <div class="main">
-      <section class="surface" aria-label="Standard reports">
-        <fieldset class="period">
-          <legend class="sr-only">Reporting period (UTC, inclusive)</legend>
-          <label class="field"
-            ><span>Start (UTC)</span><input
-              type="date"
-              name="reportStart"
-              required
-              data-testid="report-start"
-              [max]="reportEnd() || today"
-              [attr.aria-invalid]="!!reportDateError()"
-              [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
-              [ngModel]="reportStart()"
-              (ngModelChange)="reportStart.set($event ?? '')" /></label
-          ><span class="arrow" aria-hidden="true">→</span
-          ><label class="field"
-            ><span>End (UTC)</span><input
-              type="date"
-              name="reportEnd"
-              required
-              data-testid="report-end"
-              [min]="reportStart()"
-              [max]="today"
-              [attr.aria-invalid]="!!reportDateError()"
-              [attr.aria-describedby]="reportDateError() ? 'report-date-error' : null"
-              [ngModel]="reportEnd()"
-              (ngModelChange)="reportEnd.set($event ?? '')"
-          /></label>
-          <span class="span-days mono">{{ rangeDays() }}d</span>
-          <div class="presets" role="group" aria-label="Quick ranges">
-            @for (preset of presets; track preset.label) {
-              <button type="button" [class.active]="isPreset(preset.days)" (click)="usePreset(preset.days)">{{ preset.label }}</button>
-            }
-          </div>
-        </fieldset>
-        @if (reportDateError()) {
-          <p id="report-date-error" class="field-error" role="alert" data-testid="report-date-error">
-            {{ reportDateError() }}
-          </p>
-        }
-        <ul class="report-list">
-          @for (r of reportCatalog; track r.kind; let i = $index) {
-            <li class="report-card">
-              <div class="report-text">
-                <h3>{{ r.name }}</h3>
-                <p>{{ r.description }}</p>
-              </div>
-              <button
-                type="button"
-                class="generate"
-                [attr.data-testid]="'generate-' + r.kind"
-                [disabled]="!!reportDateError() || !!generating()"
-                [attr.aria-busy]="generating() === r.kind"
-                (click)="generateReport(r)"
-              >
-                @if (generating() === r.kind) {
-                  <i class="spinner" aria-hidden="true"></i>Generating…
-                } @else {
-                  Export CSV
-                }
-              </button>
-            </li>
+<section class="reports" aria-labelledby="standard-title">
+  <h2 id="standard-title" class="sr-only">Standard reports</h2>
+  <ul class="report-list">
+    @for (r of reportCatalog; track r.kind) {
+      <li class="report-card">
+        <div class="report-text">
+          <h3>{{ r.name }}</h3>
+          <p>{{ r.description }}</p>
+        </div>
+        <span class="last-export">{{ lastExport(r.name) }}</span>
+        <button
+          type="button"
+          class="generate"
+          [attr.data-testid]="'generate-' + r.kind"
+          [disabled]="!!reportDateError() || !!generating()"
+          [attr.aria-busy]="generating() === r.kind"
+          (click)="generateReport(r)"
+        >
+          @if (generating() === r.kind) {
+            <i class="spinner" aria-hidden="true"></i>Generating…
+          } @else {
+            Export CSV
           }
-        </ul>
-        <p class="footnote">Executed trades by fill time · inclusive UTC dates · max 366 days</p>
-      </section>
-    </div>
+        </button>
+      </li>
+    }
+  </ul>
+</section>
 
-    <aside class="surface history" aria-labelledby="exports-title">
-      <div class="history-head">
-        <h2 id="exports-title">Exports</h2>
-        <span>This session</span>
-      </div>
-      <ol class="export-list">
-        @for (r of exports(); track $index) {
-          <li>
-            <div class="export-text">
-              <b>{{ r.name }}</b>
-              <span class="mono">{{ r.period ?? '—' }}</span>
-              <small>{{ r.rows }} {{ r.rows === 1 ? 'row' : 'rows' }} · {{ r.at | date: 'MMM d, HH:mm' }}</small>
-            </div>
-            <button type="button" class="download" (click)="download(r)" [attr.aria-label]="'Download ' + r.name">
-              <span aria-hidden="true">↓</span><span>CSV</span>
-            </button>
-          </li>
-        } @empty {
-          <li class="history-empty"><p>No exports yet.</p></li>
-        }
-      </ol>
-    </aside>
+<section class="exports" aria-labelledby="exports-title">
+  <div class="block-head">
+    <h2 id="exports-title">Exports</h2>
+    <span>This session</span>
   </div>
-}
+  @if (exports().length) {
+    <div class="table-wrap">
+      <table class="export-table">
+        <caption class="sr-only">Reports exported this session</caption>
+        <thead class="sr-only">
+          <tr>
+            <th scope="col">Report</th>
+            <th scope="col">Period</th>
+            <th scope="col">Rows</th>
+            <th scope="col">Generated</th>
+            <th scope="col">Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of exports(); track $index) {
+            <tr>
+              <td class="name">{{ r.name }}</td>
+              <td class="mono">{{ r.period ?? '—' }}</td>
+              <td class="numeric mono">{{ r.rows }} {{ r.rows === 1 ? 'row' : 'rows' }}</td>
+              <td class="mono when">{{ dayTime(r.at) }}</td>
+              <td class="action">
+                <button type="button" class="download" (click)="download(r)" [attr.aria-label]="'Download ' + r.name">Download</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="history-empty">No exports yet. Files you export appear here so you can download them again.</p>
+  }
+</section>

@@ -1,3 +1,341 @@
+// Clients: a raised band holds the title, the account count and the filters; the accounts table sits
+// straight on the page below it, separated by hairlines rather than boxed in a panel.
 :host {
   display: block;
+  --level-novice: #7fb3d5;
+  --level-advanced: #c9a6e8;
+}
+
+:host .band {
+  margin: -24px -32px 0;
+  padding: 24px 32px 18px;
+  position: relative;
+  background: none;
+  border-bottom: 1px solid #1f231f;
+}
+/* NextTrade green on the left of the header's bottom line, like the underline of a selected tab. */
+:host .band::after {
+  content: '';
+  position: absolute;
+  left: var(--band-inset, 32px);
+  bottom: -1px;
+  width: 160px;
+  height: 2px;
+  background: var(--nt-green);
+}
+:host .head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+:host h1 {
+  margin: 0;
+  font: 800 26px/1.15 var(--font-ui);
+  letter-spacing: -0.03em;
+  color: var(--nt-text);
+}
+:host .lede {
+  margin: 6px 0 0;
+  color: #a4a79e;
+  font-size: 13.5px;
+}
+:host .figure {
+  margin: 0;
+  text-align: right;
+}
+:host .figure dt {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7e8279;
+}
+:host .figure dd {
+  margin: 4px 0 0;
+  font: 600 30px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+  color: var(--nt-text);
+}
+
+:host .filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+:host .search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 340px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #2a2f29;
+  border-radius: 4px;
+  background: #070807;
+  transition: border-color 0.12s;
+}
+:host .search:focus-within {
+  border-color: #4a5048;
+}
+:host .search svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: #7e8279;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+:host .search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nt-text);
+  font: 500 13px var(--font-ui);
+}
+:host .search input::placeholder {
+  color: #858980;
+}
+:host .seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid #2a2f29;
+  border-radius: 5px;
+  background: #070807;
+}
+:host .seg button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--nt-subtle);
+  font: 600 12.5px var(--font-ui);
+  white-space: nowrap;
+}
+:host .seg button:hover {
+  background: transparent;
+  color: var(--nt-text);
+}
+:host .seg button.on {
+  background: #1f231f;
+  color: var(--nt-text);
+}
+:host .clear {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #2a2f29;
+  border-radius: 4px;
+  background: transparent;
+  color: #a4a79e;
+  font: 700 12.5px var(--font-ui);
+}
+:host .clear:hover {
+  border-color: #4a5048;
+  background: #070807;
+  color: var(--nt-text);
+}
+:host .range {
+  margin-left: auto;
+  font: 500 12px var(--font-mono);
+  color: #7e8279;
+}
+:host .hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #7e8279;
+}
+:host .error {
+  margin: 18px 0 0;
+}
+
+:host .accounts {
+  margin-top: 6px;
+}
+:host table {
+  font-size: 13px;
+}
+:host th {
+  padding: 0 14px;
+  border-bottom: 1px solid #1f231f;
+  color: var(--nt-subtle);
+  font-weight: 400;
+}
+:host th:first-child,
+:host td:first-child {
+  padding-left: 0;
+}
+:host th:last-child,
+:host td:last-child {
+  padding-right: 0;
+}
+:host .sort {
+  height: auto;
+  padding: 14px 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: 800 10.5px var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+:host .sort:hover {
+  background: none;
+  color: var(--nt-text);
+}
+:host th[aria-sort='ascending'] .sort,
+:host th[aria-sort='descending'] .sort {
+  color: var(--nt-text);
+}
+:host td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #141714;
+  color: var(--nt-text);
+  vertical-align: middle;
+}
+:host tbody tr {
+  transition: background-color 0.1s;
+}
+:host tbody tr:hover {
+  background: #0e100e;
+}
+:host .account-link {
+  color: var(--nt-text);
+  font: 600 12.5px var(--font-mono);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+:host tbody tr:hover .account-link,
+:host .account-link:focus-visible {
+  color: var(--nt-green);
+  border-bottom-color: rgba(148, 201, 115, 0.5);
+}
+:host .owner strong {
+  font-weight: 600;
+}
+:host .owner small {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--nt-subtle);
+}
+:host .quiet,
+:host .when {
+  color: var(--nt-muted);
+}
+:host .when {
+  font: 500 12px var(--font-mono);
+}
+:host .numeric {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+// Trader level: a short colour mark, the same hue everywhere a level appears.
+:host .level {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--level-novice);
+}
+:host .level::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: currentColor;
+}
+:host .level.advanced {
+  color: var(--level-advanced);
+}
+
+// Status reads as coloured text rather than a pill: green active, amber pending, red blocked, grey closed.
+:host .badge {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nt-green);
+}
+:host .badge.neutral {
+  color: #e2b65a;
+  background: none;
+}
+:host .badge.rejected {
+  color: #ff7a6e;
+  background: none;
+}
+:host .badge.closed {
+  color: var(--nt-subtle);
+}
+
+:host .pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 0 0;
+  color: var(--nt-subtle);
+  font: 500 12px var(--font-mono);
+}
+:host .pager button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #2a2f29;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--nt-muted);
+  font: 700 12px var(--font-ui);
+}
+:host .pager button:hover:not(:disabled) {
+  border-color: #4a5048;
+  color: var(--nt-text);
+}
+:host .pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+:host .empty-state {
+  padding: 56px 0;
+  border-bottom: 1px solid #141714;
+}
+:host .empty-state h2 {
+  margin: 0;
+  font: 700 16px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .empty-state p {
+  margin: 6px 0 0;
+  color: var(--nt-muted);
+  font-size: 13px;
+}
+:host .empty-state .clear {
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  :host .band {
+    margin: -20px -16px 0;
+    --band-inset: 16px;
+    padding: 20px 16px 16px;
+  }
+  :host .search {
+    flex-basis: 100%;
+  }
+  :host .range {
+    margin-left: 0;
+  }
 }

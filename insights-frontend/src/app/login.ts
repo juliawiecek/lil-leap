@@ -20,6 +20,15 @@ export class Login {
   readonly pending = signal(false);
   readonly message = signal('');
   readonly passwordVisible = signal(false);
+  /** Shown under a field left empty, instead of sending an empty sign-in. */
+  readonly emailError = signal('');
+  readonly passwordError = signal('');
+  /** True while Caps Lock is on as the password is typed. */
+  readonly capsLock = signal(false);
+
+  checkCapsLock(event: KeyboardEvent): void {
+    this.capsLock.set(typeof event.getModifierState === 'function' && event.getModifierState('CapsLock'));
+  }
   /** Words on the moving band at the top; NextTrade shows index prices there. */
   readonly tape = ['Trading activity', 'Orders & fills', 'Client accounts', 'Reports', 'Trade lookup', 'Audit trail', 'US equities'];
   /** The same decorative candlestick chart NextTrade draws behind its sign-in. */
@@ -40,6 +49,9 @@ export class Login {
   });
   async signIn(email: string, password: string): Promise<void> {
     if (this.pending()) { return; }
+    this.emailError.set(email.trim() ? '' : 'Enter your email address.');
+    this.passwordError.set(password ? '' : 'Enter your password.');
+    if (!email.trim() || !password) { return; }
     this.pending.set(true); this.message.set('');
     try {
       await this.auth.login(email, password);

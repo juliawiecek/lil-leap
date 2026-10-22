@@ -59,18 +59,34 @@
       </span>
     </div>
     <div class="auth-body">
-      <h2 id="login-title">Staff sign in</h2>
-      <p class="auth-subtitle">Welcome back. Use your analyst or operations account.</p>
+      <div class="auth-heading">
+        <h2 id="login-title">Staff Sign In</h2>
+        <p class="auth-subtitle">Welcome back. Use your analyst or operations account.</p>
+      </div>
       <form method="post" novalidate (submit)="$event.preventDefault(); signIn(email.value, password.value)">
         <div class="field">
           <label for="email">Email address</label>
-          <div class="input-shell">
-            <input #email id="email" name="email" type="email" autocomplete="username" placeholder="you@nexttrade.local" required />
+          <div class="input-shell" [class.invalid]="emailError()">
+            <input
+              #email
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="username"
+              placeholder="you@nexttrade.local"
+              required
+              [attr.aria-invalid]="emailError() ? true : null"
+              [attr.aria-describedby]="emailError() ? 'email-error' : null"
+              (input)="emailError.set('')"
+            />
           </div>
+          @if (emailError()) {
+            <p id="email-error" class="field-error">{{ emailError() }}</p>
+          }
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <div class="input-shell">
+          <div class="input-shell" [class.invalid]="passwordError()">
             <input
               #password
               id="password"
@@ -79,6 +95,12 @@
               autocomplete="current-password"
               placeholder="Enter your password"
               required
+              [attr.aria-invalid]="passwordError() ? true : null"
+              [attr.aria-describedby]="passwordError() ? 'password-error' : capsLock() ? 'caps-hint' : null"
+              (input)="passwordError.set('')"
+              (keydown)="checkCapsLock($event)"
+              (keyup)="checkCapsLock($event)"
+              (blur)="capsLock.set(false)"
             />
             <button
               class="password-toggle"
@@ -89,13 +111,22 @@
               {{ passwordVisible() ? 'Hide' : 'Show' }}
             </button>
           </div>
+          @if (passwordError()) {
+            <p id="password-error" class="field-error">{{ passwordError() }}</p>
+          } @else if (capsLock()) {
+            <p id="caps-hint" class="field-hint">Caps Lock is on</p>
+          }
         </div>
         @if (message()) {
           <p class="form-status" role="alert">{{ message() }}</p>
         }
-        <button class="primary-action" type="submit" [disabled]="pending()">
+        <button class="primary-action" type="submit" [disabled]="pending()" [attr.aria-busy]="pending()">
+          @if (pending()) {
+            <i class="spinner" aria-hidden="true"></i>
+          }
           {{ pending() ? 'Signing in…' : 'Continue securely' }}
         </button>
+        <p class="forgot">Forgot your password? Your NextTrade administrator can reset it.</p>
       </form>
     </div>
     <div class="auth-bottom">

@@ -5,7 +5,7 @@ import { component } from './component-helper.mjs';
 const { InsightsPage } = await import('../src/app/pages/insights/insights-page.ts');
 const { LIVE_REPORTS } = await import('../src/app/live-reports.ts');
 const summary = {
-  date: '2026-10-19', time_zone: 'America/New_York', accounts: 7, orders: 12, fills: 9, gross_executed_value: '1234.50',
+  date: '2026-10-19', time_zone: 'America/Chicago', accounts: 7, orders: 12, fills: 9, gross_executed_value: '1234.50',
 };
 const top = [{ instrument: 'AAPL', tradeCount: 6 }, { instrument: 'JPM', tradeCount: 3 }];
 const trend = Array.from({ length: 24 }, (_, hour) => ({
@@ -26,7 +26,8 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   assert.match(host.textContent, /Placed an order today/);
   assert.match(host.textContent, /Today's trading across every account, Monday, October 19, 2026 \(Central time\)\./);
   assert.match(host.textContent, /9 trades · Central time/);
-  assert.equal(host.querySelectorAll('app-insights-chart circle[tabindex]').length, 24);
+  const centralHourNow = Number(new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' }).format(new Date()));
+  assert.equal(host.querySelectorAll('app-insights-chart circle[tabindex]').length, centralHourNow + 1, 'the running total stops at the current hour');
   const rows = [...host.querySelectorAll('tbody tr')]
     .map((row) => [...row.querySelectorAll('td')].slice(0, 3).map((cell) => cell.textContent.trim()));
   assert.deepEqual(rows, [['1', 'AAPL', '6'], ['2', 'JPM', '3']]);

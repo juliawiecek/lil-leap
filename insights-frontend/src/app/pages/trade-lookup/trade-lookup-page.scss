@@ -1,59 +1,327 @@
+// Trade lookup in the Insights look: the green header band holds the search; the trade, its client,
+// the record checks and the recorded steps sit below on the page as plain sections divided by hairlines.
 :host {
   display: block;
 }
-.filter-bar input {
-  width: 100%;
-  min-height: 40px;
-  font: 13px var(--font-mono);
+
+:host .band {
+  margin: -24px -32px 0;
+  padding: 24px 32px 24px;
+  position: relative;
+  background: none;
+  border-bottom: 1px solid #1f231f;
 }
-.order-id {
-  font-size: 14px;
+/* NextTrade green on the left of the header's bottom line, like the underline of a selected tab. */
+:host .band::after {
+  content: '';
+  position: absolute;
+  left: var(--band-inset, 32px);
+  bottom: -1px;
+  width: 160px;
+  height: 2px;
+  background: var(--nt-green);
+}
+:host .back-link {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #7e8279;
+  font: 500 12.5px var(--font-ui);
+}
+:host .back-link:hover {
+  background: none;
+  color: var(--nt-text);
+}
+:host h1 {
+  margin: 0;
+  font: 800 26px/1.15 var(--font-ui);
+  letter-spacing: -0.03em;
+  color: var(--nt-text);
+}
+:host .lede {
+  margin: 6px 0 0;
+  color: #a4a79e;
+  font-size: 13.5px;
+}
+:host .lookup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  max-width: 760px;
+}
+:host .search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #2a2f29;
+  border-radius: 4px;
+  background: #070807;
+  transition: border-color 0.12s;
+}
+:host .search:focus-within {
+  border-color: #4a5048;
+}
+:host .search svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: #7e8279;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+:host .search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nt-text);
+  font: 500 13px var(--font-mono);
+}
+:host .search input::placeholder {
+  color: #858980;
+}
+:host .go {
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 4px;
+  background: #94c973;
+  color: #0b140a;
+  font: 800 13px var(--font-ui);
+}
+:host .go:hover:not(:disabled) {
+  background: #a7d68a;
+}
+:host .go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+:host .error {
+  margin: 20px 0 0;
+}
+
+:host .start {
+  padding: 40px 0;
+  max-width: 560px;
+}
+:host .start h2 {
+  margin: 0;
+  font: 700 16px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .start p {
+  margin: 6px 0 0;
+  color: var(--nt-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+:host .facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  margin-top: 28px;
+}
+:host .section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1f231f;
+}
+:host .kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nt-subtle);
+}
+:host .section-head h2 {
+  margin: 4px 0 0;
+  font: 700 17px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .order-id {
+  font: 600 14px var(--font-mono) !important;
   overflow-wrap: anywhere;
 }
-.checks {
+:host .state {
+  font: 700 12.5px var(--font-ui);
+  color: #e2b65a;
+  white-space: nowrap;
+}
+:host .state.ok {
+  color: var(--nt-green);
+}
+:host .state.bad {
+  color: #ff7a6e;
+}
+:host .details {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  margin: 0;
+}
+:host .details dt,
+:host .details dd {
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #141714;
+}
+:host .details dt {
+  color: var(--nt-subtle);
+  font-size: 12.5px;
+}
+:host .details dd {
+  color: var(--nt-text);
+  font-size: 13px;
+}
+:host .account-link {
+  color: var(--nt-text);
+  font: 600 12.5px var(--font-mono);
+  text-decoration: none;
+  border-bottom: 1px solid #3a3f39;
+}
+:host .account-link:hover {
+  color: var(--nt-green);
+  border-bottom-color: var(--nt-green);
+}
+
+:host .block {
+  margin-top: 34px;
+}
+:host .block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #1f231f;
+}
+:host .block-head h2 {
+  margin: 0;
+  font: 700 14px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .block-head .count {
+  font-size: 12px;
+  color: var(--nt-subtle);
+}
+:host .checks {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.checks li {
+:host .checks li {
   display: grid;
-  grid-template-columns: 24px 150px minmax(0, 1fr);
+  grid-template-columns: 24px 170px minmax(0, 1fr);
   gap: 10px;
   align-items: baseline;
   padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #141714;
+  font-size: 13px;
 }
-.checks li:last-child {
-  border-bottom: 0;
+:host .checks .mark {
+  color: var(--nt-green);
+  font-weight: 800;
 }
-.checks .mark {
-  color: var(--accent);
-  font-weight: 700;
+:host .checks strong {
+  font-weight: 600;
+  color: var(--nt-text);
 }
-.checks .failed .mark,
-.checks .failed strong {
-  color: #edafa8;
+:host .checks li > span:last-child {
+  color: var(--nt-muted);
 }
-.checks span:last-child {
-  color: var(--muted);
+:host .checks .failed .mark,
+:host .checks .failed strong {
+  color: #ff7a6e;
 }
-@media (max-width: 600px) {
-  .checks li {
-    grid-template-columns: 24px minmax(0, 1fr);
-  }
-  .checks span:last-child {
-    grid-column: 2;
-  }
+
+:host .steps {
+  font-size: 13px;
 }
-.details-cell {
+:host .steps th {
+  height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid #1f231f;
+  background: none;
+  color: var(--nt-subtle);
+  font: 700 10.5px var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+:host .steps td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #141714;
+  color: var(--nt-text);
+  vertical-align: top;
+}
+:host .steps th:first-child,
+:host .steps td:first-child {
+  padding-left: 0;
+}
+:host .steps th:last-child,
+:host .steps td:last-child {
+  padding-right: 0;
+}
+:host .steps tbody tr:hover {
+  background: #0e100e;
+}
+:host .steps .when {
+  color: var(--nt-muted);
+  font: 500 12px var(--font-mono);
+  white-space: nowrap;
+}
+:host .steps .quiet {
+  color: var(--nt-muted);
+}
+:host .steps .step {
+  font-weight: 600;
+}
+:host .details-cell {
   white-space: normal;
   min-width: 260px;
 }
-.details-cell span {
+:host .details-cell span {
   display: inline-block;
-  margin: 0 14px 4px 0;
+  margin: 0 16px 4px 0;
+  font: 500 12.5px var(--font-mono);
 }
-.details-cell b {
-  color: var(--muted);
-  font-weight: 500;
+:host .details-cell b {
+  color: var(--nt-subtle);
+  font: 500 12px var(--font-ui);
+}
+:host .steps td.empty {
+  padding: 24px 0;
+  color: var(--nt-subtle);
+}
+
+@media (max-width: 900px) {
+  :host .facts {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+@media (max-width: 760px) {
+  :host .band {
+    margin: -20px -16px 0;
+    --band-inset: 16px;
+    padding: 20px 16px 18px;
+  }
+  :host .checks li {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  :host .checks li > span:last-child {
+    grid-column: 2;
+  }
 }

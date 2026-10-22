@@ -17,17 +17,17 @@ class MarketDayTest {
     }
 
     @Test
-    void todayRunsFromMidnightToMidnightInNewYork() {
+    void todayRunsFromMidnightToMidnightCentralTime() {
         MarketDay today = MarketDay.today(at("2026-10-01T15:30:00Z"));
 
         assertThat(today.date()).isEqualTo(LocalDate.of(2026, 10, 1));
-        assertThat(today.startInclusive()).isEqualTo(Instant.parse("2026-10-01T04:00:00Z"));
-        assertThat(today.endExclusive()).isEqualTo(Instant.parse("2026-10-02T04:00:00Z"));
+        assertThat(today.startInclusive()).isEqualTo(Instant.parse("2026-10-01T05:00:00Z"));
+        assertThat(today.endExclusive()).isEqualTo(Instant.parse("2026-10-02T05:00:00Z"));
     }
 
     @Test
-    void anEveningInNewYorkIsStillTheSameTradingDayAfterUtcMidnight() {
-        // 01:00 UTC on October 20 is 21:00 on October 19 in New York.
+    void aCentralEveningIsStillTheSameDayAfterUtcMidnight() {
+        // 01:00 UTC on October 20 is 20:00 on October 19 Central time.
         assertThat(MarketDay.today(at("2026-10-20T01:00:00Z")).date()).isEqualTo(LocalDate.of(2026, 10, 19));
     }
 
@@ -41,8 +41,8 @@ class MarketDayTest {
     }
 
     @Test
-    void hourLabelsUseNewYorkTime() {
-        assertThat(MarketDay.hourLabel(Instant.parse("2026-10-01T13:59:59Z"))).isEqualTo("09:00");
-        assertThat(MarketDay.hourLabel(Instant.parse("2026-12-01T14:30:00Z"))).isEqualTo("09:00");
+    void hourLabelsUseCentralTime() {
+        assertThat(MarketDay.hourLabel(Instant.parse("2026-10-01T13:59:59Z"))).isEqualTo("08:00");
+        assertThat(MarketDay.hourLabel(Instant.parse("2026-12-01T14:30:00Z"))).isEqualTo("08:00");
     }
 }

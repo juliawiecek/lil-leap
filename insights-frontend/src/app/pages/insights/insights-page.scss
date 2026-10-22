@@ -16,8 +16,19 @@
 :host .glance {
   margin: -24px -32px 0;
   padding: 26px 32px 24px;
-  border-bottom: 1px solid #161916;
-  background: #0b0d0c;
+  border-bottom: 1px solid #1f231f;
+  position: relative;
+  background: none;
+}
+/* NextTrade green on the left of the header's bottom line, like the underline of a selected tab. */
+:host .glance::after {
+  content: '';
+  position: absolute;
+  left: var(--band-inset, 32px);
+  bottom: -1px;
+  width: 160px;
+  height: 2px;
+  background: var(--nt-green);
 }
 :host .glance-head {
   display: flex;
@@ -39,20 +50,36 @@
   font-size: 13.5px;
 }
 :host .sentence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   margin: 0;
   color: #a4a79e;
   font-size: 14px;
+  text-align: right;
+}
+:host .sentence .lead-in {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7e8279;
 }
 :host .sentence b {
   color: #f2f0e9;
   font-weight: 600;
+}
+:host .sentence .sep {
+  margin: 0 8px;
+  color: #4a5048;
 }
 :host .glance .error {
   margin: 16px 0 0;
 }
 :host .glance-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 48px;
   align-items: end;
   margin-top: 22px;
@@ -75,9 +102,6 @@
   line-height: 1;
   letter-spacing: -0.04em;
 }
-:host .hero-figure b span {
-  color: #4a5048;
-}
 :host .hero-note {
   color: #a4a79e;
   font-size: 14px;
@@ -90,67 +114,105 @@
 }
 :host .hero-chart app-insights-chart {
   display: block;
-  height: 180px;
 }
-:host .hero-chart ::ng-deep svg {
-  width: 100%;
-  height: 180px;
+:host .hero-chart {
+  --line: #1f231f;
+  --muted: #7e8279;
+  --chart-fill: #121a10;
 }
-:host .hero-caption {
-  display: block;
-  margin-top: 6px;
-  color: #7e8279;
+:host .hero-note .up {
+  color: #94c973;
+  font-weight: 600;
+}
+:host .updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 0;
   font-size: 12px;
+  color: #8b8f86;
+}
+:host .updated i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94c973;
 }
 :host .hero-empty {
   margin: 18px 0 0;
   color: #7e8279;
 }
 
-/* Fills, orders, fill rate and accounts: a calm list; the colours match the chart and stand for the same thing everywhere */
+/* Traded value across the top, orders and accounts side by side, fill rate across the bottom; hairlines
+   between, traded value in green as the day's headline money figure. */
 :host .stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   margin: 0;
+  padding-left: 28px;
+  border-left: 1px solid #1f231f;
 }
 :host .stats > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 4px 12px;
-  padding: 12px 0;
-  border-top: 1px solid #1a1d1a;
+  min-width: 0;
+  padding: 16px 0;
+  border-top: 1px solid #1f231f;
 }
-:host .stats > div:first-child {
+:host .stats > .value,
+:host .stats > .rate {
+  grid-column: 1 / -1;
+}
+:host .stats > .value {
+  padding-top: 2px;
   border-top: 0;
 }
-:host .stats dt {
-  color: #a4a79e;
-  font-size: 13px;
+:host .stats > .pair-left {
+  padding-right: 20px;
+  border-right: 1px solid #1f231f;
 }
-:host .stats dt small {
-  display: block;
-  margin-top: 2px;
-  color: #5f645c;
-  font-size: 11.5px;
+:host .stats > .pair-right {
+  padding-left: 20px;
+}
+:host .stats dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b8f86;
 }
 :host .stats dd {
   margin: 0;
-  font-size: 21px;
-  letter-spacing: -0.01em;
-  color: #f2f0e9;
 }
-:host .stats dd.fills {
+:host .stats .figure {
+  margin-top: 8px;
+  font: 600 30px/1.05 var(--font-mono);
+  letter-spacing: -0.03em;
+  color: #f2f0e9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:host .stats .figure.money {
+  font-size: 34px;
   color: #94c973;
 }
-:host .stats dd.orders {
-  color: #7fb3d5;
+:host .stats .figure .cents {
+  color: #5f8a48;
 }
-:host .stats .rate dd {
-  color: #e2b65a;
+:host .stats .rate .figure {
+  font-size: 24px;
+}
+:host .stats .note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #8b8f86;
+}
+:host .stats .note .mono {
+  color: #d6d4cc;
 }
 :host .rate-bar {
-  grid-column: 1 / -1;
   display: block;
   height: 4px;
+  margin: 2px 0 7px;
   border-radius: 2px;
   background: #1a1d1a;
 }
@@ -158,7 +220,7 @@
   display: block;
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #e2b65a, #94c973);
+  background: #94c973;
   transition: width 0.6s ease;
 }
 
@@ -198,6 +260,11 @@
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
+/* A short list sits still, so it does not need the fade that scrolling names slide in through. */
+:host .tape-window.still {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 :host .tape-track {
   display: flex;
   width: max-content;
@@ -227,6 +294,27 @@
 }
 :host .tape li .mono {
   color: #d6d4cc;
+}
+:host .tape li .share {
+  margin-left: 4px;
+  color: #858980;
+  font-size: 11.5px;
+}
+:host .tape-track.still {
+  animation: none;
+}
+/* Fewer than four stocks: no ticker, just the stocks laid out evenly with a hairline between them. */
+:host .tape-track.still ul {
+  gap: 0;
+  padding: 0;
+}
+:host .tape-track.still li {
+  padding: 0 28px;
+  border-left: 1px solid #1f231f;
+}
+:host .tape-track.still li:first-child {
+  padding-left: 12px;
+  border-left: 0;
 }
 @keyframes insights-tape {
   to {
@@ -304,7 +392,8 @@
 :host .bar-hour {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  color: #5f645c;
+  white-space: nowrap;
+  color: #858980;
   min-height: 14px;
 }
 :host .bar-col.now .bar-count {
@@ -409,6 +498,10 @@
 }
 
 @media (max-width: 1100px) {
+  :host .stats {
+    padding-left: 0;
+    border-left: 0;
+  }
   :host .glance-body,
   :host .sections {
     grid-template-columns: minmax(0, 1fr);
@@ -420,6 +513,7 @@
 @media (max-width: 680px) {
   :host .glance {
     margin: -20px -16px 0;
+    --band-inset: 16px;
     padding: 20px 16px;
   }
   :host .tape {

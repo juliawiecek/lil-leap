@@ -30,7 +30,7 @@ public class ReportingQueryService {
     }
 
     /**
-     * Reads today's totals (New York trading day) in one statement for a consistent replica snapshot.
+     * Reads today's totals (Central-time day) in one statement for a consistent replica snapshot.
      * @return the day, accounts that placed an order today, orders submitted, fills and gross executed value
      */
     public Map<String, Object> summary() {

@@ -2,25 +2,20 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
 import { InsightsChart } from '../../shared/insights-chart';
+import { centralTime, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
+/** How often the page re-reads today's figures, in milliseconds. */
+const REFRESH_MS = 5_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-/** The hour it is now in New York, as the trend labels it ("14:00"). */
-const NY_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/New_York' });
+/** The hour it is now in Central time, as the trend labels it ("14:00"). */
+const CENTRAL_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
 /** One colour per ranked stock (rank 1 to 6), used on its bar, its swatch and its slice of the ring. */
-const RANK_COLORS = ['#94c973', '#7fb3d5', '#e2b65a', '#b49bdb', '#ff8f7e', '#6fc7b8'];
-/**
- * The server buckets trades by New York hour ("14:00"); Insights shows times in Central, which is
- * always one hour behind New York (both observe daylight saving on the same dates).
- */
-export function centralHour(newYorkHour: string): string {
-  const hour = Number(newYorkHour.slice(0, 2));
-  return Number.isFinite(hour) ? `${String((hour + 23) % 24).padStart(2, '0')}:00` : newYorkHour;
-}
+const RANK_COLORS = ['#94c973', '#7eb062', '#689652', '#547c43', '#426335', '#334d29'];
 /** Formats the server's yyyy-mm-dd trading day without shifting it into the browser's time zone. */
 const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-/** Home page: today's totals, trades by hour and the most traded stocks for the New York trading day. */
+/** Home page: today's totals, trades by hour and the most traded stocks for today (Central time). */
 @Component({
   selector: 'app-insights-page',
   imports: [DashboardIcon, InsightsChart],
@@ -37,6 +32,13 @@ export class InsightsPage implements OnDestroy {
   /** Hourly points for the shared chart. */
   readonly trendPoints = computed(() => this.trend().map((point) => ({ label: point.hour, value: point.tradeCount })));
   readonly tradesToday = computed(() => this.trend().reduce((sum, point) => sum + point.tradeCount, 0));
+  /** Trades in the current Central hour, shown beside the headline. */
+  readonly thisHour = computed(() => {
+    const now = `${CENTRAL_HOUR.format(new Date())}:00`;
+    return this.trend().find((point) => point.hour === now)?.tradeCount ?? 0;
+  });
+  /** When the figures were last read successfully, e.g. "4:02 PM CT"; empty until the first read. */
+  readonly updatedAt = signal('');
   /** Names the day the figures cover, once the server has said which day that is. */
   readonly subtitle = computed(() => {
     const day = this.summary()?.date;
@@ -49,8 +51,11 @@ export class InsightsPage implements OnDestroy {
   readonly greeting = signal(greetingFor(new Date().getHours()));
   /** Running total of today's trades, hour by hour, for the line under the traded value. */
   readonly cumulativePoints = computed(() => {
+    // Running total up to the current hour; later hours have not happened yet, so they are left off.
+    const now = `${CENTRAL_HOUR.format(new Date())}:00`;
+    const upToNow = this.trend().filter((point) => point.hour <= now);
     let total = 0;
-    return this.trend().map((point) => ({ label: centralHour(point.hour), value: (total += point.tradeCount) }));
+    return (upToNow.length ? upToNow : this.trend()).map((point) => ({ label: twelveHour(point.hour), value: (total += point.tradeCount) }));
   });
   /** The traded value split so its cents can be set lighter than the dollars. */
   readonly valueParts = computed(() => {
@@ -69,15 +74,15 @@ export class InsightsPage implements OnDestroy {
   /** Each hour's bar, sized against the busiest hour; the current New York hour is marked. */
   readonly bars = computed(() => {
     const max = Math.max(1, ...this.trend().map((point) => point.tradeCount));
-    const now = `${NY_HOUR.format(new Date())}:00`;
+    const now = `${CENTRAL_HOUR.format(new Date())}:00`;
     return this.trend().map((point, i) => ({
-      hour: centralHour(point.hour), count: point.tradeCount, height: (point.tradeCount / max) * 100, now: point.hour === now, labelled: i % 3 === 0,
+      hour: point.hour, label: twelveHour(point.hour), count: point.tradeCount, height: (point.tradeCount / max) * 100, now: point.hour === now, labelled: i % 3 === 0,
     }));
   });
   readonly busiest = computed(() =>
     this.trend().reduce<ActivityPoint | null>((best, point) => (!best || point.tradeCount > best.tradeCount ? point : best), null),
   );
-  readonly busiestHour = computed(() => (this.busiest() ? centralHour(this.busiest()!.hour) : ''));
+  readonly busiestHour = computed(() => (this.busiest() ? twelveHour(this.busiest()!.hour) : ''));
   /** The top stocks with their colour and share of all of today's trades. */
   readonly ranked = computed(() => {
     const total = Math.max(1, this.tradesToday(), ...this.top().map((row) => row.tradeCount));
@@ -95,12 +100,21 @@ export class InsightsPage implements OnDestroy {
   });
   readonly topShare = computed(() => Math.round(Math.min(100, this.ranked().slice(0, RANK_COLORS.length).reduce((sum, row) => sum + row.share, 0))));
   private destroyed = false;
+  private readonly poll: ReturnType<typeof setInterval>;
 
   constructor() {
     void this.refresh();
+    // Re-read the figures every few seconds so new trades show up without a reload; skipped while the tab is hidden.
+    this.poll = setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        void this.refresh();
+      }
+    }, REFRESH_MS);
+    // In Node test runs, a pending timer must not keep the process alive.
+    (this.poll as { unref?: () => void }).unref?.();
   }
 
-  /** Loads the totals, today's activity and the top stocks once when the page opens. */
+  /** Loads the totals, today's activity and the top stocks; runs when the page opens and every REFRESH_MS. */
   async refresh(): Promise<void> {
     if (!this.reports || this.loading() || this.destroyed) {
       return;
@@ -124,12 +138,19 @@ export class InsightsPage implements OnDestroy {
     if (trend.status === 'fulfilled') {
       this.trend.set(trend.value);
     }
+    if ([summary, top, trend].some((result) => result.status === 'fulfilled')) {
+      this.updatedAt.set(centralTime(new Date()));
+    }
     if ([summary, top, trend].some((result) => result.status === 'rejected')) {
-      this.error.set('Some reporting figures could not be loaded. Reload the page to try again.');
+      this.error.set('Some reporting figures could not be loaded. Trying again in a few seconds.');
     }
     this.loading.set(false);
   }
 
+  /** "fill" or "fills" to match a count. */
+  plural(value: number | undefined, word: string): string {
+    return Number(value) === 1 ? word : `${word}s`;
+  }
   count(value: number | undefined): string {
     return value === undefined ? '–' : COUNT.format(value);
   }
@@ -139,6 +160,7 @@ export class InsightsPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    clearInterval(this.poll);
   }
 }
 

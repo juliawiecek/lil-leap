@@ -6,7 +6,9 @@ import { NAV_BY_ROLE, homePath, roleOf, type NavItem } from '../roles';
 import { DashboardIcon } from '../shared/dashboard-icon';
 
 /** Central time for the top bar: the team works in Texas, so every time in Insights is Central. */
-const CENTRAL = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
+const CENTRAL_CLOCK = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago' });
+/** "3:59 PM" on a 12-hour clock; newer ICU puts a narrow no-break space before AM/PM, so use a plain space. */
+const centralClock = (now: Date) => CENTRAL_CLOCK.format(now).replace(/\u202f/g, ' ');
 
 /** The Insights frame around every page: sidebar for the signed-in role, top bar and sign-out. */
 @Component({
@@ -21,8 +23,8 @@ export class Shell implements OnDestroy {
   private readonly router = inject(Router, { optional: true });
   readonly mobileNav = signal(false);
   /** The time in Central, refreshed twice a minute. */
-  readonly clock = signal(CENTRAL.format(new Date()));
-  readonly #clockTimer = setInterval(() => this.clock.set(CENTRAL.format(new Date())), 30_000);
+  readonly clock = signal(centralClock(new Date()));
+  readonly #clockTimer = setInterval(() => this.clock.set(centralClock(new Date())), 30_000);
 
   role() {
     return roleOf(this.auth?.userRole);

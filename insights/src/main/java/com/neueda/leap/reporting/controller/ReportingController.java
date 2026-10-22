@@ -67,8 +67,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by instrument.
      *
-     * @param startDate first UTC day included (ISO date, required)
-     * @param endDate last UTC day included (ISO date, required)
+     * @param startDate first day included (Central time) (ISO date, required)
+     * @param endDate last day included (Central time) (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/instrument-report", produces = "text/csv")
@@ -81,8 +81,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by client segment.
      *
-     * @param startDate first UTC day included (ISO date, required)
-     * @param endDate last UTC day included (ISO date, required)
+     * @param startDate first day included (Central time) (ISO date, required)
+     * @param endDate last day included (Central time) (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/client-segment-report", produces = "text/csv")
@@ -95,8 +95,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by trading activity.
      *
-     * @param startDate first UTC day included (ISO date, required)
-     * @param endDate last UTC day included (ISO date, required)
+     * @param startDate first day included (Central time) (ISO date, required)
+     * @param endDate last day included (Central time) (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/trading-activity-report", produces = "text/csv")
@@ -104,5 +104,19 @@ public class ReportingController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return reportingService.generateTradingActivityReport(new ReportDateRange(startDate, endDate));
+    }
+
+    /**
+     * Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.
+     *
+     * @param startDate first day included (Central time) (ISO date, required)
+     * @param endDate last day included (Central time) (ISO date, required)
+     * @return CSV file response
+     */
+    @GetMapping(value = "/generate/buy-sell-balance-report", produces = "text/csv")
+    public ResponseEntity<Resource> generateBuySellBalanceReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return reportingService.generateBuySellBalanceReport(new ReportDateRange(startDate, endDate));
     }
 }

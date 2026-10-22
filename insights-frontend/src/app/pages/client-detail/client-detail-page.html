@@ -1,0 +1,243 @@
+<section class="band" [class.compact]="!detail()">
+  <a class="back-link" routerLink="/clients" queryParamsHandling="preserve">← Clients</a>
+  @if (detail(); as d) {
+    <header class="head">
+      <div>
+        <h1>{{ d.account.clientName || d.account.accountNumber }}</h1>
+        <p class="subtitle"><span class="mono-id">{{ d.account.accountNumber }}</span>{{ d.account.accountName ? ' · ' + d.account.accountName : '' }}{{ d.account.email ? ' · ' + d.account.email : '' }}</p>
+      </div>
+      <dl class="tags">
+        <div><dt>Level</dt><dd [style.color]="tone(d.account.traderLevel)">{{ label(d.account.traderLevel) }}</dd></div>
+        <div><dt>Status</dt><dd [style.color]="tone(d.account.status)">{{ label(d.account.status) }}</dd></div>
+      </dl>
+    </header>
+    <dl class="stats" aria-label="Account summary">
+      <div>
+        <dt>Traded value</dt>
+        <dd class="figure value" data-testid="client-value">{{ money(d.account.tradedValue) }}</dd>
+        <dd class="note">Filled orders, USD</dd>
+      </div>
+      <div>
+        <dt>Trades</dt>
+        <dd class="figure" data-testid="client-trades">{{ count(d.account.tradeCount) }}</dd>
+        <dd class="note">Executed fills</dd>
+      </div>
+      <div>
+        <dt>Last trade</dt>
+        <dd class="figure" data-testid="client-last-trade">{{ day(d.account.lastTradeAt) }}</dd>
+        <dd class="note">{{ time(d.account.lastTradeAt) }}</dd>
+      </div>
+      <div>
+        <dt>Positions</dt>
+        <dd class="figure" data-testid="client-positions">{{ count(d.holdings.length) }}</dd>
+        <dd class="note">Stocks held</dd>
+      </div>
+      <div>
+        <dt>Cost basis</dt>
+        <dd class="figure" data-testid="client-cost-basis">{{ money(costBasis()) }}</dd>
+        <dd class="note">Of shares held</dd>
+      </div>
+    </dl>
+    <div class="tabs" role="tablist" aria-label="Account sections">
+      <button type="button" role="tab" id="tab-overview" aria-controls="panel-overview" [class.active]="tab() === 'overview'" [attr.aria-selected]="tab() === 'overview'" (click)="show('overview')">Overview</button>
+      <button type="button" role="tab" id="tab-orders" aria-controls="panel-orders" [class.active]="tab() === 'orders'" [attr.aria-selected]="tab() === 'orders'" (click)="show('orders')">
+        Orders{{ orders() ? ' (' + count(orders()!.totalElements) + ')' : '' }}
+      </button>
+    </div>
+  }
+</section>
+@if (detail(); as d) {
+  @if (tab() === 'overview') {
+    <div id="panel-overview" class="overview" role="tabpanel" aria-labelledby="tab-overview">
+      <div class="charts">
+        <figure class="chart">
+          <figcaption><b>Allocation</b><span>by cost basis</span></figcaption>
+          @if (allocation().length) {
+            <div class="allocation">
+              <svg viewBox="0 0 148 148" role="img" [attr.aria-label]="'Allocation by cost basis; largest holding ' + percent(largestShare())">
+                <circle class="track" cx="74" cy="74" [attr.r]="ringRadius" />
+                @for (slice of allocation(); track slice.symbol) {
+                  <circle cx="74" cy="74" [attr.r]="ringRadius" [attr.stroke]="slice.color" [attr.stroke-dasharray]="slice.dash" [attr.stroke-dashoffset]="slice.offset" transform="rotate(-90 74 74)" />
+                }
+                <text class="ring-label" x="74" y="70" text-anchor="middle">LARGEST</text>
+                <text class="ring-value" x="74" y="90" text-anchor="middle">{{ largestShare().toFixed(0) }}%</text>
+              </svg>
+              <ul class="legend">
+                @for (slice of allocation(); track slice.symbol) {
+                  <li><i [style.background]="slice.color"></i><b>{{ slice.symbol }}</b><span>{{ percent(slice.share) }}</span></li>
+                }
+              </ul>
+            </div>
+          } @else {
+            <p class="chart-empty">No open positions.</p>
+          }
+        </figure>
+        <figure class="chart">
+          <figcaption>
+            <b>Bought and sold, by stock</b>
+            <span class="key"><i class="sold"></i>Sold<i class="bought"></i>Bought</span>
+          </figcaption>
+          @if (fillsError()) {
+            <p class="chart-empty">Could not load this account's trades.</p>
+          } @else if (!fills()) {
+            <p class="chart-empty">Loading trades…</p>
+          } @else if (flows().length) {
+            <div class="flows">
+              @for (row of flows(); track row.symbol) {
+                <div class="flow" [attr.aria-label]="row.symbol + ': bought ' + money(row.bought) + ', sold ' + money(row.sold)">
+                  <b>{{ row.symbol }}</b>
+                  <span class="side sell"><i [style.width.%]="row.soldWidth"></i></span>
+                  <span class="side buy"><i [style.width.%]="row.boughtWidth"></i></span>
+                  <span class="total">{{ money(row.bought + row.sold) }}</span>
+                </div>
+              }
+            </div>
+            @if (fillsTotal() > fills()!.length) {
+              <p class="chart-note">From the latest {{ count(fills()!.length) }} of {{ count(fillsTotal()) }} fills.</p>
+            }
+          } @else {
+            <p class="chart-empty">No filled orders yet.</p>
+          }
+        </figure>
+      </div>
+
+      <section class="holdings" aria-labelledby="holdings-title">
+        <div class="section-head">
+          <h2 id="holdings-title">Holdings</h2>
+          <span>Average cost of the shares still held</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Stocks this account holds</caption>
+            <thead>
+              <tr>
+                <th>Stock</th>
+                <th class="numeric">Shares</th>
+                <th class="numeric">Average cost</th>
+                <th class="numeric">Cost basis</th>
+                <th class="numeric">Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (holding of d.holdings; track holding.symbol) {
+                <tr>
+                  <td class="stock"><i [style.background]="holdingColor(holding.symbol)" aria-hidden="true"></i><strong>{{ holding.symbol }}</strong><small>{{ holding.instrumentName }}</small></td>
+                  <td class="numeric">{{ count(holding.quantity) }}</td>
+                  <td class="numeric quiet">{{ price(holding.averageCost) }}</td>
+                  <td class="numeric">{{ money(holding.costBasis) }}</td>
+                  <td class="numeric">{{ weight(holding.costBasis) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty">This account holds no stocks.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  } @else {
+    <div id="panel-orders" class="orders" role="tabpanel" aria-labelledby="tab-orders">
+      @if (balance(); as b) {
+        <dl class="balance" aria-label="Bought and sold">
+          <div>
+            <dt>Bought</dt>
+            <dd class="figure buy" data-testid="client-bought">{{ money(b.bought) }}</dd>
+            <dd class="note">{{ count(b.buys) }} {{ b.buys === 1 ? 'order' : 'orders' }}</dd>
+          </div>
+          <div>
+            <dt>Sold</dt>
+            <dd class="figure sell" data-testid="client-sold">{{ money(b.sold) }}</dd>
+            <dd class="note">{{ count(b.sells) }} {{ b.sells === 1 ? 'order' : 'orders' }}</dd>
+          </div>
+          <div>
+            <dt>Net bought</dt>
+            <dd class="figure" data-testid="client-net">{{ money(b.bought - b.sold) }}</dd>
+            <dd class="note">{{ fillsTotal() > fills()!.length ? 'Latest ' + count(fills()!.length) + ' of ' + count(fillsTotal()) + ' fills' : 'Bought minus sold' }}</dd>
+          </div>
+        </dl>
+        @if (b.bought + b.sold > 0) {
+          <span class="balance-bar" aria-hidden="true"><i class="buy" [style.flex-grow]="b.bought"></i><i class="sell" [style.flex-grow]="b.sold"></i></span>
+        }
+      }
+      <form class="order-tools" role="search" method="get" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
+        <label class="search"
+          ><span class="sr-only">Find an order</span
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg
+          ><input
+            #orderSearch
+            name="orderSearch"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Symbol, e.g. AAPL, or a full order ID"
+            [value]="orderFilters().search"
+            (input)="searchOrders($any($event.target).value)"
+        /></label>
+        <span class="count" aria-live="polite">{{ ordersLoading() ? 'Loading…' : orders() ? count(orders()!.totalElements) + ' filled orders · newest first' : '' }}</span>
+      </form>
+      @if (operations()) {
+        <p class="hint">Select an order ID to open its full trail in Trade lookup.</p>
+      }
+      @if (ordersError()) {
+        <p class="error" role="alert">{{ ordersError() }}</p>
+      }
+      <section class="order-list" aria-labelledby="orders-title" [attr.aria-busy]="ordersLoading()">
+        <h2 id="orders-title" class="sr-only">Filled orders</h2>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Orders for account {{ d.account.accountNumber }}, newest first</caption>
+            <thead>
+              <tr>
+                <th>Filled</th>
+                <th>Stock</th>
+                <th>Side</th>
+                <th class="numeric">Shares</th>
+                <th class="numeric">Fill price</th>
+                <th class="numeric">Value</th>
+                <th class="numeric">Order ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (order of orders()?.content ?? []; track order.orderId) {
+                <tr>
+                  <td class="when">{{ dateTime(order.filledAt) }}</td>
+                  <td class="symbol">{{ order.symbol }}</td>
+                  <td><span class="side-mark" [class.sell]="order.side !== 'BUY'">{{ label(order.side) }}</span></td>
+                  <td class="numeric">{{ count(order.quantity) }}</td>
+                  <td class="numeric quiet">{{ price(order.fillPrice) }}</td>
+                  <td class="numeric">{{ orderValue(order) }}</td>
+                  <td class="numeric id">
+                    @if (operations()) {
+                      <a class="order-link mono" [routerLink]="['/trades', order.orderId]" [queryParams]="{ account: accountId() }" [title]="order.orderId" [attr.aria-label]="'Open order ' + order.orderId + ' in Trade lookup'">{{ shortId(order.orderId) }}…</a>
+                    } @else {
+                      <span class="mono" [title]="order.orderId">{{ shortId(order.orderId) }}…</span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="empty">{{ ordersLoading() ? 'Loading orders…' : orderFilters().search ? 'No orders match this search.' : 'This account has no filled orders.' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (orders(); as page) {
+          @if (page.totalPages > 1) {
+            <nav class="pager" aria-label="Pages of orders">
+              <button type="button" [disabled]="page.page === 0" (click)="ordersPage(page.page - 1)">Previous</button>
+              <span>Page {{ page.page + 1 }} of {{ page.totalPages }}</span>
+              <button type="button" [disabled]="page.page + 1 >= page.totalPages" (click)="ordersPage(page.page + 1)">Next</button>
+            </nav>
+          }
+        }
+      </section>
+    </div>
+  }
+} @else if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+} @else {
+  <p class="loading" aria-busy="true">Loading account…</p>
+}
