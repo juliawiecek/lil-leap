@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
+const { SwitchScanService } = await import('../src/app/switch-scan.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 
 const NAMES = { AAPL: 'Apple Inc.', MSFT: 'Microsoft Corporation', NVDA: 'NVIDIA Corporation', AMZN: 'Amazon.com, Inc.', GOOGL: 'Alphabet Inc.' };
@@ -68,6 +69,23 @@ function tradingDesk(t) {
   desk.applyPortfolio(samplePortfolio);
   return desk;
 }
+
+test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => {
+  const said = [];
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const desk = component(t, AdvancedDashboard, [
+    { provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith()),
+    { provide: SwitchScanService, useValue: scan },
+  ]);
+  desk.applyPortfolio(samplePortfolio);
+  desk.choose(desk.quote('MSFT'));
+  desk.quantity.set('2');
+  desk.reviewOrder();
+  assert.deepEqual(said, [["You're about to buy 2 shares of Microsoft for $849. Press Confirm buy to place the order.", true]]);
+  desk.quantity.set('0');
+  desk.reviewOrder();
+  assert.equal(said.length, 1, 'an invalid order is not read back');
+});
 
 test('screeners separate gainers and decliners and restore all quotes', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);

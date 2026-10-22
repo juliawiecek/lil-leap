@@ -34,6 +34,8 @@ import type { UserProfile } from './auth-api';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
+import { orderReadBack } from './order-read-back';
+import { SwitchScanService } from './switch-scan';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -200,6 +202,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
   /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
   readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
+  readonly #switchScan = inject(SwitchScanService, { optional: true });
   /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
   tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
     const live = this.feed.quotes().find((q) => q.symbol === symbol);
@@ -614,6 +617,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.message.set(this.validate());
     if (!this.message()) {
       this.openModal('review');
+      // Says the order aloud before it can be confirmed (PS-23), cutting in on switch control.
+      const quote = this.selected();
+      this.#switchScan?.announce(orderReadBack({
+        side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+        quantity: Number(this.quantity()),
+        symbol: quote.symbol,
+        name: quote.name,
+        total: this.total(),
+        closedWarning: this.closedWarning(),
+        priceDelayed: this.priceDelayed(),
+      }), true);
     }
   }
   async confirmOrder(): Promise<void> {

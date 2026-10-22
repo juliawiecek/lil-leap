@@ -180,6 +180,9 @@ test('the page can speak through the ring, after what the ring is saying', (t) =
   assert.equal(said().at(-1), '1 day. Now you have $25,000.00, unchanged.');
   assert.equal(synth.cancelled, cancels, 'queued, not cutting the ring off');
   assert.equal(doc.querySelector('.scan-live').textContent, '1 day. Now you have $25,000.00, unchanged.');
+  engine.say("You're about to buy 2 shares of Apple for $374.", true);
+  assert.equal(synth.cancelled, cancels + 1, 'an order read-back cuts in');
+  assert.equal(said().at(-1), "You're about to buy 2 shares of Apple for $374.");
 });
 
 test('Alt+S turns switch control on with reading aloud from any page, and off again', (t) => {
