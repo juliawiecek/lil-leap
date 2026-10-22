@@ -1,6 +1,10 @@
 import { Component, DestroyRef, Injectable, effect, inject, input, signal } from '@angular/core';
 import { BriefingSnapshot, buildBriefing } from './briefing';
 import { accessibilityStore } from './accessibility';
+import { speechService } from './speech';
+
+/** The briefing's name in the app's shared voice (speech.ts). */
+const BRIEFING_SOURCE = 'briefing';
 
 /** Voice speed and how often the briefing repeats on its own (0 = only when asked). */
 export interface BriefingSettings {
@@ -55,6 +59,7 @@ export function parseLastBriefings(saved: unknown): Record<string, string> {
 @Injectable({ providedIn: 'root' })
 export class BriefingService {
   readonly #store = accessibilityStore();
+  readonly #speech = speechService();
   readonly settings = signal<BriefingSettings>(this.#store.read('briefing', parseBriefingSettings));
   readonly lines = signal<string[]>([]);
   /** Index of the sentence being read, or -1. */
@@ -97,24 +102,24 @@ export class BriefingService {
     if (!this.supported) {
       return;
     }
-    const synth = globalThis.speechSynthesis;
     this.speaking.set(true);
+    // Asked for, so it cuts in; each later sentence waits for the one before. Captioned as it plays.
     lines.forEach((line, index) => {
-      const utterance = new SpeechSynthesisUtterance(line);
-      utterance.rate = this.settings().rate;
-      utterance.onstart = () => this.current.set(index);
-      if (index === lines.length - 1) {
-        utterance.onend = () => this.#finished();
-        utterance.onerror = () => this.#finished();
-      }
-      synth.speak(utterance);
+      const last = index === lines.length - 1;
+      this.#speech.speak(line, {
+        priority: 'urgent',
+        source: BRIEFING_SOURCE,
+        queue: index > 0,
+        rate: this.settings().rate,
+        onStart: () => this.current.set(index),
+        onEnd: last ? () => this.#finished() : undefined,
+      });
     });
   }
 
   stop(): void {
-    if (this.supported) {
-      globalThis.speechSynthesis.cancel();
-    }
+    // Only the briefing's own speech: closing the briefing never silences switch control.
+    this.#speech.cancel(BRIEFING_SOURCE);
     this.#finished();
   }
 

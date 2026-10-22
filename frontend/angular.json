@@ -54,7 +54,8 @@
             ],
             "styles": [
               "src/styles.scss",
-              "src/switch-scan.scss"
+              "src/switch-scan.scss",
+              "src/captions.scss"
             ]
           },
           "configurations": {

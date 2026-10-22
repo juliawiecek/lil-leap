@@ -96,6 +96,20 @@ test('the Accessibility section has a heading and opens the shortcuts from a key
   assert.equal(opened, 1);
 });
 
+test('captions start on and can be turned off from their card (PS-23)', async (t) => {
+  const fixture = await render(t, AccessibilitySettings);
+  const root = fixture.nativeElement;
+  const toggle = root.querySelector('.caption-toggle');
+  assert.equal(root.querySelector('#' + toggle.getAttribute('aria-labelledby')).textContent.trim(), 'Captions');
+  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+  toggle.click(); fixture.detectChanges();
+  assert.equal(toggle.getAttribute('aria-pressed'), 'false');
+  assert.equal(toggle.textContent.trim(), 'Off');
+  assert.equal(fixture.componentInstance.speech.settings().show, false);
+  toggle.click(); fixture.detectChanges();
+  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+});
+
 test('the shortcut list shows every shortcut with its keys', async (t) => {
   const fixture = await render(t, KeyboardShortcuts);
   const rows = fixture.nativeElement.querySelectorAll('.shortcut-list > div');

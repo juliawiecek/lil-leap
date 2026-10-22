@@ -5,6 +5,7 @@ const {
   ScanEngine, SwitchScanService, isSwitchControlShortcut, isSwitchKey, parseScanSettings, ringTarget, scanLabel, screenBox, spokenItem,
 } = await import('../src/app/switch-scan.ts');
 const { ACCESSIBILITY_STORAGE_KEY } = await import('../src/app/accessibility.ts');
+const { SpeechService } = await import('../src/app/speech.ts');
 const { SwitchScanSettings } = await import('../src/app/switch-scan-settings.ts');
 
 const doc = browser.document;
@@ -348,6 +349,43 @@ test('a number field opens a keypad that types into it and fires the events the 
   assert.deepEqual(seen, ['input:2', 'input:20', 'input:2', 'input:25', 'input:25', 'change:25']);
   assert.equal(engine.depth, 2, 'back in the Trade group');
   assert.equal(describe(engine.current()), 'control:Number of shares', 'the ring picks up where it left off');
+});
+
+test('keypad keys are read out by name as the ring reaches them, and captioned (PS-23)', (t) => {
+  const { said } = withSpeech(t);
+  const speech = new SpeechService();
+  doc.body.innerHTML = '';
+  const engine = setup(t, { speak: true, speech });
+  choose(engine, 'group:Trade', 'control:Number of shares');
+  waitFor(engine, 'group:. to ⌫');
+  assert.equal(said().at(-1), 'point to Delete group', 'the row is said in words');
+  assert.equal(speech.caption(), 'point to Delete group', 'and captioned');
+  engine.press();
+  assert.equal(said().at(-1), 'point', 'the "." key');
+  engine.next(); engine.next();
+  assert.equal(said().at(-1), 'Delete');
+  assert.equal(doc.querySelector('.scan-pad [data-speak="point"]').getAttribute('aria-label'), '.', 'its name still matches the key (WCAG 2.5.3)');
+  engine.press();
+  choose(engine, 'group:4 to 6');
+  waitFor(engine, 'control:5');
+  assert.equal(said().at(-1), '5');
+  engine.press();
+  choose(engine, 'group:. to ⌫', 'control:.', 'group:1 to 3', 'control:2');
+  assert.equal(said().at(-1), '5 point 2', 'what was typed so far, in words');
+  waitFor(engine, 'group:Done or cancel');
+  engine.press();
+  assert.equal(said().at(-1), 'Done');
+  assert.equal(engine.ringed()?.textContent, 'Done', 'what "What\'s this?" explains');
+  engine.press();
+  assert.equal(engine.ringed()?.id, 'qty');
+});
+
+test('the ring has nothing to explain on Back, Pause, an offer, or once stopped', (t) => {
+  const engine = setup(t, { backEveryMs: 0, pauseEveryMs: 0 });
+  waitFor(engine, 'pause');
+  assert.equal(engine.ringed(), null);
+  engine.stop();
+  assert.equal(engine.ringed(), null);
 });
 
 test('cancelling a keypad puts the old value back', (t) => {

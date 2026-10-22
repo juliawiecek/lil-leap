@@ -2,11 +2,12 @@ import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
 import { ColourModeStore } from './colour-mode';
+import { SpeechService } from './speech';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds
  * its card here, so the novice and advanced Settings pages get it from one place: audio briefing
- * (PS-18), switch control (PS-19), live price updates (PS-21), voice mode (PS-22) and colour-blind
+ * (PS-18), switch control (PS-19), captions (PS-23), live price updates (PS-21), voice mode (PS-22) and colour-blind
  * mode (PS-27). Every card saves through AccessibilityStore and starts off.
  */
 @Component({
@@ -38,6 +39,25 @@ import { ColourModeStore } from './colour-mode';
         <!-- Feature cards (PS-18, PS-19, PS-21, PS-22, PS-27) go here, one per feature. -->
         <app-briefing-settings />
         <app-switch-scan-settings />
+        <div class="a11y-card">
+          <span class="a11y-text"
+            ><b id="caption-settings-title">Captions</b
+            ><small id="caption-settings-help"
+              >Show what NextTrade says aloud in a strip at the bottom of the screen: switch control, the order read-back, the
+              briefing and <kbd>Alt</kbd> + <kbd>W</kbd> explanations. On unless you turn it off.</small
+            ></span
+          >
+          <button
+            type="button"
+            class="a11y-button caption-toggle"
+            aria-labelledby="caption-settings-title"
+            aria-describedby="caption-settings-help"
+            [attr.aria-pressed]="speech.settings().show"
+            (click)="speech.setCaptions(!speech.settings().show)"
+          >
+            {{ speech.settings().show ? 'On' : 'Off' }}
+          </button>
+        </div>
         <div class="a11y-card">
           <span class="a11y-text"
             ><b>Keyboard shortcuts</b><small>Every shortcut NextTrade understands. Press <kbd>?</kbd> anywhere to open the list.</small></span
@@ -73,6 +93,8 @@ import { ColourModeStore } from './colour-mode';
       .a11y-button { flex: none; min-height: 34px; padding: 0 14px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: transparent;
         color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
       .a11y-button:hover { border-color: var(--surface-tone-01); }
+      .caption-toggle { min-width: 64px; border-radius: 999px; font-weight: 700; }
+      .caption-toggle[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
       .a11y-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       @media (max-width: 760px) { .a11y { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; } }
       @media (max-width: 480px) { .a11y-card { flex-wrap: wrap; gap: 12px; padding-inline: 12px; } }
@@ -81,6 +103,8 @@ import { ColourModeStore } from './colour-mode';
 })
 export class AccessibilitySettings {
   readonly colours = inject(ColourModeStore);
+  /** The caption strip's on/off switch (PS-23). */
+  readonly speech = inject(SpeechService);
   readonly colourOptions = [
     { value: 'off', label: 'Off' },
     { value: 'red-green', label: 'Red-green safe' },
