@@ -106,7 +106,8 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate)" class="member-name-link">ReportingQueryService</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc)</code></div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,java.time.Clock)" class="member-name-link">ReportingQueryService</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates the reporting query service.</div>
 </div>
@@ -127,7 +128,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#summary()" class="member-name-link">summary</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Reads all metrics in one statement for a consistent replica snapshot.</div>
+<div class="block">Reads today's totals (New York trading day) in one statement for a consistent replica snapshot.</div>
 </div>
 </div>
 </div>
@@ -147,13 +148,15 @@ loadScripts(document, 'script');</script>
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate)">
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,java.time.Clock)">
 <h3>ReportingQueryService</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">ReportingQueryService</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">ReportingQueryService</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbc,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
 <div class="block">Creates the reporting query service.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>jdbc</code> - reporting-replica JDBC operations</dd>
+<dd><code>clock</code> - source of the current instant, used to find today's trading day</dd>
 </dl>
 </section>
 </li>
@@ -169,10 +172,10 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="summary()">
 <h3>summary</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&gt;</span>&nbsp;<span class="element-name">summary</span>()</div>
-<div class="block">Reads all metrics in one statement for a consistent replica snapshot.</div>
+<div class="block">Reads today's totals (New York trading day) in one statement for a consistent replica snapshot.</div>
 <dl class="notes">
 <dt>Returns:</dt>
-<dd>aggregate account, order, fill and gross execution metrics</dd>
+<dd>the day, accounts that placed an order today, orders submitted, fills and gross executed value</dd>
 </dl>
 </section>
 </li>

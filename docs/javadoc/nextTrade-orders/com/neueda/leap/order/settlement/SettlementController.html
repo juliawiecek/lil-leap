@@ -140,6 +140,11 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Rolls back a settlement that has not changed any balance.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#status(java.util.UUID)" class="member-name-link">status</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;tradeId)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns the ledger-derived settlement state for an order/trade.</div>
+</div>
 </div>
 </div>
 </div>
@@ -203,6 +208,21 @@ loadScripts(document, 'script');</script>
 <dd><code>settlementId</code> - the fill identifier</dd>
 <dt>Returns:</dt>
 <dd>200 when rolled back, 400 for a malformed id, 404 for an unknown fill, or 409 when balances already changed</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="status(java.util.UUID)">
+<h3>status</h3>
+<div class="member-signature"><span class="annotations">@GetMapping("/status/{tradeId}")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a>&gt;</span>&nbsp;<span class="element-name">status</span><wbr><span class="parameters">(@PathVariable
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;tradeId)</span></div>
+<div class="block">Returns the ledger-derived settlement state for an order/trade.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>tradeId</code> - the permanent order identifier</dd>
+<dt>Returns:</dt>
+<dd>current settlement state, or 404 when the trade is unknown</dd>
 </dl>
 </section>
 </li>
