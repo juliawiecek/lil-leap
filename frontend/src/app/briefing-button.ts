@@ -35,16 +35,19 @@ export const BRIEFING_TICK_MS = 30000;
 /** Saved settings, or the defaults when nothing valid is stored. */
 export function parseBriefingSettings(saved: unknown): BriefingSettings {
   const s = (saved && typeof saved === 'object' ? saved : {}) as Partial<BriefingSettings>;
-  let everyMinutes = DEFAULT_SETTINGS.everyMinutes;
-  if (BRIEFING_REPEATS.some((r) => r.value === s.everyMinutes)) {
-    everyMinutes = s.everyMinutes!;
-  } else if (LEGACY_REPEATS.includes(s.everyMinutes!)) {
-    everyMinutes = LONGEST_REPEAT;
-  }
   return {
     rate: BRIEFING_RATES.some((r) => r.value === s.rate) ? s.rate! : DEFAULT_SETTINGS.rate,
-    everyMinutes,
+    everyMinutes: savedRepeat(s.everyMinutes),
   };
+}
+
+/** A saved repeat that is still offered, the longest one for a legacy repeat, otherwise the default. */
+function savedRepeat(minutes: unknown): number {
+  const offered = BRIEFING_REPEATS.find((r) => r.value === minutes);
+  if (offered) {
+    return offered.value;
+  }
+  return LEGACY_REPEATS.includes(minutes as number) ? LONGEST_REPEAT : DEFAULT_SETTINGS.everyMinutes;
 }
 
 /** When each account last heard a briefing, by account id; anything that is not a date is dropped. */
