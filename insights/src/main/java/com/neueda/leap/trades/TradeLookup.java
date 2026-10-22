@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -123,7 +124,10 @@ public class TradeLookup {
     private static String clientName(ResultSet row) throws SQLException {
         String first = row.getString("first_name");
         String last = row.getString("last_name");
-        return first == null && last == null ? null : String.join(" ", first == null ? "" : first, last == null ? "" : last).trim();
+        if (first == null && last == null) {
+            return null;
+        }
+        return String.join(" ", Objects.toString(first, ""), Objects.toString(last, "")).trim();
     }
 
     private static Instant instant(ResultSet row, String column) throws SQLException {
