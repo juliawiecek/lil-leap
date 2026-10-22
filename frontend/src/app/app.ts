@@ -15,6 +15,7 @@ import { safeReturnUrl } from './page-state';
   signal,
 } from '@angular/core';
 
+import { signedOutMessage } from '@lilleap/session-core/core';
 import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
@@ -88,6 +89,8 @@ export class App implements AfterViewInit, OnDestroy {
   private resetToken = this.resetTokenFromRoute();
 
   readonly authMode = signal<AuthMode>(this.resetToken ? 'reset' : 'signin');
+  /** Why the user is back here, e.g. after the inactivity sign-out (PS-30); '' for a normal visit. */
+  readonly signedOutNotice = signal(signedOutMessage(this.route?.snapshot.queryParamMap.get('reason')));
   readonly authTitle = computed(() => TITLES[this.authMode()]);
   readonly authSubtitle = computed(() => SUBTITLES[this.authMode()]);
   /** Sign-in and sign-up share tabs; the reset screens stand alone with a way back. */
@@ -193,7 +196,7 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
-    if (this.route?.snapshot.queryParamMap.has('returnUrl')) { this.showAuthPage(); }
+    if (this.route?.snapshot.queryParamMap.has('returnUrl') || this.signedOutNotice()) { this.showAuthPage(); }
     if (this.resetToken) {
       this.showAuthPage();
       // Drop the token from the address bar (and history); the same route keeps this component.

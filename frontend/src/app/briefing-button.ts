@@ -14,12 +14,20 @@ export const BRIEFING_RATES = [
   { value: 1.25, label: 'Fast' },
   { value: 1.5, label: 'Faster' },
 ];
+/**
+ * Every repeat must fit inside the 10-minute inactivity sign-out, or it can never play: a
+ * listener makes no input, so they are signed out first. A repeat does not count as activity
+ * (that would keep an unattended session open forever); the "Still there?" warning lets the
+ * listener stay. Decision: docs/accessibility/PS-30-inactivity-warning.md.
+ */
 export const BRIEFING_REPEATS = [
   { value: 0, label: 'Only when I ask' },
-  { value: 15, label: 'Every 15 minutes' },
-  { value: 30, label: 'Every 30 minutes' },
-  { value: 60, label: 'Every hour' },
+  { value: 2, label: 'Every 2 minutes' },
+  { value: 5, label: 'Every 5 minutes' },
 ];
+/** The 15, 30 and 60 minute repeats saved before PS-30 become the longest one that can still play. */
+const LONGEST_REPEAT = Math.max(...BRIEFING_REPEATS.map((r) => r.value));
+const LEGACY_REPEATS = [15, 30, 60];
 const DEFAULT_SETTINGS: BriefingSettings = { rate: 1, everyMinutes: 0 };
 /** How often the repeat timer checks whether a briefing is due. */
 export const BRIEFING_TICK_MS = 30000;
@@ -27,9 +35,15 @@ export const BRIEFING_TICK_MS = 30000;
 /** Saved settings, or the defaults when nothing valid is stored. */
 export function parseBriefingSettings(saved: unknown): BriefingSettings {
   const s = (saved && typeof saved === 'object' ? saved : {}) as Partial<BriefingSettings>;
+  let everyMinutes = DEFAULT_SETTINGS.everyMinutes;
+  if (BRIEFING_REPEATS.some((r) => r.value === s.everyMinutes)) {
+    everyMinutes = s.everyMinutes!;
+  } else if (LEGACY_REPEATS.includes(s.everyMinutes!)) {
+    everyMinutes = LONGEST_REPEAT;
+  }
   return {
     rate: BRIEFING_RATES.some((r) => r.value === s.rate) ? s.rate! : DEFAULT_SETTINGS.rate,
-    everyMinutes: BRIEFING_REPEATS.some((r) => r.value === s.everyMinutes) ? s.everyMinutes! : DEFAULT_SETTINGS.everyMinutes,
+    everyMinutes,
   };
 }
 
