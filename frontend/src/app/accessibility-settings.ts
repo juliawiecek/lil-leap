@@ -1,7 +1,7 @@
 import { Component, inject, output } from '@angular/core';
-import { ColourModeStore } from './colour-mode';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
+import { ColourModeStore } from './colour-mode';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds

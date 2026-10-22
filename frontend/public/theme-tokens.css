@@ -317,25 +317,11 @@
   --series-dash: none;
   --allocation-pattern-ink: var(--category-tone-07);
   --allocation-outline: var(--text-muted);
-  /* Audio briefing and switch-control palette (PS-18, PS-19). */
-  --briefing-border: #2c3d45;
-  --briefing-surface: #0f191d;
-  --briefing-border-hover: #4d6a75;
-  --briefing-focus: #8ee6a8;
-  --briefing-active: #51d88c;
-  --briefing-panel: #0d171b;
-  --briefing-control: #13232a;
-  --briefing-text: #c8d2dc;
-  --briefing-active-surface: #12301f;
-  --briefing-divider: #22323a;
-  --briefing-text-muted: #aebaca;
-  --scan-accent: #ffd84d;
-  --scan-glow: #ffd84d88;
-  --scan-wash: #ffd84d14;
-  --scan-surface: #15140c;
-  --scan-text: #fff3c4;
 }
 
+/* SVG interpolates stop RGB even at zero alpha. Preserve the palette hue at the transparent
+ * endpoint so safe-mode area gradients have the same strength and fade as Off. A 0% color-mix
+ * with transparent discards that hue and darkens the gradient toward black instead. */
 :root[data-colour-mode="red-green"] {
   --text-tone-04: #a1a1a1;
   --stock-text-low: var(--stock-text-subtle);
@@ -347,7 +333,7 @@
   --loss: #ffad70;
   --warning: #f2d280;
   --loss-wash-01: color-mix(in srgb, var(--loss) 10%, transparent);
-  --loss-wash-02: color-mix(in srgb, var(--loss) 0%, transparent);
+  --loss-wash-02: rgb(from var(--loss) r g b / 0);
   --loss-wash-03: color-mix(in srgb, var(--loss) 28%, transparent);
   --gain-wash-01: color-mix(in srgb, var(--gain) 0%, transparent);
   --gain-wash-02: color-mix(in srgb, var(--gain) 28%, transparent);
@@ -418,7 +404,7 @@
   --loss-wash-20: color-mix(in srgb, var(--loss) 30%, transparent);
   --chart-loss: var(--loss);
   --gain-wash-27: color-mix(in srgb, var(--gain) 30%, transparent);
-  --gain-wash-28: color-mix(in srgb, var(--gain) 0%, transparent);
+  --gain-wash-28: rgb(from var(--gain) r g b / 0);
   --gain-wash-29: color-mix(in srgb, var(--gain) 40%, transparent);
   --gain-wash-30: color-mix(in srgb, var(--gain) 5.098%, transparent);
   --gain-wash-31: color-mix(in srgb, var(--gain) 6%, transparent);
@@ -450,7 +436,7 @@
   --loss: #ed83cc;
   --warning: #e9c2de;
   --loss-wash-01: color-mix(in srgb, var(--loss) 10%, transparent);
-  --loss-wash-02: color-mix(in srgb, var(--loss) 0%, transparent);
+  --loss-wash-02: rgb(from var(--loss) r g b / 0);
   --loss-wash-03: color-mix(in srgb, var(--loss) 28%, transparent);
   --gain-wash-01: color-mix(in srgb, var(--gain) 0%, transparent);
   --gain-wash-02: color-mix(in srgb, var(--gain) 28%, transparent);
@@ -521,7 +507,7 @@
   --loss-wash-20: color-mix(in srgb, var(--loss) 30%, transparent);
   --chart-loss: var(--loss);
   --gain-wash-27: color-mix(in srgb, var(--gain) 30%, transparent);
-  --gain-wash-28: color-mix(in srgb, var(--gain) 0%, transparent);
+  --gain-wash-28: rgb(from var(--gain) r g b / 0);
   --gain-wash-29: color-mix(in srgb, var(--gain) 40%, transparent);
   --gain-wash-30: color-mix(in srgb, var(--gain) 5.098%, transparent);
   --gain-wash-31: color-mix(in srgb, var(--gain) 6%, transparent);
@@ -540,18 +526,6 @@
   --chart-2: #8cdbbd;
   --chart-3: var(--loss);
   --chart-4: #dce4e2;
-}
-
-/* New controls share the active accessibility palette while Off retains their original colours. */
-:root:is([data-colour-mode="red-green"], [data-colour-mode="blue-yellow"]) {
-  --briefing-focus: var(--gain);
-  --briefing-active: var(--gain);
-  --briefing-active-surface: color-mix(in srgb, var(--gain) 12%, var(--surface));
-  --scan-accent: var(--warning);
-  --scan-glow: color-mix(in srgb, var(--warning) 53.3333%, transparent);
-  --scan-wash: color-mix(in srgb, var(--warning) 7.8431%, transparent);
-  --scan-surface: color-mix(in srgb, var(--warning) 6%, var(--surface));
-  --scan-text: var(--text);
 }
 
 /*

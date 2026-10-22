@@ -31,7 +31,7 @@ h2 { font-size: 13px; font-weight: 700; letter-spacing: 0; }
 .header-actions { gap: 14px; }
 .market-status { display: inline-flex; align-items: center; gap: 7px; color: var(--gain); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .market-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
-.market-status.closed { color: var(--warning); }
+.market-status.closed { color: var(--loss); }
 .market-status.closed i { animation: none; }
 .header-actions .tier-badge { height: 24px; padding: 0 8px; border-color: var(--surface-tone-28); border-radius: 3px; background: none; color: var(--text-tone-02); }
 .notification-button { width: 32px; height: 32px; border-color: var(--surface-tone-17); border-radius: 4px; background: none; color: var(--text-tone-02); }
