@@ -1,14 +1,19 @@
+import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthClient } from './auth-api.js';
-import { SessionKeeper } from './session-keeper.js';
+import { INACTIVITY_SIGN_OUT, SessionKeeper } from './session-keeper.js';
 
 /** Owns the tab's idle timer and one restoration request, shared by startup and guards. */
 export class SessionCoordinator {
   readonly auth: AuthClient;
   private readonly router: Router | null;
   readonly keeper: SessionKeeper;
+  /** Seconds left before the inactivity sign-out while the "Still there?" warning is up (PS-30). */
+  readonly warningSecondsLeft = signal<number | null>(null);
   private ready: Promise<boolean> | null = null;
   private initialized = false;
+  /** Set while a redirect to sign-in is under way, so a second cause cannot replace the first. */
+  private redirecting = false;
   private readonly invalidated: (() => void) | undefined;
   private readonly activity = () => this.keeper.recordActivity();
   private readonly visible = () => {
@@ -31,8 +36,9 @@ export class SessionCoordinator {
     this.router = router;
     this.requiredRoles = typeof role === 'string' ? [role] : [...role];
     this.returnUrl = returnUrl;
-    this.keeper = new SessionKeeper(auth, () => this.toLogin(), {
+    this.keeper = new SessionKeeper(auth, () => this.toLogin(INACTIVITY_SIGN_OUT), {
       onActivity: (at) => auth.recordActivity?.(at),
+      onWarning: (secondsLeft) => this.warningSecondsLeft.set(secondsLeft),
     });
     this.invalidated = auth.onInvalidated?.(() => {
       this.keeper.stop();
@@ -76,6 +82,10 @@ export class SessionCoordinator {
   recordActivity(): void {
     this.keeper.recordActivity();
   }
+  /** The warning's "Stay signed in". */
+  staySignedIn(): void {
+    this.keeper.staySignedIn();
+  }
   get running(): boolean {
     return this.keeper.running;
   }
@@ -83,16 +93,22 @@ export class SessionCoordinator {
     this.stop();
     await this.auth.logout();
   }
-  private toLogin(): void {
-    if (!this.initialized) {
+  /** `reason` tells the sign-in page why the user is back there (see signedOutMessage). */
+  private toLogin(reason?: string): void {
+    if (!this.initialized || this.redirecting) {
       return;
     }
     const returnUrl = this.returnUrl(this.router?.url ?? '');
     if (this.router && !this.router.url.startsWith('/login')) {
-      void this.router.navigate(['/login'], {
-        queryParams: returnUrl ? { returnUrl } : {},
-        replaceUrl: true,
-      });
+      this.redirecting = true;
+      void this.router
+        .navigate(['/login'], {
+          queryParams: { ...(returnUrl ? { returnUrl } : {}), ...(reason ? { reason } : {}) },
+          replaceUrl: true,
+        })
+        .finally(() => {
+          this.redirecting = false;
+        });
     }
   }
   destroy(): void {
