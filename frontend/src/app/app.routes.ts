@@ -23,16 +23,20 @@ const tierGuard: CanActivateFn = async (route) => {
 export const routes: Routes = [
   {
     path: 'login',
+    title: 'Sign in',
     loadComponent: () => import('./app').then((module) => module.App),
     canActivate: [guestGuard],
   },
   // The emailed reset link (PS-08); without its own route the wildcard would redirect it and drop the token.
   {
     path: 'reset-password',
+    title: 'Reset password',
     loadComponent: () => import('./app').then((module) => module.App),
     canActivate: [guestGuard],
   },
-  ...Object.values(PAGE_PATHS).map((path) => ({
+  // Each page names itself in the browser tab: "Portfolio · NextTrade" (PS-20, page-title.ts).
+  ...Object.entries(PAGE_PATHS).map(([title, path]) => ({
+    title,
     path: path.slice(1),
     loadComponent: () => import('./trading-workspace').then((module) => module.TradingWorkspace),
     canActivate: [authGuard, tierGuard],
@@ -43,5 +47,5 @@ export const routes: Routes = [
   { path: 'watchlist', redirectTo: 'markets' },
   { path: 'screeners', redirectTo: 'markets' },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-  { path: '**', component: NotFound, title: 'Page not found · NextTrade' },
+  { path: '**', component: NotFound, title: 'Page not found' },
 ];

@@ -36,7 +36,8 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
   not re-reading redrawn prices, Alt+S, and settings kept in the Accessibility
   settings store.
 - `spoken-labels.test.mjs`: chart period names and the spoken chart summary,
-  and price tape items read by company name.
+  price tape items read by company name, cleaned-up speech text, and the PS-23
+  order read-back.
 - `app.test.mjs`: rendered signup/sign-in flows, registration, errors, session
   actions, password visibility, canvas drawing, and lifecycle cleanup.
 - `display-components.test.mjs`: rendered dashboard selection, sign-out,

@@ -1,5 +1,5 @@
 <div class="novice-shell">
-  <aside class="novice-sidebar" data-scan-group="Menu">
+  <aside class="novice-sidebar" aria-label="Menu" data-scan-group="Menu">
     <a class="wordmark" href="/" aria-label="NextTrade home" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span
       ><svg class="wordmark-trend" viewBox="0 0 22 16" aria-hidden="true">
@@ -74,7 +74,8 @@
         <button
           type="button"
           class="profile-avatar"
-          aria-label="Account settings"
+          [attr.aria-label]="(name() || 'A').slice(0, 1).toUpperCase() + ' account settings'"
+          data-speak="Account settings"
           title="Account settings"
           (click)="navigate('Settings')"
         >
@@ -90,7 +91,7 @@
         <button type="button" class="secondary-button" (click)="refreshPortfolio()">Try again</button>
       </div>
     }
-    <main class="novice-content">
+    <main id="main-content" class="novice-content" tabindex="-1">
       <div class="page-heading">
         <div>
           @if (activeTab() === 'Overview') {
@@ -220,7 +221,7 @@
                             <button
                               class="holding-symbol"
                               type="button"
-                              [attr.aria-label]="spokenStock(holding.symbol, holding.name)"
+                              [attr.data-speak]="spokenStock(holding.name, holding.symbol)"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
                               <span class="company-logo" [class]="'company-logo ' + holding.logo">
@@ -242,7 +243,7 @@
                                     holding.logo === 'vanguard' ? 'V' : holding.symbol.slice(0, 1)
                                   }}
                                 }</span
-                              ><span class="holding-id"><b>{{ holding.symbol }}</b><span class="company-name">{{ holding.name }}</span></span>
+                              ><span class="holding-id"><b>{{ holding.symbol }}</b> <span class="company-name">{{ holding.name }}</span></span>
                             </button>
                           </td>
                           <td>
@@ -507,7 +508,7 @@
       <label for="novice-stock">Stock</label
       ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
         @for (q of tradableQuotes(); track q.symbol) {
-          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol" [attr.aria-label]="spokenStock(q.symbol, q.name)">
+          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol" [attr.data-speak]="spokenStock(q.name, q.symbol)">
             {{ q.symbol }} · {{ q.name }}
           </option>
         }
