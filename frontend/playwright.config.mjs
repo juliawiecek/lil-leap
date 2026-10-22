@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   webServer: { command: 'node e2e/serve-built-apps.mjs', url: 'http://127.0.0.1:18080', reuseExistingServer: true },
   testDir: './e2e', timeout: 30000, workers: 1,
+  // The PS-20 axe scan signs in to a live app; it has its own config (playwright.a11y.config.mjs).
+  testIgnore: 'accessibility.spec.mjs',
   outputDir: 'test-results/session-e2e',
   use: { channel: process.env.PLAYWRIGHT_CHANNEL ?? (process.platform === 'win32' ? 'msedge' : undefined), headless: true, trace: 'retain-on-failure' },
   projects: [

@@ -73,20 +73,25 @@ test('a period that starts when the money arrived says so, and hidden balances k
   assert.match(chartSummary({ ...base, fromOpening: false, start: 0 }), /unchanged/, 'no division by zero');
 });
 
-test('each price on the tape reads with the company name, not the ticker symbol', async (t) => {
+test('each price on the tape is named by what it shows, and switch control says the company name', async (t) => {
   const feed = fakeFeed([
     { symbol: 'AAPL', name: 'Apple Inc.', price: 224.52, change: 0.4 },
     { symbol: 'BA', name: 'The Boeing Company', price: 214.93, change: -1.25 },
+    { symbol: 'KO', name: 'Coca-Cola', price: 61.2, change: 0 },
     { symbol: 'NEW', name: 'New Listing Inc.', price: 0 },
   ]);
   const fixture = await render(t, MarketTicker, {}, [feedProvider(feed)]);
-  const labels = [...fixture.nativeElement.querySelectorAll('ul:not([aria-hidden]) button')].map((b) => b.getAttribute('aria-label'));
-  assert.deepEqual(labels, [
-    'Apple, $224.52, up 0.40 percent',
-    'Boeing, $214.93, down 1.25 percent',
-    'New Listing, price not available yet',
-  ]);
+  const buttons = [...fixture.nativeElement.querySelectorAll('ul:not([aria-hidden]) button')];
+  const labels = buttons.map((b) => b.getAttribute('aria-label'));
+  // WCAG 2.5.3 (PS-20): the name holds the visible text, in order, so speech input can match it.
+  assert.deepEqual(labels, ['AAPL, $224.52, +0.40%', 'BA, $214.93, −1.25%', 'KO, $61.20, 0.00%', 'NEW, price not available yet']);
+  const bare = (text) => text.replace(/[^\p{L}\p{N}−]+/gu, ' ').trim();
+  buttons.slice(0, 3).forEach((button, i) => {
+    const shown = [...button.querySelectorAll('strong, .price, .change [aria-hidden="true"]')].map((el) => el.textContent).join(' ');
+    assert.equal(bare(labels[i]), bare(shown));
+  });
+  assert.deepEqual(labels.map(speakable), ['Apple, $224.52, +0.40%', 'Boeing, $214.93, −1.25%', 'Coca-Cola, $61.20, 0.00%', 'NEW, price not available yet']);
   feed.quotes.set(feed.quotes().map((q) => ({ ...q, quotedAt: new Date(Date.now() - 10 * 60000).toISOString() })));
   fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('ul button').getAttribute('aria-label'), /, price delayed$/);
+  assert.match(fixture.nativeElement.querySelector('ul button').getAttribute('aria-label'), /, Price delayed$/);
 });

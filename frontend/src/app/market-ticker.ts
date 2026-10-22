@@ -1,12 +1,10 @@
 import { PriceFlash } from './price-flash';
-import { FinancialChange } from './financial-change';
+import { FinancialChange, describeChange } from './financial-change';
 import { Component, OnDestroy, computed, inject, output } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
-import { spokenCompany } from './briefing';
-import { spokenChange } from './chart-speech';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -132,14 +130,19 @@ export class MarketTicker implements OnDestroy {
     return isDelayed(quotedAt, this.feed.now());
   }
 
-  /** How a price reads aloud and to screen readers: "Apple, $224.52, up 0.40 percent". */
+  /**
+   * The button's name: what it shows, in the same order ("AAPL, $224.52, +0.40%"), so people using
+   * speech input can say what they see (WCAG 2.5.3, PS-20). Switch control still says the company
+   * name, since everything it reads goes through speakable() ("Apple, $224.52, +0.40%").
+   */
   spoken(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
-    const company = spokenCompany(quote.name, quote.symbol);
     if (!quote.price) {
-      return `${company}, price not available yet`;
+      return `${quote.symbol}, price not available yet`;
     }
-    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
-    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
+    // The change as shown, without its arrow, which only repeats the sign.
+    const change = describeChange(quote.change).visual.replace(/^[^\d+−]+/, '');
+    const delayed = this.delayed(quote.quotedAt) ? ', Price delayed' : '';
+    return `${quote.symbol}, ${USD.format(quote.price)}, ${change}${delayed}`;
   }
 
   ngOnDestroy(): void {

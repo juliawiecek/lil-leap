@@ -1,3 +1,4 @@
+<app-skip-link />
 @if (mode() === 'NOVICE') {
   <app-novice-dashboard [name]="name()" [profile]="profile()" [profileLoading]="profileLoading()" [profileError]="profileError()" [mode]="mode()" (signOut)="signOut.emit()" />
 } @else {
