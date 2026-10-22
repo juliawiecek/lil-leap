@@ -5,7 +5,7 @@ import { Session } from './entities/session.entity';
 import { InvalidRefreshTokenException } from '../user/exceptions/invalid-refresh-token.exception';
 
 describe('RefreshTokenService', () => {
-  const user = { userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com' } as any;
+  const user = { userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com', userStatus: 'ACTIVE' } as any;
   const hashOf = (raw: string) => createHash('sha256').update(raw, 'utf8').digest('base64');
 
   let repository: Record<'create' | 'save' | 'findOne' | 'update', jest.Mock>;
@@ -75,6 +75,18 @@ describe('RefreshTokenService', () => {
     repository.update.mockResolvedValue({ affected: 0 } as any);
 
     await expect(service.rotate('already-used')).rejects.toThrow(InvalidRefreshTokenException);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it.each(['DISABLED', 'DELETED'])('rotate ends the session of a %s user without issuing a new token', async userStatus => {
+    repository.findOne.mockResolvedValue({ user: { ...user, userStatus } } as Session);
+    repository.update.mockResolvedValue({ affected: 1 } as any);
+
+    await expect(service.rotate('still-open')).rejects.toThrow(InvalidRefreshTokenException);
+    expect(repository.update).toHaveBeenCalledWith(
+      expect.objectContaining({ tokenHash: hashOf('still-open') }),
+      { revokedAt: expect.any(Date), lastActiveAt: expect.any(Date) },
+    );
     expect(repository.save).not.toHaveBeenCalled();
   });
 
