@@ -49,7 +49,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
     cash_balances, cash_transactions TO app_user;
 GRANT SELECT ON cash_holds TO app_user;
 GRANT SELECT ON v_account_cash, v_account_holdings, v_latest_quotes,
-    v_active_sessions, v_trader_tier_eligibility, v_trade_audit_events TO app_user;
+    v_active_sessions, v_trader_tier_eligibility, v_trade_audit_events, v_trade_clients TO app_user;
 GRANT SELECT, INSERT ON audit_log TO app_user;
 REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM app_user;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, app_user;

@@ -10,7 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
-/** Trade lookup for trading operations staff (BR-15, TS-03.5), from the reporting dataset. */
+/** Trade lookup for trading operations staff (BR-15, TS-03.5), from the reporting database. */
 @RestController
 @RequestMapping("/trades")
 @PreAuthorize("hasRole('OPERATIONS')")
@@ -20,7 +20,7 @@ public class TradeController {
     /**
      * Creates the trade lookup endpoint.
      *
-     * @param trades trades in the reporting dataset
+     * @param trades filled trades in the reporting database
      */
     public TradeController(TradeLookup trades) {
         this.trades = trades;
@@ -31,7 +31,7 @@ public class TradeController {
      *
      * @param id the trade's order id
      * @return the trade
-     * @throws ResponseStatusException 404 when the dataset has no such trade
+     * @throws ResponseStatusException 404 when no filled order has that id
      */
     @GetMapping("/{id}")
     public TradeRecord trade(@PathVariable UUID id) {

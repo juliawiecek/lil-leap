@@ -1,5 +1,5 @@
 /**
- * Trade lookup for trading operations staff (BR-15): one trade's fill and the client behind it, read
- * from the reporting dataset ({@code reports/trades.csv}) so lookups never load the trading database.
+ * Trade lookup for trading operations staff (BR-15): one trade's fill, the client behind it and every
+ * recorded step, read through the read-only reporting role so lookups never write to the trading database.
  */
 package com.neueda.leap.trades;

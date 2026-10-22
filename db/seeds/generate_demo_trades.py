@@ -1,21 +1,19 @@
-"""Generate the demo seed data and the matching insights reporting CSV.
+"""Generate the demo seed data.
 
-One deterministic trade book feeds four committed files, so they never drift:
+One deterministic trade book feeds two committed files, so they never drift:
 
   db/seeds/001_us_equity_instruments.sql      instrument universe (fixed ids)
   db/seeds/003_demo_trading_activity.sql      demo clients, accounts and trade book
-  insights/src/main/resources/reports/trades.csv  BR-16 report dataset (every seeded fill)
-  insights/src/main/resources/reports/trade-events.csv  every recorded step of those fills (Trade lookup)
 
 Instrument markets and reference prices come from the quote catalog
 (nextTrade-holdings/src/main/resources/marketdata/instrument-catalog.csv), so seeded
 fills sit near live quotes.
 
 The SQL book is relative: day offset 0 is the UTC day the database is seeded.
-The CSV is the same book anchored at ANCHOR_DATE. Re-anchor it with --anchor.
+ANCHOR_DATE fixes which earlier days are weekdays; change it with --anchor.
 
 Usage (from the repository root, standard library only):
-  python db/seeds/generate_demo_trades.py            regenerate all four files
+  python db/seeds/generate_demo_trades.py            regenerate both files
   python db/seeds/generate_demo_trades.py --check    fail if a committed file is stale
 """
 from __future__ import annotations
@@ -23,7 +21,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import json
 import random
 import sys
 import uuid
@@ -56,8 +53,6 @@ COMMON_STOCKS = _load_catalog()
 
 INSTRUMENTS_SQL = REPO / "db/seeds/001_us_equity_instruments.sql"
 TRADES_SQL = REPO / "db/seeds/003_demo_trading_activity.sql"
-TRADES_CSV = REPO / "insights/src/main/resources/reports/trades.csv"
-EVENTS_CSV = REPO / "insights/src/main/resources/reports/trade-events.csv"
 
 ANCHOR_DATE = date(2026, 10, 16)
 SEED = 20261016
@@ -375,9 +370,8 @@ def render_trades_sql(trades: list[Trade]) -> str:
 -- with {today} fills today across the NASDAQ/NYSE universe in 001_us_equity_instruments.sql.
 -- Demo logins: <first>.<last>@demo.nexttrade.local with the shared test password.
 --
--- The insights reporting dataset (insights/src/main/resources/reports/trades.csv) holds the
--- same fills with the same ids, anchored at {ANCHOR_DATE.isoformat()}; here, day offset 0 is the UTC
--- day the book is first seeded.
+-- Day offset 0 is the UTC day the book is first seeded. Insights reads these fills from the
+-- reporting replica (BR-16).
 --
 -- Runs on an empty volume as /docker-entrypoint-initdb.d/06-demo-trading-activity.sql, and on
 -- every db/setup-local.sql run. Idempotent: fixed ids plus ON CONFLICT DO NOTHING. When run on
@@ -558,82 +552,11 @@ COMMIT;
 """
 
 
-CSV_HEADER = ("fill_id,order_id,filled_at,instrument_id,instrument_symbol,instrument_name,asset_class,market_code,"
-              "user_id,client_email,client_name,account_id,account_number,account_name,account_status,trader_level,"
-              "side,filled_quantity,execution_price")
-
-
-def csv_value(value: str) -> str:
-    return '"' + value.replace('"', '""') + '"' if any(ch in value for ch in ',"\n\r') else value
-
-
-def render_csv(trades: list[Trade]) -> str:
-    markets = {s.symbol: s.market_code for s in COMMON_STOCKS}
-    rows = []
-
-    def add(order_id, fill_id, at, symbol, user_id, email, name, account_id, account_number, account_name, status, tier,
-            side, qty, price):
-        market = markets[symbol]
-        filled_at = at + timedelta(seconds=2)
-        rows.append((filled_at, [
-            fill_id, order_id, filled_at.strftime("%Y-%m-%dT%H:%M:%SZ"), instrument_id(market, symbol), symbol,
-            INSTRUMENT_INFO[symbol][0], "COMMON_STOCK", market, user_id, email, name, account_id, account_number,
-            account_name, status, tier, side, str(qty), f"{Decimal(price):.2f}"]))
-
-    for suffix, n, symbol, side, qty, price, days_ago, at in TEST_USER_FILLS:
-        order_id = f"c0000000-0000-4000-8000-{suffix}"
-        user_id, email, name, account_id, account_number, account_name, tier = TEST_ACCOUNTS[n]
-        when = datetime.combine(ANCHOR_DATE - timedelta(days=days_ago), at, timezone.utc)
-        add(order_id, md5_uuid("seed-fill-" + order_id), when, symbol, user_id, email, name, account_id,
-            account_number, account_name, "ACTIVE", tier, side, qty, price)
-    for t in trades:
-        if t.reason is None:
-            c = t.client
-            when = datetime.combine(ANCHOR_DATE + timedelta(days=t.day_offset), t.at, timezone.utc)
-            add(t.order_id, t.fill_id, when, t.symbol, c.user_id, c.email, f"{c.first} {c.last}", c.account_id,
-                c.account_number, f"{c.first} {c.last} Individual", c.status, c.tier, t.side, t.quantity, t.price)
-    rows.sort(key=lambda row: (row[0], row[1][0]))
-    return CSV_HEADER + "\n" + "".join(",".join(csv_value(v) for v in row) + "\n" for _, row in rows)
-
-
-EVENTS_HEADER = "order_id,occurred_at,source,type,actor,details"
-
-
-def render_events(trades_csv: str) -> str:
-    """Every recorded step of each fill in trades.csv, as 002/003 write them to the database.
-
-    A seeded order is submitted at t, accepted at t+1s and filled at t+2s (the CSV's filled_at), when
-    its fill, cash and holding movements and audit entries are written. Steps at the same instant are
-    ordered status, audit, fill, cash, holding, like Trade lookup used to read them from the database.
-    """
-    rows = []
-    for fill in csv.DictReader(trades_csv.splitlines()):
-        filled = datetime.strptime(fill["filled_at"], "%Y-%m-%dT%H:%M:%SZ")
-        at = lambda seconds: (filled + timedelta(seconds=seconds - 2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        qty, price, side = int(fill["filled_quantity"]), fill["execution_price"], fill["side"]
-        cash = money(Decimal(qty) * Decimal(price)) * (-1 if side == "BUY" else 1)
-        amounts = {"quantity": qty, "executionPrice": price, "cashDelta": f"{cash:.2f}"}
-        steps = [
-            (0, "STATUS", "SUBMITTED", "", {"reasonCode": "SUBMISSION_VALIDATED"}),
-            (1, "STATUS", "ACCEPTED", "", {"reasonCode": "ORDER_ACCEPTED"}),
-            (2, "STATUS", "FILLED", "", {"reasonCode": "EXECUTION_SUCCESS"}),
-            (2, "AUDIT", "ORDER_FILLED", "SYSTEM", amounts),
-            (2, "AUDIT", "SETTLEMENT_COMPLETED", "SYSTEM", amounts),
-            (2, "FILL", "FILLED", "", {"quantity": qty, "price": price, "quoteTimestamp": at(1)}),
-            (2, "CASH", side, "", {"amount": f"{cash:.2f}", "currency": "USD", "settledAt": at(2)}),
-            (2, "HOLDING", side, "", {"quantityChange": qty if side == "BUY" else -qty, "costBasis": price}),
-        ]
-        for seconds, source, kind, actor, details in steps:
-            rows.append([fill["order_id"], at(seconds), source, kind, actor,
-                         json.dumps(details, separators=(",", ":"))])
-    return EVENTS_HEADER + "\n" + "".join(",".join(csv_value(v) for v in row) + "\n" for row in rows)
-
-
 def main() -> int:
     global ANCHOR_DATE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="exit non-zero if a generated file is out of date")
-    parser.add_argument("--anchor", type=date.fromisoformat, help="date that day offset 0 maps to in the CSV")
+    parser.add_argument("--anchor", type=date.fromisoformat, help="date the weekday pattern of earlier days is counted from")
     args = parser.parse_args()
     if args.anchor:
         ANCHOR_DATE = args.anchor
@@ -641,12 +564,9 @@ def main() -> int:
         raise SystemExit("INSTRUMENT_INFO and the quote catalog list different symbols")
 
     trades = build_book()
-    trades_csv = render_csv(trades)
     outputs = {
         INSTRUMENTS_SQL: render_instruments_sql(),
         TRADES_SQL: render_trades_sql(trades),
-        TRADES_CSV: trades_csv,
-        EVENTS_CSV: render_events(trades_csv),
     }
     stale = [path for path, text in outputs.items()
              if not path.exists() or path.read_text(encoding="utf-8") != text]
