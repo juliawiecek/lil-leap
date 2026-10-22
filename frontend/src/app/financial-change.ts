@@ -14,7 +14,9 @@ export function movement(value: number): 'up' | 'down' | 'flat' {
  * in grayscale.
  */
 export function describeChange(value: number | null, unit: ChangeUnit = 'percent', currency = 'USD', locale = 'en-US', digits?: string, arrow = true) {
-  if (value === null || !Number.isFinite(value)) return { visual: '—', spoken: 'Change unavailable', direction: 'flat' };
+  if (value === null || !Number.isFinite(value)) {
+    return { visual: '—', spoken: 'Change unavailable', direction: 'flat' };
+  }
   const direction = movement(value);
   const amount = unit === 'currency'
     ? formatCurrency(Math.abs(value), locale, getCurrencySymbol(currency, 'wide', locale), currency, digits)

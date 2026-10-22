@@ -190,7 +190,8 @@ export function scanLabel(el: HTMLElement, max = 80): string {
   const labelled = el.getAttribute('aria-labelledby');
   const byId = labelled ? el.ownerDocument.getElementById(labelled)?.textContent : '';
   const fieldLabel = (el as HTMLInputElement).labels?.[0]?.textContent;
-  const text = byId || fieldLabel || shownText(el) || (el as HTMLInputElement).placeholder || el.getAttribute('title') || '';
+  const named = [byId, fieldLabel, shownText(el), (el as HTMLInputElement).placeholder, el.getAttribute('title')];
+  const text = named.find(Boolean) ?? '';
   return text.replace(/\s+/g, ' ').trim().slice(0, max) || 'Control';
 }
 
@@ -363,6 +364,8 @@ export class ScanEngine {
       list.push({ kind: 'back' });
     } else if (!this.#picker) {
       list.push({ kind: 'pause' });
+    } else {
+      // A keypad at its top level adds neither Back nor Pause.
     }
     return list;
   }
@@ -545,6 +548,8 @@ export class ScanEngine {
         out.push(inner[0]);
       } else if (inner.length > 1) {
         out.push({ kind: 'group', el });
+      } else {
+        // A group with nothing scannable inside is skipped.
       }
     }
     return out;
@@ -875,10 +880,13 @@ export class ScanEngine {
       return;
     }
     if (!this.#paused && this.#ring && !this.#ring.hidden) {
-      if (this.#tracked && !this.#tracked.isConnected) {
-        this.#position();
-      } else if (this.#tracked) {
-        this.#drawRing(this.#tracked);
+      const tracked = this.#tracked;
+      if (tracked) {
+        if (tracked.isConnected) {
+          this.#drawRing(tracked);
+        } else {
+          this.#position();
+        }
       }
       this.#refocus();
     }
@@ -910,11 +918,11 @@ export class ScanEngine {
     if (this.#live) {
       this.#live.textContent = text;
     }
-    if (speak && text) {
-      this.#say(text, false);
-      this.#queueNext = true;
-    } else if (speak) {
-      this.#queueNext = false;
+    if (speak) {
+      if (text) {
+        this.#say(text, false);
+      }
+      this.#queueNext = Boolean(text);
     }
   }
 
@@ -1042,6 +1050,8 @@ export class SwitchScanService {
       this.#engine.backEveryMs = next.backEverySec * 1000;
       this.#engine.pauseEveryMs = next.pauseEverySec * 1000;
       this.#engine.restart();
+    } else {
+      // Switch control is off and not running, so there is nothing to update.
     }
   }
 
