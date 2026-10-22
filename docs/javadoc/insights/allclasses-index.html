@@ -60,69 +60,111 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Hourly trading activity entry for the current-day dashboard.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/reporting/enums/ClientSegment.html" title="enum class in com.neueda.leap.reporting.enums">ClientSegment</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/clients/ClientController.html" title="class in com.neueda.leap.reporting.clients">ClientController</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Clients page API (TS-18.5): trading accounts with their holdings and filled orders, from the reporting
+ dataset the Reports page also reads.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/clients/ClientDtos.html" title="class in com.neueda.leap.reporting.clients">ClientDtos</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Response shapes of the Clients endpoints, built from the fills on the reporting replica.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientDtos.ClientDetail.html" title="class in com.neueda.leap.reporting.clients">ClientDtos.ClientDetail</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">An account's detail page: its summary and holdings.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientDtos.ClientSummary.html" title="class in com.neueda.leap.reporting.clients">ClientDtos.ClientSummary</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One trading account in the list, or the summary at the top of its detail page.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientDtos.Holding.html" title="class in com.neueda.leap.reporting.clients">ClientDtos.Holding</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">A stock the account holds, worked out from its buys and sells.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientDtos.Order.html" title="class in com.neueda.leap.reporting.clients">ClientDtos.Order</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One of the account's filled orders.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientDtos.Page.html" title="class in com.neueda.leap.reporting.clients">ClientDtos.Page&lt;T&gt;</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One page of results.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/clients/ClientQuery.html" title="class in com.neueda.leap.reporting.clients">ClientQuery</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">A validated Clients list request.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/clients/ClientRepository.html" title="class in com.neueda.leap.reporting.clients">ClientRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Trading accounts, their holdings and filled orders, worked out from the fills on the reporting replica
+ (<a href="com/neueda/leap/reporting/service/TradeDataset.html" title="class in com.neueda.leap.reporting.service"><code>TradeDataset</code></a>), the same data the Reports page reads.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/reporting/enums/ClientSegment.html" title="enum class in com.neueda.leap.reporting.enums">ClientSegment</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">Client segments used to group trading activity in reports.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/ClientSegmentActivityResponse.html" title="class in com.neueda.leap.reporting.dto">ClientSegmentActivityResponse</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/ClientSegmentActivityResponse.html" title="class in com.neueda.leap.reporting.dto">ClientSegmentActivityResponse</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Trading activity aggregated for a single client segment.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/DailyTradeActivityResponse.html" title="class in com.neueda.leap.reporting.dto">DailyTradeActivityResponse</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/DailyTradeActivityResponse.html" title="class in com.neueda.leap.reporting.dto">DailyTradeActivityResponse</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Number of trades executed on a single UTC calendar day.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/common/exception/GlobalExceptionHandler.html" title="class in com.neueda.leap.common.exception">GlobalExceptionHandler</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Global exception handler for REST controllers.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html" title="class in com.neueda.leap.reporting.dto">InsightsOverviewResponse</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html" title="class in com.neueda.leap.reporting.dto">InsightsOverviewResponse</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Dashboard summary of trading activity for internal stakeholders.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/InstrumentActivityResponse.html" title="class in com.neueda.leap.reporting.dto">InstrumentActivityResponse</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/InstrumentActivityResponse.html" title="class in com.neueda.leap.reporting.dto">InstrumentActivityResponse</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Trading activity aggregated for a single instrument.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/entity/InstrumentEntity.html" title="class in com.neueda.leap.reporting.entity">InstrumentEntity</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/entity/InstrumentEntity.html" title="class in com.neueda.leap.reporting.entity">InstrumentEntity</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Read-only instrument mapping for dashboard reporting.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/reporting/model/InvalidReportDateRangeException.html" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/reporting/model/InvalidReportDateRangeException.html" title="class in com.neueda.leap.reporting.model">InvalidReportDateRangeException</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
 <div class="block">Raised when a report is requested with an invalid date range.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security">JwtAuthenticationFilter</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtAuthenticationFilter.html" title="class in com.neueda.leap.security">JwtAuthenticationFilter</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Authenticates requests carrying a <code>Authorization: Bearer &lt;token&gt;</code> header.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Identity extracted from a validated JWT.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/security/JwtService.html" title="interface in com.neueda.leap.security">JwtService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Contract for issuing and validating JWT session tokens.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtServiceImpl.html" title="class in com.neueda.leap.security">JwtServiceImpl</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/JwtServiceImpl.html" title="class in com.neueda.leap.security">JwtServiceImpl</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Service responsible for issuing and validating JWT session tokens.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/KafkaOrderEventConfiguration.html" title="class in com.neueda.leap.config">KafkaOrderEventConfiguration</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/KafkaOrderEventConfiguration.html" title="class in com.neueda.leap.config">KafkaOrderEventConfiguration</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Configures Kafka listener infrastructure for the Insights application.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventConsumerService.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventConsumerService</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Three independent Kafka consumers for order lifecycle events.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/kafka/KafkaOrderEventCsvWriter.html" title="class in com.neueda.leap.reporting.kafka">KafkaOrderEventCsvWriter</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Writes terminal order events into CSV files under a configurable output directory.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/Main.html" title="class in com.neueda.leap">Main</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/Main.html" title="class in com.neueda.leap">Main</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Entry point for the insights application.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/model/MarketDay.html" title="class in com.neueda.leap.reporting.model">MarketDay</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One US trading day: midnight to midnight in New York, where NYSE and Nasdaq trade.</div>
 </div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
@@ -134,7 +176,8 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
-<div class="block">Inclusive calendar-date range for a report, interpreted in UTC.</div>
+<div class="block">Inclusive calendar-date range for a report, interpreted as New York trading days
+ (see <a href="com/neueda/leap/reporting/model/MarketDay.html" title="class in com.neueda.leap.reporting.model"><code>MarketDay</code></a>), so reports agree with the Insights page.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/dto/ReportGenerationResponseDto.html" title="class in com.neueda.leap.reporting.dto">ReportGenerationResponseDto</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab4">
@@ -158,7 +201,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/service/ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
-<div class="block">Read-only dashboard insights and placeholder report-generation use cases.</div>
+<div class="block">Read-only dashboard insights and date-bounded CSV report-generation use cases.</div>
 </div>
 <div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/service/ReportingServiceImpl.html" title="class in com.neueda.leap.reporting.service">ReportingServiceImpl</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
@@ -184,24 +227,57 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">An instrument ranked by trading activity.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/entity/TradeFillEntity.html" title="class in com.neueda.leap.reporting.entity">TradeFillEntity</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/trades/TradeController.html" title="class in com.neueda.leap.trades">TradeController</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Trade lookup for trading operations staff (BR-15, TS-03.5), from the reporting database.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/service/TradeDataset.html" title="class in com.neueda.leap.reporting.service">TradeDataset</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Every fill, read from the reporting replica (BR-16) so the Reports and Clients pages never compete with live
+ trading for database capacity.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/reporting/service/TradeDataset.Trade.html" title="class in com.neueda.leap.reporting.service">TradeDataset.Trade</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One fill in the dataset.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/entity/TradeFillEntity.html" title="class in com.neueda.leap.reporting.entity">TradeFillEntity</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Read-only fill mapping for dashboard reporting.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/trades/TradeLookup.html" title="class in com.neueda.leap.trades">TradeLookup</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Finds a filled trade and every step recorded for it in the trading database (BR-15), read through the
+ reporting role: the order, its fill and account, the trader from <code>v_trade_clients</code>, and the steps from
+ <code>order_status_history</code>, <code>v_trade_audit_events</code>, <code>fills</code>, <code>cash_transactions</code> and
+ <code>holding_movements</code>.</div>
 </div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/reporting/entity/TradeOrderEntity.html" title="class in com.neueda.leap.reporting.entity">TradeOrderEntity</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Read-only order mapping for dashboard reporting joins.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/trades/TradeRecord.html" title="class in com.neueda.leap.trades">TradeRecord</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One filled trade as the trading database records it: the fill, the account and client it belongs to,
+ and every recorded step.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/trades/TradeRecord.Account.html" title="class in com.neueda.leap.trades">TradeRecord.Account</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">The account behind a trade, with its owner's name and email.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/trades/TradeRecord.Event.html" title="class in com.neueda.leap.trades">TradeRecord.Event</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One recorded step in the trade's life.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Read-only dashboard queries over existing trading tables.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.OverviewProjection.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.OverviewProjection</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.OverviewProjection.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.OverviewProjection</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Projection for dashboard overview aggregates.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.TopInstrumentProjection.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.TopInstrumentProjection</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab1">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab1"><a href="com/neueda/leap/reporting/repository/TradeReportingRepository.TopInstrumentProjection.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository.TopInstrumentProjection</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Projection for ranked instrument activity.</div>
 </div>
 </div>

@@ -215,6 +215,22 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">OpenAPI metadata for the generated spec and Swagger UI.</div>
 </div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/cancel/OrderCancellationController.html" title="class in com.neueda.leap.order.cancel">OrderCancellationController</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block"><code>POST /orders/{id}/cancel</code>: the order's owner cancels it while it is still waiting (PS-14).</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/order/cancel/OrderCancellationException.html" title="class in com.neueda.leap.order.cancel">OrderCancellationException</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
+<div class="block">An order that exists and belongs to the caller but can no longer be cancelled; reported as HTTP 409.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/cancel/OrderCancellationException.Reason.html" title="enum class in com.neueda.leap.order.cancel">OrderCancellationException.Reason</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="block">Why the cancellation was refused.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/cancel/OrderCancellationService.html" title="class in com.neueda.leap.order.cancel">OrderCancellationService</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Cancels a caller's order while it is still waiting to execute (PS-14).</div>
+</div>
 <div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/query/OrderDetailResponse.html" title="class in com.neueda.leap.order.query">OrderDetailResponse</a></div>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">One order as stored, with its fill when it has been executed.</div>
@@ -333,41 +349,63 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color all-classes-table all-classes-table-tab1">
 <div class="block">Read-only access to the latest stored market quotes and bounded history.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/SecurityConfig.html" title="class in com.neueda.leap.config">SecurityConfig</a></div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/audit/RequestIdFilter.html" title="class in com.neueda.leap.order.submission.audit">RequestIdFilter</a></div>
 <div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Gives each order submission a request id, returned as <code>X-Request-Id</code> whether the order is
+ accepted or refused, so a refused order can be looked up in the audit log (TS-15.5).</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/audit/RuleChecks.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="block">The trading rules one submission was checked against, in the order they ran (BR-05, BR-14).</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="block">One rule's outcome.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/config/SecurityConfig.html" title="class in com.neueda.leap.config">SecurityConfig</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Verifies Identity-issued JWTs and exposes only this service's API.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/SensitiveLogConverter.html" title="class in com.neueda.leap.security">SensitiveLogConverter</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/security/SensitiveLogConverter.html" title="class in com.neueda.leap.security">SensitiveLogConverter</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Defense in depth for accidental structured credential logging, including exception text.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementController.html" title="class in com.neueda.leap.order.settlement">SettlementController</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementController.html" title="class in com.neueda.leap.order.settlement">SettlementController</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Operator commands for one settlement (TS-10.3).</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/order/settlement/SettlementException.html" title="class in com.neueda.leap.order.settlement">SettlementException</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab5">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab5"><a href="com/neueda/leap/order/settlement/SettlementException.html" title="class in com.neueda.leap.order.settlement">SettlementException</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab5">
 <div class="block">A recover or rollback request that cannot be carried out; the message is safe to return to the caller.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementIntegrityCheck.html" title="class in com.neueda.leap.order.settlement">SettlementIntegrityCheck</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementIntegrityCheck.html" title="class in com.neueda.leap.order.settlement">SettlementIntegrityCheck</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Looks for partly applied settlements at startup and on a schedule (TS-10.3 AC1), so a broken
  settlement is found by the platform rather than by a client noticing stale balances.</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab3">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab3"><a href="com/neueda/leap/order/settlement/SettlementPart.html" title="enum class in com.neueda.leap.order.settlement">SettlementPart</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab3">
 <div class="block">A record that a complete settlement of one fill must have (BR-09).</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.order.settlement">SettlementRecoveryService</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/settlement/SettlementRecoveryService.html" title="class in com.neueda.leap.order.settlement">SettlementRecoveryService</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab2">
 <div class="block">Detects and repairs settlements of a fill that were only partly applied (TS-10.3, BR-09).</div>
 </div>
-<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/settlement/SettlementResult.html" title="class in com.neueda.leap.order.settlement">SettlementResult</a></div>
-<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/settlement/SettlementResult.html" title="class in com.neueda.leap.order.settlement">SettlementResult</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Outcome of a recover or rollback request.</div>
 </div>
-<div class="col-first even-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></div>
-<div class="col-last even-row-color all-classes-table all-classes-table-tab4">
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/settlement/SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
+<div class="block">Ledger-derived settlement state for one trade/order.</div>
+</div>
+<div class="col-first even-row-color all-classes-table all-classes-table-tab2"><a href="com/neueda/leap/order/submission/audit/SubmissionAuditRepository.html" title="class in com.neueda.leap.order.submission.audit">SubmissionAuditRepository</a></div>
+<div class="col-last even-row-color all-classes-table all-classes-table-tab2">
+<div class="block">Records every submission decision in <code>audit_log</code> (BR-05, BR-14, TS-15.5): a
+ <code>RULE_CHECKED</code> row per rule, and for a refused order a <code>SUBMISSION_REFUSED</code> row.</div>
+</div>
+<div class="col-first odd-row-color all-classes-table all-classes-table-tab4"><a href="com/neueda/leap/order/submission/dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></div>
+<div class="col-last odd-row-color all-classes-table all-classes-table-tab4">
 <div class="block">Input for a market-order submission; Bean Validation runs at the API boundary.</div>
 </div>
 </div>

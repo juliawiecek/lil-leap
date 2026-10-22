@@ -93,7 +93,8 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="annotations">@RestController
 </span><span class="modifiers">public class </span><span class="element-name type-name-label">AccountController</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">The caller's trading accounts: list for selection, open another, and move cash between them (PS-05).</div>
+<div class="block">The caller's trading accounts: list for selection, open another, move cash between them (PS-05),
+ and list their cash movements for the activity feed (PS-11).</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -128,16 +129,24 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Lists accounts owned by the authenticated caller.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#open(com.neueda.leap.portfolio.dto.OpenAccountRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">open</a><wbr>(@Valid <a href="../dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a>&nbsp;request,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/CashActivityResponse.html" title="class in com.neueda.leap.portfolio.dto">CashActivityResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cashActivity(java.time.LocalDate,java.time.LocalDate,java.util.UUID,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">cashActivity</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;from,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;to,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Opens another individual cash account in USD, ACTIVE with $0.</div>
+<div class="block">Lists the caller's deposits, withdrawals and transfers for the activity feed (PS-11).</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#transfer(com.neueda.leap.portfolio.dto.TransferRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">transfer</a><wbr>(@Valid <a href="../dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a>&nbsp;request,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../dto/AccountResponse.html" title="class in com.neueda.leap.portfolio.dto">AccountResponse</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#open(com.neueda.leap.portfolio.dto.OpenAccountRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">open</a><wbr>(@Valid <a href="../dto/OpenAccountRequest.html" title="class in com.neueda.leap.portfolio.dto">OpenAccountRequest</a>&nbsp;request,
  <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Opens another individual cash account in USD, ACTIVE with $0.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/TransferResponse.html" title="class in com.neueda.leap.portfolio.dto">TransferResponse</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#transfer(com.neueda.leap.portfolio.dto.TransferRequest,com.neueda.leap.security.JwtPrincipal)" class="member-name-link">transfer</a><wbr>(@Valid <a href="../dto/TransferRequest.html" title="class in com.neueda.leap.portfolio.dto">TransferRequest</a>&nbsp;request,
+ <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Moves settled cash between two of the caller's accounts.</div>
 </div>
 </div>
@@ -188,6 +197,31 @@ loadScripts(document, 'script');</script>
 <dd><code>principal</code> - identity verified from the JWT</dd>
 <dt>Returns:</dt>
 <dd>owned accounts, oldest first, or an empty list</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="cashActivity(java.time.LocalDate,java.time.LocalDate,java.util.UUID,com.neueda.leap.security.JwtPrincipal)">
+<h3>cashActivity</h3>
+<div class="member-signature"><span class="annotations">@GetMapping("/accounts/cash-activity")
+@PreAuthorize("hasRole(\'TRADER\')")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/CashActivityResponse.html" title="class in com.neueda.leap.portfolio.dto">CashActivityResponse</a>&gt;</span>&nbsp;<span class="element-name">cashActivity</span><wbr><span class="parameters">(@RequestParam(required=false) @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;from,
+ @RequestParam(required=false) @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;to,
+ @RequestParam(required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;accountId,
+ @AuthenticationPrincipal
+ <a href="../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal)</span></div>
+<div class="block">Lists the caller's deposits, withdrawals and transfers for the activity feed (PS-11).</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>from</code> - first day to include (ISO date, UTC)</dd>
+<dd><code>to</code> - last day to include (ISO date, UTC)</dd>
+<dd><code>accountId</code> - one owned account; omit for all of them</dd>
+<dd><code>principal</code> - identity verified from the JWT</dd>
+<dt>Returns:</dt>
+<dd>non-trade cash movements, newest first</dd>
 </dl>
 </section>
 </li>

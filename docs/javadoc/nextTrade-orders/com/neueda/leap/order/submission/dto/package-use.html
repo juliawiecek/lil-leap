@@ -58,16 +58,21 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Cash and holdings sufficiency checks used during order submission.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.audit">com.neueda.leap.order.submission.audit</a></div>
 <div class="col-last odd-row-color">
+<div class="block">The audit record of each order submission: a request id per submission and the outcome of every
+ trading rule it was checked against, including for refused orders (BR-05, BR-14, TS-15.5).</div>
+</div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-last even-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.repository">com.neueda.leap.order.submission.repository</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.repository">com.neueda.leap.order.submission.repository</a></div>
+<div class="col-last odd-row-color">
 <div class="block">PostgreSQL ownership checks and account-scoped idempotent order persistence.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last even-row-color">
 <div class="block">Transactional order submission with ownership checks and retry handling.</div>
 </div>
 </div>
@@ -80,6 +85,19 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><a href="class-use/SubmitOrderRequest.html#com.neueda.leap.order.service">SubmitOrderRequest</a></div>
+<div class="col-last even-row-color">
+<div class="block">Input for a market-order submission; Bean Validation runs at the API boundary.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.submission.audit">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.order.submission.dto</a> used by <a href="../audit/package-summary.html">com.neueda.leap.order.submission.audit</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/SubmitOrderRequest.html#com.neueda.leap.order.submission.audit">SubmitOrderRequest</a></div>
 <div class="col-last even-row-color">
 <div class="block">Input for a market-order submission; Bean Validation runs at the API boundary.</div>
 </div>

@@ -8,6 +8,7 @@ com.neueda.leap.instrument.service
 com.neueda.leap.marketdata
 com.neueda.leap.marketdata.controller
 com.neueda.leap.marketdata.dto
+com.neueda.leap.marketdata.generation
 com.neueda.leap.portfolio.controller
 com.neueda.leap.portfolio.dto
 com.neueda.leap.portfolio.repository

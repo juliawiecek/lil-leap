@@ -119,9 +119,9 @@ implements <a href="ReportingService.html" title="interface in com.neueda.leap.r
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.reporting.repository.TradeReportingRepository,java.time.Clock,org.springframework.core.io.ResourceLoader)" class="member-name-link">ReportingServiceImpl</a><wbr>(<a href="../repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a>&nbsp;repository,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.neueda.leap.reporting.repository.TradeReportingRepository,java.time.Clock,com.neueda.leap.reporting.service.TradeDataset)" class="member-name-link">ReportingServiceImpl</a><wbr>(<a href="../repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a>&nbsp;repository,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock,
- org.springframework.core.io.ResourceLoader&nbsp;resourceLoader)</code></div>
+ <a href="TradeDataset.html" title="class in com.neueda.leap.reporting.service">TradeDataset</a>&nbsp;dataset)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates the reporting service.</div>
 </div>
@@ -140,34 +140,39 @@ implements <a href="ReportingService.html" title="interface in com.neueda.leap.r
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateClientSegmentReport()" class="member-name-link">generateClientSegmentReport</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateBuySellBalanceReport(com.neueda.leap.reporting.model.ReportDateRange)" class="member-name-link">generateBuySellBalanceReport</a><wbr>(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
+<div class="block">Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateInstrumentReport()" class="member-name-link">generateInstrumentReport</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateClientSegmentReport(com.neueda.leap.reporting.model.ReportDateRange)" class="member-name-link">generateClientSegmentReport</a><wbr>(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
+<div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateTradingActivityReport()" class="member-name-link">generateTradingActivityReport</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateInstrumentReport(com.neueda.leap.reporting.model.ReportDateRange)" class="member-name-link">generateInstrumentReport</a><wbr>(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateTradingActivityReport(com.neueda.leap.reporting.model.ReportDateRange)" class="member-name-link">generateTradingActivityReport</a><wbr>(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the downloadable CSV report aggregated by trading activity.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/ClientActivityTrendDto.html" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getClientActivityTrend()" class="member-name-link">getClientActivityTrend</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/ClientActivityTrendDto.html" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getClientActivityTrend()" class="member-name-link">getClientActivityTrend</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the current-day hourly trading activity trend.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/OverviewDto.html" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOverview()" class="member-name-link">getOverview</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/OverviewDto.html" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOverview()" class="member-name-link">getOverview</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the current-day dashboard summary.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/TopInstrumentDto.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getTopInstruments()" class="member-name-link">getTopInstruments</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the most actively traded instruments for the current UTC day.</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/TopInstrumentDto.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getTopInstruments()" class="member-name-link">getTopInstruments</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns the most actively traded instruments for today&apos;s New York trading day.</div>
 </div>
 </div>
 </div>
@@ -187,17 +192,17 @@ implements <a href="ReportingService.html" title="interface in com.neueda.leap.r
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(com.neueda.leap.reporting.repository.TradeReportingRepository,java.time.Clock,org.springframework.core.io.ResourceLoader)">
+<section class="detail" id="&lt;init&gt;(com.neueda.leap.reporting.repository.TradeReportingRepository,java.time.Clock,com.neueda.leap.reporting.service.TradeDataset)">
 <h3>ReportingServiceImpl</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">ReportingServiceImpl</span><wbr><span class="parameters">(<a href="../repository/TradeReportingRepository.html" title="interface in com.neueda.leap.reporting.repository">TradeReportingRepository</a>&nbsp;repository,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock,
- org.springframework.core.io.ResourceLoader&nbsp;resourceLoader)</span></div>
+ <a href="TradeDataset.html" title="class in com.neueda.leap.reporting.service">TradeDataset</a>&nbsp;dataset)</span></div>
 <div class="block">Creates the reporting service.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>repository</code> - existing read-only reporting repository used by the dashboard insights endpoints</dd>
-<dd><code>clock</code> - UTC-aware clock used to derive the current day window</dd>
-<dd><code>resourceLoader</code> - classpath resource loader used to read the BR-16 CSV dataset</dd>
+<dd><code>clock</code> - source of the current instant, used to find today's New York trading day</dd>
+<dd><code>dataset</code> - every fill, read from the reporting replica (BR-16)</dd>
 </dl>
 </section>
 </li>
@@ -228,7 +233,7 @@ implements <a href="ReportingService.html" title="interface in com.neueda.leap.r
 <h3>getTopInstruments</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/TopInstrumentDto.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a>&gt;</span>&nbsp;<span class="element-name">getTopInstruments</span>()</div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#getTopInstruments()">ReportingService</a></code></span></div>
-<div class="block">Returns the most actively traded instruments for the current UTC day.</div>
+<div class="block">Returns the most actively traded instruments for today&apos;s New York trading day.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="ReportingService.html#getTopInstruments()">getTopInstruments</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
@@ -247,47 +252,69 @@ implements <a href="ReportingService.html" title="interface in com.neueda.leap.r
 <dt>Specified by:</dt>
 <dd><code><a href="ReportingService.html#getClientActivityTrend()">getClientActivityTrend</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
 <dt>Returns:</dt>
-<dd>one entry for each UTC hour of the current day, including zero-count hours</dd>
+<dd>one entry for each New York hour of today, including zero-count hours</dd>
 </dl>
 </section>
 </li>
 <li>
-<section class="detail" id="generateInstrumentReport()">
+<section class="detail" id="generateInstrumentReport(com.neueda.leap.reporting.model.ReportDateRange)">
 <h3>generateInstrumentReport</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateInstrumentReport</span>()</div>
-<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateInstrumentReport()">ReportingService</a></code></span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateInstrumentReport</span><wbr><span class="parameters">(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateInstrumentReport(com.neueda.leap.reporting.model.ReportDateRange)">ReportingService</a></code></span></div>
 <div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="ReportingService.html#generateInstrumentReport()">generateInstrumentReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dd><code><a href="ReportingService.html#generateInstrumentReport(com.neueda.leap.reporting.model.ReportDateRange)">generateInstrumentReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>range</code> - New York trading days whose trades are included</dd>
 <dt>Returns:</dt>
 <dd>downloadable CSV attachment generated from the reporting dataset</dd>
 </dl>
 </section>
 </li>
 <li>
-<section class="detail" id="generateClientSegmentReport()">
+<section class="detail" id="generateClientSegmentReport(com.neueda.leap.reporting.model.ReportDateRange)">
 <h3>generateClientSegmentReport</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateClientSegmentReport</span>()</div>
-<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateClientSegmentReport()">ReportingService</a></code></span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateClientSegmentReport</span><wbr><span class="parameters">(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateClientSegmentReport(com.neueda.leap.reporting.model.ReportDateRange)">ReportingService</a></code></span></div>
 <div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="ReportingService.html#generateClientSegmentReport()">generateClientSegmentReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dd><code><a href="ReportingService.html#generateClientSegmentReport(com.neueda.leap.reporting.model.ReportDateRange)">generateClientSegmentReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>range</code> - New York trading days whose trades are included</dd>
 <dt>Returns:</dt>
 <dd>downloadable CSV attachment generated from the reporting dataset</dd>
 </dl>
 </section>
 </li>
 <li>
-<section class="detail" id="generateTradingActivityReport()">
+<section class="detail" id="generateTradingActivityReport(com.neueda.leap.reporting.model.ReportDateRange)">
 <h3>generateTradingActivityReport</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateTradingActivityReport</span>()</div>
-<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateTradingActivityReport()">ReportingService</a></code></span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateTradingActivityReport</span><wbr><span class="parameters">(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateTradingActivityReport(com.neueda.leap.reporting.model.ReportDateRange)">ReportingService</a></code></span></div>
 <div class="block">Returns the downloadable CSV report aggregated by trading activity.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="ReportingService.html#generateTradingActivityReport()">generateTradingActivityReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dd><code><a href="ReportingService.html#generateTradingActivityReport(com.neueda.leap.reporting.model.ReportDateRange)">generateTradingActivityReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>range</code> - New York trading days whose trades are included</dd>
+<dt>Returns:</dt>
+<dd>downloadable CSV attachment generated from the reporting dataset</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="generateBuySellBalanceReport(com.neueda.leap.reporting.model.ReportDateRange)">
+<h3>generateBuySellBalanceReport</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateBuySellBalanceReport</span><wbr><span class="parameters">(<a href="../model/ReportDateRange.html" title="class in com.neueda.leap.reporting.model">ReportDateRange</a>&nbsp;range)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="ReportingService.html#generateBuySellBalanceReport(com.neueda.leap.reporting.model.ReportDateRange)">ReportingService</a></code></span></div>
+<div class="block">Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="ReportingService.html#generateBuySellBalanceReport(com.neueda.leap.reporting.model.ReportDateRange)">generateBuySellBalanceReport</a></code>&nbsp;in interface&nbsp;<code><a href="ReportingService.html" title="interface in com.neueda.leap.reporting.service">ReportingService</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>range</code> - New York trading days whose trades are included</dd>
 <dt>Returns:</dt>
 <dd>downloadable CSV attachment generated from the reporting dataset</dd>
 </dl>

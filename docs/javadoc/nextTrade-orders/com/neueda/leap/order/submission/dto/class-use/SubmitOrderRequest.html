@@ -58,16 +58,21 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Cash and holdings sufficiency checks used during order submission.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.audit">com.neueda.leap.order.submission.audit</a></div>
 <div class="col-last odd-row-color">
+<div class="block">The audit record of each order submission: a request id per submission and the outcome of every
+ trading rule it was checked against, including for refused orders (BR-05, BR-14, TS-15.5).</div>
+</div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.controller">com.neueda.leap.order.submission.controller</a></div>
+<div class="col-last even-row-color">
 <div class="block">Authenticated HTTP endpoints for idempotent order submission.</div>
 </div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.repository">com.neueda.leap.order.submission.repository</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.repository">com.neueda.leap.order.submission.repository</a></div>
+<div class="col-last odd-row-color">
 <div class="block">PostgreSQL ownership checks and account-scoped idempotent order persistence.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.submission.service">com.neueda.leap.order.submission.service</a></div>
+<div class="col-last even-row-color">
 <div class="block">Transactional order submission with ownership checks and retry handling.</div>
 </div>
 </div>
@@ -91,6 +96,27 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
+<section class="detail" id="com.neueda.leap.order.submission.audit">
+<h2>Uses of <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a> in <a href="../../audit/package-summary.html">com.neueda.leap.order.submission.audit</a></h2>
+<div class="caption"><span>Methods in <a href="../../audit/package-summary.html">com.neueda.leap.order.submission.audit</a> with parameters of type <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>void</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">SubmissionAuditRepository.</span><code><a href="../../audit/SubmissionAuditRepository.html#recordRefused(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID,java.lang.String,java.util.List)" class="member-name-link">recordRefused</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;userId,
+ <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;reasonCode,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../../audit/RuleChecks.Check.html" title="class in com.neueda.leap.order.submission.audit">RuleChecks.Check</a>&gt;&nbsp;checks)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Records a refused submission and the rules it was checked against, in its own transaction,
+ so the record survives the refusal.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
 <section class="detail" id="com.neueda.leap.order.submission.controller">
 <h2>Uses of <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a> in <a href="../../controller/package-summary.html">com.neueda.leap.order.submission.controller</a></h2>
 <div class="caption"><span>Methods in <a href="../../controller/package-summary.html">com.neueda.leap.order.submission.controller</a> with parameters of type <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a></span></div>
@@ -99,8 +125,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionController.</span><code><a href="../../controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="../../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
- @Valid <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionController.</span><code><a href="../../controller/OrderSubmissionController.html#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit</a><wbr>(<a href="../../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ @Valid <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
 </div>
@@ -144,6 +171,13 @@ loadScripts(document, 'script');</script>
 <div class="col-second even-row-color"><span class="type-name-label">OrderSubmissionService.</span><code><a href="../../service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
  <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color">
+<div class="block">Submits an order under a fresh request id; see <a href="../../service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)"><code>OrderSubmissionService.submit(UUID, SubmitOrderRequest, UUID)</code></a>.</div>
+</div>
+<div class="col-first odd-row-color"><code><a href="../../service/OrderSubmissionResult.html" title="class in com.neueda.leap.order.submission.service">OrderSubmissionResult</a></code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">OrderSubmissionService.</span><code><a href="../../service/OrderSubmissionService.html#submit(java.util.UUID,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;authenticatedUserId,
+ <a href="../SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</code></div>
+<div class="col-last odd-row-color">
 <div class="block">Submits an order after authentication, ownership, eligibility and resource checks.</div>
 </div>
 </div>
