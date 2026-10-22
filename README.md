@@ -132,8 +132,8 @@ Browsers only talk to the two nginx frontends; each proxies API paths to the
 right service on the Docker network, so every call is same-origin (no CORS).
 `auth` has no host port at all. The trading services connect to Postgres as the
 restricted `app_user` role; the schema is owned by the admin role. Insights reads a
-streaming read-only replica as the SELECT-only `reporting_user`, so reporting never
-loads the main database (BR-16).
+streaming read-only replica as the SELECT-only `reporting_user` for every page, so
+reporting never loads the main database (BR-16).
 
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
@@ -306,9 +306,9 @@ Important runtime behavior:
 - DB initialization scripts (`db/finalized-schema.sql`, `db/init-app-role.sh`,
   the seed file) only run on the **first** startup of an empty `db_data`
   volume — re-run them by clearing that volume (`docker compose down -v`).
-  An existing volume created without the replica needs the reporting role and
-  replication slot once before `reporting-db` can start:
-  `docker compose up -d db && docker compose exec -T db bash /docker-entrypoint-initdb.d/04-reporting.sh`.
+  The replica needs no setup, on a new or an existing volume: on every `docker compose up` the one-shot
+  `reporting-setup` service creates the reporting role, replication slot and trader-name view if they are
+  missing, and `db` reads its replication rules from [db/pg_hba.conf](db/pg_hba.conf).
 - Holdings writes a synthetic quote for every catalog stock every
   `QUOTE_INTERVAL_SECONDS` (default 2); set `QUOTE_GENERATOR_ENABLED=false` to stop it.
 

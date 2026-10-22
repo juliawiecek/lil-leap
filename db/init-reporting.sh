@@ -1,5 +1,6 @@
 #!/bin/bash
-# Idempotent: run on the primary, including when upgrading an existing volume.
+# Idempotent: creates the reporting role and replication slot on the primary. Runs as an init script on a new
+# volume, and from the compose `reporting-setup` service on every start, which also covers existing volumes.
 set -euo pipefail
 : "${REPORTING_DB_PASSWORD:?REPORTING_DB_PASSWORD is required}"
 : "${REPLICATION_PASSWORD:?REPLICATION_PASSWORD is required}"
@@ -21,8 +22,10 @@ SELECT pg_create_physical_replication_slot('reporting_replica')
 WHERE NOT EXISTS (SELECT FROM pg_replication_slots WHERE slot_name = 'reporting_replica');
 SQL
 
-# The dedicated Docker network and SCRAM credentials gate replication connections.
-if ! grep -q '^host replication replicator ' "$PGDATA/pg_hba.conf"; then
-    printf '\nhost replication replicator all scram-sha-256\n' >> "$PGDATA/pg_hba.conf"
+# The dedicated Docker network and SCRAM credentials gate replication connections. Only inside the primary's
+# container; the main compose file reads db/pg_hba.conf instead, which already has this rule.
+hba="${PGDATA:-}/pg_hba.conf"
+if [ -n "${PGDATA:-}" ] && [ -f "$hba" ] && ! grep -q '^host replication replicator ' "$hba"; then
+    printf '\nhost replication replicator all scram-sha-256\n' >> "$hba"
 fi
 psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER:-main}" --dbname "${POSTGRES_DB:-nexttrade}" -c 'SELECT pg_reload_conf();'

@@ -75,7 +75,7 @@ public class TradeLookup {
     /**
      * Creates the lookup.
      *
-     * @param jdbc read-only reporting database operations
+     * @param jdbc read-only operations on the reporting replica
      * @param json parses each step's recorded fields
      */
     public TradeLookup(JdbcTemplate jdbc, ObjectMapper json) {

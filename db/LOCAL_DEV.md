@@ -28,7 +28,7 @@ The script handles the native local bootstrap from end to end:
   - `db/seeds/002_test_users.sql`: the test logins
   - `db/seeds/003_demo_trading_activity.sql`: 12 demo traders and about two weeks of trades, with 60 fills
     today across every instrument. Re-running the script on a later day adds that day's trades again.
-    The insights reporting CSV holds the same fills; regenerate all three with
+    Regenerate it and `001_us_equity_instruments.sql` with
     `python db/seeds/generate_demo_trades.py`, never edit them by hand.
 - grants the application permissions required by the backend services
 

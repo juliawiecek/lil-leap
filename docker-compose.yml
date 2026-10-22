@@ -67,7 +67,7 @@ services:
     depends_on:
       db: {condition: service_healthy}
 
-  # BR-16: reporting reads the read-only replica, never the main database, so it cannot load live trading.
+  # BR-16: every Insights page reads the read-only replica, never the main database, so it cannot load live trading.
   insights:
     build: ./insights
     environment:
@@ -83,15 +83,14 @@ services:
 
   db:
     image: postgres:16-alpine
-    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10", "-c", "max_slot_wal_keep_size=1GB"]
+    # Replication settings and db/pg_hba.conf come from here, not the volume, so existing volumes get them too.
+    command: ["postgres", "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10", "-c", "max_slot_wal_keep_size=1GB", "-c", "hba_file=/etc/postgresql/pg_hba.conf"]
     environment:
       POSTGRES_DB: nexttrade
       POSTGRES_USER: main
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-main_password}
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
-      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
-      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
       # Same key as auth, so seeded SSNs decrypt like registered ones (05-test-users.sql).
       SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-replace_me}
     healthcheck:
@@ -101,14 +100,34 @@ services:
       retries: 10
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./db/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
       - ./db/finalized-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/init-app-role.sh:/docker-entrypoint-initdb.d/02-app-role.sh:ro
       - ./db/seeds/001_us_equity_instruments.sql:/docker-entrypoint-initdb.d/03-us-equities.sql:ro
-      - ./db/init-reporting.sh:/docker-entrypoint-initdb.d/04-reporting.sh:ro
       # Dev/demo test logins (TS-DB-04). Never mount this in a production compose file.
       - ./db/seeds/002_test_users.sql:/docker-entrypoint-initdb.d/05-test-users.sql:ro
-      # Demo clients and trade book matching insights' reports/trades.csv. Dev/demo only.
+      # Demo clients and trade book, which Insights reads through the replica. Dev/demo only.
       - ./db/seeds/003_demo_trading_activity.sql:/docker-entrypoint-initdb.d/06-demo-trading-activity.sql:ro
+
+  # Runs on every start and exits: the trader-name view (migration 018), then the reporting role and replication
+  # slot (db/init-reporting.sh). All idempotent, so new and existing volumes get the replica with no manual step.
+  reporting-setup:
+    image: postgres:16-alpine
+    entrypoint: ["bash", "-c", "psql -v ON_ERROR_STOP=1 -f /reporting/018_trade_clients.sql && bash /reporting/init-reporting.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: main
+      PGDATABASE: nexttrade
+      PGPASSWORD: ${POSTGRES_PASSWORD:-main_password}
+      POSTGRES_USER: main
+      POSTGRES_DB: nexttrade
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - ./db/migrations/018_trade_clients.sql:/reporting/018_trade_clients.sql:ro
+      - ./db/init-reporting.sh:/reporting/init-reporting.sh:ro
 
   # Streaming read-only copy of db for Insights (db/start-reporting-replica.sh).
   reporting-db:
@@ -120,7 +139,7 @@ services:
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
       REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:-reporting_dev_password}
     depends_on:
-      db: {condition: service_healthy}
+      reporting-setup: {condition: service_completed_successfully}
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=\"$$REPORTING_DB_PASSWORD\" psql -h 127.0.0.1 -U reporting_user -d nexttrade -tAc 'SELECT pg_is_in_recovery()' | grep -qx t"]
       interval: 5s

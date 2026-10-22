@@ -7,9 +7,8 @@
 -- with 60 fills today across the NASDAQ/NYSE universe in 001_us_equity_instruments.sql.
 -- Demo logins: <first>.<last>@demo.nexttrade.local with the shared test password.
 --
--- The insights reporting dataset (insights/src/main/resources/reports/trades.csv) holds the
--- same fills with the same ids, anchored at 2026-10-16; here, day offset 0 is the UTC
--- day the book is first seeded.
+-- Day offset 0 is the UTC day the book is first seeded. Insights reads these fills from the
+-- reporting replica (BR-16).
 --
 -- Runs on an empty volume as /docker-entrypoint-initdb.d/06-demo-trading-activity.sql, and on
 -- every db/setup-local.sql run. Idempotent: fixed ids plus ON CONFLICT DO NOTHING. When run on

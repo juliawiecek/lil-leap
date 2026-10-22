@@ -10,7 +10,6 @@ import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import com.neueda.leap.reporting.service.TradeDataset.Trade;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -107,12 +106,12 @@ public class ReportingServiceImpl implements ReportingService {
      *
      * @param repository existing read-only reporting repository used by the dashboard insights endpoints
      * @param clock source of the current instant, used to find today's New York trading day
-     * @param resourceLoader classpath resource loader used to read the BR-16 CSV dataset
+     * @param dataset every fill, read from the reporting replica (BR-16)
      */
-    public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {
+    public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, TradeDataset dataset) {
         this.repository = repository;
         this.clock = clock;
-        this.dataset = new TradeDataset(resourceLoader);
+        this.dataset = dataset;
     }
 
     @Override
