@@ -1,11 +1,13 @@
 import { Component, Injectable, OnDestroy, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import type { ChartTable } from '../../../../shared/chart-description';
 import { ChartNarrator } from '../../../../shared/chart-narrator';
+import { SiteAccessibility } from '../site-accessibility';
 
 
 /** Both report charts share one stored opt-in and one owned speech channel. */
 @Injectable({ providedIn: 'root' })
 export class InsightsChartVoice {
+  private readonly accessibility = inject(SiteAccessibility);
   readonly enabled = signal(this.readEnabled());
   private readonly narrator = new ChartNarrator();
   private owner = '';
@@ -18,8 +20,10 @@ export class InsightsChartVoice {
     if (!enabled) this.stop(this.owner);
     try { globalThis.localStorage?.setItem('nexttrade-insights.chart-voice', enabled ? 'on' : 'off'); } catch {}
   }
-  speak(text: string, owner: string): void {
-    if (this.enabled()) { this.owner = owner; this.narrator.speak(text, owner); }
+  speak(text: string, owner: string, requested = false): void {
+    const navigation = this.accessibility.settings();
+    if (!requested && navigation.enabled && navigation.focus) return;
+    if (this.enabled()) { this.owner = owner; this.narrator.speak(text, owner, navigation.rate); }
   }
   stop(owner: string): void { this.narrator.stop(owner); }
 }
@@ -129,7 +133,7 @@ export class InsightsChartAccess implements OnDestroy {
   }
   explain(): void {
     this.explained.set(!this.explained());
-    if (this.explained()) { this.announcement.set(this.summary()); this.voice.speak(this.summary(), this.id()); }
+    if (this.explained()) { this.announcement.set(this.summary()); this.voice.speak(this.summary(), this.id(), true); }
     else this.voice.stop(this.id());
   }
   focusSummary(): void { this.focused.set(true); this.voice.speak(this.summary(), this.id()); }

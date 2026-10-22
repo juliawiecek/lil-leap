@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-@Component({ selector: 'app-root', imports: [RouterOutlet], template: '<router-outlet />' })
+import { AssistiveTools } from './assistive-tools';
+@Component({ selector: 'app-root', imports: [RouterOutlet, AssistiveTools], template: '<router-outlet /><app-assistive-tools />' })
 export class AppRoot {}

@@ -1,4 +1,5 @@
-/** Own only chart speech; never cancel a briefing, screen reader or switch-control sentence. */
+import { speechCoordinator } from './speech-coordinator.ts';
+/** Chart speech participates in the shared coordinator without interrupting higher-priority reading. */
 export class ChartNarrator {
   private utterance: SpeechSynthesisUtterance | undefined;
   private ownerId = '';
@@ -13,12 +14,13 @@ export class ChartNarrator {
     utterance.rate = rate;
     const done = () => { if (this.utterance === utterance) this.utterance = undefined; };
     utterance.onend = done; utterance.onerror = done;
-    synth.speak(utterance);
-    return true;
+    const started = speechCoordinator.submit('chart:' + owner, utterance);
+    if (!started) this.utterance = undefined;
+    return started;
   }
   stop(owner: string): void {
     if (this.utterance && this.ownerId === owner) {
-      globalThis.speechSynthesis?.cancel(); this.utterance = undefined;
+      speechCoordinator.stop('chart:' + owner); this.utterance = undefined;
     }
   }
 }

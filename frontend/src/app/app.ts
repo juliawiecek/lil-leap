@@ -18,6 +18,7 @@ import { safeReturnUrl } from './page-state';
 import { AuthApiError } from './auth-api';
 import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
+import { SkipLink } from './skip-link';
 import { toTraderRegistration } from './registration-payload';
 import type { Experience } from './stock-dashboard';
 import { observeColourMode, readThemeColour, readThemeRgb } from './theme-colours';
@@ -56,7 +57,7 @@ interface VolumeBar {
 
 @Component({
   selector: 'app-login',
-  imports: [InvestorProfile],
+  imports: [InvestorProfile, SkipLink],
   templateUrl: './app.html',
   styleUrls: ['./app.scss', './app.refresh.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -246,6 +247,7 @@ export class App implements AfterViewInit, OnDestroy {
     this.confirmationDraft.set('');
     this.passwordStarted.set(!!this.password.nativeElement.value);
     this.authMode.set(mode);
+    if (globalThis.document) globalThis.document.title = `${TITLES[mode]} · NextTrade`;
     this.formStatus.set('');
 
     if (this.focusTimer) {

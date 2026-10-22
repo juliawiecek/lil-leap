@@ -8,6 +8,7 @@
         <button
           type="button"
           [class.active]="page() === item.name"
+          [attr.aria-label]="item.name"
           [attr.aria-current]="page() === item.name ? 'page' : null"
           [attr.title]="collapsed() ? item.name : null"
           (click)="navigate(item.name)"
@@ -18,7 +19,7 @@
     </nav>
     <div class="sidebar-help" data-scan-group="Help and support">
       <span>Help &amp; Support</span
-      ><button type="button" (click)="openModal('shortcuts')">
+      ><button type="button" aria-label="Keyboard shortcuts" (click)="openModal('shortcuts')">
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
       ><button
         type="button"
@@ -27,14 +28,14 @@
       >
         <app-dashboard-icon name="collapse" /><span>Collapse</span>
       </button
-      ><button type="button" class="sign-out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
+      ><button type="button" class="sign-out" aria-label="Sign out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
         <app-dashboard-icon name="signout" /><span>Sign out</span>
       </button>
     </div>
   </aside>
   <div class="pro-main">
     <header class="pro-topbar" data-scan-group="Top bar">
-      <div class="pro-search" data-scan-group="Search">
+      <div class="pro-search" data-scan-group="Search" data-a11y-search>
         <app-dashboard-icon name="search" /><input
           aria-label="Search symbols or companies"
           placeholder="Search symbols, companies, or keywords (e.g. AAPL, earnings, AI)..."
@@ -43,7 +44,7 @@
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
-          <div class="search-results">
+          <div class="search-results" data-a11y-results role="group" aria-label="Stock search results">
             @for (q of results(); track q.symbol) {
               <button type="button" (click)="choose(q)">
                 <b>{{ q.symbol }}</b
@@ -65,14 +66,14 @@
           <button
             class="notification-button icon-button"
             type="button"
-            aria-label="Notifications"
+            aria-label="Notifications" aria-controls="advanced-notifications"
             [attr.aria-expanded]="notifications()"
             (click)="notifications.set(!notifications())"
           >
             <app-dashboard-icon name="bell" /><i></i>
           </button>
           @if (notifications()) {
-            <div class="notification-popover">
+            <div class="notification-popover" id="advanced-notifications" data-a11y-popover role="region" aria-label="Notifications">
               <b>Notifications</b>
               <p>You’re all caught up. Fills and rejections appear as messages in the corner.</p>
             </div>
@@ -100,7 +101,7 @@
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel" data-scan-group="Portfolio summary">
           <h1>
-            Portfolio Summary
+            {{ page() === 'Overview' ? 'Portfolio Summary' : page() }}
             <button
               type="button"
               class="icon-button"
@@ -113,7 +114,7 @@
           @if (!portfolioLoaded()) {
             <p class="empty-note" aria-live="polite">Loading your balances…</p>
           } @else {
-            <div class="summary-metrics">
+            <div class="summary-metrics" data-a11y-read data-a11y-label="Portfolio summary">
               <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
                 ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
@@ -158,6 +159,7 @@
                 <button
                   type="button"
                   [class.active]="bottomTab() === tab"
+                  [attr.aria-pressed]="bottomTab() === tab"
                   (click)="bottomTab.set(tab)"
                 >
                   {{ tab }}
@@ -165,21 +167,21 @@
               }
               <span class="panel-note">{{ positions().length }} positions · {{ privateBalance() ? '••••••' : (exposure().equities | currency) }} invested</span>
             </div>
-            <div class="table-scroll">
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
               @if (bottomTab() === 'Positions') {
                 <table class="positions-table">
                   <caption class="sr-only">Positions</caption>
                   <thead>
                     <tr>
-                      <th>Symbol</th>
-                      <th>Last</th>
-                      <th>Change %</th>
-                      <th>Quantity</th>
-                      <th>Market Value</th>
-                      <th>Day P&amp;L</th>
-                      <th>Total P&amp;L</th>
-                      <th>Weight</th>
-                      <th>Actions</th>
+                      <th scope="col">Symbol</th>
+                      <th scope="col">Last</th>
+                      <th scope="col">Change %</th>
+                      <th scope="col">Quantity</th>
+                      <th scope="col">Market Value</th>
+                      <th scope="col">Day P&amp;L</th>
+                      <th scope="col">Total P&amp;L</th>
+                      <th scope="col">Weight</th>
+                      <th scope="col">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -279,6 +281,7 @@
                   <button
                     type="button"
                     role="tab"
+                    [id]="'watch-tab-' + tab" aria-controls="watch-list-panel"
                     [class.active]="overviewList() === tab"
                     [attr.aria-selected]="overviewList() === tab"
                     (click)="overviewList.set($any(tab))"
@@ -290,6 +293,7 @@
             } @else {
               <div class="panel-heading"><h2>Stocks</h2></div>
             }
+            <div id="watch-list-panel" [attr.role]="page() === 'Overview' ? 'tabpanel' : null" [attr.aria-labelledby]="page() === 'Overview' ? 'watch-tab-' + overviewList() : null">
             @if (page() === 'Markets' || overviewList() === 'Watchlist') {
             @if (page() === 'Markets') {
               <select
@@ -302,15 +306,15 @@
                 <option>Decliners</option>
               </select>
             }
-            <div class="table-scroll">
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
               <table class="watch-table">
                 <caption class="sr-only">{{ page() === 'Markets' ? 'Stocks' : 'Watchlist' }}</caption>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Last</th>
-                    <th>Change</th>
-                    <th>Sector</th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Last</th>
+                    <th scope="col">Change</th>
+                    <th scope="col">Sector</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -367,6 +371,7 @@
               <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
               <app-chart-access #watchSectorAccess id="advanced-watch-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             }
+            </div>
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
@@ -487,16 +492,16 @@
             @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
             @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
             @if (profile(); as userProfile) {
-              <div>
+              <div data-a11y-sensitive>
                 <span>Full name</span><strong>{{ userProfile.firstName }} {{ userProfile.lastName }}</strong>
               </div>
-              <div>
+              <div data-a11y-sensitive>
                 <span>Email</span><strong>{{ userProfile.email }}</strong>
               </div>
-              <div>
+              <div data-a11y-sensitive>
                 <span>Phone</span><strong>{{ userProfile.phone }}</strong>
               </div>
-              <div>
+              <div data-a11y-sensitive>
                 <span>Address</span><strong>{{ userProfile.address }}</strong>
               </div>
             }

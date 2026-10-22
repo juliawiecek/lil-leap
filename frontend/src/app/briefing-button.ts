@@ -1,6 +1,7 @@
 import { Component, DestroyRef, Injectable, effect, inject, input, signal } from '@angular/core';
 import { BriefingSnapshot, buildBriefing } from './briefing';
 import { accessibilityStore } from './accessibility';
+import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /** Voice speed and how often the briefing repeats on its own (0 = only when asked). */
 export interface BriefingSettings {
@@ -97,7 +98,9 @@ export class BriefingService {
     if (!this.supported) {
       return;
     }
-    const synth = globalThis.speechSynthesis;
+    // A deliberate/repeating briefing owns one queue; closing it never cancels other reading.
+    speechCoordinator.stop();
+    const synth = speechCoordinator.channel('briefing');
     this.speaking.set(true);
     lines.forEach((line, index) => {
       const utterance = new SpeechSynthesisUtterance(line);
@@ -113,7 +116,7 @@ export class BriefingService {
 
   stop(): void {
     if (this.supported) {
-      globalThis.speechSynthesis.cancel();
+      speechCoordinator.stop('briefing');
     }
     this.#finished();
   }
@@ -165,7 +168,7 @@ export type BriefingSource = () => Promise<Omit<BriefingSnapshot, 'since'> & { a
         <span>Briefing</span>
       </button>
       @if (open()) {
-        <section id="briefing-panel" class="briefing-panel" aria-label="Audio briefing" data-scan-group="Briefing">
+        <section id="briefing-panel" class="briefing-panel" data-a11y-popover aria-label="Audio briefing" data-scan-group="Briefing">
           <div class="panel-top">
             <strong>Market briefing</strong>
             <div class="panel-actions">

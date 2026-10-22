@@ -30,13 +30,13 @@
       <div class="asset-heading">
         <div class="asset-monogram" aria-hidden="true">{{ a.symbol.slice(0, 2) }}</div>
         <div class="asset-identity">
-          <h1>{{ a.symbol }}</h1>
+          <h2>{{ a.symbol }}</h2>
           <p>{{ a.name }} <span aria-hidden="true">·</span> {{ a.market }}</p>
         </div>
         <span class="currency-label">{{ a.currency }}</span>
       </div>
 
-      <div class="hero-metrics" aria-live="off">
+      <div class="hero-metrics" aria-live="off" data-a11y-read data-a11y-label="Current stock price and performance">
         <div>
           <span class="sr-only">Current price</span>
           <p

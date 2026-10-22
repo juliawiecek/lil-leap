@@ -92,10 +92,10 @@ tbody tr:hover, .watch-table tr.selected { background: var(--surface-tone-30); }
 .weight-bar { height: 4px; border-radius: 0; background: var(--surface-tone-17); }
 .weight-bar i { border-radius: 0; background: var(--text-tone-02); opacity: 1; }
 .list-tabs { display: flex; gap: 2px; margin: 0; padding: 0 8px; border: 0; border-bottom: 1px solid var(--surface-tone-22); border-radius: 0; background: none; }
-.list-tabs button { min-height: 40px; margin-bottom: -1px; padding: 0 10px; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-tone-04); font-size: 13px; }
+.list-tabs button { min-height: 40px; margin-bottom: -1px; padding: 0 10px; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-tone-02); font-size: 13px; }
 .list-tabs button.active { border-bottom-color: var(--text-tone-03); background: none; color: var(--text-tone-03); }
 .market-tabs { gap: 2px; padding: 0; border: 0; border-radius: 0; background: none; }
-.market-tabs button { min-height: 26px; border-radius: 3px; color: var(--text-tone-04); font-size: 12.5px; }
+.market-tabs button { min-height: 26px; border-radius: 3px; color: var(--text-tone-02); font-size: 12.5px; }
 .market-tabs button:hover { background: var(--surface-tone-18); color: var(--text-tone-03); }
 .market-tabs .active, .market-tabs .active:hover { background: var(--surface-tone-17); color: var(--text-tone-03); }
 
@@ -124,7 +124,7 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
 
 /* Activity lists inside the advanced dashboard (the shared feed keeps its own look elsewhere) */
 :host ::ng-deep .pro-shell app-activity-feed .kind-switch { padding: 2px; border-color: var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-20); }
-:host ::ng-deep .pro-shell app-activity-feed .kind-switch button { min-height: 26px; border-radius: 3px; color: var(--text-tone-04); }
+:host ::ng-deep .pro-shell app-activity-feed .kind-switch button { min-height: 26px; border-radius: 3px; color: var(--text-tone-02); }
 :host ::ng-deep .pro-shell app-activity-feed .kind-switch button.active { background: var(--surface-tone-17); color: var(--text-tone-03); }
 :host ::ng-deep .pro-shell app-activity-feed .activity-filters input,
 :host ::ng-deep .pro-shell app-activity-feed .clear-filters,
@@ -132,7 +132,7 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
 :host ::ng-deep .pro-shell app-activity-feed .activity-item .actions button { border-radius: 4px; }
 :host ::ng-deep .pro-shell app-activity-feed .activity-item { border-bottom-color: var(--surface-tone-27); }
 :host ::ng-deep .pro-shell app-activity-feed .activity-item:hover { background: var(--surface-tone-30); }
-:host ::ng-deep .pro-shell app-activity-feed .activity-item time { color: var(--text-tone-04); }
+:host ::ng-deep .pro-shell app-activity-feed .activity-item time { color: var(--text-tone-02); }
 :host ::ng-deep .pro-shell app-activity-feed .activity-item .what small { color: var(--text-tone-02); }
 :host ::ng-deep .pro-shell app-activity-feed .status,
 :host ::ng-deep .pro-shell app-activity-feed .status.filled { padding: 0; border-radius: 0; background: none; color: var(--text-tone-02); }
@@ -191,7 +191,7 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what b { font-size: 13.5px; font-weight: 700; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .what small { margin: 0; color: var(--text-tone-02); font-size: 12.5px; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .amount { grid-area: amount; font-size: 13.5px; font-weight: 700; }
-:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item time { grid-area: time; grid-column: auto; justify-self: end; color: var(--text-tone-04); font-size: 12px; }
+:host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item time { grid-area: time; grid-column: auto; justify-self: end; color: var(--text-tone-02); font-size: 12px; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item .actions { grid-area: auto; grid-column: 1 / -1; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .activity-item:last-child { border-bottom: 0; }
 :host ::ng-deep .pro-grid .executions-panel app-activity-feed.compact .view-all { margin: 6px 16px 14px; }
@@ -201,7 +201,7 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
    status sitting beside the amount instead of floating mid-row. */
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed { font-size: 13px; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters { align-items: flex-end; gap: 12px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--surface-tone-22); }
-:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters label { gap: 5px; color: var(--text-tone-04); font-size: 12px; font-weight: 600; opacity: 1; }
+:host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters label { gap: 5px; color: var(--text-tone-02); font-size: 12px; font-weight: 600; opacity: 1; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input { height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--surface-tone-17); border-radius: 4px; background: var(--surface-tone-20); color: var(--text-tone-03); font-size: 13px; color-scheme: dark; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .activity-filters input:focus { border-color: var(--surface-tone-29); outline: none; }
 :host ::ng-deep .pro-grid .orders-history-panel app-activity-feed .kind-switch { height: 32px; box-sizing: border-box; }

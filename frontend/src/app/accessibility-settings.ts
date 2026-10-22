@@ -3,6 +3,7 @@ import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
 import { ColourModeStore } from './colour-mode';
+import { AssistiveSettings } from './assistive-tools';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds
@@ -12,7 +13,7 @@ import { ColourModeStore } from './colour-mode';
  */
 @Component({
   selector: 'app-accessibility-settings',
-  imports: [BriefingSettingsCard, SwitchScanSettings],
+  imports: [BriefingSettingsCard, SwitchScanSettings, AssistiveSettings],
   template: `
     <section class="a11y" aria-labelledby="accessibility-settings-title" data-scan-group="Accessibility">
       <div class="a11y-intro">
@@ -23,6 +24,7 @@ import { ColourModeStore } from './colour-mode';
         </p>
       </div>
       <div class="a11y-cards">
+        <app-assistive-settings />
         <fieldset class="a11y-card colour-mode" aria-describedby="colour-mode-help">
           <legend>Colour-blind mode</legend>
           <p id="colour-mode-help">Choose colours you can tell apart. Prices and calculations stay the same.</p>
@@ -59,7 +61,7 @@ import { ColourModeStore } from './colour-mode';
       .a11y { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 32px; padding: 26px 0; border-top: 1px solid var(--surface-tone-05); }
       .a11y-intro h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
       .a11y-intro p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
-      .a11y-cards { display: grid; gap: 12px; min-width: 0; }
+      .a11y-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
       .a11y-card.colour-mode { display: block; margin: 0; min-width: 0; }
       .colour-mode legend { padding: 0 4px; font-size: 14px; font-weight: 600; }
       .colour-mode p { margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }

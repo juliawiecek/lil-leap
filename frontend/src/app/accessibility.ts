@@ -10,7 +10,7 @@ export { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
  */
 
 /** The sections the accessibility tickets own (PS-18, PS-19, PS-21, PS-22, PS-27). */
-export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'colourMode' | 'livePrices';
+export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'visual' | 'colourMode' | 'livePrices';
 
 /** Saved settings, or an empty set when nothing valid is stored. */
 export function parseAccessibility(stored: string | null): Partial<Record<AccessibilitySection, unknown>> {

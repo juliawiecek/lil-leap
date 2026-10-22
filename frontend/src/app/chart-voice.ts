@@ -39,8 +39,10 @@ export class ChartVoice {
       return;
     }
     if (!this.enabled()) return;
+    const navigationVoice = this.#store.read('voice', v => v as { enabled?: boolean; focus?: boolean; rate?: number } | null);
+    if (!requested && navigationVoice?.enabled && navigationVoice.focus) return;
     this.#owner = owner;
-    const rate = this.#store.read('briefing', v => Number((v as { rate?: number } | null)?.rate) || 1);
+    const rate = navigationVoice?.enabled ? navigationVoice.rate || 1 : this.#store.read('briefing', v => Number((v as { rate?: number } | null)?.rate) || 1);
     this.narrator.speak(speakable(text), owner, rate);
   }
   stop(owner: string): void {

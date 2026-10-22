@@ -17,7 +17,7 @@
 
 :host { display: block; min-width: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
 *, *::before, *::after { box-sizing: border-box; }
-h1, p, dl, dd { margin: 0; }
+h2, p, dl, dd { margin: 0; }
 
 .dashboard-shell {
   @apply mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-solid border-white/10 bg-[var(--surface-tone-102)] text-slate-100;
@@ -31,7 +31,7 @@ h1, p, dl, dd { margin: 0; }
 .asset-heading { @apply mb-7 flex items-center gap-3.5; }
 .asset-monogram { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-sm font-semibold tracking-tight text-slate-300 ring-1 ring-white/10; }
 .asset-identity { @apply min-w-0; }
-.asset-identity h1 { @apply text-lg font-semibold tracking-tight; }
+.asset-identity h2 { @apply text-lg font-semibold tracking-tight; }
 .asset-identity p { @apply mt-1 text-xs leading-relaxed text-slate-400; }
 .asset-identity p span { @apply mx-1; }
 .currency-label { @apply ml-auto self-start rounded-lg bg-white/5 px-2 py-1 text-[10px] font-semibold tracking-widest text-slate-400; }
@@ -47,8 +47,8 @@ h1, p, dl, dd { margin: 0; }
 .open-metric dd { @apply text-base font-medium tracking-tight tabular-nums text-slate-200; }
 .chart-heading { @apply mx-6 flex flex-wrap items-center justify-between gap-3 border-0 border-t border-solid border-white/5 pb-4 pt-5 sm:mx-10; }
 .chart-title { @apply text-xs font-medium text-slate-300; }
-.chart-window { @apply ml-3 text-[10px] text-slate-500; }
-.chart-hint { @apply hidden text-[10px] text-slate-500 sm:block; }
+.chart-window { @apply ml-3 text-[10px] text-slate-400; }
+.chart-hint { @apply hidden text-[10px] text-slate-400 sm:block; }
 .chart-canvas { @apply w-full; --stock-chart-height: 320px; }
 .dashboard-footer { @apply flex flex-wrap items-center justify-between gap-2 px-6 pb-6 pt-4 text-[10px] leading-relaxed text-slate-500 sm:px-10; }
 .feed-notice { @apply mx-6 mb-6 rounded-xl bg-amber-400/10 px-4 py-3 text-xs leading-relaxed text-amber-200 sm:mx-10; }

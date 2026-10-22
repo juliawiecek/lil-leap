@@ -1,6 +1,6 @@
 <section class="panel order-ticket" aria-label="Trade ticket">
   <div class="ticket-body">
-    <form method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
+    <form aria-describedby="pro-ticket-message" method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
       <div class="side-switch">
         @for (action of ['Buy', 'Sell']; track action) {
           <button
@@ -29,7 +29,7 @@
       <p class="ticket-note">Market order: fills at the live price when the market is open. Final price and total may differ from this estimate.</p>
       <label for="pro-quantity">Quantity</label
       ><input
-        id="pro-quantity"
+        id="pro-quantity" aria-describedby="pro-ticket-message"
         type="number"
         required
         min="1"
@@ -77,6 +77,6 @@
       }
       <button class="primary-button review-button" type="submit">Review Order</button>
     </form>
-    <output class="ticket-message">{{ desk().message() }}</output>
+    <output class="ticket-message" id="pro-ticket-message">{{ desk().message() }}</output>
   </div>
 </section>

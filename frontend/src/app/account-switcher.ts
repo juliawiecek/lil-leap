@@ -1,6 +1,7 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
+import { FocusAfterChange } from './focus-after-change';
 import { AccountsService } from './accounts.service';
 import { AccountSummary, MAX_ACCOUNTS, TransferResult, accountLabel, canTrade } from './accounts-api';
 
@@ -24,7 +25,7 @@ const CENTS = /^\d+(\.\d{1,2})?$/;
  */
 @Component({
   selector: 'app-account-switcher',
-  imports: [CurrencyPipe, DashboardIcon],
+  imports: [CurrencyPipe, DashboardIcon, FocusAfterChange],
   templateUrl: './account-switcher.html',
   styleUrl: './account-switcher.scss',
   host: {
@@ -36,6 +37,7 @@ export class AccountSwitcher {
   readonly accounts = inject(AccountsService);
   readonly #host = inject(ElementRef<HTMLElement>);
   readonly dialogRef = viewChild<ElementRef<HTMLDialogElement>>('accountDialog');
+  readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('accountTrigger');
 
   readonly menuOpen = signal(false);
   readonly dialog = signal<Dialog | null>(null);
@@ -91,6 +93,7 @@ export class AccountSwitcher {
     this.accounts.select(account.account_id);
     this.menuOpen.set(false);
     this.notice.set(`Now showing ${accountLabel(account)}.`);
+    this.trigger()?.nativeElement.focus({ preventScroll: true });
   }
 
   openAdd(): void {
@@ -155,6 +158,10 @@ export class AccountSwitcher {
     this.dialogRef()?.nativeElement.close?.();
     this.dialog.set(null);
     this.error.set('');
+  }
+  dialogClosed(): void {
+    this.dialog.set(null);
+    this.trigger()?.nativeElement.focus({ preventScroll: true });
   }
 
   /** Closes when the dimmed area around the dialog is clicked. */

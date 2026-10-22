@@ -48,7 +48,7 @@
         <h3>{{ r.name }}</h3>
         <p>{{ r.description }}</p>
         <button
-          [attr.data-testid]="'generate-' + r.kind"
+          [attr.data-testid]="'generate-' + r.kind" [attr.aria-label]="'Generate CSV: ' + r.name"
           [disabled]="!!reportDateError() || !!generating()"
           [attr.aria-busy]="generating() === r.kind"
           (click)="generateReport(r)"
@@ -68,17 +68,17 @@
     <h2>Recent exports</h2>
     <span class="muted">This session</span>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
     <table>
       <caption class="sr-only">Recent exports</caption>
       <thead>
         <tr>
-          <th>Report</th>
-          <th>Period (New York)</th>
-          <th>Generated</th>
-          <th class="numeric">Rows</th>
-          <th>Format</th>
-          <th></th>
+          <th scope="col">Report</th>
+          <th scope="col">Period (New York)</th>
+          <th scope="col">Generated</th>
+          <th scope="col" class="numeric">Rows</th>
+          <th scope="col">Format</th>
+          <th scope="col"><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
       <tbody>
@@ -89,7 +89,7 @@
             <td>{{ r.at | date: 'medium' }}</td>
             <td class="numeric">{{ r.rows }}</td>
             <td>CSV</td>
-            <td><button class="text-button" (click)="download(r)">Download ↓</button></td>
+            <td><button class="text-button" [attr.aria-label]="'Download ' + r.name" (click)="download(r)">Download ↓</button></td>
           </tr>
         } @empty {
           <tr>

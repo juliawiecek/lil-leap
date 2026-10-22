@@ -12,6 +12,7 @@
         <button
           type="button"
           [class.active]="activeTab() === item.label"
+          [attr.aria-label]="item.label"
           [attr.aria-current]="activeTab() === item.label ? 'page' : null"
           (click)="navigate(item.label)"
         >
@@ -25,7 +26,7 @@
   </aside>
   <div class="novice-main">
     <header class="novice-topbar" data-scan-group="Top bar">
-      <div class="company-search" data-scan-group="Search">
+      <div class="company-search" data-scan-group="Search" data-a11y-search>
         <app-dashboard-icon name="search" />
         <input
           aria-label="Search for a company or symbol"
@@ -35,7 +36,7 @@
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
-          <div class="company-results">
+          <div class="company-results" data-a11y-results role="group" aria-label="Stock search results">
             @for (quote of results(); track quote.symbol) {
               <button type="button" (click)="openTrade('Buy', quote.symbol)">
                 <strong>{{ quote.symbol }}</strong
@@ -58,14 +59,14 @@
           <button
             type="button"
             class="notification-button"
-            aria-label="Notifications"
+            aria-label="Notifications" aria-controls="novice-notifications"
             [attr.aria-expanded]="notifications()"
             (click)="notifications.set(!notifications())"
           >
             <app-dashboard-icon name="bell" /><i></i>
           </button>
           @if (notifications()) {
-            <div class="notification-popover">
+            <div class="notification-popover" id="novice-notifications" data-a11y-popover role="region" aria-label="Notifications">
               <strong>Notifications</strong>
               <p>You’re all caught up.</p>
             </div>
@@ -133,7 +134,7 @@
                       <app-dashboard-icon name="eye" />
                     </button>
                   </div>
-                  <div class="portfolio-value">
+                  <div class="portfolio-value" data-a11y-read data-a11y-label="Total portfolio value" [attr.data-a11y-description]="showBalance() ? null : 'Balance hidden'">
                     @if (!portfolioLoaded()) {
                       <span aria-live="polite">Loading…</span>
                     } @else {
@@ -202,17 +203,17 @@
                 }
               </div>
               @if (investmentTab() === 'Holdings') {
-                <div class="table-scroll">
+                <div class="table-scroll" tabindex="0" role="region" aria-label="Holdings table" data-scan-group="Holdings table">
                   <table class="holdings-table">
                     <caption class="sr-only">Holdings</caption>
                     <thead>
                       <tr>
-                        <th>Symbol · Name</th>
-                        <th>Value · Shares</th>
-                        <th>Avg. price</th>
-                        <th>Today</th>
-                        <th>Total return</th>
-                        <th><span class="sr-only">Actions</span></th>
+                        <th scope="col">Symbol · Name</th>
+                        <th scope="col">Value · Shares</th>
+                        <th scope="col">Avg. price</th>
+                        <th scope="col">Today</th>
+                        <th scope="col">Total return</th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -306,12 +307,15 @@
               <app-activity-feed />
             </section>
           }
+          @if (activeTab() === 'Learn') {
+            <app-novice-learn data-scan-group="Learn" />
+          }
           @if (activeTab() === 'Settings') {
             <section class="settings-page" aria-label="Account settings" data-scan-group="Account settings">
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
-                <header class="settings-profile">
+                <header class="settings-profile" data-a11y-sensitive>
                   <span class="settings-avatar" aria-hidden="true">{{ (userProfile.firstName || 'A').slice(0, 1).toUpperCase() }}{{ (userProfile.lastName || '').slice(0, 1).toUpperCase() }}</span>
                   <div class="settings-identity">
                     <span class="settings-eyebrow">Your profile</span>
@@ -321,7 +325,7 @@
                 </header>
                 <div class="settings-section">
                   <div class="settings-intro"><h2>Personal details</h2><p>Your contact information.</p></div>
-                  <dl class="settings-list">
+                  <dl class="settings-list" data-a11y-sensitive>
                     <div><dt>Phone</dt><dd>{{ userProfile.phone || 'Not provided' }}</dd></div>
                     <div><dt>Address</dt><dd>{{ userProfile.address || 'Not provided' }}</dd></div>
                   </dl>
@@ -438,13 +442,14 @@
                 <h2>Watchlist</h2>
                 <span class="muted-note">Open a stock to add or remove it</span>
               </div>
+              <div class="table-scroll" tabindex="0" role="region" aria-label="Watchlist table" data-scan-group="Watchlist table">
               <table class="watch-table">
                 <caption class="sr-only">Watchlist</caption>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Price</th>
-                    <th>Today</th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Today</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -465,6 +470,7 @@
                   }
                 </tbody>
               </table>
+              </div>
             </section>
           </div>
         }
@@ -529,7 +535,7 @@
       </div>
       <label for="novice-shares">Number of shares</label
       ><input
-        id="novice-shares"
+        id="novice-shares" aria-describedby="novice-trade-message"
         type="number"
         min="1"
         step="1"
@@ -572,7 +578,7 @@
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
       @if (reviewing()) {
-        <p class="review-confirmation review-summary" role="status">{{ reviewSummary() }}</p>
+        <p class="review-confirmation review-summary" role="status" appFocusAfterChange>{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
           <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
@@ -580,7 +586,7 @@
       } @else {
         <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
       }
-      <output>{{ tradeMessage() }}</output>
+      <output id="novice-trade-message">{{ tradeMessage() }}</output>
     </form>
   } @else if (modal() === 'allocation') {
     <div class="asset-class-list">

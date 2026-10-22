@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { accessibilityStore } from './accessibility';
 import { speakable } from './speech-text';
+import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff
@@ -336,7 +337,7 @@ export class ScanEngine {
     }
     this.#tracked = null;
     if (this.#utterance) {
-      globalThis.speechSynthesis?.cancel();
+      speechCoordinator.stop('switch');
       this.#utterance = null;
     }
     this.#doc.removeEventListener('keydown', this.#onKeyDown, true);
@@ -944,7 +945,7 @@ export class ScanEngine {
   }
 
   #say(raw: string, queue: boolean): void {
-    const synth = globalThis.speechSynthesis;
+    const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
     // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
     const text = this.#picker ? raw : speakable(raw);
     if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
@@ -1104,7 +1105,7 @@ export class SwitchScanService {
 
 /** Speaks one sentence right away, for confirmations given after the ring has stopped. */
 function speakNow(text: string): void {
-  const synth = globalThis.speechSynthesis;
+  const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
   if (synth && typeof globalThis.SpeechSynthesisUtterance === 'function') {
     synth.cancel();
     synth.speak(new SpeechSynthesisUtterance(text));

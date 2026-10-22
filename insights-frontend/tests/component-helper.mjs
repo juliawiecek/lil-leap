@@ -9,6 +9,7 @@ import { angularJitApplicationTransform } from '@angular/compiler-cli';
 // Use Angular's JIT transform for real input/output/query metadata and TypeScript
 // source maps. Compile in memory; production source files are never changed.
 const appRoot = new URL('../src/', import.meta.url).href;
+const sharedRoot = new URL('../../shared/', import.meta.url).href;
 const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['.ts']), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
@@ -17,7 +18,7 @@ const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['
 });
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (specifier.startsWith('.') && context.parentURL?.startsWith(appRoot)) {
+    if (specifier.startsWith('.') && (context.parentURL?.startsWith(appRoot) || context.parentURL?.startsWith(sharedRoot))) {
       const candidate = new URL(specifier + '.ts', context.parentURL);
       if (existsSync(candidate)) return nextResolve(candidate.href, context);
     }

@@ -32,7 +32,7 @@
 .tape-track {
   display: flex;
   width: max-content;
-  color: #747a70;
+  color: #92998b;
   font: 500 clamp(10px, 1vw, 12px) var(--font-mono);
   text-transform: uppercase;
   white-space: nowrap;
@@ -245,6 +245,8 @@ input:focus {
   padding-right: 64px;
 }
 .password-toggle {
+  min-width: 40px;
+  min-height: 28px;
   position: absolute;
   top: 50%;
   right: 12px;

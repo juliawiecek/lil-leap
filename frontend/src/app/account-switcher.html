@@ -1,8 +1,7 @@
-<div class="switcher">
+<div class="switcher" data-a11y-sensitive>
   <button
     type="button"
-    class="switcher-trigger"
-    aria-haspopup="true"
+    class="switcher-trigger" #accountTrigger
     [attr.aria-expanded]="menuOpen()"
     aria-controls="account-menu"
     (click)="toggleMenu()"
@@ -19,7 +18,7 @@
   </button>
 
   @if (menuOpen()) {
-    <div class="account-menu" id="account-menu">
+    <div class="account-menu" id="account-menu" data-a11y-popover>
       <p class="menu-title">Your accounts</p>
       <ul>
         @for (account of accounts.accounts(); track account.account_id) {
@@ -78,7 +77,7 @@
   class="account-dialog"
   aria-labelledby="account-dialog-title"
   (click)="backdrop($event)"
-  (close)="dialog.set(null)"
+  (close)="dialogClosed()"
 >
   @if (dialog() === 'add') {
     <form method="post" (submit)="submitAdd($event)" novalidate>
@@ -173,7 +172,7 @@
         </form>
       }
       @case ('review') {
-        <dl class="review-lines">
+        <dl class="review-lines" appFocusAfterChange data-a11y-read data-a11y-label="Review transfer details">
           <div><dt>From</dt><dd>{{ from() ? label(from()!) : '' }}</dd></div>
           <div><dt>To</dt><dd>{{ to() ? label(to()!) : '' }}</dd></div>
           <div><dt>Amount</dt><dd class="amount">{{ +amount() | currency }}</dd></div>
@@ -189,7 +188,7 @@
       }
       @case ('done') {
         @if (result(); as done) {
-          <p class="success" role="status">
+          <p class="success" role="status" appFocusAfterChange>
             Moved {{ done.amount | currency }} from {{ from() ? label(from()!) : 'your account' }} to
             {{ to() ? label(to()!) : 'your account' }}.
           </p>

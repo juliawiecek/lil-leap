@@ -99,6 +99,40 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
   });
 }
 
+test('switch control reaches the shared tools dialog, toggles voice settings and chooses larger text', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await page.clock.install({ time: new Date('2026-10-21T15:30:00Z') });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await page.addInitScript(() => {
+    localStorage.setItem('nexttrade.accessibility', JSON.stringify({ switchControl: { enabled: false, intervalMs: 700, speak: false, backEverySec: 0, pauseEverySec: 0 } }));
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+      speaking: false, speak(u) { setTimeout(() => u.onend?.(), 1); }, cancel() {},
+    } });
+  });
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Accessibility', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Accessibility tools', exact: true });
+  await expect(dialog).toBeVisible();
+  await page.clock.pauseAt(new Date('2026-10-21T15:30:10Z'));
+  await page.keyboard.press('Alt+s'); await page.clock.runFor(20);
+  const press = async () => { await page.keyboard.press('Space'); await page.clock.runFor(65); };
+  await scanTo(page, state => state.live === 'Voice assistance group'); await press();
+  await scanTo(page, state => /Enable built-in voice assistance/.test(state.name)); await press();
+  await expect(dialog.getByLabel('Enable built-in voice assistance', { exact: true })).toBeChecked();
+  await scanTo(page, state => /Speak on keyboard focus/.test(state.name)); await press();
+  await expect(dialog.getByLabel('Speak on keyboard focus', { exact: true })).toBeChecked();
+  await scanTo(page, state => state.live === 'Back'); await press();
+  await scanTo(page, state => state.live === 'Visual assistance group'); await press();
+  await scanTo(page, state => /Minimum text size/.test(state.name)); await press();
+  await scanTo(page, state => /Extra large/.test(state.name)); await press();
+  await expect(page.locator('html')).toHaveAttribute('data-a11y-text', 'extra-large');
+  await expectVisibleRing(page);
+  await expect(dialog.locator('.scan-ring')).toHaveCount(1);
+  await page.keyboard.press('Alt+s');
+  await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();
+});
+
 for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} native Windows speech completes and the ring advances in real time`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade' || !process.env.NEXTTRADE_NATIVE_SPEECH);
