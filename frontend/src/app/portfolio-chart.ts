@@ -514,7 +514,9 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Up or down over the shown period: the colour of the line, the dot and the selected period. */
   readonly tone = computed(() => {
     const points = this.history();
-    if (points.length < 2 || points.at(-1)!.value === startValue(points)) return 'flat';
+    if (points.length < 2 || points.at(-1)!.value === startValue(points)) {
+      return 'flat';
+    }
     return points.at(-1)!.value < startValue(points) ? 'down' : 'up';
   });
   /** The value scale, fitted to the values shown, so each move up or down is visible. */

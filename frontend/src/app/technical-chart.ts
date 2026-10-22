@@ -85,7 +85,9 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     this.inspected.set(this.candles().reduce<PricePoint | null>((best, p) => !best || Math.abs(p.at - at) < Math.abs(best.at - at) ? p : best, null));
   }
   inspectKey(event: KeyboardEvent): void {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) return;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) {
+      return;
+    }
     event.preventDefault();
     if (event.key === 'Escape') { this.inspected.set(null); return; }
     const points = this.candles();
@@ -97,8 +99,15 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     if (this.#key !== this.chartKey()) { this.#key = this.chartKey(); this.zoom.set(1); this.anchor.set(null); this.inspected.set(null); }
   }
   ngAfterViewInit(): void {
-    if (typeof ResizeObserver === 'undefined') return;
-    this.#resize = new ResizeObserver(entries => { const width = entries[0]?.contentRect.width; if (width > 0) this.width.set(Math.round(width)); });
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.#resize = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width;
+      if (width > 0) {
+        this.width.set(Math.round(width));
+      }
+    });
     this.#resize.observe(this.svg().nativeElement);
   }
   ngOnDestroy(): void { this.#resize?.disconnect(); }

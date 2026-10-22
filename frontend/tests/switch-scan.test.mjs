@@ -50,6 +50,11 @@ function choose(engine, ...path) {
   }
 }
 
+test('a control with no text, label, placeholder or title is read as "Control"', () => {
+  doc.body.innerHTML = '<button id="blank"></button>';
+  assert.equal(scanLabel(doc.getElementById('blank')), 'Control');
+});
+
 test('settings fall back to safe defaults', () => {
   const defaults = { enabled: false, intervalMs: 1200, key: 'Space', speak: false, backEverySec: 30, pauseEverySec: 120 };
   assert.deepEqual(parseScanSettings(undefined), defaults);
@@ -170,6 +175,22 @@ test('an item redrawn under the ring (live prices) is not read out again', (t) =
   const before = said().length;
   engine.press();
   assert.deepEqual(said().slice(before), ['Buy selected.'], 'the redrawn Buy is the same item, so it is not repeated');
+});
+
+test('the ring finds an item again after it is redrawn and gives it focus back', (t) => {
+  let frame;
+  t.mock.method(browser, 'requestAnimationFrame', (callback) => { frame = callback; return 1; });
+  t.mock.method(browser, 'cancelAnimationFrame', () => { frame = undefined; });
+  // The ring follows its item every frame only while scanning advances on its own.
+  const engine = setup(t, { autoAdvance: true, intervalMs: 60_000 });
+  choose(engine, 'group:Trade');
+  waitFor(engine, 'control:Buy');
+  doc.getElementById('buy').outerHTML = '<button id="buy">Buy</button>';
+  const redrawn = doc.getElementById('buy');
+  assert.ok(frame, 'the ring follows its item every frame');
+  frame();
+  assert.equal(describe(engine.current()), 'control:Buy');
+  assert.equal(doc.activeElement, redrawn);
 });
 
 test('the page can speak through the ring, after what the ring is saying', (t) => {
