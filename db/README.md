@@ -86,6 +86,7 @@ WAL; a prolonged outage can require a replica rebuild.
   history before upgrading. Orders checks for the trigger at startup.
 - Apply [migration 009](migrations/009_cash_settlement_detail.sql) as schema owner before deploying portfolio summaries. Pause settlement writers; it backfills historical cash as settled, adds hold storage, preserves the legacy `v_account_cash.balance` column, and grants existing ledger readers SELECT on holds. New databases include these changes in the finalized schema.
 - Apply [migration 010](migrations/010_cash_transfers.sql) as schema owner before deploying account-to-account transfers (PS-05). It adds `TRANSFER` to `chk_transaction_type`; a transfer writes one negative and one positive `TRANSFER` row in a single transaction.
+- Apply [migration 018](migrations/018_trade_clients.sql) as schema owner before deploying Trade lookup from the database (BR-15). It adds `v_trade_clients` (a trader's id, name and email only) and grants it to `reporting_user` and `app_user`, so Insights can show who placed a trade without access to `users` or `customer_profiles`.
 - Current fills settle immediately. Pending-cash and hold fields are available for reads; automatic reservation/release and delayed settlement workflows remain future work.
 - Orders records idempotent submissions and settles fills, ledger entries, caches,
   status and audit data atomically under account-level locking.

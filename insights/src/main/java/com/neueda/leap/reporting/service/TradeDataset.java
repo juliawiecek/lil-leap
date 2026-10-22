@@ -123,7 +123,7 @@ public class TradeDataset {
                 new BigDecimal(columns.get(18)));
     }
 
-    /** Splits one CSV line, honouring quoted fields and doubled quotes; shared with {@link TradeEventDataset}. */
+    /** Splits one CSV line, honouring quoted fields and doubled quotes. */
     static List<String> parseCsvLine(String line) {
         List<String> values = new ArrayList<>();
         StringBuilder current = new StringBuilder();
