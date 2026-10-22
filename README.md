@@ -631,6 +631,54 @@ python -m http.server 8000 --directory docs/javadoc
 Then visit <http://localhost:8000/>. GitHub's repository viewer displays HTML source;
 use a local browser or static web server to browse the rendered documentation.
 
+## Accessibility
+
+Both trading dashboards (novice and advanced) can be used by ear, with a keyboard or a
+single switch, and with colours that colour-blind traders can tell apart (BR-18). Every
+feature starts off and is remembered in the browser. Turn them on in **Settings >
+Accessibility**:
+
+| Feature | How to use it | Options |
+|---------|---------------|---------|
+| Colour-blind mode (PS-27) | Pick a palette in Settings > Accessibility. Gains and losses always show an arrow and a + or - sign as well, so no information relies on colour alone (PS-28). | Off, Red-green safe, Blue-yellow safe |
+| Audio briefing (PS-18) | Press **Briefing** in the top bar or `Alt` + `B` for a short spoken summary of the market, your portfolio and your recent orders. With balances hidden, amounts are never read out. | Voice speed (Slow to Faster), Repeat (only when asked, every 2 or 5 minutes) |
+| Switch control (PS-19) | A ring moves through the page; press your switch key to choose what it is on. Number and text fields open an on-screen keypad. `Alt` + `S` turns it on, reading each item aloud, or off, on any page. | Scan speed (0.7 s to 3 s), switch key (Space bar or Enter), "Go back?" and "Pause?" prompts, read each item aloud |
+| Order read-back (PS-23) | Before an order is confirmed, the review says exactly what will be placed, for example "You're about to buy 2 shares of Apple for about $450", including closed-market and delayed-price notes. Switch control reads it aloud. | Always on |
+| Keyboard use (PS-17, PS-20) | Every control is reachable with `Tab`. The first `Tab` on a page offers **Skip to main content**, and every page has its own title. A focused chart can be explored with the arrow keys, `Home` and `End`. | Always on |
+| Inactivity warning (PS-30) | One minute before the inactivity sign-out (`SESSION_INACTIVITY_MINUTES`, 10 by default), a **Still there?** dialog counts down and offers **Stay signed in**. | Always on |
+
+Keyboard shortcuts (press `?` anywhere to see the list):
+
+| Keys | Action |
+|------|--------|
+| `?` | Open the shortcut list (not while typing in a field) |
+| `Alt` + `B` | Play the audio briefing |
+| `Alt` + `S` | Turn switch control on, reading each item aloud, or off |
+| `Tab` / `Shift` + `Tab` | Move to the next or previous control |
+| `Enter` / `Space` | Activate the focused button or link, or review an order |
+| `Esc` | Close a dialog, clear the search, or stop exploring a chart |
+| `←` `→`, `Home` `End` | On a focused chart, step through its prices or jump to the first or latest |
+
+The audio briefing and reading aloud use the browser's built-in speech (Chrome or Edge
+recommended); turn the sound up.
+
+To check accessibility, run the axe checks (WCAG 2.2 AA rules) against a running
+frontend:
+
+```sh
+cd frontend
+npx ng serve --port 4320          # in a second terminal, with the backend services running
+A11Y_PASSWORD=<test password> npm run test:a11y
+```
+
+`A11Y_BASE_URL` and `A11Y_EMAIL` are optional. The latest results are in the
+[axe report](docs/accessibility/axe-report.md). More detail:
+
+- [Accessibility stories](docs/accessibility/accessibility-stories.md) and the [BR-18 requirement](docs/accessibility/BR-18-accessibility.md)
+- [Colour tokens](docs/accessibility/PS-27-colour-tokens.md) and [non-colour signals](docs/accessibility/PS-28-non-colour-signals.md)
+- [Inactivity warning](docs/accessibility/PS-30-inactivity-warning.md)
+- [Demo script](docs/accessibility/demo-script.md): a four-minute walkthrough of every feature
+
 ## Synthetic Quotes
 
 Holdings generates the live synthetic US-equity quotes (there is no separate quote
