@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 
 /**
  * Every keyboard shortcut NextTrade understands, listed in one place so both dashboards' Keyboard
- * Shortcuts dialogs stay the same (PS-17). Accessibility tickets add theirs here (Alt+B, Alt+W ...).
+ * Shortcuts dialogs stay the same (PS-17). Accessibility tickets add theirs here (Alt+B, Alt+S, Alt+W ...).
  */
 export interface KeyboardShortcut {
   keys: readonly string[];
@@ -13,6 +13,10 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: ['?'], action: 'Open this list of shortcuts from anywhere on the dashboard.' },
   { keys: ['Alt + B'], action: 'Play the audio market briefing.' },
   { keys: ['Alt + S'], action: 'Turn switch control on, reading each item aloud, or off. Works on every page.' },
+  {
+    keys: ['Alt + W'],
+    action: "What's this? Explains the focused item, or the one under the switch-control ring or the mouse, in plain English, read aloud with a caption.",
+  },
   { keys: ['Tab'], action: 'Move to the next control. Shift + Tab moves back.' },
   { keys: ['Enter'], action: 'Activate the focused button or link, or review an order.' },
   { keys: ['Space'], action: 'Press the focused button or switch.' },

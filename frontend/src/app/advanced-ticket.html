@@ -26,7 +26,7 @@
         ><span>{{ desk().selected()?.name }}</span
         ><app-dashboard-icon name="search" />
       </div>
-      <p class="ticket-note">Market order: fills at the live price when the market is open. Final price and total may differ from this estimate.</p>
+      <p class="ticket-note" data-glossary="market-order">Market order: fills at the live price when the market is open. Final price and total may differ from this estimate.</p>
       <label for="pro-quantity">Quantity</label
       ><input
         id="pro-quantity"
@@ -52,7 +52,7 @@
         <p class="ticket-warning" role="note">{{ desk().closedWarning() }}</p>
       }
       @if (desk().protectionNote()) {
-        <div class="protection-row">
+        <div class="protection-row" data-glossary="price-protection">
           <div class="protection-copy">
             <span>Price protection <b>{{ desk().tolerance() }}%</b></span>
             <small>{{ desk().protectionNote() }}</small>
@@ -75,7 +75,7 @@
           }
         </div>
       }
-      <button class="primary-button review-button" type="submit">Review Order</button>
+      <button class="primary-button review-button" type="submit" data-glossary="market-order">Review Order</button>
     </form>
     <output class="ticket-message">{{ desk().message() }}</output>
   </div>

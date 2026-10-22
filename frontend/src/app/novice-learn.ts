@@ -1,6 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
+import { LEARN_GLOSSARY } from './glossary';
 
 @Component({
   selector: 'app-novice-learn',
@@ -141,12 +142,8 @@ export class NoviceLearn {
       .filter((l) => this.topic() === 'All topics' || l.topic === this.topic()),
   );
   readonly current = computed(() => this.lessons[this.active()]);
-  readonly glossary = [
-    { term: 'Share', definition: 'A unit of ownership in a company.' },
-    { term: 'Dividend', definition: 'A distribution a company may pay to shareholders.' },
-    { term: 'Time horizon', definition: 'The time until you expect to need invested money.' },
-    { term: 'Limit order', definition: 'An order to buy or sell at a specified price or better.' },
-  ];
+  /** The same plain-English words "What's this?" (Alt+W) reads out on the dashboards (PS-23). */
+  readonly glossary = LEARN_GLOSSARY;
   selectLesson(index: number): void {
     this.active.set(index);
     this.answer.set(null);

@@ -161,7 +161,7 @@
               }
               <p class="sr-only" aria-live="polite">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
-                <div>
+                <div data-glossary="buying-power">
                   <span>Buying power</span
                   ><strong>{{ showBalance() ? (buyingPower() | currency) : '••••••' }}</strong>
                 </div>
@@ -173,7 +173,7 @@
                   <span>Today’s return</span
                   ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
-                <div>
+                <div data-glossary="total-return">
                   <span>Total return</span
                   ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
@@ -208,9 +208,9 @@
                       <tr>
                         <th>Symbol · Name</th>
                         <th>Value · Shares</th>
-                        <th>Avg. price</th>
+                        <th data-glossary="average-cost">Avg. price</th>
                         <th>Today</th>
-                        <th>Total return</th>
+                        <th data-glossary="total-return">Total return</th>
                         <th><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
@@ -541,9 +541,9 @@
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
-      <p>Buying power: {{ buyingPower() | currency }}</p>
+      <p data-glossary="buying-power">Buying power: {{ buyingPower() | currency }}</p>
       @if (protectionNote()) {
-        <div class="protection-row">
+        <div class="protection-row" data-glossary="price-protection">
           <div class="protection-copy">
             <span>Price protection <b>{{ tolerance() }}%</b></span>
             <small>{{ protectionNote() }}</small>
@@ -576,7 +576,7 @@
           <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
         </div>
       } @else {
-        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
+        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" data-glossary="market-order">Review {{ side().toLowerCase() }}</button>
       }
       <output>{{ tradeMessage() }}</output>
     </form>

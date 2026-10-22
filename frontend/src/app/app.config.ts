@@ -11,6 +11,7 @@ import { SafeErrorHandler } from './safe-error-handler';
 import { provideAccessibility, provideAccessibilityStartup } from './accessibility';
 import { provideColourMode } from './colour-mode';
 import { SwitchScanService } from './switch-scan';
+import { listenForGlossary } from './glossary';
 import { PageTitleStrategy } from './page-title';
 
 export const appConfig: ApplicationConfig = {
@@ -26,6 +27,11 @@ export const appConfig: ApplicationConfig = {
     // Switch control resumes straight after a reload when it was left on, and Alt+S starts it
     // from any page, sign-in included (PS-19).
     provideAccessibilityStartup(() => inject(SwitchScanService).listenForShortcut()),
+    // Alt+W explains the focused or ringed item aloud, with a caption, on every page (PS-23).
+    provideAccessibilityStartup(() => {
+      const scan = inject(SwitchScanService);
+      listenForGlossary(document, scan.speech, () => scan.engine?.ringed() ?? null);
+    }),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },

@@ -13,7 +13,7 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
 @Component({
   selector: 'app-price-protection-settings',
   template: `
-    <div class="setting-row">
+    <div class="setting-row" data-glossary="price-protection">
       <div class="setting-label">
         <span id="protection-label">Price protection</span>
         <small>Orders are rejected, with nothing charged, if the price moves against you by more than this before they fill.</small>
@@ -45,7 +45,7 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
       </div>
     </div>
 
-    <div class="setting-row">
+    <div class="setting-row" data-glossary="price-protection">
       <div class="setting-label">
         <span id="overrides-label">Per-stock overrides</span>
         <small>A different limit for particular stocks.</small>

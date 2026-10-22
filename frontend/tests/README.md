@@ -35,6 +35,10 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
   aloud, "Go back?" and "Pause?" offers, ringing a settings toggle with its row,
   not re-reading redrawn prices, Alt+S, and settings kept in the Accessibility
   settings store.
+- `speech.test.mjs`: PS-23 shared voice (polite and urgent speech, queueing, a voice
+  outside the app), the caption strip and its timing, dialogs, the Captions setting.
+- `glossary.test.mjs`: PS-23 "What's this?" entries, lookup by `data-glossary`, Alt+W,
+  which item is explained, and the Learn hub sharing the glossary.
 - `spoken-labels.test.mjs`: chart period names and the spoken chart summary,
   price tape items read by company name, cleaned-up speech text, and the PS-23
   order read-back.
