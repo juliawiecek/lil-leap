@@ -144,7 +144,8 @@ test('sector bars and the interactive performance heat map expose the same curre
   const heat = page.locator('app-chart-access').filter({ has: page.locator('#advanced-heatmap-summary') });
   await heat.getByRole('button', { name: 'Explain this chart', exact: true }).click();
   await expect(heat.locator('p').first()).toContainText('AAPL');
-  const toggle = heat.getByRole('button', { name: 'Show as table', exact: true });
+  const tableId = await heat.getByRole('button', { name: 'Show as table', exact: true }).getAttribute('aria-controls');
+  const toggle = heat.locator(`button[aria-controls="${tableId}"]`);
   await toggle.focus(); await page.keyboard.press('Space');
   await expect(toggle).toBeFocused();
   await expect(heat.locator('tbody tr')).toHaveCount(2);
