@@ -1,3 +1,4 @@
+import type { TradeMark } from './trade-marks';
 import { FinancialChange } from './financial-change';
 import { CurrencyPipe, DecimalPipe, NgClass, isPlatformBrowser } from '@angular/common';
 import {
@@ -233,6 +234,9 @@ function currentSessionOpen(
 export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDestroy {
   readonly selectedAsset = input<StockAsset | null>(null);
   readonly windowSeconds = input(86400);
+  readonly trades = input<readonly TradeMark[]>([]);
+  readonly averageCost = input<number | null>(null);
+  readonly privateValues = input(false);
   readonly sampleMs = input<ChartSampleMs>(5000);
   readonly #sampleClock = new BehaviorSubject<ChartSampleMs>(5000);
   readonly #state = signal<StockDashboardState>({

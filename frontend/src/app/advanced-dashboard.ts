@@ -1,3 +1,5 @@
+import { ChartAccess, ChartFocus } from './chart-access';
+import { categoryDescription, categoryTable, comparisonDescription, comparisonTable } from '../../../shared/chart-description';
 import { PriceFlash } from './price-flash';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
@@ -103,7 +105,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
@@ -257,6 +259,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly dayGain = signal(0);
   readonly dayGainPercent = signal(0);
   /** Cash and stocks as shares of the total, for the summary and the exposure panel. */
+  readonly exposureCategories = computed(() => {
+    const a = this.exposure();
+    return [{ label: 'Equities', value: a.equities, percent: a.equitiesPercent }, { label: 'Cash', value: a.cash, percent: a.cashPercent }];
+  });
+  readonly exposureDescription = computed(() => !this.portfolioLoaded() ? 'Portfolio exposure. Balances have not loaded yet.' : categoryDescription('Portfolio exposure', this.exposureCategories(), this.privateBalance()));
+  readonly exposureTable = computed(() => this.portfolioLoaded() ? categoryTable(this.exposureCategories(), this.privateBalance()) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
   readonly exposure = computed(() => {
     const total = this.portfolio();
     const equities = Math.max(0, Math.round((total - this.buyingPower()) * 100) / 100);
@@ -282,6 +290,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     moves.sort((a, b) => b.change - a.change);
     return moves.map((m) => ({ ...m, width: (Math.abs(m.change) / biggest) * 100 }));
   });
+  readonly sectorCategories = computed(() => this.sectors().map(s => ({ label: s.name, value: s.change })));
+  readonly sectorDescription = computed(() => comparisonDescription('Sector performance today', this.sectorCategories()) + ' Each sector is the equally weighted average move of the stocks NextTrade lists in that sector.');
+  readonly sectorTable = computed(() => ({ ...comparisonTable(this.sectorCategories()), note: 'Equally weighted averages of the listed stocks in each sector, not an index or the entire market.' }));
+  readonly heatMapQuotes = computed(() => this.quotes().slice(0, 9));
+  readonly heatCategories = computed(() => this.heatMapQuotes().map(q => ({ label: q.symbol, value: q.change })));
+  readonly heatDescription = computed(() => comparisonDescription('Listed stock performance today', this.heatCategories()) + ' Select a stock to open its chart and trade ticket.');
+  readonly heatTable = computed(() => comparisonTable(this.heatCategories()));
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');

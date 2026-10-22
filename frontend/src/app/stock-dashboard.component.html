@@ -95,11 +95,11 @@
     <span class="chart-hint">Move over the chart to explore</span>
   </div>
   <app-stock-svg-chart
-    class="chart-canvas"
+    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()"
     [windowSeconds]="windowSeconds()"
-    [label]="(asset()?.symbol || 'Stock') + ' one-day stock price'"
+    [label]="(asset()?.symbol || selectedAsset()?.symbol || 'Stock') + (windowSeconds() === 86400 ? ' one-day stock price' : ' stock price over the last ' + windowSeconds() + ' seconds')"
     [emptyLabel]="
-      state().connection === 'connecting' ? 'Loading price history?' : 'No price history available'
+      state().connection === 'connecting' ? 'Price history is loading.' : 'No price history available.'
     "
   />
 

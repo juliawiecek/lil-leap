@@ -1,5 +1,10 @@
+import { ChartAccess, ChartFocus } from './chart-access';
+import { describeSeries, seriesTable, chartDate, chartValue, type ChartTable } from '../../../shared/chart-description';
+import { describeTrades } from './technical-chart-data';
+import type { TradeMark } from './trade-marks';
 ﻿import { isPlatformBrowser } from '@angular/common';
 import {
+  computed,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -50,10 +55,12 @@ const TIME = new Intl.DateTimeFormat('en-US', {
 @Component({
   selector: 'app-stock-svg-chart',
   standalone: true,
+  imports: [ChartAccess, ChartFocus],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <div class="plot">
     <svg
-      #svg
+      #svg [appChartFocus]="access"
       width="100%"
       height="100%"
       tabindex="0"
@@ -108,6 +115,8 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         <text data-time="2" />
       </g>
     </svg>
+    </div>
+    <app-chart-access #access [id]="gradientId" [label]="label()" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="label() + windowSeconds()" />
     <div #tooltip class="tooltip" role="status" aria-live="off" hidden></div>
     @if (empty()) {
       <p class="empty" role="status">{{ emptyLabel() }}</p>
@@ -119,10 +128,10 @@ const TIME = new Intl.DateTimeFormat('en-US', {
         display: block;
         position: relative;
         width: 100%;
-        height: 100%;
         min-height: 180px;
         min-width: 0;
       }
+      .plot { height: var(--stock-chart-height, 320px); }
       svg {
         display: block;
         overflow: hidden;
@@ -168,9 +177,34 @@ const TIME = new Intl.DateTimeFormat('en-US', {
 })
 export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly windowSeconds = input(86400);
-  readonly label = input('One-day stock price');
+  readonly label = input('Stock price');
   readonly emptyLabel = input('No prices available yet');
   readonly palette = EMERALD_AREA;
+  readonly trades = input<readonly TradeMark[]>([]);
+  readonly averageCost = input<number | null>(null);
+  readonly privateValues = input(false);
+  readonly accessPoints = signal<readonly { at: number; value: number }[]>([]);
+  readonly accessCurrency = signal('USD');
+  readonly accessOpening = signal<number | null>(null);
+  readonly viewTrades = computed(() => {
+    const points = this.accessPoints();
+    return this.trades().filter(t => points.length && t.at >= points[0].at && t.at <= points.at(-1)!.at);
+  });
+  readonly description = computed(() => describeSeries(this.accessPoints(), { name: this.label(), currency: this.accessCurrency(), empty: this.emptyLabel(), period: this.windowSeconds() === 86400 ? 'one day' : `last ${this.windowSeconds()} seconds` }) + ' ' + this.performanceText() + '. ' + describeTrades(this.viewTrades(), this.accessPoints().at(-1)?.value, this.averageCost(), this.privateValues()));
+  readonly dataTable = computed(() => this.makeTable(true));
+  readonly allData = computed(() => this.makeTable(false));
+  private makeTable(group: boolean): ChartTable {
+    const table = seriesTable(this.accessPoints(), { currency: this.accessCurrency() }, group);
+    table.references = [
+      ...(this.accessOpening() !== null ? [{ label: 'Session open', value: chartValue(this.accessOpening()!, { currency: this.accessCurrency() }) }] : []),
+      ...(!this.privateValues() && this.averageCost() !== null && Number.isFinite(this.averageCost()) ? [{ label: 'Average cost reference', value: chartValue(this.averageCost()!, { currency: this.accessCurrency() }) }] : []),
+    ];
+    if (this.privateValues() || !this.viewTrades().length) return table;
+    return { ...table, columns: [...table.columns, 'Your trades'], rows: [
+      ...table.rows.map(row => [...row, '']),
+      ...this.viewTrades().map(t => [chartDate(t.at), ...table.columns.slice(1).map(() => ''), `${t.side === 'BUY' ? 'Bought' : 'Sold'} ${t.quantity} at ${chartValue(t.price, { currency: this.accessCurrency() })}`]),
+    ] };
+  }
   readonly empty = signal(true);
   readonly performance = signal<'gain' | 'loss' | 'neutral'>('neutral');
   readonly performanceText = signal('Session comparison unavailable');
@@ -255,6 +289,10 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     const hasPrices = points.some(validPrice);
     this.empty.set(!hasPrices);
     if (!hasPrices) {
+      this.accessPoints.set([]);
+      this.accessOpening.set(null);
+      this.performance.set('neutral');
+      this.performanceText.set('Session comparison unavailable');
       this.#points = [];
       this.#range = undefined;
       this.#nodes.get('line')?.setAttribute('d', '');
@@ -273,6 +311,8 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
    * palette's gain or loss colour, gradient and dash. Every palette gets both states.
    */
   setPerformance(price: number, open: number | null, currency = 'USD'): void {
+    this.accessCurrency.set(currency);
+    this.accessOpening.set(open !== null && Number.isFinite(open) && open > 0 ? open : null);
     const state = performanceState(price, open);
     this.performance.set(state);
     // At-the-open counts as a gain for styling, but the label still says so plainly.
@@ -304,6 +344,11 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     // Freeze the inspection copy as well as the viewport; live updates remain buffered.
     this.#points = [...points];
     this.#range = range;
+    const observations = points.filter(p => p.time >= range.from && p.time <= Math.min(range.to, range.reveal)).map(p => ({ at: p.time * 1000, value: p.price }));
+    const before = this.accessPoints();
+    if (observations.length !== before.length || observations.some((p, i) => p.at !== before[i].at || p.value !== before[i].value)) {
+      this.#zone.run(() => this.accessPoints.set(observations));
+    }
     if (this.empty()) {
       this.empty.set(false);
     }

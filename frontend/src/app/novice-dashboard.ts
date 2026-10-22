@@ -1,3 +1,5 @@
+import { ChartAccess, ChartFocus } from './chart-access';
+import { categoryDescription, categoryTable } from '../../../shared/chart-description';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
@@ -100,7 +102,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -381,6 +383,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     return { title: 'Spread across companies', detail: `${holdings.length} companies, none above ${Math.round(largest * 100)}% of your stocks.` };
   });
+  readonly allocationCategories = computed(() => {
+    const a = this.assetAllocation();
+    return [{ label: 'Stocks', value: a.stocksValue, percent: a.stocksPercent }, { label: 'Cash', value: a.cashValue, percent: a.cashPercent }];
+  });
+  readonly allocationDescription = computed(() => !this.portfolioLoaded() ? 'Asset allocation. Balances have not loaded yet.' : categoryDescription('Asset allocation', this.allocationCategories(), !this.showBalance()));
+  readonly allocationTable = computed(() => this.portfolioLoaded() ? categoryTable(this.allocationCategories(), !this.showBalance()) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
   readonly assetAllocation = computed(() => {
     const stocksValue = this.holdings().reduce((sum, h) => sum + h.value, 0);
     const cashValue = this.buyingPower();

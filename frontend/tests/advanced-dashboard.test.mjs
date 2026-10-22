@@ -11,6 +11,18 @@ const LISTED = [['AAPL', 176.56, 1.85], ['NVDA', 893.12, 2.36], ['MSFT', 424.31,
 const feedWith = () => fakeFeed(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
 const { OrderSubmissionClient, OrderSubmissionError } = await import('../src/app/order-submission-api.ts');
 
+test('sector and heat-map alternatives update from the exact displayed quote subset and sector averages', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(fakeFeed([]))]);
+  desk.quotes.set(Array.from({ length: 10 }, (_, i) => ({ symbol: `STOCK${i}`, name: `Stock ${i}`, sector: i < 2 ? 'Technology' : 'Other', price: 100, change: i === 0 ? 4 : -2 })));
+  assert.match(desk.sectorDescription(), /Technology: up 1 percent/);
+  assert.deepEqual(desk.sectorTable().rows.find(row => row[0] === 'Technology'), ['Technology', '+1%']);
+  assert.equal(desk.heatTable().rows.length, 9);
+  assert.doesNotMatch(desk.heatDescription(), /STOCK9/);
+  desk.quotes.update(rows => rows.map(q => ({ ...q, change: 3 })));
+  assert.match(desk.sectorDescription(), /Technology: up 3 percent/);
+  assert.deepEqual(desk.heatTable().rows[0], ['STOCK0', '+3%']);
+});
+
 // Mock AuthService that provides an accessToken
 class MockAuthService {
   get accessToken() {

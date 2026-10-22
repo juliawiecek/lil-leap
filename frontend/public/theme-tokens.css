@@ -376,7 +376,7 @@
   --category-tone-07: #232030;
   --loss-tone-14: var(--loss);
   --category-wash-08: color-mix(in srgb, var(--buy) 12%, transparent);
-  --buy-deep: #a998e7;
+  --buy-deep: #9588e7;
   --buy-light: #bfaefd;
   --buy: #b1a0ef;
   --category-wash-09: color-mix(in srgb, var(--buy) 0%, transparent);
@@ -479,7 +479,7 @@
   --category-tone-07: #27242f;
   --loss-tone-14: var(--loss);
   --category-wash-08: color-mix(in srgb, var(--buy) 12%, transparent);
-  --buy-deep: #bdabe4;
+  --buy-deep: #a99be4;
   --buy-light: #d3c1fa;
   --buy: #c5b3ec;
   --category-wash-09: color-mix(in srgb, var(--buy) 0%, transparent);

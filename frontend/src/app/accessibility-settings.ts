@@ -1,3 +1,4 @@
+import { ChartVoice } from './chart-voice';
 import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
@@ -36,6 +37,11 @@ import { ColourModeStore } from './colour-mode';
           </div>
         </fieldset>
         <!-- Feature cards (PS-18, PS-19, PS-21, PS-22, PS-27) go here, one per feature. -->
+        <fieldset class="a11y-card colour-mode">
+          <legend>Chart voice</legend>
+          <label class="colour-option"><input type="checkbox" [checked]="chartVoice.enabled()" (change)="chartVoice.setEnabled($any($event.target).checked)" />Read chart summaries aloud</label>
+          <p>Hear a chart when you focus it or choose Explain this chart. Uses your briefing voice speed.</p>
+        </fieldset>
         <app-briefing-settings />
         <app-switch-scan-settings />
         <div class="a11y-card">
@@ -80,6 +86,7 @@ import { ColourModeStore } from './colour-mode';
   ],
 })
 export class AccessibilitySettings {
+  readonly chartVoice = inject(ChartVoice);
   readonly colours = inject(ColourModeStore);
   readonly colourOptions = [
     { value: 'off', label: 'Off' },

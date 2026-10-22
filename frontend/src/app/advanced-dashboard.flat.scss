@@ -231,6 +231,10 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
 .market-panel .market-tabs { display: flex; width: max-content; height: auto; margin: 12px 16px 4px; }
 .market-panel .market-tabs button { padding: 0 10px; border: 0; }
 .market-panel .heat-map { margin: 12px 16px 0; }
+.market-panel > app-chart-access { margin: 0 16px; }
+@media (min-width: 951px) {
+  .pro-grid:not(.secondary-page) .watch-panel:has(app-chart-access button[aria-expanded='true']) { height: auto; min-height: 460px; }
+}
 .market-panel .sector-list { margin: 14px 16px 0; }
 .market-panel .sector-list > div { height: 40px; }
 .market-panel .mover-row { width: 100%; box-sizing: border-box; padding: 12px 16px; }

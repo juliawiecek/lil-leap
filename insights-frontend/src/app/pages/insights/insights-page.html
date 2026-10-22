@@ -15,7 +15,7 @@
       <span class="muted">{{ count(tradesToday()) }} trades · New York time</span>
     </div>
     @if (tradesToday()) {
-      <app-insights-chart [points]="trendPoints()" label="Trades per hour today, New York time" prefix="" />
+      <app-insights-chart [points]="trendPoints()" [context]="summary()?.date ?? ''" label="Trades per hour today, New York time" prefix="" />
     } @else {
       <div class="empty">
         <app-dashboard-icon name="chart" />
@@ -29,15 +29,15 @@
       <h2 id="top-title">Top traded today</h2>
       <span class="muted">By number of trades</span>
     </div>
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap ranking-graphic" role="img" tabindex="0" aria-label="Most traded stocks today" aria-describedby="insights-top-summary" (focus)="rankingAccess.focusSummary()" (blur)="rankingAccess.focused.set(false)">
+      <table aria-hidden="true">
         <caption class="sr-only">Most traded stocks today</caption>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Stock</th>
-            <th class="numeric">Trades</th>
-            <th class="bar-cell"><span class="sr-only">Share of the busiest stock</span></th>
+            <th scope="col">#</th>
+            <th scope="col">Stock</th>
+            <th scope="col" class="numeric">Trades</th>
+            <th scope="col" class="bar-cell"><span class="sr-only">Share of the busiest stock</span></th>
           </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@
               <td class="muted">{{ i + 1 }}</td>
               <td><strong>{{ row.instrument }}</strong></td>
               <td class="numeric">{{ count(row.tradeCount) }}</td>
-              <td class="bar-cell"><span class="bar" [style.width.%]="(row.tradeCount / topMax()) * 100"></span></td>
+              <td class="bar-cell"><span class="bar" aria-hidden="true" [style.width.%]="(row.tradeCount / topMax()) * 100"></span><span class="sr-only">{{ count(row.tradeCount / topMax() * 100) }} percent of the busiest stock</span></td>
             </tr>
           } @empty {
             <tr>
@@ -56,5 +56,6 @@
         </tbody>
       </table>
     </div>
+    <app-insights-chart-access #rankingAccess id="insights-top" label="Most traded stocks today" [summary]="topDescription()" [table]="topTable()" [context]="summary()?.date ?? ''" />
   </section>
 </div>

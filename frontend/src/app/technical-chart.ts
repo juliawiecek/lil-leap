@@ -1,3 +1,6 @@
+import { ChartAccess, ChartFocus } from './chart-access';
+import { chartPeriodLabel, chartValue, describeSeries } from '../../../shared/chart-description';
+import { describeTrades, technicalTable, volumeTable } from './technical-chart-data';
 import { AfterViewInit, Component, ElementRef, OnChanges, OnDestroy, computed, input, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import type { PricePoint } from './market-feed-api';
@@ -10,7 +13,7 @@ const HEIGHT = 180;
 /** Native SVG enhancement of the existing history plot; no new market requests or chart library. */
 @Component({
   selector: 'app-technical-chart',
-  imports: [CurrencyPipe, DecimalPipe],
+  imports: [CurrencyPipe, DecimalPipe, ChartAccess, ChartFocus],
   templateUrl: './technical-chart.html',
   styleUrl: './technical-chart.scss',
 })
@@ -23,6 +26,22 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly trades = input<readonly TradeMark[]>([]);
   readonly averageCost = input<number | null>(null);
   readonly id = `technical-${++chartId}`;
+  readonly privateValues = input(false);
+  readonly viewTrades = computed(() => this.trades().filter(t => t.at >= this.viewport().start && t.at <= this.viewport().end));
+  readonly description = computed(() => describeSeries(this.visible().map(p => ({ at: p.at, value: p.price, low: p.candle?.low, high: p.candle?.high })), {
+    name: this.symbol() + ' recorded prices', period: this.period(), currency: 'USD',
+  }) + ' ' + describeTrades(this.viewTrades(), this.visible().at(-1)?.price, this.averageCost(), this.privateValues()) + ' ' + this.paths().map(s => { const last = s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).at(-1); return `${s.name}: ${last ? 'latest value ' + chartValue(last.price, { currency: 'USD', precision: 2 }) : s.unavailable}.`; }).join(' ') + ' ' + this.summary());
+  readonly dataTable = computed(() => technicalTable(this.visible(), this.series(), this.viewTrades(), true, this.privateValues(), this.averageCost()));
+  readonly allData = computed(() => technicalTable(this.visible(), this.series(), this.viewTrades(), false, this.privateValues(), this.averageCost()));
+  readonly volumePoints = computed(() => this.candles().filter(p => p.candle?.volume !== null).map(p => ({ at: p.at, value: p.candle!.volume! })));
+  readonly volumeDescription = computed(() => {
+    const missing = this.candles().length - this.volumePoints().length;
+    return describeSeries(this.volumePoints(), { name: this.symbol() + ' reported traded volume', period: this.period(), unit: 'shares', empty: 'Volume is unavailable for this view; no complete reported volume is available for the displayed bars.' })
+      + (missing ? ` Volume is unavailable for ${missing} of ${this.candles().length} displayed bars; these gaps are not zero.` : '')
+      + (this.candles().length < this.visible().length ? ' Displayed bars combine consecutive observations; the table can show every original observation.' : '');
+  });
+  readonly volumeTable = computed(() => volumeTable(this.candles().length ? this.candles() : this.visible(), this.candles().length > 0 && this.candles().length < this.visible().length));
+  readonly allVolume = computed(() => volumeTable(this.visible()));
   readonly height = HEIGHT;
   readonly width = signal(600);
   readonly zoom = signal(1);
@@ -62,7 +81,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const spacing = xs.slice(1).map((x, i) => x - xs[i]).filter(x => x > 0);
     return Math.max(3, Math.min(8, spacing.length ? Math.min(...spacing) * .65 : 6));
   });
-  readonly summary = computed(() => `${this.symbol()} ${this.period()} recorded prices. Up candles hollow; down candles filled; unchanged candles have a horizontal body. EMA 50 solid, EMA 200 dashed, VWAP dotted. ${this.hasVolume() ? 'Up volume outlined, down volume hatched.' : 'Traded volume and VWAP unavailable from this feed.'} Use arrow keys to inspect; Escape clears selection.`);
+  readonly summary = computed(() => `${this.symbol()} ${chartPeriodLabel(this.period())} recorded prices. Up candles hollow; down candles filled; unchanged candles have a horizontal body. EMA 50 solid, EMA 200 dashed, VWAP dotted. ${this.hasVolume() ? 'Up volume outlined, down volume hatched.' : 'Traded volume and VWAP unavailable from this feed.'} Use arrow keys to inspect; Escape clears selection.`);
 
   x(at: number): number { const v = this.viewport(); return 4 + (at - v.start) / (v.end - v.start) * (this.width() - 8); }
   y(price: number): number { return priceY(price, this.range(), HEIGHT); }

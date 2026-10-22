@@ -26,7 +26,8 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   assert.match(host.textContent, /Placed an order today/);
   assert.match(host.textContent, /Today's trading across every account, Monday, October 19, 2026 \(New York time\)\./);
   assert.match(host.textContent, /9 trades · New York time/);
-  assert.equal(host.querySelectorAll('app-insights-chart circle[tabindex]').length, 24);
+  assert.equal(host.querySelectorAll('app-insights-chart circle[aria-hidden="true"]').length, 24);
+  assert.equal(host.querySelectorAll('app-insights-chart svg[tabindex="0"]').length, 1);
   const rows = [...host.querySelectorAll('tbody tr')]
     .map((row) => [...row.querySelectorAll('td')].slice(0, 3).map((cell) => cell.textContent.trim()));
   assert.deepEqual(rows, [['1', 'AAPL', '6'], ['2', 'JPM', '3']]);

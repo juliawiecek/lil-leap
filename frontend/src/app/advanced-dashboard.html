@@ -350,7 +350,7 @@
                 <p class="empty-note">Loading prices…</p>
               }
             } @else {
-              <div class="sector-list">
+              <div class="sector-list" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="watchSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
@@ -365,6 +365,7 @@
                 }
               </div>
               <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
+              <app-chart-access #watchSectorAccess id="advanced-watch-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             }
           </section>
         }
@@ -372,8 +373,8 @@
           <section class="panel market-panel" data-scan-group="Market overview">
             <div class="panel-heading"><h2>Market Overview</h2></div>
             @if (page() === 'Overview') {
-              <div class="heat-map" aria-label="Today's move of each listed stock">
-                @for (q of quotes().slice(0, 9); track q.symbol) {
+              <div class="heat-map" role="group" tabindex="0" aria-label="Listed stock performance heat map" data-scan-group="Stock performance" [appChartFocus]="heatAccess" [chartScanChildren]="true">
+                @for (q of heatMapQuotes(); track q.symbol) {
                   <button
                     type="button"
                     class="heat-tile"
@@ -381,13 +382,15 @@
                     [class.loss]="q.change < 0"
                     [style.--heat]="q.change < 0 ? -q.change : q.change"
                     (click)="choose(q)"
+                    aria-describedby="advanced-heatmap-summary"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + q.change + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
                 }
               </div>
+              <app-chart-access #heatAccess id="advanced-heatmap" label="Listed stock performance today" [summary]="heatDescription()" [table]="heatTable()" />
             } @else {
             <div class="market-tabs">
               @for (tab of ['Sectors', 'Top Movers']; track tab) {
@@ -402,7 +405,7 @@
             </div>
             }
             @if (page() === 'Overview' || marketTab() === 'Sectors') {
-              <div class="sector-list">
+              <div class="sector-list" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
@@ -417,6 +420,7 @@
                 }
               </div>
               <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
+              <app-chart-access #marketSectorAccess id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             } @else {
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
@@ -466,9 +470,10 @@
                     ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
                   </div>
                 </div>
-                <div class="split-bar" role="img" [attr.aria-label]="'Equities ' + exposure().equitiesPercent + '%, Cash ' + exposure().cashPercent + '%'">
+                <div class="split-bar" tabindex="0" [appChartFocus]="exposureAccess" role="img" aria-label="Portfolio exposure">
                   <i class="equities" [style.width.%]="exposure().equitiesPercent"></i><i class="cash" [style.width.%]="exposure().cashPercent"></i>
                 </div>
+                <app-chart-access #exposureAccess id="advanced-exposure" label="Portfolio exposure" [summary]="exposureDescription()" [table]="exposureTable()" [context]="selectedAccount()?.account_id ?? ''" />
                 <div class="split-legend">
                   <span>Equities {{ exposure().equitiesPercent | number: '1.1-1' }}%</span><span>Cash {{ exposure().cashPercent | number: '1.1-1' }}%</span>
                 </div>

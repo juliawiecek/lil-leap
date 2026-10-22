@@ -153,12 +153,13 @@
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"
                   [error]="chartError()"
-                  [delayed]="chartDelayed()"
+                  [delayed]="chartDelayed()" [balanceHidden]="!showBalance()" [accountKey]="selectedAccount()?.account_id ?? ''"
                   (periodChange)="setChartPeriod($event)"
                   (scrub)="chartScrub.set($event)"
                 />
               }
-              <p class="sr-only" aria-live="polite">{{ chartAnnouncement() }}</p>
+              <!-- PS-25 owns the chart live region; keep the existing switch-control announcement. -->
+              <p class="sr-only" aria-hidden="true">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
                 <div>
                   <span>Buying power</span
@@ -377,7 +378,7 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <div class="allocation-donut" role="img" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
+                <div class="allocation-donut" tabindex="0" [appChartFocus]="allocationAccess" role="img" aria-label="Asset allocation">
                   <!-- A rounded progress arc follows the actual stock share over a full cash track. -->
                   <svg viewBox="0 0 42 42" aria-hidden="true">
                     <defs>
@@ -413,6 +414,7 @@
                   </div>
                 </div>
               </div>
+              <app-chart-access #allocationAccess id="novice-allocation" label="Asset allocation" [summary]="allocationDescription()" [table]="allocationTable()" [context]="selectedAccount()?.account_id ?? ''" />
               <button type="button" class="diversification" (click)="openModal('allocation')">
                 <span class="shield-icon"><app-dashboard-icon name="shield" /></span
                 ><span
