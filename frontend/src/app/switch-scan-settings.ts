@@ -79,7 +79,7 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
       .scan-toggle[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
       label { display: grid; min-width: 0; max-width: 100%; gap: 4px; color: var(--text-muted); font-size: 12px; }
-      select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);
+      select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: var(--background);
         color: var(--text); font: inherit; }
       label.check { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--text); font-size: 13px; }
       label.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }

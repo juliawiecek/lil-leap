@@ -24,7 +24,7 @@ import { AssistiveSettings } from './assistive-tools';
         </p>
       </div>
       <div class="a11y-cards">
-        <app-assistive-settings />
+        <app-assistive-settings class="settings-appearance" />
         <fieldset class="a11y-card colour-mode" aria-describedby="colour-mode-help">
           <legend>Colour-blind mode</legend>
           <p id="colour-mode-help">Choose colours you can tell apart. Prices and calculations stay the same.</p>
@@ -63,11 +63,12 @@ import { AssistiveSettings } from './assistive-tools';
       .a11y-intro p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
       .a11y-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
       .a11y-card.colour-mode { display: block; margin: 0; min-width: 0; }
-      .colour-mode legend { padding: 0 4px; font-size: 14px; font-weight: 600; }
+      .colour-mode legend { float: left; width: 100%; margin-bottom: 4px; padding: 0; font-size: 14px; font-weight: 600; }
+      .colour-mode legend + * { clear: both; }
       .colour-mode p { margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       .colour-options { display: flex; flex-wrap: wrap; gap: 8px; }
-      .colour-option { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px;
-        border: 1px solid var(--control-border); border-radius: 8px; color: var(--text); cursor: pointer; }
+      .colour-option { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+        border: 1px solid var(--surface-tone-02); border-radius: 6px; color: var(--text); font-size: 13px; cursor: pointer; }
       .colour-option:has(:checked) { background: var(--selection-surface); border-color: var(--focus); }
       .colour-option:hover { border-color: var(--focus); }
       .colour-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
@@ -78,11 +79,11 @@ import { AssistiveSettings } from './assistive-tools';
       .a11y-text b { font-size: 14px; font-weight: 600; }
       .a11y-text small { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       kbd { padding: 0 5px; border: 1px solid var(--surface-tone-02); border-radius: 4px; font: inherit; font-weight: 700; }
-      .a11y-button { flex: none; min-height: 34px; padding: 0 14px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: transparent;
+      .a11y-button { flex: none; min-height: 36px; padding: 0 14px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: transparent;
         color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
       .a11y-button:hover { border-color: var(--surface-tone-01); }
       .a11y-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-      @media (max-width: 760px) { .a11y { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; } }
+      @media (max-width: 900px) { .a11y { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; } }
       @media (max-width: 480px) { .a11y-card { flex-wrap: wrap; gap: 12px; padding-inline: 12px; } }
     `,
   ],

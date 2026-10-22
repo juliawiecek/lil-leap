@@ -43,7 +43,7 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-bu
       kbd { padding: 0 5px; border: 1px solid var(--surface-tone-02); border-radius: 4px; font: inherit; font-weight: 700; }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
       label { display: grid; min-width: 0; max-width: 100%; gap: 4px; color: var(--text-muted); font-size: 12px; }
-      select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);
+      select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: var(--background);
         color: var(--text); font: inherit; }
       select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       @media (max-width: 480px) { .card { padding-inline: 12px; } }

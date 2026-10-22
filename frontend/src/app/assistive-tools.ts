@@ -4,7 +4,7 @@ let settingsId = 0;
 @Component({
   selector: 'app-assistive-settings',
   templateUrl: '../../../shared/assistive-settings.html',
-  styleUrl: '../../../shared/assistive-tools.scss',
+  styleUrls: ['../../../shared/assistive-tools.scss', './assistive-settings.scss'],
 })
 export class AssistiveSettings {
   readonly access = inject(SiteAccessibility);
