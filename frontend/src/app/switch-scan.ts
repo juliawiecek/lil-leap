@@ -901,12 +901,15 @@ export class ScanEngine {
     }
   }
 
-  /** Says something for the page, such as a chart summary, after what the ring is saying. */
-  say(text: string): void {
+  /**
+   * Says something for the page: a chart summary waits for what the ring is saying; an order
+   * read-back (`interrupt`) cuts in, since it is what the user must hear before confirming.
+   */
+  say(text: string, interrupt = false): void {
     if (this.#live) {
       this.#live.textContent = text;
     }
-    this.#say(text, true);
+    this.#say(text, !interrupt);
   }
 
   /** Tells screen readers what happened and, when speaking is on, says it aloud too. */
@@ -1049,9 +1052,9 @@ export class SwitchScanService {
     }
   }
 
-  /** Says something for the page (a chart summary) while switch control is on. */
-  announce(text: string): void {
-    this.#engine?.say(text);
+  /** Says something for the page (a chart summary, an order read-back) while switch control is on. */
+  announce(text: string, interrupt = false): void {
+    this.#engine?.say(text, interrupt);
   }
 
   /**
