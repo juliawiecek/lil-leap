@@ -2,33 +2,33 @@
    Settings page (Oct 2026): look and feel only. Sections with a short title on
    the left and their settings on the right, on a continuous flat surface.
    ========================================================================== */
-.settings-page { max-width: 1000px; padding: 0 28px; background: #0c0c0c; }
+.settings-page { max-width: 1000px; padding: 0 28px; background: var(--surface); }
 .settings-profile { display: flex; align-items: center; gap: 18px; padding: 30px 0 32px; }
-.settings-avatar { display: grid; place-items: center; flex: none; width: 56px; height: 56px; border-radius: 50%; background: #94c973; color: #000000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
+.settings-avatar { display: grid; place-items: center; flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--gain); color: var(--mask-ink); box-shadow: 0 4px 12px var(--shadow-99); font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
 .settings-identity { min-width: 0; }
-.settings-eyebrow { color: #a4a79e; font-size: 12px; font-weight: 500; letter-spacing: 0.025em; }
+.settings-eyebrow { color: var(--text-muted); font-size: 12px; font-weight: 500; letter-spacing: 0.025em; }
 .settings-identity h2 { margin: 10px 0 8px; font-size: 30px; line-height: 1.2; font-weight: 600; letter-spacing: -0.035em; overflow-wrap: anywhere; }
-.settings-identity p { margin: 0; color: #b5b8af; font-size: 14px; overflow-wrap: anywhere; }
-.profile-status { margin: 16px 0 0; color: #a4a79e; font-size: 14px; }
+.settings-identity p { margin: 0; color: var(--text-tone-64); font-size: 14px; overflow-wrap: anywhere; }
+.profile-status { margin: 16px 0 0; color: var(--text-muted); font-size: 14px; }
 .settings-section {
   display: grid;
   grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
   gap: 32px;
   padding: 26px 0;
-  border-top: 1px solid #292d27;
+  border-top: 1px solid var(--surface-tone-05);
 }
 .settings-intro h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
-.settings-intro p { margin: 6px 0 0; color: #a4a79e; font-size: 13px; line-height: 1.55; }
+.settings-intro p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
 .safeguards-group {
   min-width: 0;
   padding: 0 20px 4px;
-  border: 1px solid #262926;
+  border: 1px solid var(--surface-tone-04);
   border-radius: 8px;
-  background: #111111;
-  --muted: #a4a79e;
-  --line: #242824;
-  --protection-selected-bg: #25451b;
-  --protection-selected-text: #a8df80;
+  background: var(--surface-tone-03);
+  --muted: var(--text-muted);
+  --line: var(--surface-tone-98);
+  --protection-selected-bg: var(--gain-tone-26);
+  --protection-selected-text: var(--gain-tone-25);
 }
 .settings-list { min-width: 0; margin: 0; }
 .settings-list > div {
@@ -38,17 +38,17 @@
   gap: 24px;
   min-height: 24px;
   padding: 14px 0;
-  border-bottom: 1px solid #171a17;
+  border-bottom: 1px solid var(--surface-tone-15);
 }
 .settings-list > div:first-child { padding-top: 0; }
 .settings-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
-.account-details dd { color: #c2c5bc; font-weight: 500; }
-.settings-list dt { color: #a4a79e; font-size: 14px; }
+.account-details dd { color: var(--text-tone-63); font-weight: 500; }
+.settings-list dt { color: var(--text-muted); font-size: 14px; }
 .settings-list dd { margin: 0; font-size: 14px; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
-.tier-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid #2c312b; border-radius: 6px; color: #d6d4cc; font-size: 12.5px; font-weight: 700; }
+.tier-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 1px solid var(--surface-tone-10); border-radius: 6px; color: var(--text-tone-19); font-size: 12.5px; font-weight: 700; }
 .setting-text { display: flex; flex-direction: column; gap: 3px; }
 .setting-text b { font-size: 14px; font-weight: 600; }
-.setting-text small { color: #a4a79e; font-size: 12.5px; line-height: 1.5; }
+.setting-text small { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
 .switch {
   flex: none;
   display: flex;
@@ -58,23 +58,23 @@
   padding: 3px;
   border: 0;
   border-radius: 999px;
-  background: #2c312b;
+  background: var(--surface-tone-10);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
-.switch i { width: 18px; height: 18px; border-radius: 50%; background: #a4a79e; }
-.switch.on { justify-content: flex-end; background: #94c973; }
-.switch.on i { background: #0b0c0b; }
-.switch:focus-visible { outline: 2px solid #f2efe6; outline-offset: 2px; }
-.signed-in { color: #a4a79e; font-size: 14px; }
-.signed-in b { color: #f2f0e9; font-weight: 600; }
-.settings-session { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 8px 0 0; padding: 24px 0; border-top: 1px solid #252923; }
+.switch i { width: 18px; height: 18px; border-radius: 50%; background: var(--text-muted); }
+.switch.on { justify-content: flex-end; background: var(--gain); }
+.switch.on i { background: var(--on-accent); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.signed-in { color: var(--text-muted); font-size: 14px; }
+.signed-in b { color: var(--text); font-weight: 600; }
+.settings-session { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 8px 0 0; padding: 24px 0; border-top: 1px solid var(--surface-tone-97); }
 .settings-session h2 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
-.settings-session p { margin: 4px 0 0; color: #a4a79e; font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.settings-session p { margin: 4px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .settings-session .secondary-button { flex: none; }
 .settings-page .secondary-button { min-height: 36px; padding: 0 16px; border-radius: 6px; font-size: 13px; }
-.settings-session .secondary-button { color: #ff7a6e; border-color: #65332e; background: #251311; }
-.settings-session .secondary-button:hover { color: #ff9b92; border-color: #a34c43; background: #351916; }
+.settings-session .secondary-button { color: var(--loss); border-color: var(--loss-tone-19); background: var(--surface-tone-96); }
+.settings-session .secondary-button:hover { color: var(--loss-tone-18); border-color: var(--loss-tone-17); background: var(--loss-tone-16); }
 @media (max-width: 900px) {
   .settings-page { padding-inline: 20px; }
   .settings-section { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; }

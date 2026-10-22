@@ -1,3 +1,5 @@
+import { PriceFlash } from './price-flash';
+import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
@@ -31,6 +33,9 @@ import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { BriefingButton, BriefingSource } from './briefing-button';
+import { orderReadBack } from './order-read-back';
+import { SwitchScanService } from './switch-scan';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -98,9 +103,9 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [
+  imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
@@ -195,6 +200,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly overviewList = signal<'Watchlist' | 'Movers' | 'Sectors'>('Watchlist');
   readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
+  readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
+  readonly #switchScan = inject(SwitchScanService, { optional: true });
   /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
   tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
     const live = this.feed.quotes().find((q) => q.symbol === symbol);
@@ -493,9 +501,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }
       // Bars sit on fixed boundaries; the last point is the open bar while it is dated after this bar's start.
       if (last && barMs && last.at > Math.floor(at / barMs) * barMs) {
-        return [...points.slice(0, -1), { at, price: quote.price }];
+        const candle = last.candle ? { ...last.candle, close: quote.price, high: Math.max(last.candle.high, quote.price), low: Math.min(last.candle.low, quote.price), volume: null } : undefined;
+        return [...points.slice(0, -1), { at, price: quote.price, ...(candle ? { candle } : {}) }];
       }
-      return [...points, { at, price: quote.price }];
+      const candle = barMs && last?.candle ? { time: Math.floor(at / barMs) * barMs, open: quote.price, high: quote.price, low: quote.price, close: quote.price, volume: null } : undefined;
+      return [...points, { at, price: quote.price, ...(candle ? { candle } : {}) }];
     });
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
@@ -516,6 +526,42 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   viewOrders(): void {
     this.navigate('Activity');
   }
+  /**
+   * What the spoken briefing reads (PS-18): the summary panel's figures, today's move of each
+   * position from the live feed, and this account's orders. A failed order load leaves orders out.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    const accountId = this.selectedAccount()?.account_id;
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.positions();
+    return {
+      accountId,
+      now,
+      market: this.feed.status(),
+      balanceHidden: this.privateBalance(),
+      total: this.portfolio(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((p) => ({
+        symbol: p.symbol,
+        name: live.get(p.symbol)?.name ?? p.symbol,
+        dayChangePercent: live.get(p.symbol)?.change ?? null,
+      })),
+      orders,
+      pricesDelayed: held.some((p) => {
+        const quote = live.get(p.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
   navigate(page: string): void {
     this.page.set(page);
     this.routing?.go(page);
@@ -571,6 +617,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.message.set(this.validate());
     if (!this.message()) {
       this.openModal('review');
+      // Says the order aloud before it can be confirmed (PS-23), cutting in on switch control.
+      const quote = this.selected();
+      this.#switchScan?.announce(orderReadBack({
+        side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+        quantity: Number(this.quantity()),
+        symbol: quote.symbol,
+        name: quote.name,
+        total: this.total(),
+        closedWarning: this.closedWarning(),
+        priceDelayed: this.priceDelayed(),
+      }), true);
     }
   }
   async confirmOrder(): Promise<void> {

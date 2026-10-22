@@ -1,8 +1,14 @@
+import { PriceFlash } from './price-flash';
+import { FinancialChange, describeChange } from './financial-change';
 import { Component, OnDestroy, computed, inject, output } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
+import { spokenCompany } from './briefing';
+import { spokenChange } from './chart-speech';
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 /**
  * Live ticker strip for both dashboards (TS-14.7 AC2, PS-02): the market's open/closed badge and
@@ -10,9 +16,9 @@ import { marketBadgeText } from './market-status-api';
  */
 @Component({
   selector: 'app-market-ticker',
-  imports: [CurrencyPipe, DecimalPipe],
+  imports: [FinancialChange, PriceFlash, CurrencyPipe],
   template: `
-    <div class="ticker" aria-label="Live prices">
+    <div class="ticker" aria-label="Live prices" aria-live="off">
       <span class="badge" [class.closed]="!feed.status()?.open" role="status">
         <i aria-hidden="true"></i>{{ badge() }}
       </span>
@@ -26,13 +32,15 @@ import { marketBadgeText } from './market-status-api';
               type="button"
               [class.flash-up]="quote.direction === 'up'"
               [class.flash-down]="quote.direction === 'down'"
+              [attr.aria-label]="spoken(quote)"
+              [attr.data-speak]="spokenWords(quote)"
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
               @if (quote.price) {
-                <span class="price">{{ quote.price | currency }}</span>
+                <app-price-flash [direction]="quote.direction"><span class="price">{{ quote.price | currency }}</span></app-price-flash>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
-                  {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                  <app-financial-change [value]="quote.change" unit="percent" />
                 </span>
                 @if (delayed(quote.quotedAt)) {
                   <em class="delayed">Price delayed</em>
@@ -59,9 +67,9 @@ import { marketBadgeText } from './market-status-api';
             >
               <strong>{{ quote.symbol }}</strong>
               @if (quote.price) {
-                <span class="price">{{ quote.price | currency }}</span>
+                <app-price-flash [direction]="quote.direction"><span class="price">{{ quote.price | currency }}</span></app-price-flash>
                 <span class="change" [class.up]="quote.change > 0" [class.down]="quote.change < 0">
-                  {{ quote.change > 0 ? '+' : '' }}{{ quote.change | number: '1.2-2' }}%
+                  <app-financial-change [value]="quote.change" unit="percent" />
                 </span>
                 @if (delayed(quote.quotedAt)) {
                   <em class="delayed">Price delayed</em>
@@ -83,33 +91,33 @@ import { marketBadgeText } from './market-status-api';
       :host { display: block; }
       .ticker { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0; font-size: 12.5px; }
       .tape-window { flex: 1; min-width: 0; overflow: hidden;
-        -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 3%, #000 95%, transparent); }
+        -webkit-mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 95%, transparent); mask-image: linear-gradient(90deg, transparent, var(--mask-ink) 3%, var(--mask-ink) 95%, transparent); }
       .tape { display: flex; width: max-content; }
       .tape ul { padding-right: 4px; }
       .tape.moving { animation-name: tape-scroll; animation-timing-function: linear; animation-iteration-count: infinite; }
       .tape-window:hover .tape, .tape-window:focus-within .tape { animation-play-state: paused; }
       @keyframes tape-scroll { to { transform: translateX(-50%); } }
       .badge { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 4px 10px 4px 0; border-radius: 999px;
-        background: transparent; color: #94c973; font-weight: 700; white-space: nowrap; }
+        background: transparent; color: var(--gain); font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
-      @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, .55); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-      .badge.closed { color: var(--market-status-accent, #e2b65a); }
+      @keyframes live { 0% { box-shadow: 0 0 0 0 var(--gain-wash-09); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+      .badge.closed { color: var(--loss); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
       button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;
-        color: #a4a79e; font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
-      button strong { color: #f2f0e9; font-weight: 700; }
+        color: var(--text-muted); font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
+      button strong { color: var(--text); font-weight: 700; }
       .change { font-weight: 600; }
-      button:hover { background: #161616; }
+      button:hover { background: var(--surface-raised); }
       .price { font-variant-numeric: tabular-nums; }
-      .change.up { color: var(--green, #94c973); }
-      .change.down { color: #ff7a6e; }
-      .muted, .change { color: var(--muted, #a4a79e); }
-      .delayed { padding: 0 5px; border-radius: 4px; background: #211b0e; color: #e2b65a; font-style: normal; font-size: 12px; }
+      .change.up { color: var(--green, var(--gain)); }
+      .change.down { color: var(--loss); }
+      .muted, .change { color: var(--muted, var(--text-muted)); }
+      .delayed { padding: 0 5px; border-radius: 4px; background: var(--surface-tone-14); color: var(--warning); font-style: normal; font-size: 12px; }
       .flash-up { animation: flash-up 1.2s ease-out; }
       .flash-down { animation: flash-down 1.2s ease-out; }
-      @keyframes flash-up { from { background: rgba(148, 201, 115, .2); } to { background: transparent; } }
-      @keyframes flash-down { from { background: rgba(255, 122, 110, .2); } to { background: transparent; } }
+      @keyframes flash-up { from { background: var(--gain-wash-20); } to { background: transparent; } }
+      @keyframes flash-down { from { background: var(--loss-wash-08); } to { background: transparent; } }
       @media (prefers-reduced-motion: reduce) { .flash-up, .flash-down, .badge i, .tape.moving { animation: none; } .tape-window { overflow-x: auto; scrollbar-width: none; } }
     `,
   ],
@@ -123,6 +131,34 @@ export class MarketTicker implements OnDestroy {
 
   delayed(quotedAt: string): boolean {
     return isDelayed(quotedAt, this.feed.now());
+  }
+
+  /**
+   * The button's name: what it shows, in the same order ("AAPL, $224.52, +0.40%"), so people using
+   * speech input can say what they see (WCAG 2.5.3, PS-20). Switch control still says the company
+   * name, since everything it reads goes through speakable() ("Apple, $224.52, +0.40%").
+   */
+  spoken(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    if (!quote.price) {
+      return `${quote.symbol}, price not available yet`;
+    }
+    // The change as shown, without its arrow, which only repeats the sign.
+    const change = describeChange(quote.change).visual.replace(/^[^\d+−]+/, '');
+    const delayed = this.delayed(quote.quotedAt) ? ', Price delayed' : '';
+    return `${quote.symbol}, ${USD.format(quote.price)}, ${change}${delayed}`;
+  }
+
+  /**
+   * What switch control says aloud (data-speak): the company and the move in words, "Apple,
+   * $224.52, up 0.40 percent". Kept apart from the button's name above, which must match the screen.
+   */
+  spokenWords(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    const company = spokenCompany(quote.name, quote.symbol);
+    if (!quote.price) {
+      return `${company}, price not available yet`;
+    }
+    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
+    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
   }
 
   ngOnDestroy(): void {

@@ -42,7 +42,7 @@
           <p
             class="current-price"
             [ngClass]="
-              a.hasPerformance
+              a.hasPerformance && a.change !== 0
                 ? a.isMarketUp
                   ? 'text-market-up'
                   : 'text-market-down'
@@ -56,22 +56,12 @@
               <span
                 class="performance-badge"
                 [ngClass]="
-                  a.isMarketUp
+                  a.change === 0 ? 'text-slate-300 ring-white/10' : a.isMarketUp
                     ? 'bg-market-up/10 text-market-up ring-market-up/20'
                     : 'bg-market-down/10 text-market-down ring-market-down/20'
                 "
               >
-                <svg
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                  class="performance-arrow"
-                  [class.arrow-down]="!a.isMarketUp"
-                >
-                  <path d="M4 13l5-5 3 3 4-6M11 5h5v5" />
-                </svg>
-                {{ a.change! >= 0 ? '+' : '' }}{{ a.change | currency: a.currency : 'symbol' }} ({{
-                  a.changePercent! >= 0 ? '+' : ''
-                }}{{ a.changePercent | number: '1.2-2' }}%)
+                <app-financial-change [value]="a.change" [percent]="a.changePercent" unit="currency" [currency]="a.currency" />
               </span>
               <span class="comparison-label">vs. session open</span>
             } @else {

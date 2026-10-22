@@ -1,12 +1,12 @@
 :host {
   display: block;
   font-family: var(--font-ui);
-  background: #0c0c0c;
-  color: #f2f0e9;
+  background: var(--surface);
+  color: var(--text);
   color-scheme: dark;
-  --muted: #a4a79e;
-  --green: #94c973;
-  --line: #1a1d1a;
+  --muted: var(--text-muted);
+  --green: var(--gain);
+  --line: var(--surface-tone-13);
 }
 :host([hidden]) {
   display: none !important;
@@ -160,7 +160,7 @@ a:hover {
   padding: 9px 14px;
   border: 1px solid var(--green);
   border-radius: 6px;
-  color: #0c0c0c;
+  color: var(--surface);
   background: var(--green);
   font-size: 12px;
   font-weight: 600;
@@ -212,7 +212,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--line);
   border-radius: 7px;
   text-align: left;
-  color: #f2f0e9;
+  color: var(--text);
 }
 .lesson-list > button.active {
   border-color: var(--green);
@@ -296,7 +296,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: none;
-  color: #f2f0e9;
+  color: var(--text);
   text-align: left;
   font-size: 12px;
 }
@@ -335,7 +335,7 @@ progress::-webkit-progress-value {
 .glossary summary {
   cursor: pointer;
   font-size: 13px;
-  color: #f2f0e9;
+  color: var(--text);
 }
 .glossary p {
   margin-top: 10px;

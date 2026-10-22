@@ -1,4 +1,6 @@
 import { EnvironmentProviders, InjectionToken, Injectable, inject, makeEnvironmentProviders, provideAppInitializer, signal } from '@angular/core';
+import { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
+export { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
 
 /**
  * One place for every accessibility setting (PS-17): briefing, switch control, voice mode,
@@ -6,7 +8,6 @@ import { EnvironmentProviders, InjectionToken, Injectable, inject, makeEnvironme
  * single entry in this browser. Nothing is stored until a feature is turned on, so every feature
  * starts off; blocked storage means defaults for this visit, never an error.
  */
-export const ACCESSIBILITY_STORAGE_KEY = 'nexttrade.accessibility';
 
 /** The sections the accessibility tickets own (PS-18, PS-19, PS-21, PS-22, PS-27). */
 export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'colourMode' | 'livePrices';
@@ -45,6 +46,18 @@ export class AccessibilityStore {
     } catch {
       // Storage can be blocked; the setting still applies until the page reloads.
     }
+  }
+}
+
+/**
+ * The app's shared store. Feature services also run outside Angular in plain unit tests, where
+ * there is no injector; they get a store of their own that reads the same browser entry.
+ */
+export function accessibilityStore(): AccessibilityStore {
+  try {
+    return inject(AccessibilityStore);
+  } catch {
+    return new AccessibilityStore();
   }
 }
 

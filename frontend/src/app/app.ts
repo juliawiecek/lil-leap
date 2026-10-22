@@ -20,6 +20,7 @@ import { AuthService } from './auth.service';
 import { InvestorProfile } from './investor-profile';
 import { toTraderRegistration } from './registration-payload';
 import type { Experience } from './stock-dashboard';
+import { observeColourMode, readThemeColour, readThemeRgb } from './theme-colours';
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
 
@@ -74,8 +75,14 @@ export class App implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router, { optional: true });
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private readonly riseColor = '#94c973';
-  private readonly neutralColor = '#d6d4cc';
+  private riseColor = '';
+  private neutralColor = '';
+  private candleGlow = '';
+  private morphGain = [0, 0, 0];
+  private morphLoss = [0, 0, 0];
+  private targetGain = [0, 0, 0];
+  private targetLoss = [0, 0, 0];
+  private stopColourWatch?: () => void;
 
   /** Set when the app was opened from an emailed reset link; cleared once the password is changed. */
   private resetToken = this.resetTokenFromRoute();
@@ -197,12 +204,18 @@ export class App implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.refreshChartColours();
+    this.stopColourWatch = observeColourMode(() => {
+      this.refreshChartColours();
+      this.drawChart();
+    });
     this.buildVolumeField();
     this.resizeChart();
     this.animationFrameId = requestAnimationFrame((now) => this.animate(now));
   }
 
   ngOnDestroy(): void {
+    this.stopColourWatch?.();
     cancelAnimationFrame(this.animationFrameId);
     if (this.focusTimer) {
       clearTimeout(this.focusTimer);
@@ -575,21 +588,33 @@ export class App implements AfterViewInit, OnDestroy {
     context.lineWidth = 1;
     context.beginPath();
     context.moveTo(x, highY);
+    context.lineTo(x, bodyTop);
+    context.moveTo(x, bodyTop + bodyHeight);
     context.lineTo(x, lowY);
     context.stroke();
     const rising = animatedClose >= candle.open;
     const highlighted = rising && Math.floor(x / this.candleStep) % 6 === 2;
-    context.shadowColor = rising ? 'rgba(148, 201, 115, 0.3)' : 'transparent';
+    context.shadowColor = rising ? this.candleGlow : 'transparent';
     context.shadowBlur = highlighted ? 5 : 0;
     context.fillStyle = color;
-    context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
-    if (highlighted) {
-      context.fillStyle = '#94c973';
-      context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.min(3, bodyHeight));
+    if (rising) {
+      context.strokeRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+    } else {
+      context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
     }
     context.shadowBlur = 0;
     context.shadowColor = 'transparent';
     context.globalAlpha = 1;
+  }
+
+  private refreshChartColours(): void {
+    this.riseColor = readThemeColour('--gain');
+    this.neutralColor = readThemeColour('--candle-loss');
+    this.candleGlow = readThemeColour('--candle-glow');
+    this.morphGain = readThemeRgb('--candle-morph-gain');
+    this.morphLoss = readThemeRgb('--candle-morph-loss');
+    this.targetGain = readThemeRgb('--candle-target-gain');
+    this.targetLoss = readThemeRgb('--candle-target-loss');
   }
 
   private drawChart(): void {
@@ -643,18 +668,27 @@ export class App implements AfterViewInit, OnDestroy {
       const top = mix(Math.min(this.priceY(candle.open), this.priceY(candle.close)), 39 + target.top * scaleY);
       const height = mix(Math.max(8, Math.abs(this.priceY(candle.close) - this.priceY(candle.open))), target.height * scaleY);
       const width = mix(introWidth, 3.6 * scaleX);
-      const fromColor = candle.close >= candle.open ? [135, 187, 102] : [196, 203, 191];
-      const toColor = target.falling ? [75, 91, 66] : [127, 164, 89];
+      const fromColor = candle.close >= candle.open ? this.morphGain : this.morphLoss;
+      const toColor = target.falling ? this.targetLoss : this.targetGain;
       const color = `rgb(${fromColor.map((value, channel) => Math.round(mix(value, toColor[channel]))).join(',')})`;
       context.globalAlpha = mix(this.clamp((startX + index * this.candleStep) / 90, 0.18, 1), target.opacity);
       context.strokeStyle = color;
       context.lineWidth = mix(1, 0.4 * scaleX);
       context.beginPath();
       context.moveTo(x, mix(this.priceY(candle.high), 39 + target.high * scaleY));
+      context.lineTo(x, top);
+      context.moveTo(x, top + height);
       context.lineTo(x, mix(this.priceY(candle.low), 39 + target.low * scaleY));
       context.stroke();
       context.fillStyle = color;
-      context.fillRect(x - width / 2, top, width, height);
+      // The seeded walk and the SVG target disagree on direction, so the hollow/filled convention
+      // changes with the geometry at the midpoint rather than flipping on the first morph frame.
+      const falling = t < 0.5 ? candle.close < candle.open : target.falling;
+      if (falling) {
+        context.fillRect(x - width / 2, top, width, height);
+      } else {
+        context.strokeRect(x - width / 2, top, width, height);
+      }
     }
     context.globalAlpha = 1;
   }

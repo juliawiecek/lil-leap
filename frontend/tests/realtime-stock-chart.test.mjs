@@ -31,12 +31,12 @@ test('reusable SVG wrapper samples updates, keeps the emerald area style, handle
   assert.equal(line.getAttribute('d'), '');
   t.mock.timers.tick(5000);
   fixture.detectChanges();
-  assert.equal(line.getAttribute('stroke'), '#22c55e');
+  assert.equal(line.getAttribute('stroke'), 'var(--area-line)');
   feed.next({ time: 106, price: 98 });
   t.mock.timers.tick(5000);
   animateFrame(performance.now() + 1000);
   fixture.detectChanges();
-  assert.equal(line.getAttribute('stroke'), '#22c55e');
+  assert.equal(line.getAttribute('stroke'), 'var(--area-line)');
   assert.match(line.getAttribute('d'), /^M/);
   feed.error(new Error('Disconnected'));
   fixture.detectChanges();

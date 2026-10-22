@@ -12,6 +12,8 @@ const {
   nearestPoint,
   normalizeHistory,
   performancePalette,
+  performanceState,
+  EMERALD_AREA,
   priceDomain,
   reducePoints,
   visiblePoints,
@@ -62,10 +64,23 @@ test('sampling emits the actual latest price and timestamp, rejects late/invalid
   assert.throws(() => samplingInterval(1000), RangeError);
 });
 test('neutral performance is green; down/up colors always derive from the official open', () => {
-  assert.equal(performancePalette(100, 100).line, '#22c55e');
-  assert.equal(performancePalette(99, 100).line, '#ef4444');
-  assert.equal(performancePalette(101, 100).top, 'rgba(34, 197, 94, 0.3)');
-  assert.equal(performancePalette(102, null).line, '#94a3b8');
+  assert.equal(performancePalette(100, 100).line, 'var(--chart-gain)');
+  assert.equal(performancePalette(99, 100).line, 'var(--chart-loss)');
+  assert.equal(performancePalette(101, 100).top, 'var(--gain-wash-27)');
+  assert.equal(performancePalette(102, null).line, 'var(--chart-neutral)');
+});
+test('the session verdict is shared, uses the open as its baseline, and drives the area tokens', () => {
+  assert.equal(performanceState(101, 100), 'gain');
+  assert.equal(performanceState(100, 100), 'gain', 'at the open counts as a gain');
+  assert.equal(performanceState(99.99, 100), 'loss');
+  for (const open of [null, NaN, 0, -1]) assert.equal(performanceState(100, open), 'neutral');
+  // A dip below the previous tick is still a daily gain while it stays above the open.
+  assert.equal(performanceState(105, 100), 'gain');
+  assert.equal(performanceState(103, 100), 'gain');
+  // The renderer only ever emits tokens, so no palette colour is hardcoded in the chart.
+  for (const style of [EMERALD_AREA.line, EMERALD_AREA.top, EMERALD_AREA.bottom]) {
+    assert.match(style, /^var\(--area-/);
+  }
 });
 test('time coordinates respect irregular spacing and line/area paths share exact vertices', () => {
   assert.equal(mapX(125, range, box), 35);
