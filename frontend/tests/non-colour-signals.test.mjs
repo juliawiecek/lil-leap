@@ -147,3 +147,27 @@ test('technical chart renders actual hollow/filled candles, patterned volume, al
   assert.match(root.textContent, /Volume unavailable/);
   assert.equal(root.querySelector('[data-indicator=VWAP].indicator-line'), null);
 });
+
+test('technical chart ignores keys it does not handle and follows its measured width', async t => {
+  let observed;
+  const observers = [];
+  globalThis.ResizeObserver = class {
+    constructor(callback) { observers.push(callback); }
+    observe(element) { observed = element; }
+    disconnect() {}
+  };
+  t.after(() => { delete globalThis.ResizeObserver; });
+  const points = bars();
+  const fixture = await render(t, TechnicalChart, { points, window: { start, end: points.at(-1).at }, symbol: 'AAPL' });
+  const chart = fixture.componentInstance;
+  const plot = fixture.nativeElement.querySelector('.technical-plot');
+  const other = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+  plot.dispatchEvent(other); fixture.detectChanges();
+  assert.equal(other.defaultPrevented, false);
+  assert.equal(chart.inspected(), null);
+  assert.ok(observed, 'the chart observes its own size');
+  observers[0]([{ contentRect: { width: 812.4 } }]);
+  assert.equal(chart.width(), 812);
+  observers[0]([{ contentRect: { width: 0 } }]);
+  assert.equal(chart.width(), 812, 'a hidden chart keeps its last width');
+});

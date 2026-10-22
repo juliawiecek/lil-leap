@@ -296,7 +296,8 @@ export class BriefingButton {
   tick(now = Date.now()): void {
     const every = this.service.settings().everyMinutes;
     const last = this.service.lastAt;
-    if (every > 0 && last && !this.loading() && !this.service.speaking() && now - last.getTime() >= every * 60000) {
+    const due = every > 0 && !!last && now - last.getTime() >= every * 60000;
+    if (due && !this.loading() && !this.service.speaking()) {
       void this.play();
     }
   }
