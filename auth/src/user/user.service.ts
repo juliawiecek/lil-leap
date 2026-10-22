@@ -48,7 +48,8 @@ export class UserService {
       // Do the bcrypt work even for unknown emails and locked accounts. The response is
       // also identical: neither the lock state nor account existence is disclosed.
       const matches = this.passwordEncoder.matches(request.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
-      if (!user) {
+      // A disabled or deleted user is answered like an unknown email, and its counter is left alone (BR-03).
+      if (!user || user.userStatus !== 'ACTIVE') {
         return null;
       }
       const now = Date.now();

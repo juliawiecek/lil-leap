@@ -56,6 +56,10 @@ export class RefreshTokenService {
     if (!session || !(await this.revokeActive(tokenHash))) {
       throw new InvalidRefreshTokenException();
     }
+    // A user disabled or deleted while signed in loses the session at its next refresh (BR-03).
+    if (session.user.userStatus !== 'ACTIVE') {
+      throw new InvalidRefreshTokenException();
+    }
 
     const newRawRefreshToken = await this.issue(session.user);
 
