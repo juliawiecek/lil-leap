@@ -1,10 +1,14 @@
 import { PriceFlash } from './price-flash';
-import { FinancialChange } from './financial-change';
+import { FinancialChange, describeChange } from './financial-change';
 import { Component, OnDestroy, computed, inject, output } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
+import { spokenCompany } from './briefing';
+import { spokenChange } from './chart-speech';
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 /**
  * Live ticker strip for both dashboards (TS-14.7 AC2, PS-02): the market's open/closed badge and
@@ -28,6 +32,8 @@ import { marketBadgeText } from './market-status-api';
               type="button"
               [class.flash-up]="quote.direction === 'up'"
               [class.flash-down]="quote.direction === 'down'"
+              [attr.aria-label]="spoken(quote)"
+              [attr.data-speak]="spokenWords(quote)"
               (click)="pick.emit(quote.symbol)"
             >
               <strong>{{ quote.symbol }}</strong>
@@ -95,7 +101,7 @@ import { marketBadgeText } from './market-status-api';
         background: transparent; color: var(--gain); font-weight: 700; white-space: nowrap; }
       .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: live 2.4s ease-out infinite; }
       @keyframes live { 0% { box-shadow: 0 0 0 0 var(--gain-wash-09); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-      .badge.closed { color: var(--market-status-accent, var(--warning)); }
+      .badge.closed { color: var(--loss); }
       .badge.closed i { animation: none; }
       ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
       button { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; border: 0; border-radius: 999px; background: none;
@@ -125,6 +131,34 @@ export class MarketTicker implements OnDestroy {
 
   delayed(quotedAt: string): boolean {
     return isDelayed(quotedAt, this.feed.now());
+  }
+
+  /**
+   * The button's name: what it shows, in the same order ("AAPL, $224.52, +0.40%"), so people using
+   * speech input can say what they see (WCAG 2.5.3, PS-20). Switch control still says the company
+   * name, since everything it reads goes through speakable() ("Apple, $224.52, +0.40%").
+   */
+  spoken(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    if (!quote.price) {
+      return `${quote.symbol}, price not available yet`;
+    }
+    // The change as shown, without its arrow, which only repeats the sign.
+    const change = describeChange(quote.change).visual.replace(/^[^\d+−]+/, '');
+    const delayed = this.delayed(quote.quotedAt) ? ', Price delayed' : '';
+    return `${quote.symbol}, ${USD.format(quote.price)}, ${change}${delayed}`;
+  }
+
+  /**
+   * What switch control says aloud (data-speak): the company and the move in words, "Apple,
+   * $224.52, up 0.40 percent". Kept apart from the button's name above, which must match the screen.
+   */
+  spokenWords(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
+    const company = spokenCompany(quote.name, quote.symbol);
+    if (!quote.price) {
+      return `${company}, price not available yet`;
+    }
+    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
+    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
   }
 
   ngOnDestroy(): void {

@@ -9,7 +9,9 @@ export interface Indicator {
 
 /** Seed with the actual period's SMA; no invented warm-up values or displaced timestamps. */
 export function ema(points: readonly PricePoint[], period: number): PricePoint[] {
-  if (!Number.isInteger(period) || period < 1 || points.length < period) return [];
+  if (!Number.isInteger(period) || period < 1 || points.length < period) {
+    return [];
+  }
   let value = points.slice(0, period).reduce((sum, p) => sum + p.price, 0) / period;
   const output = [{ at: points[period - 1].at, price: value }];
   for (const p of points.slice(period)) {
@@ -27,12 +29,16 @@ export function vwap(points: readonly PricePoint[]): PricePoint[] {
   for (const p of points) {
     const bar = p.candle;
     // A missing bar/volume makes a cumulative VWAP unknowable, including subsequent points.
-    if (!bar || bar.volume === null) return [];
+    if (!bar || bar.volume === null) {
+      return [];
+    }
     const next = day.format(bar.time);
     if (next !== session) { session = next; weighted = volume = 0; }
     weighted += (bar.high + bar.low + bar.close) / 3 * bar.volume;
     volume += bar.volume;
-    if (volume > 0) output.push({ at: p.at, price: weighted / volume });
+    if (volume > 0) {
+      output.push({ at: p.at, price: weighted / volume });
+    }
   }
   return output;
 }
@@ -67,7 +73,11 @@ export function placeEndLabels<T extends { y: number }>(labels: readonly T[], he
   const sorted = [...labels].sort((a, b) => a.y - b.y);
   const actualGap = Math.min(gap, (height - inset * 2) / Math.max(1, sorted.length - 1));
   const placed = sorted.map((label, i) => ({ ...label, labelY: Math.max(inset + i * actualGap, Math.min(height - inset, label.y)) }));
-  for (let i = 1; i < placed.length; i++) placed[i].labelY = Math.max(placed[i].labelY, placed[i - 1].labelY + actualGap);
-  for (let i = placed.length - 1; i >= 0; i--) placed[i].labelY = Math.min(placed[i].labelY, height - inset - (placed.length - 1 - i) * actualGap);
+  for (let i = 1; i < placed.length; i++) {
+    placed[i].labelY = Math.max(placed[i].labelY, placed[i - 1].labelY + actualGap);
+  }
+  for (let i = placed.length - 1; i >= 0; i--) {
+    placed[i].labelY = Math.min(placed[i].labelY, height - inset - (placed.length - 1 - i) * actualGap);
+  }
   return placed;
 }

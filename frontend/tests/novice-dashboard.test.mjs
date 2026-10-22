@@ -27,10 +27,10 @@ const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), 
 
 // A dashboard wired to fake backends: records submitted orders, returns scripted order history
 // and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
-async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'], chart = false } = {}) {
+async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'], chart = false, providers = [] } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
   const feed = feedWith();
-  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed), ...providers]);
   let loads = 0;
   desk.portfolioClient = { load: async () => portfolios[Math.min(loads++, portfolios.length - 1)] };
   const submitted = [];
@@ -445,6 +445,67 @@ test('the ticket follows live prices, flags a stale quote, and reviews in one li
   assert.equal(desk.tradePriceDelayed(), true);
   desk.viewOrders();
   assert.equal(desk.activeTab(), 'Activity');
+});
+
+test('the spoken briefing reads the portfolio as shown, live moves and this account\'s orders (PS-18)', async t => {
+  const fill = historyRow('FILLED', { fillPrice: 176.5, filledQuantity: 2, filledAt: new Date().toISOString() });
+  const { desk, feed } = await tradingDesk(t);
+  feed.push(listed().map((q) => ({ ...q, change: q.symbol === 'NVDA' ? 2.5 : 0.4 })));
+  let asked;
+  desk.orderHistoryClient = { list: async (filters) => { asked = filters; return [fill]; } };
+  const snapshot = await desk.briefingSource();
+  assert.equal(asked.accountId, 'acct-1');
+  assert.equal(snapshot.accountId, 'acct-1', 'so this account remembers its own last briefing');
+  assert.equal(snapshot.total, desk.portfolioValue());
+  assert.equal(snapshot.gain, desk.totalReturn());
+  assert.equal(snapshot.buyingPower, 6420.18);
+  const cost = samplePortfolio.holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
+  assert.ok(Math.abs(snapshot.gainPercent - (desk.totalReturn() / cost) * 100) < 0.01, 'percent of what the shares cost');
+  assert.deepEqual(snapshot.holdings.map((h) => [h.symbol, h.dayChangePercent]), [['AAPL', 0.4], ['MSFT', 0.4], ['NVDA', 2.5]]);
+  assert.deepEqual(snapshot.orders, [fill]);
+  assert.equal(snapshot.balanceHidden, false);
+  assert.equal(snapshot.pricesDelayed, false);
+
+  desk.showBalance.set(false);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+});
+
+test('choosing a chart period says where the portfolio started and where it is now', async t => {
+  const { desk } = await tradingDesk(t, { chart: true });
+  desk.feed.client = { closes: async () => [] };
+  desk.setChartPeriod('1W');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 week\. /);
+  desk.showBalance.set(false);
+  desk.setChartPeriod('1M');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 month\. (Your balance is hidden|There is no history)/);
+  assert.ok(!desk.chartAnnouncement().includes('$'), 'no amounts while the balance is hidden');
+});
+
+test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
+  const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+  const said = [];
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const { desk } = await tradingDesk(t, { providers: [{ provide: SwitchScanService, useValue: scan }] });
+  desk.openTrade('Buy', 'AAPL');
+  desk.quantity.set('2');
+  desk.reviewTrade();
+  assert.equal(said.length, 1);
+  assert.match(said[0][0], /^You're about to buy 2 shares of Apple for \$353\. .*Press Confirm buy to place the order\.$/);
+  assert.equal(said[0][1], true, 'cuts in on whatever switch control was saying');
+  await desk.confirmTrade();
+  assert.equal(said.length, 1, 'confirming re-checks the order but does not read it again');
+  desk.openTrade('Sell', 'AAPL');
+  desk.quantity.set('1');
+  desk.reviewTrade();
+  assert.match(said.at(-1)[0], /^You're about to sell 1 share of Apple/);
+  desk.quantity.set('3'); desk.reviewing.set(false);
+  desk.reviewTrade();
+  assert.match(said.at(-1)[0], /^You're about to sell 3 shares of Apple/, 'an edited order is read again');
 });
 
 test('an order still running past the tracking limit points the user to Activity', async t => {

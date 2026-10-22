@@ -49,6 +49,18 @@ export class AccessibilityStore {
   }
 }
 
+/**
+ * The app's shared store. Feature services also run outside Angular in plain unit tests, where
+ * there is no injector; they get a store of their own that reads the same browser entry.
+ */
+export function accessibilityStore(): AccessibilityStore {
+  try {
+    return inject(AccessibilityStore);
+  } catch {
+    return new AccessibilityStore();
+  }
+}
+
 function readStored(): string | null {
   try {
     return globalThis.localStorage?.getItem(ACCESSIBILITY_STORAGE_KEY) ?? null;

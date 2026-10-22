@@ -39,6 +39,11 @@ import {
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { BriefingButton, BriefingSource } from './briefing-button';
+import { chartSummary } from './chart-speech';
+import { orderReadBack } from './order-read-back';
+import { spokenCompany } from './briefing';
+import { SwitchScanService } from './switch-scan';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -96,7 +101,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -118,6 +123,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly marketStatusLine = computed(() => marketStatusLabel(this.marketStatus(), this.marketClock()));
   readonly marketOpen = computed(() => this.marketStatus()?.open ?? false);
   readonly marketClosingSoon = computed(() => this.marketOpen() && !!this.marketStatus()?.nextClose);
+  /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
+  readonly marketKnownOpen = computed(() => this.marketStatus()?.open ?? null);
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
   readonly closedWarning = computed(() => closedMarketWarning(this.marketStatus(), this.marketClock()));
   /** The ticket's price is older than the orders service accepts (TS-14.7 AC3). */
@@ -225,6 +232,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartHistory = signal<ValuePoint[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
+  /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
+  readonly spokenStock = spokenCompany;
+  /** The last chart summary said aloud, for screen readers (a polite live region). */
+  readonly chartAnnouncement = signal('');
+  readonly #switchScan = inject(SwitchScanService, { optional: true });
   /** The chart point under the cursor; the value above the chart follows it while it is set. */
   readonly chartScrub = signal<ValuePoint | null>(null);
   /** The big number: the scrubbed point's value, otherwise the live total. */
@@ -488,7 +500,26 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.reviewing.set(!error);
     if (!error && startingReview) {
       this.clientReference.set(OrderSubmissionClient.generateClientReference());
+      this.#readBack();
     }
+  }
+
+  /**
+   * Says the order aloud before it can be confirmed (PS-23), cutting in on whatever switch control
+   * was saying. Only on starting a review, so confirming does not repeat it; editing and reviewing
+   * again reads the new details.
+   */
+  #readBack(): void {
+    const quote = this.tradeQuote();
+    this.#switchScan?.announce(orderReadBack({
+      side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+      quantity: Number(this.quantity()),
+      symbol: quote.symbol,
+      name: quote.name,
+      total: this.tradeTotal(),
+      closedWarning: this.closedWarning(),
+      priceDelayed: this.tradePriceDelayed(),
+    }), true);
   }
   /**
    * Sends the reviewed order to the backend. Holdings and buying power are not changed
@@ -653,7 +684,30 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   setChartPeriod(period: ChartPeriod): void {
     this.chartPeriod.set(period);
     this.chartScrub.set(null);
-    void this.loadChart();
+    void this.loadChart().then(() => this.#announceChart(period));
+  }
+
+  /**
+   * Says how the portfolio moved over the period just chosen, once its history has loaded:
+   * "1 month. A month ago you had $24,000.00. Now you have $25,450.09, up 6.04 percent." Shown to
+   * screen readers and read aloud by switch control. A period changed again meanwhile is not read.
+   */
+  #announceChart(period: ChartPeriod): void {
+    if (this.destroyed || this.chartPeriod() !== period) {
+      return;
+    }
+    const points = this.chartPoints();
+    const text = chartSummary({
+      period,
+      start: points.length ? startValue(points) : 0,
+      end: points.at(-1)?.value ?? this.portfolioValue(),
+      // A period reaching back before the account had money starts from its first deposit.
+      fromOpening: !!this.chartSpan()?.fromOpening || (points[0]?.value ?? 0) === 0,
+      balanceHidden: !this.showBalance(),
+      hasHistory: points.length >= 2 && !this.chartError(),
+    });
+    this.chartAnnouncement.set(text);
+    this.#switchScan?.announce(text);
   }
   /**
    * Rebuilds the portfolio-value chart for the chosen period from the account's real history:
@@ -812,6 +866,39 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   viewOrders(): void {
     this.navigate('Activity');
   }
+
+  /**
+   * What the spoken briefing reads (PS-18): the portfolio as shown, today's move of each holding
+   * from the live feed, and this account's orders. A failed order load leaves orders out.
+   */
+  readonly briefingSource: BriefingSource = async () => {
+    const accountId = this.selectedAccount()?.account_id;
+    let orders: OrderHistoryRow[] = [];
+    try {
+      orders = await this.orderHistoryClient.list({ accountId });
+    } catch {
+      // The rest of the briefing is still worth hearing.
+    }
+    const now = new Date(this.feed.now());
+    const live = new Map(this.feed.quotes().map((q) => [q.symbol, q]));
+    const held = this.holdings();
+    return {
+      accountId,
+      now,
+      market: this.marketStatus(),
+      balanceHidden: !this.showBalance(),
+      total: this.portfolioValue(),
+      gain: this.totalReturn(),
+      gainPercent: this.totalReturnPercent(),
+      buyingPower: this.buyingPower(),
+      holdings: held.map((h) => ({ symbol: h.symbol, name: h.name, dayChangePercent: live.get(h.symbol)?.change ?? null })),
+      orders,
+      pricesDelayed: held.some((h) => {
+        const quote = live.get(h.symbol);
+        return !!quote?.price && isDelayed(quote.quotedAt, now.getTime());
+      }),
+    };
+  };
 
   /**
    * Shows the feed's latest prices, re-values holdings at the latest bids (PS-10: no separate

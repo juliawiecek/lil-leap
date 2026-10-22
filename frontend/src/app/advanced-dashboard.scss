@@ -296,6 +296,10 @@ h2 {
 .pro-content {
   padding: 0 14px 15px;
 }
+/* The skip link focuses <main> itself (PS-20); its controls keep their own focus rings. */
+.pro-content:focus {
+  outline: none;
+}
 .session-line {
   height: 22px;
   display: flex;

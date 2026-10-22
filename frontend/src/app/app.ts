@@ -684,8 +684,11 @@ export class App implements AfterViewInit, OnDestroy {
       // The seeded walk and the SVG target disagree on direction, so the hollow/filled convention
       // changes with the geometry at the midpoint rather than flipping on the first morph frame.
       const falling = t < 0.5 ? candle.close < candle.open : target.falling;
-      if (falling) context.fillRect(x - width / 2, top, width, height);
-      else context.strokeRect(x - width / 2, top, width, height);
+      if (falling) {
+        context.fillRect(x - width / 2, top, width, height);
+      } else {
+        context.strokeRect(x - width / 2, top, width, height);
+      }
     }
     context.globalAlpha = 1;
   }

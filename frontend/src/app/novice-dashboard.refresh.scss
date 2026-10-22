@@ -86,6 +86,7 @@ app-market-ticker {
 .greeting { margin-bottom: 4px; font-size: 14px; font-weight: 500; letter-spacing: 0; }
 .market-status { gap: 14px; font-size: 13px; }
 .market-status > span:first-child { padding: 6px 12px; border-radius: 999px; background: var(--status-wash); color: var(--market-status-accent); font-weight: 700; }
+.market-status > span.closed { background: var(--loss-wash-01); color: var(--loss); }
 .market-status > span + span { padding-left: 0; border-left: 0; }
 .market-status i { width: 7px; height: 7px; animation: nt-pulse 2.4s ease-out infinite; }
 .market-status .open i { background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
