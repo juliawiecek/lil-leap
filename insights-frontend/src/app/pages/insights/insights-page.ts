@@ -11,7 +11,7 @@ const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD
 /** The hour it is now in Central time, as the trend labels it ("14:00"). */
 const CENTRAL_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
 /** One colour per ranked stock (rank 1 to 6), used on its bar, its swatch and its slice of the ring. */
-const RANK_COLORS = ['#94c973', '#7eb062', '#689652', '#547c43', '#426335', '#334d29'];
+const RANK_COLORS = ['#94c973', '#6f9fc2', '#d4b06a', '#a98fc9', '#d08a72', '#5fb3a3'];
 /** Formats the server's yyyy-mm-dd trading day without shifting it into the browser's time zone. */
 const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
@@ -47,7 +47,7 @@ export class InsightsPage implements OnDestroy {
   });
   /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
-  /** "Good morning" / "Good afternoon" / "Good evening" by the analyst's own clock. */
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the analyst's own clock. */
   readonly greeting = signal(greetingFor(new Date().getHours()));
   /** Running total of today's trades, hour by hour, for the line under the traded value. */
   readonly cumulativePoints = computed(() => {
@@ -165,5 +165,5 @@ export class InsightsPage implements OnDestroy {
 }
 
 function greetingFor(hour: number): string {
-  return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  return hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 }

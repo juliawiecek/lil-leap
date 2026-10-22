@@ -42,7 +42,12 @@
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.03em;
+  word-spacing: 0.12em;
   line-height: 1.15;
+}
+/* The time of day in NextTrade's "Trade" green. */
+:host .glance h1 .accent {
+  color: #94c973;
 }
 :host .glance .subtitle {
   margin-top: 4px;

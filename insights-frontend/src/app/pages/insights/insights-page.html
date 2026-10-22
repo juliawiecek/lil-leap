@@ -1,7 +1,7 @@
 <section class="glance" aria-label="Today at a glance" [attr.aria-busy]="loading()">
   <div class="glance-head">
     <div>
-      <h1>{{ greeting() }}</h1>
+      <h1>{{ greeting().split(' ')[0] }} <span class="accent">{{ greeting().split(' ')[1] }}</span></h1>
       <p class="subtitle">{{ subtitle() }}</p>
       @if (updatedAt(); as at) {
         <p class="updated"><i aria-hidden="true"></i>Live · updated {{ at }}</p>

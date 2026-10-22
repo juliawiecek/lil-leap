@@ -154,7 +154,7 @@
           <div>
             <dt>Net bought</dt>
             <dd class="figure" data-testid="client-net">{{ money(b.bought - b.sold) }}</dd>
-            <dd class="note">{{ fillsTotal() > fills()!.length ? 'Latest ' + count(fills()!.length) + ' of ' + count(fillsTotal()) + ' fills' : 'Bought minus sold' }}</dd>
+            <dd class="note">{{ fillsTotal() > fills()!.length ? 'Latest ' + count(fills()!.length) + ' of ' + count(fillsTotal()) + ' fills' : 'Bought − sold' }}</dd>
           </div>
         </dl>
         @if (b.bought + b.sold > 0) {

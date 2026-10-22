@@ -13,8 +13,11 @@ const COUNT = new Intl.NumberFormat('en-US');
 const SEARCH_DELAY_MS = 300;
 /** The overview chart reads at most this many pages of fills (25 each), newest first. */
 const ACTIVITY_PAGES = 4;
-/** Allocation colours: shades of NextTrade green, largest holding brightest; anything past the sixth is grouped as Other. */
-const HUES = ['#94c973', '#7eb062', '#689652', '#547c43', '#426335', '#334d29'];
+/**
+ * Allocation colours, largest holding first: NextTrade green, then distinct but muted hues so each slice is easy to
+ * tell apart without turning into a rainbow; anything past the sixth is grouped as Other (grey).
+ */
+const HUES = ['#94c973', '#6f9fc2', '#d4b06a', '#a98fc9', '#d08a72', '#5fb3a3'];
 const OTHER = '#5f645c';
 const RING_RADIUS = 58;
 const RING = 2 * Math.PI * RING_RADIUS;
