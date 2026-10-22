@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, browser } from './dom-helper.mjs';
 const {
-  ScanEngine, SwitchScanService, isSwitchControlShortcut, isSwitchKey, parseScanSettings, ringTarget, scanLabel, screenBox,
+  ScanEngine, SwitchScanService, isSwitchControlShortcut, isSwitchKey, parseScanSettings, ringTarget, scanLabel, screenBox, spokenItem,
 } = await import('../src/app/switch-scan.ts');
 const { ACCESSIBILITY_STORAGE_KEY } = await import('../src/app/accessibility.ts');
 const { SwitchScanSettings } = await import('../src/app/switch-scan-settings.ts');
@@ -201,6 +201,9 @@ test('the page can speak through the ring, after what the ring is saying', (t) =
   assert.equal(said().at(-1), '1 day. Now you have $25,000.00, unchanged.');
   assert.equal(synth.cancelled, cancels, 'queued, not cutting the ring off');
   assert.equal(doc.querySelector('.scan-live').textContent, '1 day. Now you have $25,000.00, unchanged.');
+  engine.say("You're about to buy 2 shares of Apple for $374.", true);
+  assert.equal(synth.cancelled, cancels + 1, 'an order read-back cuts in');
+  assert.equal(said().at(-1), "You're about to buy 2 shares of Apple for $374.");
 });
 
 test('Alt+S turns switch control on with reading aloud from any page, and off again', (t) => {
@@ -374,6 +377,20 @@ test('a dropdown opens its options as a scanned list', (t) => {
   choose(engine, 'group:Trade', 'control:Stock', 'group:AAPL to MSFT', 'control:MSFT');
   assert.equal(changed, 'MSFT');
   assert.equal(engine.pickerOpen, false);
+});
+
+test('words meant for the voice (data-speak) are read instead of what the screen shows', (t) => {
+  const engine = setup(t);
+  const select = doc.getElementById('sym');
+  select.options[0].setAttribute('data-speak', 'Apple');
+  select.options[1].setAttribute('data-speak', 'Microsoft');
+  choose(engine, 'group:Trade', 'control:Stock');
+  assert.ok(engine.items().some((item) => item.kind === 'group' && scanLabel(item.el) === 'Apple to Microsoft'), 'the picker rows use the spoken names');
+  const button = doc.createElement('button');
+  button.textContent = '1M';
+  button.setAttribute('aria-pressed', 'true');
+  button.setAttribute('data-speak', '1 month');
+  assert.equal(spokenItem(button), '1 month, selected', 'the name stays "1M" for screen readers; the voice says "1 month"');
 });
 
 test('an open dialog becomes the whole scan, and the ring moves inside it', (t) => {

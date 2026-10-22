@@ -1,5 +1,5 @@
 <div class="pro-shell" [class.collapsed]="collapsed()">
-  <aside class="pro-sidebar" data-scan-group="Menu">
+  <aside class="pro-sidebar" aria-label="Menu" data-scan-group="Menu">
     <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
@@ -89,7 +89,7 @@
         </button>
       </div>
     </header>
-    <main class="pro-content">
+    <main id="main-content" class="pro-content" tabindex="-1">
       @if (serviceDown()) {
         <div class="service-banner" role="alert">
           <strong>We can't reach NextTrade right now.</strong>

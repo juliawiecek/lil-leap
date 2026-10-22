@@ -304,6 +304,10 @@ h2 {
 .novice-content {
   padding: 20px 31px 24px;
 }
+/* The skip link focuses <main> itself (PS-20); its controls keep their own focus rings. */
+.novice-content:focus {
+  outline: none;
+}
 .page-heading {
   display: flex;
   justify-content: space-between;

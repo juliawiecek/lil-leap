@@ -5,7 +5,29 @@ import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { PERIOD_NAMES, chartSummary, spokenChange } = await import('../src/app/chart-speech.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
 const { STOCK_NAMES, speakable, stockName } = await import('../src/app/speech-text.ts');
-const { speechTime } = await import('../src/app/switch-scan.ts');
+const { speechTime, spokenItem } = await import('../src/app/switch-scan.ts');
+const { orderReadBack } = await import('../src/app/order-read-back.ts');
+
+test('an order is read back with side, shares, company, total and how to place it', () => {
+  const base = { symbol: 'GOOGL', name: 'Alphabet Inc.', closedWarning: '', priceDelayed: false };
+  assert.equal(
+    orderReadBack({ ...base, side: 'Buy', quantity: 2, total: 374.2 }),
+    "You're about to buy 2 shares of Google for $374. Press Confirm buy to place the order.",
+  );
+  assert.equal(
+    orderReadBack({ ...base, side: 'Sell', quantity: 1, total: 24512.08 }),
+    "You're about to sell 1 share of Google for about $24,500. Press Confirm sell to place the order.",
+  );
+});
+
+test('the read-back mentions a closed market and a delayed price when the review shows them', () => {
+  const text = orderReadBack({
+    side: 'Buy', quantity: 3, symbol: 'ZZZ', name: 'Acme Widgets, Inc.', total: 90,
+    closedWarning: 'The market is closed. Your order will fill when it opens at 8:30 AM.', priceDelayed: true,
+  });
+  assert.equal(text, "You're about to buy 3 shares of Acme Widgets for $90. The market is closed. Your order will fill "
+    + 'when it opens at 8:30 AM. The price is delayed, so the final total may be different. Press Confirm buy to place the order.');
+});
 
 test('all 33 listed stocks have spoken names, so no symbol is ever spelled out', () => {
   assert.equal(Object.keys(STOCK_NAMES).length, 33);
@@ -73,20 +95,34 @@ test('a period that starts when the money arrived says so, and hidden balances k
   assert.match(chartSummary({ ...base, fromOpening: false, start: 0 }), /unchanged/, 'no division by zero');
 });
 
-test('each price on the tape reads with the company name, not the ticker symbol', async (t) => {
+test('each price on the tape is named by what it shows, and switch control says the company name', async (t) => {
   const feed = fakeFeed([
     { symbol: 'AAPL', name: 'Apple Inc.', price: 224.52, change: 0.4 },
     { symbol: 'BA', name: 'The Boeing Company', price: 214.93, change: -1.25 },
+    { symbol: 'KO', name: 'Coca-Cola', price: 61.2, change: 0 },
     { symbol: 'NEW', name: 'New Listing Inc.', price: 0 },
   ]);
   const fixture = await render(t, MarketTicker, {}, [feedProvider(feed)]);
-  const labels = [...fixture.nativeElement.querySelectorAll('ul:not([aria-hidden]) button')].map((b) => b.getAttribute('aria-label'));
-  assert.deepEqual(labels, [
+  const buttons = [...fixture.nativeElement.querySelectorAll('ul:not([aria-hidden]) button')];
+  const labels = buttons.map((b) => b.getAttribute('aria-label'));
+  // WCAG 2.5.3 (PS-20): the name holds the visible text, in order, so speech input can match it.
+  assert.deepEqual(labels, ['AAPL, $224.52, +0.40%', 'BA, $214.93, −1.25%', 'KO, $61.20, 0.00%', 'NEW, price not available yet']);
+  const bare = (text) => text.replace(/[^\p{L}\p{N}−]+/gu, ' ').trim();
+  buttons.slice(0, 3).forEach((button, i) => {
+    const shown = [...button.querySelectorAll('strong, .price, .change [aria-hidden="true"]')].map((el) => el.textContent).join(' ');
+    assert.equal(bare(labels[i]), bare(shown));
+  });
+  // Switch control's voice reads data-speak: company names and the move in words.
+  assert.deepEqual(buttons.map((b) => b.getAttribute('data-speak')), [
     'Apple, $224.52, up 0.40 percent',
     'Boeing, $214.93, down 1.25 percent',
+    'Coca-Cola, $61.20, unchanged',
     'New Listing, price not available yet',
   ]);
+  assert.equal(spokenItem(buttons[0]), 'Apple, $224.52, up 0.40 percent');
   feed.quotes.set(feed.quotes().map((q) => ({ ...q, quotedAt: new Date(Date.now() - 10 * 60000).toISOString() })));
   fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('ul button').getAttribute('aria-label'), /, price delayed$/);
+  const first = fixture.nativeElement.querySelector('ul button');
+  assert.match(first.getAttribute('aria-label'), /, Price delayed$/);
+  assert.match(first.getAttribute('data-speak'), /, price delayed$/);
 });

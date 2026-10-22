@@ -43,6 +43,7 @@ import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
+import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { SwitchScanService } from './switch-scan';
 
@@ -507,7 +508,26 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.reviewing.set(!error);
     if (!error && startingReview) {
       this.clientReference.set(OrderSubmissionClient.generateClientReference());
+      this.#readBack();
     }
+  }
+
+  /**
+   * Says the order aloud before it can be confirmed (PS-23), cutting in on whatever switch control
+   * was saying. Only on starting a review, so confirming does not repeat it; editing and reviewing
+   * again reads the new details.
+   */
+  #readBack(): void {
+    const quote = this.tradeQuote();
+    this.#switchScan?.announce(orderReadBack({
+      side: this.side() === 'Sell' ? 'Sell' : 'Buy',
+      quantity: Number(this.quantity()),
+      symbol: quote.symbol,
+      name: quote.name,
+      total: this.tradeTotal(),
+      closedWarning: this.closedWarning(),
+      priceDelayed: this.tradePriceDelayed(),
+    }), true);
   }
   /**
    * Sends the reviewed order to the backend. Holdings and buying power are not changed

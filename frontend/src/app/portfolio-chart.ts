@@ -162,7 +162,7 @@ let nextPortfolioChartId = 0;
           type="button"
           [class.selected]="period() === item"
           [attr.aria-pressed]="period() === item"
-          [attr.aria-label]="periodNames[item]"
+          [attr.data-speak]="periodNames[item]"
           (click)="periodChange.emit(item)"
         >
           {{ item }}

@@ -27,9 +27,9 @@
     }
   </div>
   <div class="market-scan" aria-hidden="true"></div>
-  <main class="chart-stage" aria-label="Animated stock market chart">
+  <div class="chart-stage" aria-hidden="true">
     <canvas #marketChart id="market-chart" inert></canvas>
-  </main>
+  </div>
   <div class="edge-shade" aria-hidden="true"></div>
 
   @if (pageReady() && !profileOpen()) {
@@ -72,7 +72,7 @@
     </div>
   </div>
   }
-  <section class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+  <main class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>
@@ -98,7 +98,7 @@
           </div>
         }
 
-        <form #authForm method="post" novalidate (submit)="onSubmit($event, authForm)">
+        <form #authForm id="auth-form" method="post" novalidate (submit)="onSubmit($event, authForm)">
 
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
@@ -164,7 +164,7 @@
         <span>Support</span>
       </nav>
     </footer>
-  </section>
+  </main>
 
 @if (profileOpen()) {
   <app-investor-profile
