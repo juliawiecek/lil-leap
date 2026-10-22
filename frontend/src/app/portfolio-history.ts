@@ -252,6 +252,9 @@ export function portfolioEvents(movements: readonly { transactionId?: string; oc
 
 /** A capped/imported ledger must agree with the current snapshot before claiming history. */
 export function ledgerMatches(snapshot: Portfolio, cash: readonly CashEvent[], shares: readonly ShareEvent[]): boolean {
+  if (!cash.every(e => Number.isFinite(e.at) && Number.isFinite(e.amount)) ||
+      !shares.every(e => Number.isFinite(e.at) && Number.isFinite(e.quantity) && Number.isFinite(e.price) && e.price > 0 && !!e.symbol) ||
+      !snapshot.holdings.every(h => !!h.symbol && Number.isFinite(h.quantity) && h.quantity > 0)) return false;
   if (Math.abs(snapshot.cash - cash.reduce((sum, e) => sum + e.amount, 0)) > .011) return false;
   const quantities = new Map<string, number>();
   for (const e of shares) quantities.set(e.symbol, (quantities.get(e.symbol) ?? 0) + e.quantity);

@@ -21,7 +21,8 @@
           <path class="wick" [attr.d]="'M' + x(p.at) + ' ' + y(p.candle!.high) + 'V' + bodyTop(p) + 'M' + x(p.at) + ' ' + (bodyTop(p) + bodyHeight(p)) + 'V' + y(p.candle!.low)" />
           <rect class="candle-body" [attr.x]="x(p.at) - bodyWidth() / 2" [attr.y]="bodyTop(p)" [attr.width]="bodyWidth()" [attr.height]="bodyHeight(p)" />
         </g>
-      } @empty { <path class="price-line" transform="translate(4 0)" [attr.d]="line()" /> }
+      }
+      @if (hasRawPrices()) { <path class="price-line" transform="translate(4 0)" [attr.d]="line()" /> }
       @for (s of paths(); track s.name) { @if (s.path) { <path class="indicator-line" transform="translate(4 0)" [attr.data-indicator]="s.name" [attr.d]="s.path" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /> } }
       @for (s of labels(); track s.name) { <path class="label-leader" [attr.d]="'M' + s.x + ' ' + s.y + 'L' + width() + ' ' + s.labelY" [attr.stroke]="s.token" /> }
       @if (averageCost(); as cost) { <line class="average-line" x1="0" [attr.x2]="width()" [attr.y1]="y(cost)" [attr.y2]="y(cost)" /> }
@@ -34,7 +35,7 @@
   <div class="end-labels" aria-label="Indicator values at visible line ends">
     @for (s of labels(); track s.name) { <span class="indicator-label" [attr.data-indicator]="s.name" [style.top.%]="s.labelY / height * 100" [style.color]="s.token"><svg width="16" height="8" aria-hidden="true"><path d="M0 4H16" [attr.stroke-dasharray]="s.dash" /></svg>{{ s.name }}<small>{{ s.price | number:'1.2-2' }}</small></span> }
   </div>
-  <div class="price-axis" aria-label="Price scale">@for (price of axes(); track $index) { <span>{{ price | number:'1.2-2' }}</span> }</div>
+  <div class="price-axis" aria-label="Price scale">@if (visible().length) { @for (price of axes(); track $index) { <span>{{ price | number:'1.2-2' }}</span> } }</div>
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
 @if (averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }

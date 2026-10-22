@@ -85,8 +85,8 @@ test('advanced price, OHLC/indicators, exposure and real reported volume have al
   await expect(priceAccess.locator('thead')).toContainText('VWAP');
   await expect(priceAccess.locator('tfoot')).toContainText('Average cost reference');
   await expect(priceAccess.locator('tfoot')).toContainText('$195.00');
-  await alternatives(page, technical.locator('.volume-plot'), technical.locator('app-chart-access').last());
-  const volumeAccess = technical.locator('app-chart-access').last();
+  const volumeAccess = technical.locator('app-chart-access').filter({ has: page.locator('[id$="-volume-data-summary"]') });
+  await alternatives(page, technical.locator('.volume-plot'), volumeAccess);
   await expect(volumeAccess.locator('tbody')).toContainText('shares');
   const displayedBars = await volumeAccess.locator('tbody tr').count();
   const everyObservation = volumeAccess.getByRole('button', { name: 'Show every observation', exact: true });
@@ -116,7 +116,7 @@ test('missing volume is explained without invented values and all controls work 
   await colourFixture(page, 'ADVANCED');
   await page.goto('/dashboard');
   await page.getByText('Trade history and long-range chart', { exact: true }).click();
-  const volume = page.locator('app-technical-chart app-chart-access').last();
+  const volume = page.locator('app-technical-chart app-chart-access').filter({ has: page.locator('[id$="-volume-data-summary"]') });
   await volume.getByRole('button', { name: 'Explain this chart', exact: true }).click();
   await expect(volume.locator('p').first()).toContainText('unavailable');
   const toggle = volume.locator('button[aria-controls$="-table"]');

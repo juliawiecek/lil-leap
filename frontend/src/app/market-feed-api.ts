@@ -83,8 +83,8 @@ export interface PriceCandle {
 }
 
 export function candleMetadata(row: { time: string; open?: unknown; high?: unknown; low?: unknown; close: unknown; volume?: unknown }): PriceCandle | undefined {
-  const time = Date.parse(row.time), open = Number(row.open), high = Number(row.high), low = Number(row.low), close = Number(row.close);
-  if (![time, open, high, low, close].every(Number.isFinite) || Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
+  const time = Date.parse(row.time), open = numericValue(row.open), high = numericValue(row.high), low = numericValue(row.low), close = numericValue(row.close);
+  if (!Number.isFinite(time) || open === null || high === null || low === null || close === null || Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
     return undefined;
   }
   const volume = numericValue(row.volume);

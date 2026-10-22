@@ -121,7 +121,7 @@ test('portfolio loading hides the old plot and values until its new period is re
   assert.ok(fixture.nativeElement.querySelector('svg'));
   fixture.componentRef.setInput('loading', true);
   fixture.componentRef.setInput('period', '1W'); fixture.detectChanges();
-  assert.equal(fixture.nativeElement.querySelector('svg'), null);
+  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]'), null);
   assert.match(fixture.componentInstance.description(), /loading/);
   assert.deepEqual(fixture.componentInstance.dataTable().rows, []);
   fixture.componentRef.setInput('points', [{ at, value: 200 }, { at: at + 1000, value: 220 }]);
@@ -245,7 +245,7 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   assert.equal(chart.baselineY(), 100);
   assert.equal(chart.end().value, 0);
   assert.equal(chart.labelLeft(), 0);
-  assert.equal(fixture.nativeElement.querySelector('svg'), null);
+  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]'), null);
   const scrubbed = [];
   chart.scrub.subscribe((point) => scrubbed.push(point));
   chart.scrubKey(new browser.KeyboardEvent('keydown', { key: 'Home' }));

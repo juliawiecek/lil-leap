@@ -32,7 +32,10 @@ export function vwap(points: readonly PricePoint[]): PricePoint[] {
   for (const p of points) {
     const bar = p.candle;
     // A missing bar/volume makes a cumulative VWAP unknowable, including subsequent points.
-    if (!bar || bar.volume === null || !Number.isFinite(bar.volume) || bar.volume < 0) {
+    if (!bar || bar.volume === null || !Number.isFinite(bar.volume) || bar.volume < 0 ||
+        ![bar.time, bar.open, bar.high, bar.low, bar.close].every(Number.isFinite) ||
+        Math.min(bar.open, bar.high, bar.low, bar.close) <= 0 ||
+        bar.high < Math.max(bar.open, bar.close) || bar.low > Math.min(bar.open, bar.close)) {
       return [];
     }
     const next = day.format(bar.time);

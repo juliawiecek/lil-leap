@@ -468,7 +468,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   async #loadHistory(quote: Quote, period = this.period()): Promise<void> {
     const key = quote.symbol + '|' + period + '|' + Math.floor(Date.now() / 60000);
-    if (!quote.instrumentId || key === this.#historyKey) {
+    if (!quote.instrumentId) {
+      ++this.#historyRequest;
+      this.#historyKey = '';
+      this.#historySymbol = quote.symbol;
+      this.#barMs = 0;
+      this.priceHistory.set([]);
+      this.historyLoading.set(false);
+      this.historyError.set('Recorded prices are unavailable for this security.');
+      return;
+    }
+    if (key === this.#historyKey) {
       return;
     }
     const selectionChanged = !this.#historyKey.startsWith(quote.symbol + '|' + period + '|');
@@ -476,7 +486,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.#historyKey = key;
     this.historyLoading.set(true);
     this.historyError.set('');
-    if (selectionChanged) this.priceHistory.set([]);
+    if (selectionChanged) { this.priceHistory.set([]); this.#barMs = 0; }
     if (quote.symbol !== this.#historySymbol) {
       this.#historySymbol = quote.symbol;
       this.#barMs = 0;
@@ -515,6 +525,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.priceHistory.set(points);
       this.#addTick(this.selected());
     }
+    if (current() && !points.length && !this.historyError()) this.priceHistory.set([]);
     if (current()) {
       this.historyLoading.set(false);
       if (this.historyError()) this.#historyKey = '';
@@ -537,8 +548,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         const candle = last.candle ? { ...last.candle, close: quote.price, high: Math.max(last.candle.high, quote.price), low: Math.min(last.candle.low, quote.price), volume: null } : undefined;
         return [...points.slice(0, -1), { at, price: quote.price, ...(candle ? { candle } : {}) }];
       }
-      const candle = barMs && last?.candle ? { time: Math.floor(at / barMs) * barMs, open: quote.price, high: quote.price, low: quote.price, close: quote.price, volume: null } : undefined;
-      return [...points, { at, price: quote.price, ...(candle ? { candle } : {}) }];
+      // A latest quote is not a complete OHLC interval. Keep it as a price observation
+      // until the candle endpoint supplies the interval's actual open and extremes.
+      return [...points, { at, price: quote.price }];
     });
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */

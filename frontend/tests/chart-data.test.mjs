@@ -5,6 +5,8 @@ import { component } from './component-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { quoteHistoryPoints, orderedPrices, allocation } = await import('../src/app/chart-data.ts');
 const { MarketFeedClient } = await import('../src/app/market-feed-api.ts');
+const { candleMetadata } = await import('../src/app/market-feed-api.ts');
+const { tradeMarks } = await import('../src/app/trade-marks.ts');
 const { ema, rsi, vwap } = await import('../src/app/technical-chart-math.ts');
 const { portfolioEvents, portfolioSeries, ledgerMatches } = await import('../src/app/portfolio-history.ts');
 const { hasMarketValuation } = await import('../src/app/portfolio-api.ts');
@@ -14,6 +16,34 @@ const { AuthService } = await import('../src/app/auth.service.ts');
 const at = Date.parse('2026-10-21T14:00:00Z');
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const flush = () => new Promise(resolve => setImmediate(resolve));
+
+test('malformed candle fields are not coerced to financial observations', () => {
+  const bar = { time: new Date(at).toISOString(), open: 2, high: 3, low: 1, close: 2 };
+  for (const field of ['open', 'high', 'low', 'close']) {
+    for (const invalid of [null, undefined, '', false, true, NaN, Infinity]) {
+      assert.equal(candleMetadata({ ...bar, [field]: invalid }), undefined);
+    }
+  }
+  assert.equal(candleMetadata(bar).volume, null);
+});
+
+test('trade markers require valid executions and never substitute submitted quantity', () => {
+  const fill = { symbol: 'AAPL', side: 'BUY', status: 'FILLED', quantity: 100,
+    filledQuantity: 2, fillPrice: 10, filledAt: new Date(at).toISOString() };
+  assert.equal(tradeMarks([fill], 'AAPL')[0].quantity, 2);
+  for (const invalid of [
+    { filledQuantity: null }, { filledQuantity: NaN }, { filledQuantity: 0 },
+    { fillPrice: null }, { filledAt: 'invalid' }, { side: 'UNKNOWN' }, { status: 'ACCEPTED' },
+  ]) assert.deepEqual(tradeMarks([{ ...fill, ...invalid }], 'AAPL'), []);
+});
+
+test('ledger reconciliation rejects non-finite cash, shares and snapshot quantities', () => {
+  const snapshot = { cash: 0, holdings: [] };
+  assert.equal(ledgerMatches(snapshot, [{ at, amount: NaN }], []), false);
+  assert.equal(ledgerMatches(snapshot, [{ at: NaN, amount: 0 }], []), false);
+  assert.equal(ledgerMatches(snapshot, [], [{ at, symbol: 'AAPL', quantity: NaN, price: 10 }]), false);
+  assert.equal(ledgerMatches({ cash: 0, holdings: [{ symbol: 'AAPL', quantity: NaN }] }, [], []), false);
+});
 
 test('history mapping normalizes zones to epoch ms, preserves precision and newest timestamp ties', () => {
   const rows = [
@@ -67,6 +97,9 @@ test('EMA SMA seed and Wilder RSI match independent hand/reference values withou
   assert.equal(result[0].at, at + 14 * 60000);
   assert.deepEqual(rsi(points(values.slice(0, 14)), 14), []);
   assert.deepEqual(ema(points(values), 200), []);
+  const linear = points(Array.from({ length: 201 }, (_, i) => i + 1));
+  assert.deepEqual(ema(linear, 200).map(p => p.price), [100.5, 101.5]);
+  assert.deepEqual(ema(linear.slice(0, 51), 50).map(p => p.price), [25.5, 26.5]);
   assert.equal(rsi(points([1, 2, 3]), 2)[0].price, 100);
   assert.equal(rsi(points([3, 2, 1]), 2)[0].price, 0);
   assert.equal(rsi(points([2, 2, 2]), 2)[0].price, 50);
@@ -80,6 +113,12 @@ test('VWAP weights typical OHLC prices by reported shares and resets on New York
   assert.deepEqual(vwap([bar(at, 10, null)]), []);
   assert.deepEqual(vwap([bar(at, 10, 0)]), []);
   assert.deepEqual(vwap([bar(at, 10, 100), bar(at + 60000, 13, null)]), [], 'no incomplete cumulative VWAP');
+  const invalid = bar(at, 10, 100);
+  invalid.candle.time = NaN;
+  assert.deepEqual(vwap([invalid]), [], 'invalid bar times never throw or create a session');
+  invalid.candle.time = at; invalid.candle.high = NaN;
+  assert.deepEqual(vwap([invalid]), [], 'invalid OHLC never enters VWAP');
+  assert.deepEqual(vwap([bar(at, 10, 0), bar(at + 60000, 13, 100)]).map(p => p.price), [13]);
 });
 
 test('executed buys and sells move cash/shares once; open orders and pending transfers do not', () => {
@@ -140,4 +179,28 @@ test('advanced history drops stale symbols/timeframes, preserves empty windows a
   feed.client.closes = async () => [];
   desk.setPeriod('1M'); await flush();
   assert.equal(desk.historyError(), ''); assert.deepEqual(desk.priceHistory(), []);
+  desk.priceHistory.set([{ at, price: 200 }]);
+  desk.setPeriod('1D'); await flush();
+  assert.deepEqual(desk.priceHistory(), [], 'a successful empty refresh clears prior observations');
+  desk.selected.set({ symbol: 'UNKNOWN', price: 0 });
+  desk.setPeriod('1W');
+  assert.deepEqual(desk.priceHistory(), []);
+  assert.equal(desk.historyLoading(), false);
+  assert.match(desk.historyError(), /unavailable/);
+});
+
+test('a live quote in a new interval stays a raw observation until real OHLC arrives', async t => {
+  const feed = fakeFeed([]);
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
+  const time = Math.floor(Date.now() / 300000) * 300000 - 300000;
+  const candle = { time, open: 100, high: 105, low: 99, close: 103, volume: null };
+  feed.client = { closes: async () => Array.from({ length: 30 }, (_, i) => ({
+    at: time - (29 - i) * 300000 + 1000, price: 103, candle: { ...candle, time: time - (29 - i) * 300000 },
+  })), history: async () => [] };
+  feed.push([{ symbol: 'AAPL', price: 103, quotedAt: new Date(time + 1000).toISOString() }]);
+  await flush();
+  assert.ok(desk.priceHistory().at(-1).candle);
+  feed.push([{ symbol: 'AAPL', price: 106, quotedAt: new Date(time + 301000).toISOString() }]);
+  assert.equal(desk.priceHistory().at(-1).price, 106);
+  assert.equal(desk.priceHistory().at(-1).candle, undefined);
 });

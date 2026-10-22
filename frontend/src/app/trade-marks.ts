@@ -3,6 +3,7 @@
  * and their average cost as a horizontal line. Built from order history; no new data.
  */
 import type { OrderHistoryRow } from './order-history-api';
+import { numericValue } from './chart-data';
 
 export interface TradeMark {
   side: 'BUY' | 'SELL';
@@ -47,17 +48,17 @@ function labelFormat(span: number): Intl.DateTimeFormatOptions {
 
 /** Filled orders for one stock, oldest first, as chart markers. */
 export function tradeMarks(rows: readonly OrderHistoryRow[], symbol: string, locale?: string): TradeMark[] {
-  const when = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const when = new Intl.DateTimeFormat(locale, { timeZone: 'America/New_York', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
   return rows
-    .filter((row) => row.symbol === symbol && row.status === 'FILLED' && row.fillPrice !== null && row.filledAt)
-    .map((row) => {
+    .filter((row) => row.symbol === symbol && row.status === 'FILLED')
+    .flatMap((row) => {
+      const quantity = numericValue(row.filledQuantity), price = numericValue(row.fillPrice);
+      const at = Date.parse(row.filledAt ?? '');
+      if (!['BUY', 'SELL'].includes(row.side) || quantity === null || quantity <= 0 || price === null || price <= 0 || !Number.isFinite(at)) return [];
       const side = row.side === 'SELL' ? 'SELL' : 'BUY';
-      const quantity = Number(row.filledQuantity ?? row.quantity);
-      const price = Number(row.fillPrice);
-      const at = Date.parse(row.filledAt as string);
       const verb = side === 'BUY' ? 'Bought' : 'Sold';
-      return { side, quantity, price, at, label: `${verb} ${quantity} @ ${money.format(price)} · ${when.format(at)}` } as TradeMark;
+      return [{ side, quantity, price, at, label: `${verb} ${quantity} @ ${money.format(price)} · ${when.format(at)}` } as TradeMark];
     })
     .filter((mark) => Number.isFinite(mark.at) && mark.price > 0)
     .sort((a, b) => a.at - b.at);

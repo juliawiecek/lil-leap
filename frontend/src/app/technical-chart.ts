@@ -77,6 +77,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   });
   readonly source = computed(() => orderedPrices(this.points()));
   readonly visible = computed(() => this.source().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end));
+  readonly hasRawPrices = computed(() => this.visible().some(p => !p.candle));
   readonly candles = computed(() => displayCandles(this.visible(), this.width() / 7));
   readonly series = computed(() => indicators(this.source()));
   readonly range = computed(() => priceRange([
@@ -92,7 +93,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   }), HEIGHT, 28));
   readonly marks = computed(() => plotMarks(this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
   readonly axes = computed(() => Array.from({ length: 5 }, (_, i) => this.range().high - i * (this.range().high - this.range().low) / 4));
-  readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at)));
+  readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at)));
   readonly maxVolume = computed(() => Math.max(1, ...this.candles().map(p => p.candle!.volume ?? 0)));
   readonly hasVolume = computed(() => this.candles().some(p => p.candle!.volume !== null));
   readonly bodyWidth = computed(() => {
@@ -108,7 +109,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   bodyHeight(p: PricePoint): number { return Math.max(1, Math.abs(this.y(p.candle!.open) - this.y(p.candle!.close))); }
   candleText(p: PricePoint): string {
     const c = p.candle!;
-    return `${new Date(c.time).toLocaleString()}: ${c.close > c.open ? 'Up, hollow' : c.close < c.open ? 'Down, filled' : 'Unchanged'}, open ${c.open}, high ${c.high}, low ${c.low}, close ${c.close}${c.volume === null ? ', volume unavailable' : ', volume ' + c.volume}`;
+    return `${chartDate(c.time)}: ${c.close > c.open ? 'Up, hollow' : c.close < c.open ? 'Down, filled' : 'Unchanged'}, open ${c.open}, high ${c.high}, low ${c.low}, close ${c.close}${c.volume === null ? ', volume unavailable' : ', volume ' + c.volume}`;
   }
   pan(direction: number): void {
     const v = this.viewport();
@@ -133,7 +134,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? points.length - 1 : Math.max(0, Math.min(points.length - 1, (index < 0 ? points.length - 1 : index) + (event.key === 'ArrowRight' ? 1 : -1)));
     this.inspected.set(points[next] ?? null);
   }
-  readonly inspectable = computed(() => this.candles().length ? this.candles() : this.visible());
+  readonly inspectable = computed(() => this.visible().some(p => !p.candle) ? this.visible() : this.candles());
   ngOnChanges(): void {
     if (this.#key !== this.chartKey()) { this.#key = this.chartKey(); this.zoom.set(1); this.anchor.set(null); this.inspected.set(null); }
   }

@@ -26,6 +26,21 @@ test('rendered RSI, reusable series and chart alternatives share the same real o
   assert.deepEqual(chart.dataTable().rows.map(r => r[4]), values.slice(0, 3).map(String));
 });
 
+test('mixed OHLC and raw quotes render and inspect the same source', async t => {
+  const points = [...bars.slice(0, 2), { at: start + 120000, price: 45 }];
+  const fixture = await render(t, TechnicalChart, { points, window: { start, end: start + 120000 } });
+  const chart = fixture.componentInstance;
+  assert.equal(chart.candles().length, 2);
+  assert.ok(fixture.nativeElement.querySelector('.price-line').getAttribute('d'));
+  chart.inspectKey({ key: 'End', preventDefault() {} }); fixture.detectChanges();
+  assert.equal(chart.inspected().price, 45);
+  assert.equal(chart.inspected().candle, undefined);
+  assert.equal(chart.allData().rows.at(-1)[1], 'Unavailable');
+  assert.equal(chart.allData().rows.at(-1)[4], '45');
+  fixture.componentRef.setInput('points', []); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('.price-axis').textContent.trim(), '');
+});
+
 test('raw price charts keep inspection usable without fabricating candles', async t => {
   const points = bars.slice(0, 3).map(({ at, price }) => ({ at, price }));
   const fixture = await render(t, TechnicalChart, { points, window: { start, end: points.at(-1).at } });
