@@ -22,19 +22,27 @@ story is merged; skip them if it is not.
    press Alt+B again: amounts are no longer read out.
 4. **One-button trading (PS-19, PS-23).** In Accessibility, turn on Switch control and Read each
    item aloud. Using only the space bar: Ready to trade > Buy > Number of shares > 2 > Done >
-   Review > Confirm. The fill toast appears. "That trade used one button, and could be done
-   without looking at the screen."
-5. **The briefing again (PS-18).** Press Alt+B: it now reports the order just placed.
-6. **A chart in words (PS-25).** Focus the portfolio chart and use the arrow keys to step through
+   Review > Confirm. Point out the caption strip at the bottom: every item the ring reads, and
+   each keypad key ("2", "Done"), is shown as it is spoken. At Review the order is read back and
+   captioned ("You're about to buy 2 shares of Apple for about $450 ...") before Confirm. The fill
+   toast appears above the caption. "That trade used one button, and could be done without looking
+   at the screen, or without hearing it."
+5. **What's this? (PS-23).** Press Alt+S to turn switch control off. Hover over Buying power on
+   the Overview and press Alt+W: it is explained in plain English, aloud and in the caption. Tab
+   to a button with no entry and press Alt+W: "No extra help for this item."
+6. **The briefing again (PS-18).** Press Alt+B: it now reports the order just placed, and each
+   sentence is captioned as it is read.
+7. **A chart in words (PS-25).** Focus the portfolio chart and use the arrow keys to step through
    prices, then open Explain this chart.
-7. **Colour-blind mode (PS-27, PS-28).** Turn on colour-blind colours. Gains turn blue and losses
+8. **Colour-blind mode (PS-27, PS-28).** Turn on colour-blind colours. Gains turn blue and losses
    orange, and every change gets an arrow.
-8. **The score (PS-20).** Show the axe result: no serious or critical issues.
+9. **The score (PS-20).** Show the axe result: no serious or critical issues.
 
 ## If something goes wrong
 
 - Nothing is spoken: check the volume and that the browser tab is not muted; the briefing panel
-  still shows the text.
+  still shows the text, and the caption strip shows everything else.
+- No caption strip: Settings > Accessibility > Captions must be On (it is on unless turned off).
 - Switch control does not move: click the page once so it has focus, then press Space.
 - Signed out mid-demo: the inactivity limit is 10 minutes until PS-30 lands; sign in again.
 
