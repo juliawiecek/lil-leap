@@ -34,6 +34,8 @@
       }
     </div>
   </div>
+  @if (desk().historyLoading()) { <p class="chart-note" role="status">Loading recorded prices...</p> }
+  @if (desk().historyError()) { <p class="chart-note" role="status">{{ desk().historyError() }}</p> }
   <app-technical-chart [privateValues]="desk().privateBalance()" [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
   @if (!desk().priceLine()) { <p class="chart-note">Collecting recorded prices for {{ desk().selected().symbol }}.</p> }
 

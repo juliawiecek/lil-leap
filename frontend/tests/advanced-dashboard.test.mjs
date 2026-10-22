@@ -266,7 +266,7 @@ test('the summary shows real cash and invested shares, sectors come from listed 
   const now = Date.now();
   desk.currentTime.set(new Date(now));
   desk.priceHistory.set([{ at: now - 60000, price: 170 }, { at: now - 30000, price: 175 }]);
-  assert.match(desk.priceLine(), /^M0\.0,([\d.]+) L[\d.]+,\1 L[\d.]+,[\d.]+$/, 'flat from the start of the day at the first price, then the recorded prices');
+  assert.match(desk.priceLine(), /^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/, 'only the two recorded observations; no invented price before the first');
   assert.equal(desk.historyStart(), now - 60000);
   desk.priceHistory.set([]);
   assert.equal(desk.priceLine(), '', 'no invented candles while prices are still being collected');

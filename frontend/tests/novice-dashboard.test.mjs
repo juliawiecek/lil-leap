@@ -99,7 +99,7 @@ test('the guided workspace exposes Learn alongside its trading pages, and servic
 test('the overview chart rebuilds the account’s value from its deposits, fills and recorded prices', async t => {
   const now = Date.now();
   const at = (hoursAgo) => new Date(now - hoursAgo * 3600000).toISOString();
-  const { desk, feed } = await tradingDesk(t, { history: [[]], portfolios: [{ cash: 500, holdings: [] }], chart: true });
+  const { desk, feed } = await tradingDesk(t, { history: [[]], portfolios: [{ cash: 500, holdings: [{ ...holding('AAPL', 5, 100), instrumentId: 'aapl-id' }] }], chart: true });
   desk.accountState.use([{ account_id: 'acct-1', account_status: 'ACTIVE', trading_enabled: true, created_at: at(10) }]);
   desk.cashActivityClient = { list: async (filters) => {
     assert.deepEqual(filters, { accountId: 'acct-1' });
@@ -117,12 +117,12 @@ test('the overview chart rebuilds the account’s value from its deposits, fills
   assert.equal(desk.chartSpan().fromOpening, true, 'a ten-hour-old account: the week view starts at its first deposit');
   assert.equal(desk.chartSpan().start, Date.parse(at(10)));
   assert.deepEqual(requests, [['aapl-id', '5m']]);
-  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1000, 1050, 1050, 1050], 'a step at the fill');
-  // Recorded prices are midpoints; live values use the bid, so the history is moved onto the bid.
+  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1050, 1050], 'history begins once a recorded price makes valuation possible');
+  // Changing today?s bid cannot change past observations.
   const aapl = feed.quotes().find((q) => q.symbol === 'AAPL');
   feed.quotes.set(feed.quotes().map((q) => (q.symbol === 'AAPL' ? { ...q, bid: aapl.price * 0.99 } : q)));
   await desk.loadChart();
-  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1000, 1000, 1044.5, 1044.5, 1044.5], '5 shares at 110 × 0.99');
+  assert.deepEqual(desk.chartHistory().map((p) => p.value), [1050, 1050], 'today spread cannot rewrite historical bids');
   feed.quotes.set(feed.quotes().map((q) => (q.symbol === 'AAPL' ? aapl : q)));
   desk.applyPortfolio({ cash: 500, holdings: [] });
   assert.equal(desk.chartPoints().at(-1).value, 500, 'the line ends at the live value shown above it');
@@ -169,7 +169,7 @@ test('every live value is added to the line, so its dips and rises stay instead 
 test('reloading the day after close includes recorded after-hours quotes', async t => {
   const now = Date.parse('2026-10-20T21:30:00Z');
   t.mock.method(Date, 'now', () => now);
-  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 900, holdings: [] }], chart: true });
+  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 900, holdings: [{ ...holding('AAPL', 1, 100), instrumentId: 'aapl-id' }] }], chart: true });
   desk.cashActivityClient = { list: async () => [{ occurredAt: '2026-10-19T13:00:00Z', amount: 1000 }] };
   desk.orderHistoryClient = { list: async () => [historyRow('FILLED', {
     quantity: 1, filledQuantity: 1, fillPrice: 100, filledAt: '2026-10-20T14:00:00Z',
@@ -238,17 +238,22 @@ test('the chart is marked delayed when a held stock’s price is stale or the se
   assert.equal(desk.chartDelayed(), true);
 });
 
-test('the allocation ring is the real share in stocks', async t => {
-  const { desk } = await tradingDesk(t);
-  assert.equal(desk.stocksShare().toFixed(2), ((13691.76 / 20111.94) * 100).toFixed(2));
+test('the allocation ring uses market quotes and remains unavailable with only book cost', async t => {
+  const { desk, feed } = await tradingDesk(t);
+  assert.equal(desk.allocationReady(), false, 'missing instrument quotes cannot be called market value');
+  const h = { ...holding('AAPL', 1, 100), instrumentId: 'aapl-id' };
+  feed.push([{ symbol: 'AAPL', instrumentId: 'aapl-id', price: 100 }]);
+  desk.applyPortfolio({ cash: 100, holdings: [h] });
+  assert.equal(desk.stocksShare(), 50);
+  assert.equal(desk.assetAllocation().cashPercent, 50);
   desk.applyPortfolio({ cash: 100, holdings: [] });
   assert.equal(desk.stocksShare(), 0);
-  desk.applyPortfolio({ cash: 0, holdings: [holding('AAPL', 1, 100)] });
+  desk.applyPortfolio({ cash: 0, holdings: [h] });
   assert.equal(desk.stocksShare(), 100);
-  desk.applyPortfolio({ cash: 9999, holdings: [holding('AAPL', 1, 1)] });
-  assert.ok(desk.stocksShare() > 0 && desk.stocksShare() < 1, 'small allocations retain their real share');
+  desk.applyPortfolio({ cash: 999999, holdings: [h] });
+  assert.ok(desk.stocksShare() > 0 && desk.stocksShare() < 1, 'tiny allocations keep their arc');
   desk.applyPortfolio({ cash: 0, holdings: [] });
-  assert.equal(desk.stocksShare(), 0, 'an empty account draws no arc');
+  assert.equal(desk.assetAllocation().cashPercent, 0, 'empty is not 100% cash');
 });
 
 test('the chart starts when money first arrived, else when the account opened', async () => {

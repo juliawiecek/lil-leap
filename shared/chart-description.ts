@@ -1,3 +1,4 @@
+import { orderedPoints } from './chart-data.ts';
 /** PS-25: data-only descriptions shared by both Angular applications. Times are epoch ms. */
 export interface SeriesPoint { at: number; value: number; low?: number; high?: number; label?: string }
 export interface ChartTable {
@@ -23,8 +24,8 @@ export function chartValue(value: number, options: SeriesOptions = {}): string {
 }
 /** Copy, sort and deduplicate without inventing observations or treating missing values as zero. */
 export function seriesPoints(points: readonly SeriesPoint[]): SeriesPoint[] {
-  return [...new Map(points.filter(p => Number.isFinite(p.at) && Number.isFinite(new Date(p.at).getTime()) && Number.isFinite(p.value))
-    .map(p => [p.at, { ...p, low: Number.isFinite(p.low) ? p.low : undefined, high: Number.isFinite(p.high) ? p.high : undefined }])).values()].sort((a, b) => a.at - b.at);
+  return orderedPoints(points.map(p => ({ ...p, time: p.at, low: Number.isFinite(p.low) ? p.low : undefined, high: Number.isFinite(p.high) ? p.high : undefined })))
+    .map(({ time, ...p }) => p);
 }
 export function describeSeries(input: readonly SeriesPoint[], options: SeriesOptions = {}): string {
   const name = `${options.name ?? 'Recorded values'}${options.period ? `, ${chartPeriodLabel(options.period)}` : ''}`;

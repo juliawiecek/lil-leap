@@ -1,4 +1,5 @@
 import { ChartAccess, ChartFocus } from './chart-access';
+import { chartPoints, type ChartSeries } from './chart-data';
 import { describeSeries, seriesTable, chartDate, chartValue, type ChartTable } from '../../../shared/chart-description';
 import { describeTrades } from './technical-chart-data';
 import type { TradeMark } from './trade-marks';
@@ -185,6 +186,8 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly privateValues = input(false);
   readonly accessPoints = signal<readonly { at: number; value: number }[]>([]);
   readonly accessCurrency = signal('USD');
+  readonly chartSeries = computed<ChartSeries>(() => ({ id: this.label(), label: this.label(), unit: 'USD',
+    points: chartPoints(this.accessPoints(), p => p.at, p => p.value), status: this.accessPoints().length ? 'ready' : 'empty' }));
   readonly accessOpening = signal<number | null>(null);
   readonly viewTrades = computed(() => {
     const points = this.accessPoints();

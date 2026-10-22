@@ -38,7 +38,7 @@
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
 @if (averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
-@if (inspected(); as p) { <p class="candle-detail" role="status">{{ candleText(p) }}</p> }
+@if (inspected(); as p) { <p class="candle-detail" role="status">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {
   <svg class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">
@@ -48,3 +48,12 @@
 } @else { <p class="volume-unavailable">Volume unavailable — this feed reports quote prices without traded volume.</p> }
 
 <app-chart-access #volumeAccess [id]="id + '-volume-data'" [label]="symbol() + ' reported volume'" [summary]="volumeDescription()" [table]="volumeTable()" [rawTable]="allVolume()" [context]="chartKey() + zoom() + anchor()" />
+<p class="chart-conventions">RSI {{ rsiPeriod() }} · Wilder smoothing · 0–100
+  @if (visibleRsi().length) { · Latest {{ visibleRsi().at(-1)!.price | number:'1.2-2' }} }
+</p>
+@if (rsiLine()) {
+  <svg class="rsi-plot" [attr.viewBox]="'0 0 ' + width() + ' 60'" preserveAspectRatio="none" role="img" tabindex="0" [appChartFocus]="rsiAccess" [attr.aria-label]="symbol() + ' relative strength index'">
+    <path class="indicator-line" [attr.d]="rsiLine()" stroke="var(--chart-2)" />
+  </svg>
+} @else { <p class="chart-conventions">RSI unavailable — needs {{ rsiPeriod() + 1 }} recorded bars.</p> }
+<app-chart-access #rsiAccess [id]="id + '-rsi'" [label]="symbol() + ' relative strength index'" [summary]="rsiDescription()" [table]="rsiTable()" [context]="chartKey() + zoom() + anchor()" />

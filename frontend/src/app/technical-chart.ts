@@ -1,10 +1,11 @@
 import { ChartAccess, ChartFocus } from './chart-access';
-import { chartPeriodLabel, chartValue, describeSeries } from '../../../shared/chart-description';
+import { chartPoints, orderedPrices, type ChartSeries } from './chart-data';
+import { chartDate, chartPeriodLabel, chartValue, describeSeries } from '../../../shared/chart-description';
 import { describeTrades, technicalTable, volumeTable } from './technical-chart-data';
 import { AfterViewInit, Component, ElementRef, OnChanges, OnDestroy, computed, input, signal, viewChild } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import type { PricePoint } from './market-feed-api';
-import { displayCandles, indicators, placeEndLabels } from './technical-chart-math';
+import { displayCandles, indicators, placeEndLabels, rsi } from './technical-chart-math';
 import { pricePath, priceRange, priceY, plotMarks, type ChartWindow, type TradeMark } from './trade-marks';
 
 let chartId = 0;
@@ -13,7 +14,7 @@ const HEIGHT = 180;
 /** Native SVG enhancement of the existing history plot; no new market requests or chart library. */
 @Component({
   selector: 'app-technical-chart',
-  imports: [CurrencyPipe, DecimalPipe, ChartAccess, ChartFocus],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, ChartAccess, ChartFocus],
   templateUrl: './technical-chart.html',
   styleUrl: './technical-chart.scss',
 })
@@ -27,6 +28,24 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly averageCost = input<number | null>(null);
   readonly id = `technical-${++chartId}`;
   readonly privateValues = input(false);
+  readonly rsiPeriod = input(14);
+  readonly rsiPoints = computed(() => rsi(this.source().filter(p => p.candle), this.rsiPeriod()));
+  readonly visibleRsi = computed(() => this.rsiPoints().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end));
+  readonly rsiLine = computed(() => this.visibleRsi().map((p, i) => `${i ? 'L' : 'M'}${this.x(p.at)},${60 - p.price / 100 * 60}`).join(' '));
+  readonly rsiDescription = computed(() => describeSeries(this.visibleRsi().map(p => ({ at: p.at, value: p.price })), {
+    name: this.symbol() + ' RSI ' + this.rsiPeriod(), period: this.period(), empty: `Needs ${this.rsiPeriod() + 1} recorded bars.`,
+  }));
+  readonly rsiTable = computed(() => ({ columns: ['Time (New York)', 'RSI ' + this.rsiPeriod()],
+    rows: this.visibleRsi().map(p => [chartDate(p.at), chartValue(p.price)]) }));
+  readonly chartSeries = computed<readonly ChartSeries[]>(() => [
+    { id: this.symbol() + ':price', label: this.symbol() + ' recorded prices', unit: 'USD', points: chartPoints(this.visible(), p => p.at, p => p.price), status: this.visible().length ? 'ready' : 'empty' },
+    ...this.series().map(s => {
+      const points = chartPoints(s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end), p => p.at, p => p.price);
+      return { id: this.symbol() + ':' + s.name, label: s.name, unit: 'USD' as const, points, status: points.length ? 'ready' as const : 'unavailable' as const, note: s.unavailable };
+    }),
+    { id: this.symbol() + ':rsi', label: 'RSI ' + this.rsiPeriod(), unit: 'index', points: chartPoints(this.visibleRsi(), p => p.at, p => p.price), status: this.visibleRsi().length ? 'ready' : 'unavailable' },
+    { id: this.symbol() + ':volume', label: 'Reported traded volume', unit: 'shares', points: chartPoints(this.volumePoints(), p => p.at, p => p.value), status: this.hasVolume() ? 'ready' : 'unavailable' },
+  ]);
   readonly viewTrades = computed(() => this.trades().filter(t => t.at >= this.viewport().start && t.at <= this.viewport().end));
   readonly description = computed(() => describeSeries(this.visible().map(p => ({ at: p.at, value: p.price, low: p.candle?.low, high: p.candle?.high })), {
     name: this.symbol() + ' recorded prices', period: this.period(), currency: 'USD',
@@ -56,7 +75,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const end = Math.max(base.start + span, Math.min(base.end, this.anchor() ?? base.end));
     return { start: end - span, end };
   });
-  readonly source = computed(() => [...this.points()].filter(p => Number.isFinite(p.at) && Number.isFinite(p.price) && p.price > 0).sort((a, b) => a.at - b.at));
+  readonly source = computed(() => orderedPrices(this.points()));
   readonly visible = computed(() => this.source().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end));
   readonly candles = computed(() => displayCandles(this.visible(), this.width() / 7));
   readonly series = computed(() => indicators(this.source()));
@@ -101,7 +120,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   inspectPointer(event: PointerEvent): void {
     const rect = this.svg().nativeElement.getBoundingClientRect();
     const at = this.viewport().start + (event.clientX - rect.left) / Math.max(1, rect.width) * (this.viewport().end - this.viewport().start);
-    this.inspected.set(this.candles().reduce<PricePoint | null>((best, p) => !best || Math.abs(p.at - at) < Math.abs(best.at - at) ? p : best, null));
+    this.inspected.set(this.inspectable().reduce<PricePoint | null>((best, p) => !best || Math.abs(p.at - at) < Math.abs(best.at - at) ? p : best, null));
   }
   inspectKey(event: KeyboardEvent): void {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) {
@@ -109,11 +128,12 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     }
     event.preventDefault();
     if (event.key === 'Escape') { this.inspected.set(null); return; }
-    const points = this.candles();
+    const points = this.inspectable();
     const index = points.findIndex(p => p.at === this.inspected()?.at);
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? points.length - 1 : Math.max(0, Math.min(points.length - 1, (index < 0 ? points.length - 1 : index) + (event.key === 'ArrowRight' ? 1 : -1)));
     this.inspected.set(points[next] ?? null);
   }
+  readonly inspectable = computed(() => this.candles().length ? this.candles() : this.visible());
   ngOnChanges(): void {
     if (this.#key !== this.chartKey()) { this.#key = this.chartKey(); this.zoom.set(1); this.anchor.set(null); this.inspected.set(null); }
   }

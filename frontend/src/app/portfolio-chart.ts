@@ -1,4 +1,5 @@
 import { ChartAccess, ChartFocus } from './chart-access';
+import { chartPoints, type ChartSeries } from './chart-data';
 import { chartValue, describeSeries, seriesTable } from '../../../shared/chart-description';
 import {
   Component,
@@ -55,6 +56,7 @@ let nextPortfolioChartId = 0;
   selector: 'app-portfolio-chart',
   imports: [CurrencyPipe, ChartAccess, ChartFocus],
   template: `
+    @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
     @if (error()) {
       <p class="chart-note" role="alert">{{ error() }}</p>
     } @else if (loading() || history().length < 2) {
@@ -467,6 +469,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly period = input<ChartPeriod>('1D');
   readonly loading = input(false);
   readonly error = input('');
+  readonly notice = input('');
   /** Live prices have stopped arriving: the line ends at the last known value and says so. */
   readonly delayed = input(false);
   readonly balanceHidden = input(false);
@@ -476,7 +479,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     name: 'Portfolio value', period: this.focused() ? 'most recent hour' : PERIOD_WORDS[this.period()], currency: 'USD', hidden: this.balanceHidden(),
     empty: this.loading() ? 'History is loading.' : this.error() || 'No portfolio history is available for this period.',
   }) + (this.references().length ? ` The reference line marks the period starting value of ${this.references()[0].value}.` : '')
-    + (this.delayed() ? ' Live prices are delayed; these are the last recorded values.' : ''));
+    + (this.delayed() ? ' Live prices are delayed; these are the last recorded values.' : '') + ' ' + this.notice());
   readonly references = computed(() => !this.balanceHidden() && this.accessiblePoints().length
     ? [{ label: 'Period starting value reference', value: chartValue(startValue(this.history()), { currency: 'USD' }) }] : []);
   readonly dataTable = computed(() => ({ ...seriesTable(this.accessiblePoints(), { currency: 'USD', hidden: this.balanceHidden() }), references: this.references() }));
@@ -488,15 +491,11 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly #inspection = signal<readonly ValuePoint[] | null>(null);
 
   /** Ignore malformed observations before constructing a path; do not mutate input history. */
-  readonly history = computed(() =>
-    [
-      ...new Map(
-        (this.#inspection() ?? this.points())
-          .filter((p) => Number.isFinite(p.at) && Number.isFinite(p.value))
-          .map((p) => [p.at, p]),
-      ).values(),
-    ].sort((a, b) => a.at - b.at),
-  );
+  readonly normalizedPoints = computed(() => chartPoints(this.#inspection() ?? this.points(), p => p.at, p => p.value));
+  readonly history = computed(() => this.normalizedPoints().map(p => ({ at: p.time, value: p.value })));
+  readonly chartSeries = computed<ChartSeries>(() => ({ id: this.accountKey() + ':portfolio', label: 'Portfolio value', unit: 'USD',
+    points: this.loading() || this.error() ? [] : chartPoints(this.displayPoints(), p => p.at, p => p.value),
+    status: this.loading() ? 'loading' : this.error() ? 'error' : this.displayPoints().length ? 'ready' : 'empty', note: this.error() || this.notice() }));
   readonly dayView = signal<'recent' | 'full'>('recent');
   readonly recentPoints = computed(() => {
     const points = this.history();

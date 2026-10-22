@@ -46,6 +46,7 @@ import { StockSvgChart } from './stock-svg-chart';
 import { samplingInterval, type ChartSampleMs } from './stock-chart-stream';
 import type { StockPriceTick } from './stock-price-ticks';
 import { validPrice } from './stock-chart-math';
+import { quoteHistoryPoints } from './chart-data';
 
 export interface StockAsset {
   readonly symbol: string;
@@ -121,19 +122,9 @@ function createStockDashboardFeed(
             history: history
               ? of(history)
               : quotes.getHistory(quote.instrumentId, 1000).pipe(
-                  map((rows) =>
-                    [...rows]
-                      .reverse()
-                      .filter(
-                        (row) =>
-                          sessionDay(Date.parse(row.quotedAt)) ===
-                          sessionDay(Date.parse(quote.quotedAt)),
-                      )
-                      .map((row) => ({
-                        time: Date.parse(row.quotedAt) / 1000,
-                        price: Number(row.midpoint),
-                      })),
-                  ),
+                  map(rows => quoteHistoryPoints(rows)
+                    .filter(point => sessionDay(point.time) === sessionDay(Date.parse(quote.quotedAt)))
+                    .map(point => ({ time: point.time / 1000, price: point.value }))),
                   catchError(() => of([])),
                 ),
           }).pipe(
