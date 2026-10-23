@@ -18,6 +18,30 @@ test('insights icons bind known names and fall back for unknown names', async t 
   assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('aria-hidden'), 'true');
 });
 
+test('chart resizing refits its real point coordinates and disconnects its observer on teardown', async t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+  const observers = [];
+  Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: class {
+    constructor(callback) { this.callback = callback; observers.push(this); }
+    observe(element) { this.element = element; }
+    disconnect() { this.disconnected = true; }
+  } });
+  t.after(() => { if (previous) Object.defineProperty(globalThis, 'ResizeObserver', previous); else delete globalThis.ResizeObserver; });
+  const fixture = await render(t, InsightsChart, { points: [{ label: 'Start', value: 1 }, { label: 'End', value: 2 }] });
+  const chart = fixture.componentInstance;
+  assert.equal(observers.length, 1);
+  const observer = observers[0];
+  assert.equal(observer.element, fixture.nativeElement);
+  observer.callback([{ contentRect: { width: 480.4 } }]); fixture.detectChanges();
+  assert.equal(chart.width(), 480);
+  assert.equal(chart.x(1), 466);
+  assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('viewBox'), '0 0 480 220');
+  observer.callback([{ contentRect: { width: 90 } }]); fixture.detectChanges();
+  assert.equal(chart.width(), 480, 'a temporarily hidden or narrow chart keeps its last usable width');
+  fixture.destroy();
+  assert.equal(observer.disconnected, true);
+});
+
 test('chart renders empty state, binds points, and exposes values on keyboard focus and hover', async t => {
   const fixture = await render(t, InsightsChart);
   assert.match(fixture.nativeElement.textContent, /No observations/);
