@@ -2,11 +2,10 @@ FROM node:24-alpine AS build
 WORKDIR /repo
 COPY shared/session-core/package*.json shared/session-core/
 RUN npm ci --prefix shared/session-core
-COPY shared/session-core/src shared/session-core/src
-COPY shared/session-core/tsconfig.json shared/session-core/tsconfig.json
+COPY shared/ shared/
 RUN npm run build --prefix shared/session-core
-# The app's prebuild script copies the shared build into node_modules with this.
-COPY scripts/sync-session-core-dist.mjs scripts/sync-session-core-dist.mjs
+# Include both repository scripts used by the app's prebuild hook.
+COPY scripts/sync-session-core-dist.mjs scripts/build-assistive-bootstrap.mjs scripts/
 WORKDIR /repo/frontend
 
 COPY frontend/package.json frontend/package-lock.json frontend/.npmrc ./
