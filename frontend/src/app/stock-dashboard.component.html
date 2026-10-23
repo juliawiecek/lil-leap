@@ -95,7 +95,7 @@
     <span class="chart-hint">Move over the chart to explore</span>
   </div>
   <app-stock-svg-chart
-    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()"
+    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()" [asset]="asset() ?? selectedAsset()"
     [windowSeconds]="windowSeconds()"
     [label]="(asset()?.symbol || selectedAsset()?.symbol || 'Stock') + (windowSeconds() === 86400 ? ' one-day stock price' : ' stock price over the last ' + windowSeconds() + ' seconds')"
     [emptyLabel]="

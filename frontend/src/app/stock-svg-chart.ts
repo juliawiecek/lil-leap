@@ -3,6 +3,8 @@ import { chartPoints, type ChartSeries } from './chart-data';
 import { describeSeries, seriesTable, chartDate, chartValue, type ChartTable } from '../../../shared/chart-description';
 import { describeTrades } from './technical-chart-data';
 import type { TradeMark } from './trade-marks';
+import { chartSound, pointAnnouncement, stepIndex, type ChartSound } from './chart-keyboard';
+import { spokenCompany } from './briefing';
 ﻿import { isPlatformBrowser } from '@angular/common';
 import {
   computed,
@@ -61,7 +63,7 @@ const TIME = new Intl.DateTimeFormat('en-US', {
   template: `
     <div class="plot">
     <svg
-      #svg [appChartFocus]="access"
+      #svg [appChartFocus]="access" [chartSound]="sound"
       width="100%"
       height="100%"
       tabindex="0"
@@ -184,6 +186,17 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly trades = input<readonly TradeMark[]>([]);
   readonly averageCost = input<number | null>(null);
   readonly privateValues = input(false);
+  /** The stock shown, so its trades are said with the company's name ("of Apple"). */
+  readonly asset = input<{ readonly symbol: string; readonly name: string } | null>(null);
+  readonly company = computed(() => {
+    const asset = this.asset();
+    return asset?.symbol ? spokenCompany(asset.name ?? '', asset.symbol) : '';
+  });
+  /** What Space plays: the prices shown, with the person's trades and average cost unless private. */
+  readonly sound = (): ChartSound => {
+    const points = this.#inspectable().map((p) => ({ at: p.time * 1000, value: p.price }));
+    return this.privateValues() ? chartSound(points) : chartSound(points, this.viewTrades(), this.averageCost());
+  };
   readonly accessPoints = signal<readonly { at: number; value: number }[]>([]);
   readonly accessCurrency = signal('USD');
   readonly chartSeries = computed<ChartSeries>(() => ({ id: this.label(), label: this.label(), unit: 'USD',
@@ -215,6 +228,7 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly clipId = `stock-clip-${nextChartId}`;
   private readonly svg = viewChild.required<ElementRef<SVGSVGElement>>('svg');
   private readonly tooltip = viewChild.required<ElementRef<HTMLDivElement>>('tooltip');
+  private readonly access = viewChild.required<ChartAccess>('access');
   readonly #zone = inject(NgZone);
   readonly #platform = inject(PLATFORM_ID);
   #viewport: StockChartViewport | undefined;
@@ -449,28 +463,28 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     this.tooltip().nativeElement.setAttribute('aria-live', 'off');
     this.#viewport?.resume();
   }
+  /**
+   * Left and Right step through the prices, Home and End jump to the ends, PageUp and PageDown
+   * move a tenth (PS-26). The tooltip shows the price; the chart's live region says the date,
+   * price, change and any trade made there, so it is heard once, not twice.
+   */
   #keyboard(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       this.#clearSelection();
       return;
     }
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-      return;
-    }
     const points = this.#inspectable();
-    if (!points.length) {
+    const index = stepIndex(event.key, this.#selection ? lowerBound(points, this.#selection.time) : -1, points.length);
+    if (index === null) {
       return;
     }
     event.preventDefault();
     this.#viewport?.pause();
-    let index = this.#selection ? lowerBound(points, this.#selection.time) : points.length - 1;
-    index =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? points.length - 1
-          : Math.max(0, Math.min(points.length - 1, index + (event.key === 'ArrowLeft' ? -1 : 1)));
-    this.tooltip().nativeElement.setAttribute('aria-live', 'polite');
     this.#showSelection(points[index]);
+    const spoken = points.map((p) => ({ at: p.time * 1000, value: p.price }));
+    const text = pointAnnouncement(spoken, index, {
+      currency: this.#currency, tradesHidden: this.privateValues(), company: this.company(), trades: this.viewTrades(),
+    });
+    this.#zone.run(() => this.access().announce(text));
   }
 }
