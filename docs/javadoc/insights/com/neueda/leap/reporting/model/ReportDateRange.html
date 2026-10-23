@@ -99,7 +99,8 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public record </span><span class="element-name type-name-label">ReportDateRange</span>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Record.html" title="class or interface in java.lang" class="external-link">Record</a></span></div>
-<div class="block">Inclusive calendar-date range for a report, interpreted in UTC.
+<div class="block">Inclusive calendar-date range for a report, interpreted as New York trading days
+ (see <a href="MarketDay.html" title="class in com.neueda.leap.reporting.model"><code>MarketDay</code></a>), so reports agree with the Insights page.
 
  <p>Construction validates the range, so any instance is safe to pass to a
  repository. The range is capped at <a href="#MAX_DAYS">366</a> days to keep reporting
@@ -159,7 +160,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#endExclusive()" class="member-name-link">endExclusive</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the first instant after the range (start of the day after <code>endDate</code>, UTC).</div>
+<div class="block">Returns the first instant after the range (midnight ending <code>endDate</code> in New York).</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>final boolean</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#equals(java.lang.Object)" class="member-name-link">equals</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;o)</code></div>
@@ -179,7 +180,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#startInclusive()" class="member-name-link">startInclusive</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the first instant included in the range (start of <code>startDate</code>, UTC).</div>
+<div class="block">Returns the first instant included in the range (midnight starting <code>startDate</code> in New York).</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>final <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toString()" class="member-name-link">toString</a>()</code></div>
@@ -254,7 +255,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="startInclusive()">
 <h3>startInclusive</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a></span>&nbsp;<span class="element-name">startInclusive</span>()</div>
-<div class="block">Returns the first instant included in the range (start of <code>startDate</code>, UTC).</div>
+<div class="block">Returns the first instant included in the range (midnight starting <code>startDate</code> in New York).</div>
 <dl class="notes">
 <dt>Returns:</dt>
 <dd>inclusive lower bound</dd>
@@ -265,7 +266,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="endExclusive()">
 <h3>endExclusive</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a></span>&nbsp;<span class="element-name">endExclusive</span>()</div>
-<div class="block">Returns the first instant after the range (start of the day after <code>endDate</code>, UTC).</div>
+<div class="block">Returns the first instant after the range (midnight ending <code>endDate</code> in New York).</div>
 <dl class="notes">
 <dt>Returns:</dt>
 <dd>exclusive upper bound</dd>

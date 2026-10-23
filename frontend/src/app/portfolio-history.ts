@@ -257,7 +257,11 @@ export function portfolioEvents(movements: readonly { transactionId?: string; oc
     }
     const signed = row.side === 'SELL' ? -quantity : quantity;
     shares.push({ at, symbol: row.symbol, price, quantity: signed });
-    cash.push({ at, amount: -signed * price });
+    // Orders settle each fill in whole cents (price x quantity, half up), and the cash balance is
+    // the sum of those settled amounts. Unrounded sub-cent fill prices drift a cent or two from it
+    // after a handful of trades and made ledgerMatches reject every demo account's history.
+    const settled = Math.round((quantity * price + Number.EPSILON) * 100) / 100;
+    cash.push({ at, amount: signed < 0 ? settled : -settled });
   }
   seen.clear();
   for (const row of movements) {

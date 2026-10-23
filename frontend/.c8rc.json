@@ -8,8 +8,8 @@
   "reports-dir": "coverage",
   "check-coverage": true,
   "per-file": true,
-  "lines": 1,
-  "statements": 1,
-  "functions": 1,
-  "branches": 1
+  "lines": 52,
+  "statements": 52,
+  "functions": 0,
+  "branches": 30
 }

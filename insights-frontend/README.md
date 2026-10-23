@@ -20,9 +20,9 @@ Open http://localhost:4301. Start `docker compose up --build -d gateway` from th
 | Page | Route | Analyst | Operations | Data |
 | --- | --- | --- | --- | --- |
 | Insights | `/insights` | ✓ | ✓ | Today only, as the New York trading day (midnight to midnight, America/New_York): active accounts, orders, fills and traded value (`/reports/summary`), trades by hour and top traded stocks (`/reports/insights/*`) |
-| Clients | `/clients`, `/clients/:accountId` | ✓ | ✓ | Every trading account in the reporting dataset (`reports/trades.csv`, the file the Reports page uses) with trader level, status, traded value, trades and last trade; search (a pasted order ID finds its account), filters, sorting and paging kept in the URL. Detail: summary, holdings worked out from the fills, and filled orders (`/reports/clients/*`). Each account shows its owner's name and email, and search matches them too. Operations staff open an order in Trade lookup from the Orders tab |
+| Clients | `/clients`, `/clients/:accountId` | ✓ | ✓ | Every trading account with a fill, read from the reporting replica like the Reports page with trader level, status, traded value, trades and last trade; search (a pasted order ID finds its account), filters, sorting and paging kept in the URL. Detail: summary, holdings worked out from the fills, and filled orders (`/reports/clients/*`). Each account shows its owner's name and email, and search matches them too. Operations staff open an order in Trade lookup from the Orders tab |
 | Reports | `/reports` | ✓ | ✓ | Instrument, client segment and trading activity CSVs for a New York date range (`/reports/generate/*`, TS-18.6) |
-| Trade lookup | `/trades`, `/trades/:orderId` | | ✓ | One trade from the reporting dataset (`reports/trades.csv`): what was traded, the price, value and fill time, the client and account behind it (linked to their Clients page), record checks, and every recorded step oldest first from `reports/trade-events.csv` (`/trades/{id}`, BR-15) |
+| Trade lookup | `/trades`, `/trades/:orderId` | | ✓ | Any filled trade from the trading database, read through the read-only reporting role: what was traded, the price, value and fill time, the client and account behind it (linked to their Clients page), record checks, and every recorded step oldest first (`/trades/{id}`, BR-15) |
 
 Operations staff see everything analysts see, plus the trade lookup. Signing in lands both roles on
 Insights; opening a page your role cannot see sends you there too. Traders and any other role get
@@ -30,8 +30,8 @@ Insights; opening a page your role cannot see sends you there too. Traders and a
 (`/dashboard`, `/history`, `/trading-activity`, `/client-activity`, `/orders`, `/trade-investigation`,
 `/compliance`, `/settings`) redirect to `/insights`.
 
-Nothing is sample data: every figure comes from the insights service. Report CSVs are still built from
-`insights/src/main/resources/reports/trades.csv` until NEXT-252 moves them to the database.
+Nothing is sample data: every figure comes from the insights service. Every page reads the
+reporting replica, never the main trading database (BR-16).
 
 ## Structure
 

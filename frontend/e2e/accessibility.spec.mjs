@@ -92,7 +92,12 @@ test('sign-in page and novice dashboard', async ({ page }) => {
   await expect(nav).toBeVisible();
 
   await test.step('Skip link', async () => {
-    await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : null));
+    // Signing in is a route change, and the site-wide assistive tools (PS-22) then move focus to
+    // the new page's heading, past the skip link. The skip link is the first stop when a page is
+    // opened fresh, so check it from a reload.
+    await expect(page.locator('main h1')).toBeFocused();
+    await page.reload();
+    await expect(nav).toBeVisible();
     await page.keyboard.press('Tab');
     const skip = page.getByRole('link', { name: 'Skip to main content' });
     await expect(skip).toBeFocused();

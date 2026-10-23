@@ -42,6 +42,10 @@ CREATE TABLE users (
     -- OPERATIONS: trading operations staff who investigate trades, seeded rather than self-registered)
     user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST', 'OPERATIONS')),
 
+    -- BR-03: only ACTIVE users may sign in or refresh a session (DISABLED: expired or compromised;
+    -- DELETED: closed, row kept for the audit trail)
+    user_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
@@ -51,7 +55,8 @@ CREATE TABLE users (
 
     CONSTRAINT chk_user_email CHECK (length(trim(email)) > 0),
     CONSTRAINT chk_user_password CHECK (length(trim(password_hash)) > 0),
-    CONSTRAINT chk_failed_login_attempts CHECK (failed_login_attempts >= 0)
+    CONSTRAINT chk_failed_login_attempts CHECK (failed_login_attempts >= 0),
+    CONSTRAINT chk_user_status CHECK (user_status IN ('ACTIVE', 'DISABLED', 'DELETED'))
 );
 
 -- Case-insensitive, whitespace-insensitive unique emails
@@ -780,6 +785,14 @@ CREATE OR REPLACE VIEW v_trade_audit_events AS
     SELECT audit_id, related_order_id AS order_id, actor_type, event_type, payload, created_at
     FROM audit_log
     WHERE related_order_id IS NOT NULL;
+
+-- BR-15: Who placed a trade, for Trade lookup in Insights. Only a trader's id, name and email, so the
+-- reporting role can read it without access to credentials or other personal data.
+CREATE OR REPLACE VIEW v_trade_clients AS
+    SELECT u.user_id, p.first_name, p.last_name, u.email
+    FROM users u
+    LEFT JOIN customer_profiles p ON p.user_id = u.user_id
+    WHERE u.user_role = 'TRADER';
 
 -- BR-03: Active sessions per user
 CREATE OR REPLACE VIEW v_active_sessions AS

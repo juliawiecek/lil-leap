@@ -128,6 +128,19 @@ implements <a href="QuoteRepository.html" title="interface in com.neueda.leap.ma
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="PriceCandle.html" title="class in com.neueda.leap.marketdata">PriceCandle</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#findCandles(java.util.UUID,com.neueda.leap.marketdata.CandleInterval,int)" class="member-name-link">findCandles</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="CandleInterval.html" title="enum class in com.neueda.leap.marketdata">CandleInterval</a>&nbsp;interval,
+ int&nbsp;limit)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Groups the instrument's quotes from the last <code>limit</code> intervals into midpoint candles.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#findDayOpen(java.util.UUID,java.time.Instant)" class="member-name-link">findDayOpen</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;now)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Selects a regular-session baseline using the instrument/time index, not a history page.</div>
+</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#findHistoryByInstrumentId(java.util.UUID,int)" class="member-name-link">findHistoryByInstrumentId</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
  int&nbsp;limit)</code></div>
@@ -229,6 +242,45 @@ implements <a href="QuoteRepository.html" title="interface in com.neueda.leap.ma
 <dd><code>limit</code> - maximum number of quotes to return (clamped to MAX_HISTORY_LIMIT)</dd>
 <dt>Returns:</dt>
 <dd>list of quotes, ordered by timestamp descending, or empty when no quote exists</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="findDayOpen(java.util.UUID,java.time.Instant)">
+<h3>findDayOpen</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a>&gt;</span>&nbsp;<span class="element-name">findDayOpen</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;now)</span></div>
+<div class="block">Selects a regular-session baseline using the instrument/time index, not a history page.
+ Before 09:30 New York time (and on weekends), the last quote at or before the
+ previous weekday's 16:00 close is used, excluding overnight and premarket ticks.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="QuoteRepository.html#findDayOpen(java.util.UUID,java.time.Instant)">findDayOpen</a></code>&nbsp;in interface&nbsp;<code><a href="QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>instrumentId</code> - persistent instrument identifier</dd>
+<dd><code>now</code> - current instant</dd>
+<dt>Returns:</dt>
+<dd>first session quote or previous available close; empty when none exists</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="findCandles(java.util.UUID,com.neueda.leap.marketdata.CandleInterval,int)">
+<h3>findCandles</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="PriceCandle.html" title="class in com.neueda.leap.marketdata">PriceCandle</a>&gt;</span>&nbsp;<span class="element-name">findCandles</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="CandleInterval.html" title="enum class in com.neueda.leap.marketdata">CandleInterval</a>&nbsp;interval,
+ int&nbsp;limit)</span></div>
+<div class="block">Groups the instrument's quotes from the last <code>limit</code> intervals into midpoint candles.
+ Future-dated quotes are ignored, matching the latest-quote reads.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="QuoteRepository.html#findCandles(java.util.UUID,com.neueda.leap.marketdata.CandleInterval,int)">findCandles</a></code>&nbsp;in interface&nbsp;<code><a href="QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a></code></dd>
+<dt>Parameters:</dt>
+<dd><code>instrumentId</code> - persistent instrument identifier</dd>
+<dd><code>interval</code> - candle width</dd>
+<dd><code>limit</code> - number of intervals to cover (clamped to MAX_CANDLE_LIMIT)</dd>
+<dt>Returns:</dt>
+<dd>candles ordered oldest first</dd>
 </dl>
 </section>
 </li>

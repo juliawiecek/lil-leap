@@ -19,7 +19,7 @@ describe('UserService', () => {
   beforeEach(() => {
     customerProfileRepository = { findOne: jest.fn() };
     jest.useFakeTimers().setSystemTime(new Date('2026-10-19T12:00:00Z'));
-    user = { userId: 'u1', email: 'trader@example.com', passwordHash: '{bcrypt}hash',
+    user = { userId: 'u1', email: 'trader@example.com', passwordHash: '{bcrypt}hash', userStatus: 'ACTIVE',
       failedLoginAttempts: 0, lockedUntil: null } as User;
     committed = false;
     query = { where: jest.fn().mockReturnThis(), setLock: jest.fn().mockReturnThis(), getOne: jest.fn() };
@@ -83,6 +83,16 @@ describe('UserService', () => {
     );
     expect(passwordEncoder.matches).toHaveBeenCalledWith('x', expect.stringMatching(/^\{bcrypt\}\$2a\$10\$/));
     expect(manager.update).not.toHaveBeenCalled();
+  });
+
+  it.each(['DISABLED', 'DELETED'] as const)('rejects a %s user with the unknown-email error, even with the right password', async status => {
+    user.userStatus = status;
+    user.failedLoginAttempts = 1;
+
+    await expect(service.login({ email: user.email, password: 'right' })).rejects.toThrow(INVALID_SIGN_IN_MESSAGE);
+    expect(passwordEncoder.matches).toHaveBeenCalledTimes(1);
+    expect(manager.update).not.toHaveBeenCalled();
+    expect(user.failedLoginAttempts).toBe(1);
   });
 
   it('serializes normalized email checks with a database row lock', async () => {

@@ -88,6 +88,9 @@
 
       <section class="auth-panel" aria-labelledby="auth-title">
         <h2 id="auth-title">{{ authTitle() }}</h2>
+        @if (pageReady() && signedOutNotice() && authMode() === 'signin') {
+          <p class="signed-out-notice" role="alert">{{ signedOutNotice() }}</p>
+        }
         <p class="auth-subtitle" id="auth-subtitle">
           {{ authSubtitle() }}
         </p>

@@ -23,7 +23,9 @@ export function accessibleName(element: Element): string {
 export function describeElement(element: Element, detailed = false): string {
   if (element.closest('[inert], [aria-hidden="true"], [hidden]')) return '';
   const field = element as HTMLInputElement;
-  const name = accessibleName(element);
+  // `data-speak` holds the wording meant for the ear ("1 week", "Apple, up 1 percent") while the
+  // accessible name keeps the visible text (WCAG 2.5.3, PS-20); speech prefers the spoken form.
+  const name = tidy(element.getAttribute('data-speak') ?? '') || accessibleName(element);
   if (!name) return '';
   const role = element.getAttribute('role') || ({ BUTTON: 'button', A: 'link', SELECT: 'listbox', TEXTAREA: 'text field', SUMMARY: 'disclosure', H1: 'heading', H2: 'heading', H3: 'heading', TH: 'table heading', TD: 'table cell' } as Record<string, string>)[element.tagName];
   const parts = [name];

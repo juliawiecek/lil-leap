@@ -92,12 +92,16 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Quote display response contracts.</div>
 </div>
-<div class="col-first odd-row-color"><a href="../config/package-summary.html">com.neueda.leap.config</a></div>
+<div class="col-first odd-row-color"><a href="generation/package-summary.html">com.neueda.leap.marketdata.generation</a></div>
 <div class="col-last odd-row-color">
+<div class="block">Synthetic quote generation: the catalog, the GBM price model and the job that stores live quotes.</div>
+</div>
+<div class="col-first even-row-color"><a href="../config/package-summary.html">com.neueda.leap.config</a></div>
+<div class="col-last even-row-color">
 <div class="block">HTTP authentication, authorization and security filter configuration.</div>
 </div>
-<div class="col-first even-row-color"><a href="../security/package-summary.html">com.neueda.leap.security</a></div>
-<div class="col-last even-row-color">
+<div class="col-first odd-row-color"><a href="../security/package-summary.html">com.neueda.leap.security</a></div>
+<div class="col-last odd-row-color">
 <div class="block">JWT authentication, SSN encryption, and sensitive-log masking.</div>
 </div>
 </div>
@@ -105,18 +109,26 @@ loadScripts(document, 'script');</script>
 </li>
 <li>
 <div id="class-summary">
-<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="class-summary-tab0" role="tab" aria-selected="true" aria-controls="class-summary.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary', 2)" class="active-table-tab">All Classes and Interfaces</button><button id="class-summary-tab1" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab1', 2)" class="table-tab">Interfaces</button><button id="class-summary-tab2" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab2', 2)" class="table-tab">Classes</button><button id="class-summary-tab4" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab4', 2)" class="table-tab">Record Classes</button></div>
+<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="class-summary-tab0" role="tab" aria-selected="true" aria-controls="class-summary.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary', 2)" class="active-table-tab">All Classes and Interfaces</button><button id="class-summary-tab1" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab1', 2)" class="table-tab">Interfaces</button><button id="class-summary-tab2" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab2', 2)" class="table-tab">Classes</button><button id="class-summary-tab3" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab3', 2)" class="table-tab">Enum Classes</button><button id="class-summary-tab4" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab4', 2)" class="table-tab">Record Classes</button></div>
 <div id="class-summary.tabpanel" role="tabpanel" aria-labelledby="class-summary-tab0">
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="JdbcQuoteRepository.html" title="class in com.neueda.leap.marketdata">JdbcQuoteRepository</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab3"><a href="CandleInterval.html" title="enum class in com.neueda.leap.marketdata">CandleInterval</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab3">
+<div class="block">Candle widths the price chart can request, each with its PostgreSQL interval literal.</div>
+</div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="JdbcQuoteRepository.html" title="class in com.neueda.leap.marketdata">JdbcQuoteRepository</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">Reads the latest stored quote, breaking timestamp ties by creation time and quote ID.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab4"><a href="MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab4">
+<div class="col-first even-row-color class-summary class-summary-tab4"><a href="MarketQuote.html" title="class in com.neueda.leap.marketdata">MarketQuote</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab4">
 <div class="block">Immutable quote evidence used for market display and execution pricing.</div>
+</div>
+<div class="col-first odd-row-color class-summary class-summary-tab4"><a href="PriceCandle.html" title="class in com.neueda.leap.marketdata">PriceCandle</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab4">
+<div class="block">Open, high, low and close midpoint prices for one time bucket of stored quotes.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="QuoteRepository.html" title="interface in com.neueda.leap.marketdata">QuoteRepository</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">

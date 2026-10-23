@@ -47,10 +47,10 @@ const signedInAs = (role, session = { logout: async () => {} }) => [
 const navLabels = (fixture) => [...fixture.nativeElement.querySelectorAll('nav a span')].map(span => span.textContent.trim());
 const navGroups = (fixture) => [...fixture.nativeElement.querySelectorAll('nav .nav-group')].map(p => p.textContent.trim());
 
-test('analysts see the three reporting pages, and the header shows who is signed in', async t => {
+test('analysts see the three reporting pages and their settings, and the header shows who is signed in', async t => {
   const fixture = await render(t, Shell, {}, signedInAs('ANALYST'));
-  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports']);
-  assert.deepEqual(navGroups(fixture), ['Analytics']);
+  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Settings']);
+  assert.deepEqual(navGroups(fixture), ['Analytics', 'Preferences']);
   assert.match(fixture.nativeElement.querySelector('.identity').textContent, /analyst@nexttrade\.local.*Analyst/s);
   assert.equal(fixture.nativeElement.querySelector('.avatar').textContent.trim(), 'A');
   assert.equal(fixture.nativeElement.querySelector('header select'), null, 'the role is never chosen in the page');
@@ -58,8 +58,8 @@ test('analysts see the three reporting pages, and the header shows who is signed
 
 test('operations staff see everything analysts see, plus the trade lookup', async t => {
   const fixture = await render(t, Shell, {}, signedInAs('OPERATIONS'));
-  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Trade lookup']);
-  assert.deepEqual(navGroups(fixture), ['Analytics', 'Operations']);
+  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Trade lookup', 'Settings']);
+  assert.deepEqual(navGroups(fixture), ['Analytics', 'Operations', 'Preferences']);
   assert.equal(fixture.componentInstance.home(), '/insights');
   assert.match(fixture.nativeElement.querySelector('.identity').textContent, /Operations/);
 });

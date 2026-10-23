@@ -17,7 +17,7 @@ export class SpeechCoordinator {
     if (next !== this.synth) { this.pending.clear(); this.synth = next; }
     return next;
   }
-  submit(owner: string, utterance: SpeechSynthesisUtterance, options: { interrupt?: boolean; queue?: boolean } = {}): boolean {
+  submit(owner: string, utterance: SpeechSynthesisUtterance, options: { interrupt?: boolean; queue?: boolean; defaultVoice?: boolean } = {}): boolean {
     const synth = this.current();
     if (!synth || !this.supported || !utterance.text) return false;
     // Passive readers never interrupt another channel. Explicit reading/briefing may replace it.
@@ -29,8 +29,11 @@ export class SpeechCoordinator {
     utterance.volume = preferences.volume ?? 1;
     const voices = synth.getVoices?.() ?? [];
     const local = voices.filter(voice => voice.localService);
-    // Never choose an online voice for financial/account content.
-    if (typeof synth.getVoices === 'function' && !local.length) return false;
+    // Never choose an online voice for financial/account content. Switch control and the briefing
+    // (`defaultVoice`) spoke with the browser's own voice before this coordinator existed; they keep
+    // doing so while no local voice is known (Chrome lists voices only after `voiceschanged`), or a
+    // switch user would hear nothing at all.
+    if (typeof synth.getVoices === 'function' && !local.length && !options.defaultVoice) return false;
     if (local.length) utterance.voice = local.find(v => v.voiceURI === preferences.voiceURI) ?? local.find(v => v.default) ?? local[0];
     const ended = utterance.onend, failed = utterance.onerror;
     const finish = () => {
@@ -64,7 +67,7 @@ export class SpeechCoordinator {
     return {
       get speaking() { return !!globalThis.speechSynthesis?.speaking; },
       speak(utterance) {
-        if (!coordinator.submit(owner, utterance, { queue: true })) {
+        if (!coordinator.submit(owner, utterance, { queue: true, defaultVoice: true })) {
           utterance.onerror?.call(utterance, { error: 'synthesis-unavailable' } as SpeechSynthesisErrorEvent);
         }
       },

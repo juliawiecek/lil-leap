@@ -6,6 +6,10 @@ state, the coordinator, guards, and the `SESSION_AUTH` injection token used by
 the interceptor. App adapters supply their existing AuthService, allowed return
 URLs and required role. Storage keys and route tables stay app-specific.
 
+The idle keeper warns 60 seconds before the inactivity sign-out (PS-30). Each app
+renders `<lil-session-timeout-warning [session]="...">` from `./angular` once, in
+its root component; see docs/accessibility/PS-30-inactivity-warning.md.
+
 `./angular` also exports `ApiHttpClient`, the shared typed GET/POST wrapper for
 business services (NEXT-153/NEXT-163). It delegates to Angular `HttpClient`, so
 both apps use the registered interceptor for all business API requests. Only

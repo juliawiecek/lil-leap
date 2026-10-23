@@ -92,7 +92,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="annotations">@RestController
 @RequestMapping("/reports")
-@PreAuthorize("hasRole(\'ANALYST\')")
+@PreAuthorize("hasAnyRole(\'ANALYST\', \'OPERATIONS\')")
 </span><span class="modifiers">public class </span><span class="element-name type-name-label">ReportingController</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
 <div class="block">Read-only dashboard and report-generation API for internal analyst users.</div>
@@ -126,33 +126,42 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateClientSegmentReport()" class="member-name-link">generateClientSegmentReport</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateBuySellBalanceReport(java.time.LocalDate,java.time.LocalDate)" class="member-name-link">generateBuySellBalanceReport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
+<div class="block">Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateInstrumentReport()" class="member-name-link">generateInstrumentReport</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateClientSegmentReport(java.time.LocalDate,java.time.LocalDate)" class="member-name-link">generateClientSegmentReport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
+<div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateTradingActivityReport()" class="member-name-link">generateTradingActivityReport</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateInstrumentReport(java.time.LocalDate,java.time.LocalDate)" class="member-name-link">generateInstrumentReport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;org.springframework.core.io.Resource&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#generateTradingActivityReport(java.time.LocalDate,java.time.LocalDate)" class="member-name-link">generateTradingActivityReport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the downloadable CSV report aggregated by trading activity.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/ClientActivityTrendDto.html" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getClientActivityTrend()" class="member-name-link">getClientActivityTrend</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/ClientActivityTrendDto.html" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getClientActivityTrend()" class="member-name-link">getClientActivityTrend</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the hourly client trading activity trend for the current day.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/OverviewDto.html" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOverview()" class="member-name-link">getOverview</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/OverviewDto.html" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getOverview()" class="member-name-link">getOverview</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the current-day dashboard summary.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/TopInstrumentDto.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getTopInstruments()" class="member-name-link">getTopInstruments</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/TopInstrumentDto.html" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getTopInstruments()" class="member-name-link">getTopInstruments</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the most active instruments for the current day.</div>
 </div>
 </div>
@@ -228,39 +237,76 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="generateInstrumentReport()">
+<section class="detail" id="generateInstrumentReport(java.time.LocalDate,java.time.LocalDate)">
 <h3>generateInstrumentReport</h3>
 <div class="member-signature"><span class="annotations">@GetMapping(value="/generate/instrument-report",
             produces="text/csv")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateInstrumentReport</span>()</div>
-<div class="block">Returns the downloadable CSV report aggregated by instrument. “Hourly trade activity trend: number of executed trades per hour.”</div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateInstrumentReport</span><wbr><span class="parameters">(@RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ @RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</span></div>
+<div class="block">Returns the downloadable CSV report aggregated by instrument.</div>
 <dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>startDate</code> - first New York trading day included (ISO date, required)</dd>
+<dd><code>endDate</code> - last New York trading day included (ISO date, required)</dd>
 <dt>Returns:</dt>
 <dd>CSV file response</dd>
 </dl>
 </section>
 </li>
 <li>
-<section class="detail" id="generateClientSegmentReport()">
+<section class="detail" id="generateClientSegmentReport(java.time.LocalDate,java.time.LocalDate)">
 <h3>generateClientSegmentReport</h3>
 <div class="member-signature"><span class="annotations">@GetMapping(value="/generate/client-segment-report",
             produces="text/csv")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateClientSegmentReport</span>()</div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateClientSegmentReport</span><wbr><span class="parameters">(@RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ @RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</span></div>
 <div class="block">Returns the downloadable CSV report aggregated by client segment.</div>
 <dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>startDate</code> - first New York trading day included (ISO date, required)</dd>
+<dd><code>endDate</code> - last New York trading day included (ISO date, required)</dd>
 <dt>Returns:</dt>
 <dd>CSV file response</dd>
 </dl>
 </section>
 </li>
 <li>
-<section class="detail" id="generateTradingActivityReport()">
+<section class="detail" id="generateTradingActivityReport(java.time.LocalDate,java.time.LocalDate)">
 <h3>generateTradingActivityReport</h3>
 <div class="member-signature"><span class="annotations">@GetMapping(value="/generate/trading-activity-report",
             produces="text/csv")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateTradingActivityReport</span>()</div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateTradingActivityReport</span><wbr><span class="parameters">(@RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ @RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</span></div>
 <div class="block">Returns the downloadable CSV report aggregated by trading activity.</div>
 <dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>startDate</code> - first New York trading day included (ISO date, required)</dd>
+<dd><code>endDate</code> - last New York trading day included (ISO date, required)</dd>
+<dt>Returns:</dt>
+<dd>CSV file response</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="generateBuySellBalanceReport(java.time.LocalDate,java.time.LocalDate)">
+<h3>generateBuySellBalanceReport</h3>
+<div class="member-signature"><span class="annotations">@GetMapping(value="/generate/buy-sell-balance-report",
+            produces="text/csv")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;org.springframework.core.io.Resource&gt;</span>&nbsp;<span class="element-name">generateBuySellBalanceReport</span><wbr><span class="parameters">(@RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;startDate,
+ @RequestParam @DateTimeFormat(iso=DATE)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/LocalDate.html" title="class or interface in java.time" class="external-link">LocalDate</a>&nbsp;endDate)</span></div>
+<div class="block">Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>startDate</code> - first New York trading day included (ISO date, required)</dd>
+<dd><code>endDate</code> - last New York trading day included (ISO date, required)</dd>
 <dt>Returns:</dt>
 <dd>CSV file response</dd>
 </dl>

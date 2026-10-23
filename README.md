@@ -115,6 +115,7 @@ flowchart LR
     end
 
     db[("PostgreSQL 16<br/>nexttrade · :5432")]
+    replica[("Read-only replica<br/>reporting-db")]
 
     browser --> fe & ife
     fe -- "/auth/*, /rules/*" --> auth
@@ -122,13 +123,17 @@ flowchart LR
     fe -- "/api/holdings/*" --> holdings
     ife -- "/auth/*" --> auth
     ife -- "/api/*" --> insights
-    auth & orders & holdings & insights --> db
+    auth & orders & holdings --> db
+    db -. streaming replication .-> replica
+    insights --> replica
 ```
 
 Browsers only talk to the two nginx frontends; each proxies API paths to the
 right service on the Docker network, so every call is same-origin (no CORS).
-`auth` has no host port at all. Every service connects to Postgres as the
-restricted `app_user` role; the schema is owned by the admin role.
+`auth` has no host port at all. The trading services connect to Postgres as the
+restricted `app_user` role; the schema is owned by the admin role. Insights reads a
+streaming read-only replica as the SELECT-only `reporting_user` for every page, so
+reporting never loads the main database (BR-16).
 
 | Service | Tech | Host port | What it does today |
 |---|---|---|---|
@@ -283,6 +288,7 @@ the optional Kafka services, which are added by
 | Service             | Built from        | Host port(s)                | Notes                                    |
 | -------------------- | ------------------ | ----------------------------- | ------------------------------------------ |
 | `db`                 | `postgres:16-alpine`| `5432`                        | Runs schema/seed scripts once, on an empty volume; has a `pg_isready` healthcheck |
+| `reporting-db`       | `postgres:16-alpine`| none                          | Read-only streaming replica of `db` for Insights ([start-reporting-replica.sh](db/start-reporting-replica.sh)) |
 | `orders`             | `./nextTrade-orders`| `8082` -> `8080`             | Orders service; `frontend` proxies `/api/orders/*` and `/api/*` here |
 | `holdings`           | `./nextTrade-holdings`| `8083` -> `8080`           | Holdings service; `frontend` proxies `/api/holdings/*` here |
 | `insights`           | `./insights`       | `8081` -> `8080`              | Reporting service (see [Architecture](#architecture)) |
@@ -295,11 +301,14 @@ the optional Kafka services, which are added by
 
 Important runtime behavior:
 
-- Services reach Postgres internally at `db:5432`; `orders`, `holdings`,
-  `insights` and `auth` all connect over the Docker network.
+- Services reach Postgres internally over the Docker network: `orders`, `holdings`
+  and `auth` at `db:5432`, `insights` at `reporting-db:5432`.
 - DB initialization scripts (`db/finalized-schema.sql`, `db/init-app-role.sh`,
   the seed file) only run on the **first** startup of an empty `db_data`
   volume — re-run them by clearing that volume (`docker compose down -v`).
+  The replica needs no setup, on a new or an existing volume: on every `docker compose up` the one-shot
+  `reporting-setup` service creates the reporting role, replication slot and trader-name view if they are
+  missing, and `db` reads its replication rules from [db/pg_hba.conf](db/pg_hba.conf).
 - Holdings writes a synthetic quote for every catalog stock every
   `QUOTE_INTERVAL_SECONDS` (default 2); set `QUOTE_GENERATOR_ENABLED=false` to stop it.
 
@@ -621,6 +630,85 @@ python -m http.server 8000 --directory docs/javadoc
 
 Then visit <http://localhost:8000/>. GitHub's repository viewer displays HTML source;
 use a local browser or static web server to browse the rendered documentation.
+
+## Accessibility
+
+NextTrade is built so that people with different needs can trade on their own: someone who is
+blind or has low vision can use it by ear, someone who can press only one button can use it with
+a single switch, colour-blind traders get colours they can tell apart, and everything works from
+the keyboard. The features are part of both trading dashboards (novice and advanced). Each one
+starts off and is remembered in the browser once turned on, so it never surprises anyone who
+does not need it.
+
+### Try it in two minutes
+
+1. Start the app (see [Quick Start](#quick-start)) and sign in with one of the
+   [test logins](#test-logins-development-only). Turn the sound up; Chrome or Edge works best.
+2. Press `?` to see every keyboard shortcut.
+3. Press `Alt` + `B`: the **audio briefing** reads out the market, your portfolio and your recent
+   orders.
+4. Open **Settings > Accessibility** and pick **Red-green safe** under Colour-blind mode: every
+   colour changes, and gains and losses still show an arrow and a + or - sign.
+5. Press `Alt` + `S`: **switch control** starts. A ring moves through the page and reads each item
+   aloud; press `Space` when it reaches **Buy**, and keep using only `Space` to place an order.
+   Before you confirm, the order is read back to you. Press `Alt` + `S` again to stop.
+
+### The features
+
+| Feature | What it does | How to use it |
+|---------|--------------|---------------|
+| Colour-blind mode | Swaps every colour for a palette that red-green or blue-yellow colour-blind people can tell apart. Gains and losses also carry an arrow and a + or - sign, so no information depends on colour alone. Prices and calculations never change. | Settings > Accessibility > Colour-blind mode: Off, Red-green safe or Blue-yellow safe |
+| Audio briefing | A short spoken summary of the market, your portfolio and your recent orders. If balances are hidden, amounts are never read out. | The **Briefing** button in the top bar, or `Alt` + `B`. Settings: voice speed, and repeat only when asked or every 2 or 5 minutes |
+| Switch control | Lets someone who can press only one button (a head switch, a sip-and-puff device or the space bar) use the whole dashboard. A ring moves through the page; pressing the switch chooses what it is on. Number and text fields open an on-screen keypad. | `Alt` + `S` on any page, or Settings > Accessibility. Settings: scan speed (0.7 to 3 seconds), switch key (Space or Enter), regular "Go back?" and "Pause?" offers, and reading each item aloud |
+| Order read-back | Before an order is confirmed, the review says exactly what will happen, for example "You're about to buy 2 shares of Apple for about $450", including notes when the market is closed or the price is delayed. | Automatic in every order review; switch control reads it aloud |
+| Keyboard and screen readers | Every control can be reached with `Tab`, the first `Tab` offers **Skip to main content**, every page has its own title, and a focused chart can be explored price by price. Spoken text says "Amazon" and "up", not "A M Z N" and "▲". | Always on |
+| Inactivity warning | A minute before the automatic sign-out (after 10 minutes without activity by default), a **Still there?** dialog counts down and offers **Stay signed in**, so nobody loses their place while working slowly. | Always on |
+
+### Keyboard shortcuts
+
+Press `?` anywhere on a dashboard to see this list.
+
+| Keys | Action |
+|------|--------|
+| `?` | Open the shortcut list (not while typing in a field) |
+| `Alt` + `B` | Play the audio briefing |
+| `Alt` + `S` | Turn switch control on, reading each item aloud, or off |
+| `Tab` / `Shift` + `Tab` | Move to the next or previous control |
+| `Enter` / `Space` | Activate the focused button or link, or review an order |
+| `Esc` | Close a dialog, clear the search, or stop exploring a chart |
+| `←` `→`, `Home` `End` | On a focused chart, step through its prices or jump to the first or latest |
+
+### Where the code is
+
+All paths are under `frontend/src/app/` unless shown otherwise; the tests are in `frontend/tests/`.
+
+| Feature | Code | Tests |
+|---------|------|-------|
+| Settings > Accessibility page | `accessibility-settings.ts`; every choice is saved by `accessibility.ts` | `accessibility.test.mjs` |
+| Colour-blind mode | `colour-mode.ts`, `colour-mode-preferences.ts`, `theme-colours.ts`; arrows and signs in `financial-change.ts` | `colour-mode.test.mjs`, `colour-palettes.test.mjs`, `non-colour-signals.test.mjs` |
+| Audio briefing | the sentences in `briefing.ts`; button and speech in `briefing-button.ts`; settings card `briefing-settings.ts` | `briefing.test.mjs` |
+| Switch control | `switch-scan.ts`; settings card `switch-scan-settings.ts`; how text is spoken in `speech-text.ts` and `chart-speech.ts` | `switch-scan.test.mjs`, `spoken-labels.test.mjs` |
+| Order read-back | `order-read-back.ts` | `spoken-labels.test.mjs` |
+| Skip link, page titles, shortcuts | `skip-link.ts`, `app.routes.ts`, `keyboard-shortcuts.ts` | `page-structure.test.mjs` |
+| Inactivity warning | `shared/session-core/src/session-timeout-warning.ts` | `shared/session-core/tests/session-timeout-warning.test.mjs` |
+
+The sentences are built by plain functions, so the tests check exactly what is said without a
+browser or a speech engine; `npm --prefix frontend test` runs them with the rest of the frontend
+tests.
+
+### Checking accessibility
+
+`frontend/e2e/accessibility.spec.mjs` runs axe, an automated accessibility checker, against the
+WCAG 2.2 AA rules on the running app. Start the backend services and the frontend
+(`npx ng serve --port 4320` in `frontend/`), then:
+
+```sh
+cd frontend
+A11Y_PASSWORD=<test password> npm run test:a11y
+```
+
+`A11Y_BASE_URL` and `A11Y_EMAIL` are optional. The latest results are in the
+[axe report](docs/accessibility/axe-report.md).
 
 ## Synthetic Quotes
 
