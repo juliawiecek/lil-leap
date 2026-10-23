@@ -17,6 +17,14 @@ interface ProfileField {
   matches?: string[];
 }
 
+const DOLLARS = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+/** A typed dollar amount ("10,000.5") in whole cents, or null when it is not a valid amount. */
+function toCents(text: string): bigint | null {
+  const match = /^(\d{1,16})(?:\.(\d{1,2}))?$/.exec(text.replaceAll(',', '').trim());
+  return match ? BigInt(match[1]) * 100n + BigInt((match[2] ?? '').padEnd(2, '0')) : null;
+}
+
 @Component({
   selector: 'app-investor-profile',
   imports: [SelectMenu],
@@ -684,6 +692,7 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     }
     const value = control.value.trim();
     this.validateMoneyField(field.id, value, control);
+    this.validateDepositWithinLiquidity(value, control, field.id, form);
     this.validateCountry(value, control, field.id);
     this.validateAge(value, control, field.id);
     this.validatePhone(value, control, field.id);
@@ -694,6 +703,19 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const isMoneyField = fieldId === 'annual_income' || fieldId === 'liquidity_position' || fieldId === 'initial_deposit';
     if (isMoneyField && value && !/^\d{1,16}(?:\.\d{1,2})?$/.test(value.replaceAll(',', ''))) {
       control.setCustomValidity('Enter a nonnegative amount with up to two decimal places.');
+    }
+  }
+
+  /** The initial deposit may not exceed the liquidity position; the server rejects it too, but only after the last step. */
+  private validateDepositWithinLiquidity(value: string, control: HTMLInputElement, fieldId: string, form: HTMLFormElement): void {
+    if (fieldId !== 'initial_deposit' || !value || control.validity.customError) {
+      return;
+    }
+    const liquidityControl = form.elements.namedItem('liquidity_position');
+    const liquidity = toCents(liquidityControl instanceof HTMLInputElement ? liquidityControl.value : this.values()['liquidity_position'] ?? '');
+    const deposit = toCents(value);
+    if (deposit !== null && liquidity !== null && deposit > liquidity) {
+      control.setCustomValidity(`Your initial deposit can't be more than your liquidity position (${DOLLARS.format(Number(liquidity) / 100)}).`);
     }
   }
 
