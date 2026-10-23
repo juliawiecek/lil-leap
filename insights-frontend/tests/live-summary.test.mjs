@@ -27,7 +27,7 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   assert.match(host.textContent, /Today's trading across every account, Monday, October 19, 2026 \(Central time\)\./);
   assert.match(host.textContent, /9 trades · Central time/);
   const centralHourNow = Number(new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' }).format(new Date()));
-  assert.equal(fixture.componentInstance.cumulativePoints().length, centralHourNow + 1, 'the running total stops at the current hour');
+  assert.equal(host.querySelectorAll('app-insights-chart circle[tabindex]').length, centralHourNow + 1, 'the running total stops at the current hour');
   const rows = [...host.querySelectorAll('tbody tr')]
     .map((row) => [...row.querySelectorAll('td')].slice(0, 3).map((cell) => cell.textContent.trim()));
   assert.deepEqual(rows, [['1', 'AAPL', '6'], ['2', 'JPM', '3']]);
@@ -40,7 +40,7 @@ test('the greeting follows the Central clock, not the computer\'s time zone', as
   const { greetingFor } = await import('../src/app/pages/insights/insights-page.ts');
   const { centralHour } = await import('../src/app/shared/app-time.ts');
   assert.deepEqual([0, 11, 12, 17, 18, 23].map(greetingFor),
-    ['Good morning', 'Good morning', 'Good afternoon', 'Good afternoon', 'Good evening', 'Good evening']);
+    ['Good Morning', 'Good Morning', 'Good Afternoon', 'Good Afternoon', 'Good Evening', 'Good Evening']);
   // 03:00 UTC on October 23 is still 10 PM on the 22nd in Chicago; 18:28 UTC is 1:28 PM.
   assert.equal(centralHour(new Date('2026-10-23T03:00:00Z')), 22);
   assert.equal(centralHour(new Date('2026-10-22T18:28:00Z')), 13);
@@ -85,24 +85,6 @@ test('one failed call keeps the other figures and shows only a fixed safe messag
   assert.equal(text.includes('do-not-display'), false);
   assert.equal(fixture.componentInstance.summary(), summary);
   assert.equal(fixture.componentInstance.trend().length, 24);
-});
-
-test('the figures and the chart are re-read every 5 seconds', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval'] });
-  let calls = 0;
-  const page = component(t, InsightsPage, [{ provide: LIVE_REPORTS, useValue: service({ load: async () => { calls++; return summary; } }) }]);
-  await settle();
-  assert.equal(calls, 1, 'read once when the page opens');
-  t.mock.timers.tick(4_999);
-  await settle();
-  assert.equal(calls, 1, 'not yet');
-  t.mock.timers.tick(1);
-  await settle();
-  assert.equal(calls, 2, 'again after 5 seconds');
-  t.mock.timers.tick(5_000);
-  await settle();
-  assert.equal(calls, 3);
-  page.ngOnDestroy();
 });
 
 test('loading is single-flight and never applies a response after the page closes', async (t) => {

@@ -1,8 +1,11 @@
 <section class="glance" aria-label="Today at a glance" [attr.aria-busy]="loading()">
   <div class="glance-head">
     <div>
-      <h1>{{ greeting() }}</h1>
+      <h1>{{ greeting().split(' ')[0] }} <span class="accent">{{ greeting().split(' ')[1] }}</span></h1>
       <p class="subtitle">{{ subtitle() }}</p>
+      @if (updatedAt(); as at) {
+        <p class="updated"><i aria-hidden="true"></i>Live · updated {{ at }}</p>
+      }
     </div>
     @if (summary(); as s) {
       <p class="sentence">
@@ -25,7 +28,7 @@
       </div>
       @if (tradesToday()) {
         <div class="hero-chart">
-          <app-insights-chart [points]="cumulativePoints()" [height]="260" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
+          <app-insights-chart [points]="cumulativePoints()" [height]="210" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
         </div>
       } @else {
         <p class="hero-empty">No trades yet today. The line fills in as trades execute.</p>
@@ -55,6 +58,23 @@
     </dl>
   </div>
 </section>
+
+@if (ranked().length) {
+  <div class="tape" aria-label="Most traded today">
+    <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
+    <div class="tape-window" [class.still]="ranked().length < 4">
+      <div class="tape-track" [class.still]="ranked().length < 4">
+        @for (copy of ranked().length < 4 ? [0] : [0, 1]; track copy) {
+          <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
+            @for (row of ranked(); track row.instrument) {
+              <li><b>{{ row.instrument }}</b><span class="mono">{{ count(row.tradeCount) }}</span> {{ plural(row.tradeCount, 'trade') }}<span class="share mono">{{ row.share.toFixed(0) }}%</span></li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+}
 
 <div class="sections">
   <section class="area" aria-labelledby="trend-title">
@@ -96,7 +116,7 @@
               <circle cx="21" cy="21" r="15.9155" [attr.stroke]="arc.color" [attr.stroke-dasharray]="arc.dash" [attr.stroke-dashoffset]="arc.offset" />
             }
           </svg>
-          <span><b class="mono">{{ topShare() }}%</b><small>Top {{ arcs().length }}</small></span>
+          <span><b class="mono">{{ topShare() }}%</b><small>top {{ arcs().length }}</small></span>
         </div>
       }
       <div class="table-wrap">

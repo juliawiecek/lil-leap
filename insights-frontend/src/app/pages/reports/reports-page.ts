@@ -14,7 +14,7 @@ import { centralDayTime, centralTime } from '../../shared/app-time';
   selector: 'app-reports-page',
   imports: [FormsModule],
   templateUrl: './reports-page.html',
-  styleUrls: ['./reports-page.scss', './reports-page.novice.scss'],
+  styleUrl: './reports-page.scss',
 })
 export class ReportsPage implements OnDestroy {
   readonly reportFiles = inject(REPORT_FILES, { optional: true });

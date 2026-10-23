@@ -45,7 +45,7 @@
       <span class="crumb">{{ current().group }}<i aria-hidden="true">/</i><b>{{ current().label }}</b></span>
       <div class="top-actions">
         <span class="clock">{{ clock() }} CT</span>
-        <span class="role-tag">{{ roleLabel() }}</span>
+        <span class="role-tag">{{ roleLabel().toUpperCase() }}</span>
       </div>
     </header>
     <main id="workspace" tabindex="-1" class="content">

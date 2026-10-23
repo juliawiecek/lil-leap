@@ -59,8 +59,8 @@
                 @for (slice of allocation(); track slice.symbol) {
                   <circle cx="74" cy="74" [attr.r]="ringRadius" [attr.stroke]="slice.color" [attr.stroke-dasharray]="slice.dash" [attr.stroke-dashoffset]="slice.offset" transform="rotate(-90 74 74)" />
                 }
-                <text class="ring-value" x="74" y="76" text-anchor="middle">{{ largestShare().toFixed(0) }}%</text>
-                <text class="ring-label" x="74" y="94" text-anchor="middle">Largest</text>
+                <text class="ring-label" x="74" y="70" text-anchor="middle">LARGEST</text>
+                <text class="ring-value" x="74" y="90" text-anchor="middle">{{ largestShare().toFixed(0) }}%</text>
               </svg>
               <ul class="legend">
                 @for (slice of allocation(); track slice.symbol) {

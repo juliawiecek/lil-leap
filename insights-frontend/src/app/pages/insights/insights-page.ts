@@ -2,10 +2,10 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
 import { InsightsChart } from '../../shared/insights-chart';
-import { centralHour, twelveHour } from '../../shared/app-time';
+import { centralHour, centralTime, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
-/** How often the figures and the chart are re-read: every 5 seconds, so new trades appear almost at once. */
+/** How often the page re-reads today's figures, in milliseconds. */
 const REFRESH_MS = 5_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 /** The hour it is now in Central time, as the trend labels it ("14:00"). */
@@ -20,7 +20,7 @@ const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', d
   selector: 'app-insights-page',
   imports: [DashboardIcon, InsightsChart],
   templateUrl: './insights-page.html',
-  styleUrls: ['./insights-page.scss', './insights-page.novice.scss'],
+  styleUrl: './insights-page.scss',
 })
 export class InsightsPage implements OnDestroy {
   private readonly reports = inject(LIVE_REPORTS, { optional: true });
@@ -37,6 +37,8 @@ export class InsightsPage implements OnDestroy {
     const now = `${CENTRAL_HOUR.format(new Date())}:00`;
     return this.trend().find((point) => point.hour === now)?.tradeCount ?? 0;
   });
+  /** When the figures were last read successfully, e.g. "4:02 PM CT"; empty until the first read. */
+  readonly updatedAt = signal('');
   /** Names the day the figures cover, once the server has said which day that is. */
   readonly subtitle = computed(() => {
     const day = this.summary()?.date;
@@ -45,7 +47,7 @@ export class InsightsPage implements OnDestroy {
   });
   /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
-  /** "Good morning" / "Good afternoon" / "Good evening" by the Central clock shown in the top bar. */
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock shown in the top bar. */
   readonly greeting = signal(greetingFor(centralHour()));
   /** Running total of today's trades, hour by hour, for the line under the traded value. */
   readonly cumulativePoints = computed(() => {
@@ -138,6 +140,9 @@ export class InsightsPage implements OnDestroy {
     if (trend.status === 'fulfilled') {
       this.trend.set(trend.value);
     }
+    if ([summary, top, trend].some((result) => result.status === 'fulfilled')) {
+      this.updatedAt.set(centralTime(new Date()));
+    }
     if ([summary, top, trend].some((result) => result.status === 'rejected')) {
       this.error.set('Some reporting figures could not be loaded. Trying again in a few seconds.');
     }
@@ -163,8 +168,5 @@ export class InsightsPage implements OnDestroy {
 
 /** The greeting for an hour on the Central clock, 0 to 23. */
 export function greetingFor(hour: number): string {
-  if (hour < 12) {
-    return 'Good morning';
-  }
-  return hour < 18 ? 'Good afternoon' : 'Good evening';
+  return hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 }

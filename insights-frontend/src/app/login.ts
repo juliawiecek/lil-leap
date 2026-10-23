@@ -11,7 +11,7 @@ import { homePath } from './roles';
 @Component({
   selector: 'app-insights-login',
   templateUrl: './login.html',
-  styleUrls: ['./login.scss', './login.novice.scss'],
+  styleUrl: './login.scss',
 })
 export class Login {
   private readonly auth = inject(AuthService);
@@ -31,6 +31,8 @@ export class Login {
   checkCapsLock(event: KeyboardEvent): void {
     this.capsLock.set(typeof event.getModifierState === 'function' && event.getModifierState('CapsLock'));
   }
+  /** Words on the moving band at the top; NextTrade shows index prices there. */
+  readonly tape = ['Trading activity', 'Orders & fills', 'Client accounts', 'Reports', 'Trade lookup', 'Audit trail', 'US equities'];
   /** The same decorative candlestick chart NextTrade draws behind its sign-in. */
   readonly candles = Array.from({ length: 44 }, (_, index) => {
     const progress = index / 43;

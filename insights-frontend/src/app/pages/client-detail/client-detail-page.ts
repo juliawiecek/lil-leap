@@ -34,7 +34,7 @@ type Tab = 'overview' | 'orders';
   selector: 'app-client-detail-page',
   imports: [RouterLink],
   templateUrl: './client-detail-page.html',
-  styleUrls: ['./client-detail-page.scss', './client-detail-page.novice.scss'],
+  styleUrl: './client-detail-page.scss',
 })
 export class ClientDetailPage {
   private readonly clients = inject(CLIENT_ACCOUNTS, { optional: true });
