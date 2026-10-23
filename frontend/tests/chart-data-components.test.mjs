@@ -98,7 +98,7 @@ test('dense portfolio SVG, tooltips and accessible series share exact retained o
   assert.deepEqual(seen.map(p => [p.at, p.value]), [[points[0].at, points[0].value], [points.at(-1).at, points.at(-1).value]]);
 });
 
-test('a truncated year advertises partial coverage in visible and shared chart data', async t => {
+test('a truncated year retains partial coverage in accessible and shared chart data', async t => {
   const points = [{ at: start - 86400000, value: 100 }, { at: start, value: 110 }];
   const range = { start: start - 365 * 86400000, end: start, fromOpening: false };
   const fixture = await render(t, PortfolioChart, { points, period: '1Y', range });
@@ -106,11 +106,12 @@ test('a truncated year advertises partial coverage in visible and shared chart d
   assert.equal(chart.chartSeries().coverage.status, 'partial');
   assert.equal(chart.chartSeries().coverage.requestedStart, range.start);
   assert.equal(chart.chartSeries().coverage.start, points[0].at);
-  assert.match(fixture.nativeElement.textContent, /Partial history/);
+  assert.equal(fixture.nativeElement.querySelector('.coverage-flag'), null);
+  assert.match(chart.description(), /Only part of the requested period has recorded values/);
   assert.match(chart.description(), /available recorded history/);
   assert.doesNotMatch(chart.summary(), /past 365 days/);
-  assert.match(fixture.nativeElement.querySelector('.recorded-range').textContent, /2026/);
+  assert.match(chart.description(), /2026/);
   fixture.componentRef.setInput('points', [{ at: start - 60000, value: 100 }, { at: start, value: 110 }]);
   fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('.recorded-range').textContent, /2026/, 'a short recorded span in a year view still names its date');
+  assert.match(chart.description(), /2026/, 'a short recorded span in a year view still names its date in the accessible description');
 });

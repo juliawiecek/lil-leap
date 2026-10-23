@@ -187,14 +187,7 @@ let nextPortfolioChartId = 0;
         </div>
       }
     </div>
-    @if (!error() && !loading() && history().length >= 2) {
-      <p class="chart-note recorded-range">
-        <span>{{ recordedRangeText() }}</span>
-        @if (coverage().status === 'partial') { <span class="coverage-flag" role="status">Partial history{{ notice() ? '' : ' · earlier values unavailable' }}</span> }
-        <span class="performance-label">{{ tone() === 'down' ? '↓ Down overall' : tone() === 'up' ? '↑ Up overall' : '— No overall change' }}</span>
-      </p>
-    }
-    @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
+    @if (notice() && notice() !== 'Account value includes deposits and transfers.') { <p class="chart-note" role="status">{{ notice() }}</p> }
     <app-chart-access #access [id]="gradientId" [label]="subject()" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="subject() + period() + dayView() + accountKey()" />
     @if (delayed() && history().length >= 2) {
       <p class="chart-note delayed" role="status">
@@ -265,6 +258,8 @@ let nextPortfolioChartId = 0;
         transform: translateX(-100%);
       }
       svg {
+        /* Paint after the positioned gridlines so they stay behind the price series. */
+        position: relative;
         display: block;
         width: 100%;
         height: 300px;
@@ -419,13 +414,6 @@ let nextPortfolioChartId = 0;
         color: var(--text-subtle);
         font-size: 12px;
       }
-      .recorded-range {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 16px;
-        margin-top: 12px;
-      }
-      .performance-label { margin-left: auto; color: var(--text-muted); }
       @media (max-width: 600px) {
         svg,
         .chart-empty {
@@ -621,13 +609,6 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly plotPoints = computed(() => plotSeries(this.displayPoints(), Math.ceil(WIDTH / 6)));
   /** Fit the observed span, including partial recent-hour history, without adding points. */
   readonly plotWindow = computed(() => ({ start: this.plotPoints()[0]?.at ?? 0, end: this.plotPoints().at(-1)?.at ?? 0 }));
-  readonly recordedRangeText = computed(() => {
-    const { start, end } = this.plotWindow();
-    const options: Intl.DateTimeFormatOptions = this.period() === '1D' && centralDay(start) === centralDay(end)
-      ? { hour: 'numeric', minute: '2-digit' }
-      : { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
-    return `Recorded ${centralTime(start, options)}–${centralTime(end, options)} CT`;
-  });
   readonly viewBox = `${-INSET_X} ${-INSET_Y} ${WIDTH + 2 * INSET_X} ${HEIGHT + 2 * INSET_Y}`;
   setDayView(view: 'recent' | 'full'): void {
     this.endScrub();

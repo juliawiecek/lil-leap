@@ -44,7 +44,8 @@ for (const side of ['Buy', 'Sell']) {
     await expect(chart.locator('.cursor-time')).toBeVisible();
     await chart.getByRole('button', { name: '1W', exact: true }).click();
     await expect(chart.getByRole('button', { name: '1W', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(chart.locator('.recorded-range')).toContainText('Partial history');
+    await expect(chart.locator('.coverage-flag')).toHaveCount(0);
+    await expect(description).toContainText('Only part of the requested period has recorded values');
     await dialog.locator('#novice-stock').click();
     await dialog.getByRole('option').filter({ hasText: 'MSFT' }).click();
     await expect(image).toHaveAttribute('aria-label', 'MSFT price chart');

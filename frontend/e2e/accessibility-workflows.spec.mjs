@@ -135,7 +135,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     test.setTimeout(120000); await colourFixture(page, tier);
     await page.addInitScript(() => localStorage.setItem('nexttrade.accessibility', JSON.stringify({ visual: { textSize: 'extra-large', textSpacing: true, enhancedFocus: true } })));
     await page.setViewportSize({ width: 320, height: 900 });
-    const routes = tier === 'NOVICE' ? ['dashboard','portfolio','activity','learn','settings'] : ['dashboard','portfolio','activity','markets','settings'];
+    const routes = tier === 'NOVICE' ? ['dashboard','portfolio','activity','settings'] : ['dashboard','portfolio','activity','markets','settings'];
     for (const path of routes) {
       await page.goto('/' + path); await expect(page.locator('main h1')).toBeVisible();
       const overflow = await page.evaluate(() => ({ document: document.documentElement.scrollWidth > innerWidth + 1, main: [...document.querySelectorAll('main')].some(main => main.clientWidth && main.scrollWidth > main.clientWidth + 1) }));

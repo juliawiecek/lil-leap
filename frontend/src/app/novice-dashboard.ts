@@ -48,7 +48,6 @@ import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { SwitchScanService } from './switch-scan';
-import { NoviceLearn } from './novice-learn';
 import { FocusAfterChange } from './focus-after-change';
 
 /** How often the portfolio-value chart re-reads its history. */
@@ -125,7 +124,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, NoviceLearn, FocusAfterChange, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, FocusAfterChange, AccountSettings,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -271,7 +270,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     { label: 'Overview', icon: 'home' },
     { label: 'Portfolio', icon: 'chart' },
     { label: 'Activity', icon: 'orders' },
-    { label: 'Learn', icon: 'learn' },
     { label: 'Settings', icon: 'settings' },
   ];
   /** Balances could not be read: the service is down or unreachable (PS-11). */

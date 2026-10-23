@@ -76,12 +76,11 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} all page routes expose native structure and pass the WCAG axe rules`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
     await colourFixture(page, tier); await mockSpeech(page);
-    const pages = tier === 'NOVICE' ? ['/dashboard', '/portfolio', '/activity', '/learn', '/settings'] : ['/dashboard', '/portfolio', '/activity', '/markets', '/settings'];
+    const pages = tier === 'NOVICE' ? ['/dashboard', '/portfolio', '/activity', '/settings'] : ['/dashboard', '/portfolio', '/activity', '/markets', '/settings'];
     for (const path of pages) {
       await page.goto(path);
       await expect(page.locator('main')).toBeVisible();
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-      if (path === '/learn') await expect(page.locator('app-novice-learn')).toBeVisible();
       await expect(page).toHaveTitle(/NextTrade/);
       await audit(page, `${tier}-${path.slice(1)}`, info);
     }

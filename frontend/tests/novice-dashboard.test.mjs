@@ -86,9 +86,9 @@ test('an order queued for the open is watched, and its fill reloads balances wit
   assert.equal(historyCalls(), calls, 'with no open orders left, polling stops');
 });
 
-test('the guided workspace exposes Learn alongside its trading pages, and service failures show a banner', async t => {
+test('the guided workspace exposes its trading pages and settings, and service failures show a banner', async t => {
   const { desk } = await tradingDesk(t);
-  assert.deepEqual(desk.navigation.map(n => n.label), ['Overview', 'Portfolio', 'Activity', 'Learn', 'Settings']);
+  assert.deepEqual(desk.navigation.map(n => n.label), ['Overview', 'Portfolio', 'Activity', 'Settings']);
   assert.equal(desk.serviceDown(), false);
   desk.portfolioClient.load = async () => { throw new Error('Could not reach the server.'); };
   await desk.refreshPortfolio();

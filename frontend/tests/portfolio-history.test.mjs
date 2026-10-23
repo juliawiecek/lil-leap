@@ -352,5 +352,4 @@ test('partial recent-hour history fills the width without inventing earlier valu
   assert.equal(chart.focused(), true);
   assert.deepEqual(chart.placed().map(p => p.x), [0, 400, 800]);
   assert.deepEqual(chart.chartSeries().points, points.slice(1).map(p => ({ time: p.at, value: p.value })));
-  assert.equal(chart.recordedRangeText(), 'Recorded 9:42 AM–10:00 AM CT');
 });
