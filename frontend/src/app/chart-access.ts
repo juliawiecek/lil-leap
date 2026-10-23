@@ -54,6 +54,9 @@ import { ChartVoice } from './chart-voice';
     caption { text-align: left; padding: 8px; font-weight: 600; }
     th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--control-border); white-space: nowrap; }
     th { font-weight: 600; }
+    /* Values line up on their decimal places; the row label column stays left-aligned. */
+    td, thead th:not(:first-child) { text-align: right; }
+    td[colspan] { text-align: left; }
     [hidden] { display: none !important; }
     @media (forced-colors: active) { button { border-color: ButtonText; } th, td { border-color: CanvasText; } }
   `],

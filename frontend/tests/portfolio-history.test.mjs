@@ -167,7 +167,7 @@ test('the line is green when the period is up and red when it is down, with a sp
   assert.equal(empty.active(), null);
 });
 
-test('1D fills the chart from the open to now: each value sits at its time, with no axes', t => {
+test('1D fills the chart from the open to now: each value sits at its time on round-value gridlines', t => {
   const session = { open: Date.parse('2026-10-19T13:30:00Z'), close: Date.parse('2026-10-19T20:00:00Z') };
   const range = { start: session.open, end: NOW, fromOpening: false, session };
   const { chart, inputs } = chartWith(t, [{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }], range);
@@ -180,8 +180,8 @@ test('1D fills the chart from the open to now: each value sits at its time, with
   assert.equal(placed[0].x, 0, 'the open is the left edge');
   assert.equal(placed.at(-1).x, 800, 'now is the right edge: no room for hours still to come');
   assert.equal(Math.round(placed[1].x), 267, 'placed by its time: 10:00 is a third of the way from 9:30 to 11:00');
-  assert.equal(chart.times, undefined, 'no times along the bottom');
-  assert.equal(chart.valueTicks, undefined, 'no values down the side');
+  assert.deepEqual(chart.valueTicks().map((tick) => tick.label), ['$19,000', '$19,500', '$20,000'], 'round values down the side');
+  assert.deepEqual(chart.timeTicks().map((tick) => tick.label), ['8:30 AM', '9:15 AM', '10:00 AM'], 'open, middle and now along the bottom, in Central time');
 });
 
 test('all periods place observations by elapsed time, including nights and weekends', t => {

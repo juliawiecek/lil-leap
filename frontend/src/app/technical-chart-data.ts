@@ -18,7 +18,7 @@ export function technicalTable(points: readonly PricePoint[], series: readonly I
   const buckets = new Map<string, PricePoint[]>();
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
   for (const [index, p] of points.entries()) { const key = grouped ? day.format(p.at) : String(index); const ps = buckets.get(key) ?? []; ps.push(p); buckets.set(key, ps); }
-  const number = (n: number | null | undefined) => n !== null && n !== undefined && Number.isFinite(n) ? chartValue(n) : 'Unavailable';
+  const number = (n: number | null | undefined) => n !== null && n !== undefined && Number.isFinite(n) ? chartValue(n, { precision: 4 }) : 'Unavailable';
   const values = series.map(s => new Map(s.points.map(p => [p.at, p.price])));
   const includedTrades = new Set<TradeMark>();
   const rows = [...buckets].map(([key, ps]) => {

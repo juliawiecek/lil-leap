@@ -139,7 +139,8 @@ test('recent-hour alternatives retain the drawn full-period baseline and redact 
   assert.equal(chart.dataTable().rows.length, 2, 'only the recent hour is displayed');
   assert.deepEqual(chart.placed().map(p => p.x), [0, 800], 'the available half hour fills the plot');
   assert.equal(fixture.nativeElement.querySelector('.line').getAttribute('d'), chart.path());
-  assert.equal(fixture.nativeElement.querySelector('.recorded-range').textContent.trim(), 'Recorded 10:30 AM–11:00 AM CT');
+  assert.equal(fixture.nativeElement.querySelector('.recorded-range span').textContent.trim(), 'Recorded 10:30 AM–11:00 AM CT');
+  assert.equal(fixture.nativeElement.querySelector('.performance-label').textContent.trim(), '↑ Up overall');
   assert.deepEqual(chart.dataTable().references, [{ label: 'Period starting value reference', value: '$100.00' }]);
   assert.match(chart.description(), /from \$110\.00.*\$120\.00.*reference line.*\$100\.00/);
   fixture.componentRef.setInput('balanceHidden', true); fixture.detectChanges();

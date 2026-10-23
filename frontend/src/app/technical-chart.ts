@@ -10,6 +10,7 @@ import { pricePath, priceRange, priceY, plotMarks, type ChartWindow, type TradeM
 
 let chartId = 0;
 const HEIGHT = 180;
+const MIN_EXTENT_MS = 30 * 60 * 1000;
 
 /** Native SVG enhancement of the existing history plot; no new market requests or chart library. */
 @Component({
@@ -70,8 +71,19 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   #resize?: ResizeObserver;
   #key = '';
 
+  /** The period window trimmed to start at the first recorded price or trade, so a short history
+   * fills the plot instead of crowding against its right edge. */
+  readonly extent = computed(() => {
+    const base = this.window();
+    const first = [this.source().find(p => p.at >= base.start)?.at, ...this.trades().map(t => t.at)]
+      .reduce<number>((min, at) => at !== undefined && at >= base.start && at <= base.end ? Math.min(min, at) : min, Infinity);
+    if (!Number.isFinite(first)) return base;
+    // Keep at least half an hour on screen so a lone observation is not stretched edge to edge.
+    const start = Math.max(base.start, Math.min(first, base.end - MIN_EXTENT_MS));
+    return { start, end: base.end };
+  });
   readonly viewport = computed(() => {
-    const base = this.window(), span = Math.max(1, (base.end - base.start) / this.zoom());
+    const base = this.extent(), span = Math.max(1, (base.end - base.start) / this.zoom());
     const end = Math.max(base.start + span, Math.min(base.end, this.anchor() ?? base.end));
     return { start: end - span, end };
   });
@@ -120,11 +132,11 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   bodyHeight(p: PricePoint): number { return Math.max(1, Math.abs(this.y(p.candle!.open) - this.y(p.candle!.close))); }
   candleText(p: PricePoint): string {
     const c = p.candle!;
-    return `${chartDate(c.time)}: ${c.close > c.open ? 'Up, hollow' : c.close < c.open ? 'Down, filled' : 'Unchanged'}, open ${c.open}, high ${c.high}, low ${c.low}, close ${c.close}${c.volume === null ? ', volume unavailable' : ', volume ' + c.volume}`;
+    return `${chartDate(c.time)}: ${c.close > c.open ? 'Up, hollow' : c.close < c.open ? 'Down, filled' : 'Unchanged'}, open ${chartValue(c.open, { precision: 4 })}, high ${chartValue(c.high, { precision: 4 })}, low ${chartValue(c.low, { precision: 4 })}, close ${chartValue(c.close, { precision: 4 })}${c.volume === null ? ', volume unavailable' : ', volume ' + c.volume}`;
   }
   pan(direction: number): void {
     const v = this.viewport();
-    this.anchor.set(Math.max(this.window().start + v.end - v.start, Math.min(this.window().end, v.end + direction * (v.end - v.start) * .4)));
+    this.anchor.set(Math.max(this.extent().start + v.end - v.start, Math.min(this.extent().end, v.end + direction * (v.end - v.start) * .4)));
     this.inspected.set(null);
   }
   changeZoom(factor: number): void { this.zoom.update(value => Math.max(1, Math.min(32, value * factor))); this.inspected.set(null); }

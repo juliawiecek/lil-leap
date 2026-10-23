@@ -48,7 +48,8 @@ const INSET_Y = 12;
 let nextPortfolioChartId = 0;
 
 /**
- * The novice overview's custom emerald area chart, with a dotted baseline at the period's starting value and no axes. Every recorded value
+ * The novice overview's custom emerald area chart, with a dotted baseline at the period's starting value, round-value
+ * gridlines and start/middle/end times. Every recorded value
  * is its own point, so each rise and dip stays in the line as new values arrive; the scale refits
  * to the values shown. Dense 1D data opens on the recent hour, with the full day one tap away.
  * Hovering (or arrow keys) scrubs along the line and reports the point under the cursor, so the
@@ -69,27 +70,14 @@ let nextPortfolioChartId = 0;
         }}
       </div>
     } @else {
-      @if (period() === '1D' && canFocus()) {
-        <div class="day-window" role="group" aria-label="Day chart detail">
-          <span>Day view</span>
-          <button
-            type="button"
-            [attr.aria-pressed]="dayView() === 'recent'"
-            (click)="setDayView('recent')"
-          >
-            Recent hour
-          </button>
-          <button
-            type="button"
-            [attr.aria-pressed]="dayView() === 'full'"
-            title="Current Central-time calendar day, including deposits and transfers"
-            (click)="setDayView('full')"
-          >
-            Full day
-          </button>
-        </div>
-      }
       <div class="chart" [class.down]="tone() === 'down'">
+        <div class="plot">
+        <!-- Recessive HTML gridlines sit behind the SVG; text in the stretched SVG would distort. -->
+        <div class="value-axis" aria-hidden="true">
+          @for (tick of valueTicks(); track tick.value) {
+            <span class="gridline" [style.top.%]="tick.top"><span>{{ tick.label }}</span></span>
+          }
+        </div>
         <svg
           #svg
           [attr.viewBox]="viewBox"
@@ -152,31 +140,64 @@ let nextPortfolioChartId = 0;
             >{{ cursorTime() }} · {{ point.value | currency }}</span
           >
         }
+        </div>
+        <div class="time-axis" aria-hidden="true">
+          @for (tick of timeTicks(); track tick.at) {
+            <span [style.left.%]="tick.left">{{ tick.label }}</span>
+          }
+        </div>
       </div>
-      <p class="chart-note recorded-range">{{ recordedRangeText() }}</p>
-      @if (coverage().status === 'partial') { <p class="chart-note" role="status">Partial history: only the recorded range shown is available for this period.</p> }
+    }
+    <!-- Every time control sits in one row directly under the plot. -->
+    <div class="time-controls">
+      <div
+        class="periods"
+        role="group"
+        aria-label="Chart time range"
+        [class.down]="tone() === 'down'"
+      >
+        @for (item of periods; track item) {
+          <button
+            type="button"
+            [class.selected]="period() === item"
+            [attr.aria-pressed]="period() === item"
+            [attr.data-speak]="periodNames[item]"
+            [attr.title]="periodNames[item]"
+            (click)="periodChange.emit(item)"
+          >
+            {{ item }}
+          </button>
+        }
+      </div>
+      @if (!error() && !loading() && history().length >= 2 && period() === '1D' && canFocus()) {
+        <div class="day-window" role="group" aria-label="Day chart detail">
+          <button
+            type="button"
+            [attr.aria-pressed]="dayView() === 'recent'"
+            (click)="setDayView('recent')"
+          >
+            Recent hour
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="dayView() === 'full'"
+            title="Current Central-time calendar day, including deposits and transfers"
+            (click)="setDayView('full')"
+          >
+            Full day
+          </button>
+        </div>
+      }
+    </div>
+    @if (!error() && !loading() && history().length >= 2) {
+      <p class="chart-note recorded-range">
+        <span>{{ recordedRangeText() }}</span>
+        @if (coverage().status === 'partial') { <span class="coverage-flag" role="status">Partial history{{ notice() ? '' : ' · earlier values unavailable' }}</span> }
+        <span class="performance-label">{{ tone() === 'down' ? '↓ Down overall' : tone() === 'up' ? '↑ Up overall' : '— No overall change' }}</span>
+      </p>
     }
     @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
     <app-chart-access #access [id]="gradientId" label="Portfolio value" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="period() + dayView() + accountKey()" />
-    <div
-      class="periods"
-      role="group"
-      aria-label="Chart time range"
-      [class.down]="tone() === 'down'"
-    >
-      @for (item of periods; track item) {
-        <button
-          type="button"
-          [class.selected]="period() === item"
-          [attr.aria-pressed]="period() === item"
-          [attr.data-speak]="periodNames[item]"
-          [attr.title]="periodNames[item]"
-          (click)="periodChange.emit(item)"
-        >
-          {{ item }}
-        </button>
-      }
-    </div>
     @if (delayed() && history().length >= 2) {
       <p class="chart-note delayed" role="status">
         Live prices are delayed, so the line ends at the last known value.
@@ -197,11 +218,53 @@ let nextPortfolioChartId = 0;
         --down: var(--chart-gain);
       }
       .chart {
-        position: relative;
         --tone: var(--up);
+        --gutter: 64px;
       }
       .chart.down {
         --tone: var(--down);
+      }
+      /* The top margin keeps the hover label clear of the value header above the chart. */
+      .plot {
+        position: relative;
+        margin: 36px var(--gutter) 0 0;
+      }
+      .value-axis {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .gridline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        border-top: 1px solid var(--surface-tone-08);
+      }
+      .gridline span,
+      .time-axis span {
+        position: absolute;
+        color: var(--text-subtle);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .gridline span {
+        left: calc(100% + 8px);
+        transform: translateY(-50%);
+      }
+      .time-axis {
+        position: relative;
+        height: 16px;
+        margin: 6px var(--gutter) 0 0;
+      }
+      .time-axis span {
+        transform: translateX(-50%);
+      }
+      .time-axis span:first-child {
+        transform: none;
+      }
+      .time-axis span:last-child {
+        transform: translateX(-100%);
       }
       svg {
         display: block;
@@ -240,6 +303,7 @@ let nextPortfolioChartId = 0;
         stroke-width: 1;
         vector-effect: non-scaling-stroke;
       }
+      .area { opacity: 0.7; }
       /* A round, non-scaling stroke keeps the dot circular in the responsive SVG. */
       .dot {
         fill: none;
@@ -249,20 +313,22 @@ let nextPortfolioChartId = 0;
         vector-effect: non-scaling-stroke;
         pointer-events: none;
       }
-      .day-window {
+      .time-controls {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 6px;
-        margin: 0 0 14px;
-        color: var(--text-subtle);
-        font-size: 11px;
+        justify-content: space-between;
+        gap: 8px 12px;
+        margin-top: 12px;
       }
-      .day-window span {
-        margin-right: auto;
+      .day-window {
+        display: flex;
+        gap: 6px;
+        font-size: 12px;
       }
       .day-window button {
-        padding: 5px 9px;
+        min-height: 34px;
+        padding: 5px 10px;
         border: 1px solid var(--surface-tone-10);
         border-radius: 6px;
         background: transparent;
@@ -283,9 +349,10 @@ let nextPortfolioChartId = 0;
       }
       .cursor-time {
         box-sizing: border-box;
+        width: max-content;
         max-width: 100%;
         position: absolute;
-        top: -26px;
+        top: -32px;
         transform: translateX(-50%);
         padding: 4px 10px;
         border: 1px solid var(--surface-tone-10);
@@ -311,7 +378,6 @@ let nextPortfolioChartId = 0;
         width: max-content;
         max-width: 100%;
         gap: 2px;
-        margin-top: 16px;
         padding: 4px;
         border: 1px solid var(--surface-tone-08);
         border-radius: 12px;
@@ -353,10 +419,24 @@ let nextPortfolioChartId = 0;
         color: var(--text-subtle);
         font-size: 12px;
       }
+      .recorded-range {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 16px;
+        margin-top: 12px;
+      }
+      .performance-label { margin-left: auto; color: var(--text-muted); }
       @media (max-width: 600px) {
         svg,
         .chart-empty {
           height: 220px;
+        }
+        .chart {
+          --gutter: 52px;
+        }
+        .gridline span,
+        .time-axis span {
+          font-size: 10px;
         }
         .periods {
           width: 100%;
@@ -565,6 +645,31 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   });
   /** The value scale, fitted to the values shown, so each move up or down is visible. */
   readonly scale = computed(() => valueScale(this.plotPoints().map((p) => p.value)));
+  /** Round-number gridlines inside the fitted scale; labels are withheld while balances are hidden. */
+  readonly valueTicks = computed(() => {
+    const { low, high } = this.scale();
+    const step = niceStep((high - low) / 3);
+    const format = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: step >= 1 ? 0 : 2, minimumFractionDigits: step >= 1 ? 0 : 2 });
+    const ticks = [];
+    for (let value = Math.ceil(low / step) * step; value <= high; value += step) {
+      const y = ((high - value) / (high - low)) * HEIGHT;
+      ticks.push({ value, top: ((y + INSET_Y) / (HEIGHT + 2 * INSET_Y)) * 100, label: this.balanceHidden() ? '' : format.format(value) });
+    }
+    return ticks;
+  });
+  /** Start, middle and end of the plotted span, in Central time. */
+  readonly timeTicks = computed(() => {
+    const { start, end } = this.plotWindow();
+    const sameDay = centralDay(start) === centralDay(end);
+    const options: Intl.DateTimeFormatOptions = sameDay
+      ? { hour: 'numeric', minute: '2-digit' }
+      : end - start <= 8 * 24 * 3600 * 1000 ? { weekday: 'short', hour: 'numeric' } : { month: 'short', day: 'numeric' };
+    return [start, (start + end) / 2, end].map((at, i) => ({
+      at,
+      left: ((i / 2) * WIDTH + INSET_X) / (WIDTH + 2 * INSET_X) * 100,
+      label: centralTime(at, options),
+    }));
+  });
   /** Every timeframe uses elapsed time, preserving nights, weekends and irregular sampling. */
   readonly placed = computed(() => {
     const points = this.plotPoints();
@@ -694,6 +799,13 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
       this.scrub.emit(point ? { at: point.at, value: point.value } : null);
     }
   }
+}
+
+/** The 1, 2 or 5 × 10ⁿ step nearest above a raw step, so gridlines land on round values. */
+function niceStep(raw: number): number {
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const norm = raw / magnitude;
+  return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * magnitude;
 }
 
 /** Index of the point whose x is closest. */

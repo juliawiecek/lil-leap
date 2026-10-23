@@ -253,3 +253,5 @@ dialog { border-color: var(--surface-tone-28); border-radius: 8px; background: v
 /* Sign out, at the foot of the sidebar under a thin divider. */
 .sidebar-help button.sign-out { margin-top: 6px; border-top: 1px solid var(--surface-tone-27); border-radius: 0 0 4px 4px; padding-top: 2px; }
 .sidebar-help button.sign-out:hover { color: var(--text-tone-03); }
+/* One sector has nothing to compare against: its bar would always be full width, so show the move alone. */
+.sector-list.solo .sector-bar { visibility: hidden; }

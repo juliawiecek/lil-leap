@@ -26,6 +26,20 @@ test('rendered RSI, reusable series and chart alternatives share the same real o
   assert.deepEqual(chart.dataTable().rows.map(r => r[4]), values.slice(0, 3).map(String));
 });
 
+test('a short history fills the technical plot instead of crowding the right edge of its period', async t => {
+  const day = { start: bars.at(-1).at - 86400000, end: bars.at(-1).at };
+  const fixture = await render(t, TechnicalChart, { points: bars, window: day, symbol: 'AAPL' });
+  const chart = fixture.componentInstance;
+  assert.equal(chart.viewport().end, day.end);
+  assert.equal(chart.viewport().start, day.end - 30 * 60000, 'fifteen minutes of bars keep a half-hour minimum span');
+  fixture.componentRef.setInput('trades', [{ at: start - 3600000, price: 44, side: 'BUY', quantity: 1, label: 'Bought 1' }]);
+  fixture.detectChanges();
+  assert.equal(chart.viewport().start, start - 3600000, 'an earlier trade in the period stays on screen');
+  fixture.componentRef.setInput('window', { start: start + 60000, end: day.end });
+  fixture.detectChanges();
+  assert.equal(chart.viewport().start, start + 60000, 'never earlier than the period itself');
+});
+
 test('mixed OHLC and raw quotes render and inspect the same source', async t => {
   const points = [...bars.slice(0, 2), { at: start + 120000, price: 45 }];
   const fixture = await render(t, TechnicalChart, { points, window: { start, end: start + 120000 } });

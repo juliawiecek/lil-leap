@@ -354,7 +354,7 @@
                 <p class="empty-note">Loading prices…</p>
               }
             } @else {
-              <div class="sector-list" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="watchSectorAccess">
+              <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="watchSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
@@ -410,7 +410,7 @@
             </div>
             }
             @if (page() === 'Overview' || marketTab() === 'Sectors') {
-              <div class="sector-list" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
+              <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
