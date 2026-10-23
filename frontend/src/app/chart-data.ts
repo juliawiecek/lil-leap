@@ -1,5 +1,5 @@
 import { numericValue, orderedPoints, type ChartDataPoint } from '../../../shared/chart-data';
-export { chartPoints, numericValue, orderedPoints, type ChartDataPoint, type ChartSeries } from '../../../shared/chart-data';
+export { chartPoints, numericValue, orderedPoints, type ChartDataPoint, type ChartSeries, type ChartCoverage } from '../../../shared/chart-data';
 import type { PricePoint } from './market-feed-api';
 
 export interface HistoricalQuote { quotedAt: string; midpoint?: unknown; bid?: unknown }

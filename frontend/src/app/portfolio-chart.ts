@@ -23,10 +23,12 @@ import {
   ChartPeriod,
   ChartRange,
   ValuePoint,
+  plotSeries,
   startValue,
   valueScale,
+  historyCoverage,
 } from './portfolio-history';
-import { centralTime } from './app-time';
+import { centralDay, centralTime } from './app-time';
 import { PERIOD_NAMES } from './chart-speech';
 import {
   EMERALD_AREA,
@@ -56,7 +58,6 @@ let nextPortfolioChartId = 0;
   selector: 'app-portfolio-chart',
   imports: [CurrencyPipe, ChartAccess, ChartFocus],
   template: `
-    @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
     @if (error()) {
       <p class="chart-note" role="alert">{{ error() }}</p>
     } @else if (loading() || history().length < 2) {
@@ -81,6 +82,7 @@ let nextPortfolioChartId = 0;
           <button
             type="button"
             [attr.aria-pressed]="dayView() === 'full'"
+            title="Current Central-time calendar day, including deposits and transfers"
             (click)="setDayView('full')"
           >
             Full day
@@ -146,12 +148,15 @@ let nextPortfolioChartId = 0;
           }
         </svg>
         @if (active(); as point) {
-          <span class="cursor-time" [style.left.%]="labelLeft()"
+          <span class="cursor-time" [style.left.%]="labelLeft()" [style.transform]="'translateX(-' + labelLeft() + '%)'"
             >{{ cursorTime() }} · {{ point.value | currency }}</span
           >
         }
       </div>
+      <p class="chart-note recorded-range">{{ recordedRangeText() }}</p>
+      @if (coverage().status === 'partial') { <p class="chart-note" role="status">Partial history: only the recorded range shown is available for this period.</p> }
     }
+    @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
     <app-chart-access #access [id]="gradientId" label="Portfolio value" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="period() + dayView() + accountKey()" />
     <div
       class="periods"
@@ -165,6 +170,7 @@ let nextPortfolioChartId = 0;
           [class.selected]="period() === item"
           [attr.aria-pressed]="period() === item"
           [attr.data-speak]="periodNames[item]"
+          [attr.title]="periodNames[item]"
           (click)="periodChange.emit(item)"
         >
           {{ item }}
@@ -176,9 +182,9 @@ let nextPortfolioChartId = 0;
         Live prices are delayed, so the line ends at the last known value.
       </p>
     }
-    @if (range()?.fromOpening && history().length >= 2 && !focused()) {
+    @if (range()?.fromOpening && history().length >= 2 && !focused() && coverage().status === 'complete') {
       <p class="chart-note">
-        Your account opened {{ openedText() }}, so this shows everything since then.
+        Available account history starts {{ openedText() }}.
       </p>
     }
   `,
@@ -276,6 +282,8 @@ let nextPortfolioChartId = 0;
         color: var(--warning);
       }
       .cursor-time {
+        box-sizing: border-box;
+        max-width: 100%;
         position: absolute;
         top: -26px;
         transform: translateX(-50%);
@@ -286,7 +294,8 @@ let nextPortfolioChartId = 0;
         color: var(--text);
         font-size: 12px;
         font-weight: 600;
-        white-space: nowrap;
+        white-space: normal;
+        text-align: center;
         pointer-events: none;
       }
       .chart-empty {
@@ -297,6 +306,7 @@ let nextPortfolioChartId = 0;
         font-size: 13px;
       }
       .periods {
+        box-sizing: border-box;
         display: flex;
         width: max-content;
         max-width: 100%;
@@ -398,10 +408,9 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     this.#renderEffect = effect(
       () => {
         const svg = this.svg()?.nativeElement,
-          displayed = this.displayPoints(),
+          displayed = this.plotPoints(),
           history = this.history();
-        const scale = this.scale(),
-          timed = this.timed();
+        const scale = this.scale();
         const key = `${this.period()}:${this.dayView()}:${this.range()?.start ?? ''}`;
         if (previousKey && previousKey !== key && this.#inspection() !== null) {
           this.endScrub();
@@ -412,12 +421,12 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
           previousSvg = undefined;
           return;
         }
-        const points = history.map((point, index) => ({
-          time: timed ? point.at : index,
+        const points = displayed.map((point) => ({
+          time: point.at,
           price: point.value,
         }));
-        const to = timed ? displayed.at(-1)!.at : history.length - 1;
-        const from = timed ? (this.focused() ? to - RECENT_MS : displayed[0].at) : 0;
+        const to = this.plotWindow().end;
+        const from = this.plotWindow().start;
         this.#drawPoints = points;
         this.#baseline = startValue(history);
         const animate = previousSvg === svg && previousKey === key;
@@ -474,16 +483,20 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly delayed = input(false);
   readonly balanceHidden = input(false);
   readonly accountKey = input('');
-  readonly accessiblePoints = computed(() => this.loading() || this.error() ? [] : this.displayPoints());
+  readonly accessiblePoints = computed(() => this.loading() || this.error() ? [] : this.plotPoints());
   readonly description = computed(() => describeSeries(this.accessiblePoints(), {
-    name: 'Portfolio value', period: this.focused() ? 'most recent hour' : PERIOD_WORDS[this.period()], currency: 'USD', hidden: this.balanceHidden(),
+    name: 'Portfolio value', period: this.periodDescription(), currency: 'USD', hidden: this.balanceHidden(),
     empty: this.loading() ? 'History is loading.' : this.error() || 'No portfolio history is available for this period.',
   }) + (this.references().length ? ` The reference line marks the period starting value of ${this.references()[0].value}.` : '')
-    + (this.delayed() ? ' Live prices are delayed; these are the last recorded values.' : '') + ' ' + this.notice());
+    + (this.delayed() ? ' Live prices are delayed; these are the last recorded values.' : '')
+    + (this.coverage().status === 'partial' ? ' Only part of the requested period has recorded values.' : '') + ' ' + this.notice());
   readonly references = computed(() => !this.balanceHidden() && this.accessiblePoints().length
     ? [{ label: 'Period starting value reference', value: chartValue(startValue(this.history()), { currency: 'USD' }) }] : []);
-  readonly dataTable = computed(() => ({ ...seriesTable(this.accessiblePoints(), { currency: 'USD', hidden: this.balanceHidden() }), references: this.references() }));
-  readonly allData = computed(() => ({ ...seriesTable(this.accessiblePoints(), { currency: 'USD', hidden: this.balanceHidden() }, false), references: this.references() }));
+  readonly dataTable = computed(() => ({ ...seriesTable(this.accessiblePoints(), { currency: 'USD', hidden: this.balanceHidden() }), references: this.references(),
+    note: this.plotPoints().length < this.displayPoints().length ? 'The display retains recorded observations, including each interval’s high and low. Choose every observation for the full history.' : undefined }));
+  /** Full-resolution observations remain available alongside the less dense display. */
+  readonly rawPoints = computed(() => this.loading() || this.error() ? [] : this.displayPoints());
+  readonly allData = computed(() => ({ ...seriesTable(this.rawPoints(), { currency: 'USD', hidden: this.balanceHidden() }, false), references: this.references() }));
   readonly periodChange = output<ChartPeriod>();
   /** The point under the cursor, or null when the cursor leaves the chart. */
   readonly scrub = output<ValuePoint | null>();
@@ -493,9 +506,14 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Ignore malformed observations before constructing a path; do not mutate input history. */
   readonly normalizedPoints = computed(() => chartPoints(this.#inspection() ?? this.points(), p => p.at, p => p.value));
   readonly history = computed(() => this.normalizedPoints().map(p => ({ at: p.time, value: p.value })));
+  readonly coverage = computed(() => historyCoverage(this.range(), this.history()));
+  readonly periodDescription = computed(() => this.focused() ? 'most recent hour'
+    : this.coverage().status === 'partial' ? 'available recorded history'
+    : this.range()?.fromOpening ? 'since first record' : PERIOD_WORDS[this.period()]);
   readonly chartSeries = computed<ChartSeries>(() => ({ id: this.accountKey() + ':portfolio', label: 'Portfolio value', unit: 'USD',
-    points: this.loading() || this.error() ? [] : chartPoints(this.displayPoints(), p => p.at, p => p.value),
-    status: this.loading() ? 'loading' : this.error() ? 'error' : this.displayPoints().length ? 'ready' : 'empty', note: this.error() || this.notice() }));
+    points: this.loading() || this.error() ? [] : chartPoints(this.plotPoints(), p => p.at, p => p.value),
+    coverage: this.loading() || this.error() ? historyCoverage(this.range(), []) : this.coverage(),
+    status: this.loading() ? 'loading' : this.error() ? 'error' : this.plotPoints().length ? 'ready' : 'empty', note: this.error() || this.notice() }));
   readonly dayView = signal<'recent' | 'full'>('recent');
   readonly recentPoints = computed(() => {
     const points = this.history();
@@ -511,6 +529,18 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     () => this.period() === '1D' && this.dayView() === 'recent' && this.canFocus(),
   );
   readonly displayPoints = computed(() => (this.focused() ? this.recentPoints() : this.history()));
+  /** The plotted subset preserves actual values and extrema. Descriptions and inspection use
+   * this same subset; the full-resolution table retains every observation. */
+  readonly plotPoints = computed(() => plotSeries(this.displayPoints(), Math.ceil(WIDTH / 6)));
+  /** Fit the observed span, including partial recent-hour history, without adding points. */
+  readonly plotWindow = computed(() => ({ start: this.plotPoints()[0]?.at ?? 0, end: this.plotPoints().at(-1)?.at ?? 0 }));
+  readonly recordedRangeText = computed(() => {
+    const { start, end } = this.plotWindow();
+    const options: Intl.DateTimeFormatOptions = this.period() === '1D' && centralDay(start) === centralDay(end)
+      ? { hour: 'numeric', minute: '2-digit' }
+      : { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+    return `Recorded ${centralTime(start, options)}–${centralTime(end, options)} CT`;
+  });
   readonly viewBox = `${-INSET_X} ${-INSET_Y} ${WIDTH + 2 * INSET_X} ${HEIGHT + 2 * INSET_Y}`;
   setDayView(view: 'recent' | 'full'): void {
     this.endScrub();
@@ -518,7 +548,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   }
 
   readonly periods = CHART_PERIODS;
-  /** Spoken names for the period buttons ("1 month", not "1M"). */
+  /** Buttons disclose their actual rolling-day ranges, including to speech consumers. */
   readonly periodNames = PERIOD_NAMES;
   readonly width = WIDTH;
   readonly height = HEIGHT;
@@ -534,25 +564,16 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     return points.at(-1)!.value < startValue(points) ? 'down' : 'up';
   });
   /** The value scale, fitted to the values shown, so each move up or down is visible. */
-  readonly scale = computed(() => valueScale(this.displayPoints().map((p) => p.value)));
-  /**
-   * Whether points sit at their times. 1D, 1M, 3M and 1Y do: the line fills the chart from the
-   * period's start to the newest value, and time before the account existed shows at $0. 1W and
-   * ALL space points evenly in order, as brokerage apps do, so nights and weekends take no room.
-   */
-  readonly timed = computed(() => TIMED_PERIODS.has(this.period()));
-  /** Each point placed on the chart. */
+  readonly scale = computed(() => valueScale(this.plotPoints().map((p) => p.value)));
+  /** Every timeframe uses elapsed time, preserving nights, weekends and irregular sampling. */
   readonly placed = computed(() => {
-    const points = this.displayPoints();
+    const points = this.plotPoints();
     const { low, high } = this.scale();
-    const latest = points.at(-1)?.at ?? 0;
-    const start = this.focused() ? latest - RECENT_MS : (points[0]?.at ?? 0);
+    const { start, end: latest } = this.plotWindow();
     const span = Math.max(latest - start, 1);
-    const timed = this.timed();
-    const last = Math.max(points.length - 1, 1);
-    return points.map((p, i) => ({
+    return points.map((p) => ({
       ...p,
-      x: (timed ? (p.at - start) / span : i / last) * WIDTH,
+      x: (p.at - start) / span * WIDTH,
       y: ((high - p.value) / (high - low)) * HEIGHT,
     }));
   });
@@ -568,7 +589,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
       ? `${this.path()} L${points.at(-1)!.x},${HEIGHT} L${points[0].x},${HEIGHT} Z`
       : '';
   });
-  /** The dotted line at the period's starting value (once the account held money). */
+  /** The dotted line at the period's first recorded value, including a real zero balance. */
   readonly baselineY = computed(() => {
     const { low, high } = this.scale();
     return this.history().length
@@ -607,7 +628,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     }
     const first = startValue(points);
     const last = points.at(-1)!.value;
-    const percent = first > 0 ? Math.abs(((last - first) / first) * 100) : 0;
+    const percent = first > 0 ? Math.abs(((last - first) / first) * 100) : null;
     let word: string;
     if (last > first) {
       word = 'up';
@@ -616,7 +637,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     } else {
       word = 'unchanged';
     }
-    return `Portfolio value ${PERIOD_WORDS[this.period()]}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${word} ${percent.toFixed(2)}%. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
+    return `Portfolio value ${this.periodDescription()}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${percent === null ? 'percentage change unavailable' : word + ' ' + percent.toFixed(2) + '%'}. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
   });
 
   /** Moves the cursor to the point nearest the pointer: mouse, pen, or a finger dragged across. */
@@ -686,14 +707,11 @@ function nearest(points: readonly { x: number }[], x: number): number {
   return best;
 }
 
-/** Periods whose points sit at their times; the rest are spaced evenly. */
-const TIMED_PERIODS = new Set<ChartPeriod>(['1D', '1M', '3M', '1Y']);
-
 export const PERIOD_WORDS: Record<ChartPeriod, string> = {
   '1D': 'today',
-  '1W': 'past week',
-  '1M': 'past month',
-  '3M': 'past 3 months',
-  '1Y': 'past year',
-  ALL: 'since opening',
+  '1W': 'past 7 days',
+  '1M': 'past 30 days',
+  '3M': 'past 90 days',
+  '1Y': 'past 365 days',
+  ALL: 'available recorded history',
 };

@@ -77,7 +77,18 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   });
   readonly source = computed(() => orderedPrices(this.points()));
   readonly visible = computed(() => this.source().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end));
-  readonly hasRawPrices = computed(() => this.visible().some(p => !p.candle));
+  /** Live quotes arrive without OHLC, so they stay raw observations. Draw them only from the last
+   * candle onward: pathing the whole series lays a full-resolution line over the decimated candles
+   * instead of continuing them, which a single tick is enough to trigger. */
+  readonly rawTail = computed(() => {
+    const points = this.visible();
+    let last = -1;
+    for (let i = points.length - 1; i >= 0; i--) {
+      if (points[i].candle) { last = i; break; }
+    }
+    return last < 0 ? points : points.slice(last);
+  });
+  readonly hasRawPrices = computed(() => this.rawTail().some(p => !p.candle));
   readonly candles = computed(() => displayCandles(this.visible(), this.width() / 7));
   readonly series = computed(() => indicators(this.source()));
   readonly range = computed(() => priceRange([
@@ -85,7 +96,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     ...this.series().flatMap(s => s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price)),
     ...this.trades().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price), this.averageCost() ?? 0,
   ]) ?? { low: 0, high: 1 });
-  readonly line = computed(() => pricePath(this.source(), this.viewport(), this.range(), this.width() - 8, HEIGHT));
+  readonly line = computed(() => pricePath(this.rawTail(), this.viewport(), this.range(), this.width() - 8, HEIGHT));
   readonly paths = computed(() => this.series().map(s => ({ ...s, path: pricePath(s.points, this.viewport(), this.range(), this.width() - 8, HEIGHT), unavailable: s.points.length ? 'No values in this view' : s.unavailable })));
   readonly labels = computed(() => placeEndLabels(this.paths().flatMap(s => {
     const end = s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).at(-1);

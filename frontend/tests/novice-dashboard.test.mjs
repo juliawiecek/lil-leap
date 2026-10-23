@@ -160,6 +160,7 @@ test('every live value is added to the line, so its dips and rises stay instead 
   assert.deepEqual(desk.chartPoints(), desk.chartHistory(), 'without a new observation, live balances cannot rewrite the closing price');
   desk.chartLive.set(times.slice(-2).map((at, i) => ({ at, value: [19000, 19100][i] })));
   // Longer periods keep one live value per price bar, as the history has.
+  desk.chartPeriod.set('1W');
   desk.chartSpan.set({ start: loaded - 7 * 86400000, end: loaded, fromOpening: false });
   assert.equal(desk.chartPoints().length, 3, 'the history, then only the latest of the live values in their hour');
   assert.equal(desk.chartPoints().at(-1).value, desk.portfolioValue());
@@ -179,7 +180,8 @@ test('reloading the day after close includes recorded after-hours quotes', async
     { at: Date.parse('2026-10-20T21:29:00Z'), price: 115 },
   ] };
   await desk.loadChart();
-  assert.equal(desk.chartSpan().session.close, Date.parse('2026-10-20T20:00:00Z'));
+  assert.equal(desk.chartSpan().start, Date.parse('2026-10-20T05:00:00Z'));
+  assert.equal(desk.chartSpan().session, undefined);
   assert.equal(desk.chartSpan().end, now);
   assert.ok(desk.chartHistory().some(p => p.at === Date.parse('2026-10-20T21:29:00Z') && p.value === 1015));
   desk.ngOnDestroy();
@@ -194,19 +196,22 @@ test('one live value per bar: the last in each', async () => {
 
 test('1D names the session’s day when it is not today', async t => {
   const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
-  const now = new Date();
+  // Friday in UTC is still Thursday on the app's Central clock. Keep the fixture
+  // independent of the machine's time zone and the hour this suite runs.
+  const now = new Date('2026-10-23T02:00:00Z');
+  desk.marketClock.set(now);
   desk.chartHistory.set([{ at: now - 2000, value: 1000 }, { at: now - 1000, value: 1000 }]);
   desk.chartSpan.set({ start: now - 2000, end: now - 1000, fromOpening: false, session: { open: now - 2000, close: now } });
   assert.equal(desk.headerChange().label, 'Today');
   const lastWeek = now.getTime() - 7 * 86400000;
   desk.chartSpan.set({ start: lastWeek, end: lastWeek + 1000, fromOpening: false, session: { open: lastWeek, close: lastWeek + 1000 } });
-  assert.equal(desk.headerChange().label, new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(lastWeek));
+  assert.equal(desk.headerChange().label, 'Thursday');
   desk.ngOnDestroy();
 });
 
 test('the big number and its change line follow the period, the scrubbed point and its sign', async t => {
   const { desk } = await tradingDesk(t, { portfolios: [{ cash: 1000, holdings: [] }] });
-  assert.equal(desk.headerChange().label, 'Today', 'before the chart loads: today’s move');
+  assert.equal(desk.headerChange().label, 'Change unavailable', 'before the chart loads: today’s move');
   desk.chartSpan.set({ start: 0, end: 10, fromOpening: false });
   desk.chartHistory.set([{ at: 0, value: 1100 }, { at: 5, value: 1200 }, { at: 10, value: 1000 }]);
   assert.equal(desk.headerValue(), 1000);
@@ -220,9 +225,13 @@ test('the big number and its change line follow the period, the scrubbed point a
   desk.setChartPeriod('ALL');
   assert.equal(desk.chartScrub(), null, 'a new period drops the scrub');
   desk.chartSpan.set({ start: 0, end: 10, fromOpening: true });
-  assert.equal(desk.headerChange().label, 'Since opening');
+  assert.equal(desk.headerChange().label, 'Since first record');
   desk.chartHistory.set([{ at: 0, value: 1000 }, { at: 10, value: 1000 }]);
   assert.equal(desk.headerChangeText(), '$0.00 (0.00%)');
+  desk.chartHistory.set([{ at: 0, value: 0 }, { at: 10, value: 1000 }]);
+  assert.equal(desk.headerChange().amount, 1000, 'a later deposit does not replace the zero baseline');
+  assert.equal(desk.headerChange().percent, null);
+  assert.equal(desk.headerChangeText(), '+$1,000.00 (percentage unavailable)');
   desk.ngOnDestroy();
 });
 
@@ -483,11 +492,11 @@ test('choosing a chart period says where the portfolio started and where it is n
   desk.feed.client = { closes: async () => [] };
   desk.setChartPeriod('1W');
   for (let i = 0; i < 5; i++) await flush();
-  assert.match(desk.chartAnnouncement(), /^1 week\. /);
+  assert.match(desk.chartAnnouncement(), /^Last 7 days\. /);
   desk.showBalance.set(false);
   desk.setChartPeriod('1M');
   for (let i = 0; i < 5; i++) await flush();
-  assert.match(desk.chartAnnouncement(), /^1 month\. (Your balance is hidden|There is no history)/);
+  assert.match(desk.chartAnnouncement(), /^Last 30 days\. (Your balance is hidden|There is no history)/);
   assert.ok(!desk.chartAnnouncement().includes('$'), 'no amounts while the balance is hidden');
 });
 

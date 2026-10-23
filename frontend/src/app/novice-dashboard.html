@@ -141,9 +141,9 @@
                       {{ showBalance() ? (headerValue() | currency) : '••••••••' }}
                     }
                   </div>
-                  <div class="portfolio-gain" [class.up]="headerChange().amount > 0" [class.down]="headerChange().amount < 0">
-                    <strong>@if (showBalance()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { •••••• }</strong
-                    ><span>{{ headerChange().label }}</span>
+                  <div class="portfolio-gain" [class.up]="chartChangeAvailable() && headerChange().amount > 0" [class.down]="chartChangeAvailable() && headerChange().amount < 0">
+                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Change unavailable } } @else { •••••• }</strong
+                    ><span>{{ chartChangeAvailable() ? 'Account value change · ' + headerChange().label : (chartLoading() ? 'Loading history' : '') }}</span>
                   </div>
                 </div>
               </div>

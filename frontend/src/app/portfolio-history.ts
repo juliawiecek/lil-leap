@@ -5,9 +5,10 @@
  * reaches back before the account opened. Pure functions, so every period can be tested.
  */
 
-import { numericValue, orderedPoints } from './chart-data';
+import { numericValue, orderedPoints, type ChartCoverage } from './chart-data';
 import type { Portfolio } from './portfolio-api';
 import type { OrderHistoryRow } from './order-history-api';
+import { APP_TIME_ZONE } from './app-time';
 export const CHART_PERIODS = ['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const;
 export type ChartPeriod = (typeof CHART_PERIODS)[number];
 
@@ -75,13 +76,13 @@ export interface ValuePoint {
 }
 
 /**
- * The span a period covers, ending now. 1D is the latest trading session; 1W starts no earlier
- * than the account's opening; 1M, 3M and 1Y always cover their full length; "ALL" starts at the
- * opening. With no opening time known, a period falls back to its length alone.
+ * Account-day values start at midnight Central time, including weekends and holidays.
+ * Other ranges are rolling days, clamped to first funding. An explicitly supplied session
+ * remains supported for consumers that chart a trading session rather than an account day.
  */
 export function chartRange(period: ChartPeriod, now: number, openedAt: number | null, session: Session | null = null): ChartRange {
-  const opened = openedAt !== null && Number.isFinite(openedAt) && openedAt < now ? openedAt : null;
-  // 1D is the latest trading session, as brokerage apps show it, from its open up to now (or its close).
+  const opened = openedAt !== null && Number.isFinite(openedAt) && openedAt <= now ? openedAt : null;
+  // An explicit session opts into session boundaries instead of the default account day.
   const sessionEnd = session ? Math.min(now, session.close) : 0;
   if (period === '1D' && session && (opened === null || opened < sessionEnd)) {
     const start = opened !== null && opened > session.open ? opened : session.open;
@@ -90,14 +91,34 @@ export function chartRange(period: ChartPeriod, now: number, openedAt: number | 
   if (period === 'ALL') {
     return { start: opened ?? now - DAY, end: now, fromOpening: opened !== null };
   }
-  const start = now - PERIOD_MS[period];
+  const start = period === '1D' ? zonedTime(zonedDate(now, APP_TIME_ZONE), 0, APP_TIME_ZONE) : now - PERIOD_MS[period];
   // No financial observations exist before the account opened.
   return opened !== null && opened > start ? { start: opened, end: now, fromOpening: true } : { start, end: now, fromOpening: false };
 }
 
-/** The value a period's change is measured from: its first value once the account held money. */
+/** Coverage refers to the requested account range, not the width of the fitted SVG. */
+export function historyCoverage(range: ChartRange | null, points: readonly ValuePoint[]): ChartCoverage {
+  const first = points[0], last = points.at(-1);
+  const requested = { requestedStart: range?.start ?? null, requestedEnd: range?.end ?? null };
+  if (!first || !last) return { status: 'empty', start: null, end: null, ...requested };
+  return { status: range && (first.at > range.start || last.at < range.end) ? 'partial' : 'complete',
+    start: first.at, end: last.at, ...requested };
+}
+
+export const PORTFOLIO_PERIOD_LABELS: Record<ChartPeriod, string> = {
+  '1D': 'Today', '1W': 'Past 7 days', '1M': 'Past 30 days', '3M': 'Past 90 days', '1Y': 'Past 365 days', ALL: 'Available history',
+};
+
+export function portfolioPeriodLabel(period: ChartPeriod, range: ChartRange | null, points: readonly ValuePoint[]): string {
+  const coverage = historyCoverage(range, points);
+  if (coverage.status === 'empty') return 'Change unavailable';
+  if (coverage.status === 'partial') return 'Available history';
+  return range?.fromOpening ? 'Since first record' : PORTFOLIO_PERIOD_LABELS[period];
+}
+
+/** Preserve a real zero opening value; the caller must not divide by that baseline. */
 export function startValue(points: readonly ValuePoint[]): number {
-  return (points.find((p) => p.value > 0) ?? points[0])?.value ?? 0;
+  return points[0]?.value ?? 0;
 }
 
 /**
@@ -274,12 +295,52 @@ export function priceAt(series: readonly PricePoint[], at: number): number | nul
   return found;
 }
 
-/** The value scale for a line: its lowest and highest values with a little room above and below. */
+/**
+ * Reduce display density using real observations, retaining first/last and each time bucket's
+ * opening, closing, lowest and highest values. Never attach an average to an observation's time.
+ * Inputs are normalized chronologically by the chart; calculations retain the full source.
+ */
+export function plotSeries(points: readonly ValuePoint[], limit: number): ValuePoint[] {
+  if (!Number.isFinite(limit) || limit < 2 || points.length <= limit) return [...points];
+  const count = Math.floor(limit);
+  if (count < 6) return [points[0], points[points.length - 1]];
+  const buckets = Math.max(1, Math.floor((count - 2) / 4));
+  const first = points[0], last = points[points.length - 1];
+  const span = Math.max(1, last.at - first.at);
+  const grouped = new Map<number, ValuePoint[]>();
+  for (const point of points.slice(1, -1)) {
+    const key = Math.min(buckets - 1, Math.floor((point.at - first.at) / span * buckets));
+    const group = grouped.get(key) ?? [];
+    group.push(point);
+    grouped.set(key, group);
+  }
+  const output: ValuePoint[] = [points[0]];
+  for (const group of grouped.values()) {
+    const low = group.reduce((a, b) => b.value < a.value ? b : a);
+    const high = group.reduce((a, b) => b.value > a.value ? b : a);
+    output.push(...[...new Set([group[0], low, high, group[group.length - 1]])].sort((a, b) => a.at - b.at));
+  }
+  output.push(last);
+  return output;
+}
+
+/** A quiet period uses a wider scale without changing any observed values. */
 export function valueScale(values: readonly number[]): { low: number; high: number } {
   const max = values.length ? Math.max(...values) : 0;
   const min = values.length ? Math.min(...values) : 0;
   // A flat line still gets a visible band around it: a hundredth of a percent of its value, at least a cent.
   const pad = Math.max((max - min) * 0.12, Math.abs(max) * 0.0001, 0.01);
-  return { low: min - pad, high: max + pad };
+  let low = min - pad;
+  let high = max + pad;
+  // Fitting the axis to the values alone magnifies a quiet period: a portfolio that moved a
+  // quarter of a percent would fill the chart, so ordinary price noise reads as a dramatic line.
+  // Half a percent of the account's value is the narrowest band worth drawing; above that the
+  // scale still fits the values, so real moves keep their shape.
+  const minSpan = Math.max(Math.abs(max) * 0.005, 0.02);
+  if (high - low < minSpan) {
+    const middle = (high + low) / 2;
+    low = middle - minSpan / 2;
+    high = middle + minSpan / 2;
+  }
+  return { low, high };
 }
-

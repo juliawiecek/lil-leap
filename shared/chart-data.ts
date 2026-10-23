@@ -2,6 +2,13 @@
  * All times are Unix epoch milliseconds; currency values retain calculation precision.
  */
 export interface ChartDataPoint { time: number; value: number }
+export interface ChartCoverage {
+  status: 'complete' | 'partial' | 'empty';
+  start: number | null;
+  end: number | null;
+  requestedStart: number | null;
+  requestedEnd: number | null;
+}
 export interface ChartSeries<P extends ChartDataPoint = ChartDataPoint> {
   id: string;
   label: string;
@@ -9,6 +16,7 @@ export interface ChartSeries<P extends ChartDataPoint = ChartDataPoint> {
   points: readonly P[];
   status: 'ready' | 'empty' | 'loading' | 'error' | 'unavailable';
   note?: string;
+  coverage?: ChartCoverage;
 }
 
 /** Last valid observation wins timestamp ties. Never coerce null/empty strings to zero. */

@@ -37,7 +37,7 @@ import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, tradingSession,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
@@ -54,9 +54,6 @@ import { FocusAfterChange } from './focus-after-change';
 export const CHART_REFRESH_MS = 60000;
 /** Live values kept for the chart: a day of five-second updates. */
 const LIVE_POINTS = 17280;
-const PERIOD_LABELS: Record<ChartPeriod, string> = {
-  '1D': 'Today', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
-};
 
 /**
  * When the account first held money: its first deposit, transfer or fill. Before that it was
@@ -244,6 +241,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartNotice = signal('');
   readonly chartSeries = computed<ChartSeries>(() => ({ id: 'portfolio:' + (this.selectedAccount()?.account_id ?? 'all'),
     label: 'Portfolio value', unit: 'USD', points: this.chartLoading() || this.chartError() ? [] : chartPoints(this.chartPoints(), p => p.at, p => p.value),
+    coverage: historyCoverage(this.chartSpan(), this.chartLoading() || this.chartError() ? [] : this.chartPoints()),
     status: this.chartLoading() ? 'loading' : this.chartError() ? 'error' : this.chartPoints().length ? 'ready' : 'unavailable',
     note: this.chartError() || this.chartNotice() }));
   /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
@@ -255,21 +253,22 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartScrub = signal<ValuePoint | null>(null);
   /** The big number: the scrubbed point's value, otherwise the live total. */
   readonly headerValue = computed(() => this.chartScrub()?.value ?? this.portfolioValue());
+  readonly chartChangeAvailable = computed(() => !this.chartLoading() && !this.chartError() && this.chartPoints().length >= 2);
   /**
    * The line under the big number: how much the value moved over the chosen period (or up to the
-   * scrubbed point), as brokerage apps show it. Before the chart loads, today's move.
+   * scrubbed point). The template waits for a usable history before displaying a change.
    */
   readonly headerChange = computed(() => {
     const points = this.chartPoints();
     if (points.length < 2) {
-      return { amount: this.todayReturn(), percent: this.todayReturnPercent(), label: 'Today' };
+      return { amount: 0, percent: 0, label: 'Change unavailable' };
     }
-    // Measured from when the account first held money, not from the $0 before it existed.
+    // A real zero balance at the range start must not be replaced by a later deposit.
     const start = startValue(points);
     const scrub = this.chartScrub();
     const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
     const span = this.chartSpan();
-    let label = span?.fromOpening ? 'Since opening' : PERIOD_LABELS[this.chartPeriod()];
+    let label = portfolioPeriodLabel(this.chartPeriod(), span, points);
     if (span?.session && centralDay(span.session.open) !== centralDay(this.marketClock())) {
       // Before today's open: the last session's move, named by its day.
       label = centralTime(span.session.open, { weekday: 'long' });
@@ -277,11 +276,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (scrub) {
       label = `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`;
     }
-    return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
+    return { amount, percent: start > 0 ? (amount / start) * 100 : null, label };
   });
   /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
   readonly headerChangeText = computed(() => {
     const { amount, percent } = this.headerChange();
+    if (percent === null) return `${formatMoney(amount, true)} (percentage unavailable)`;
     let sign: string;
     if (amount > 0) {
       sign = '+';
@@ -322,12 +322,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const history = this.chartHistory();
     if (!this.portfolioLoaded()) return history;
     const range = this.chartSpan();
-    const session = range?.session;
     // Quotes keep arriving outside order-execution hours. Keep their actual times instead of
     // moving the closing point's price while its timestamp (and the viewport) stays frozen.
     let live = this.chartLive().filter((p) => p.at >= (history[0]?.at ?? range?.start ?? 0));
-    if (range && !session) {
-      // Longer periods space points evenly, so live values are kept one per price bar, as the history is.
+    if (range && this.chartPeriod() !== '1D') {
+      // Longer periods retain the last live observation per price bar.
       live = lastPerBar(live, barStep(range).ms);
     }
     if (!live.length) {
@@ -721,6 +720,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       fromOpening: !!this.chartSpan()?.fromOpening || (points[0]?.value ?? 0) === 0,
       balanceHidden: !this.showBalance(),
       hasHistory: points.length >= 2 && !this.chartError(),
+      partial: historyCoverage(this.chartSpan(), points).status === 'partial',
     });
     this.chartAnnouncement.set(text);
     this.#switchScan?.announce(text);
@@ -742,13 +742,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       if (request !== this.#chartRequest || this.destroyed) return;
       const now = Date.now();
       const { cash, shares: fills } = portfolioEvents(movements, orders);
-      const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
-      const range = chartRange(period, now, fundedAt(account?.created_at, cash), session);
-      if (period === '1D') {
-        // The demo quote feed runs after the regular session too; market hours gate fills,
-        // not the history we display. Include those recorded quotes on reload as well.
-        range.end = now;
-      }
+      const range = chartRange(period, now, fundedAt(account?.created_at, cash));
       const prices = await this.#closes([...new Set(fills.map((f) => f.symbol))], range, now);
       if (request !== this.#chartRequest || this.destroyed) {
         return;
@@ -761,7 +755,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
         : !points.length || points[0].at > range.start
           ? 'Earlier valuations are unavailable because historical prices are missing. Only the supported portion is shown.'
-          : 'Valued at recorded bids. Deposits and transfers change the account value; this is not a cash-flow-adjusted investment return.');
+          : 'Account value includes deposits and transfers.');
       this.chartError.set('');
     } catch {
       if (request === this.#chartRequest) {
