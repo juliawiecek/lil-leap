@@ -37,7 +37,20 @@ standby configuration and starts recovery. Its private passfile holds replicatio
 credentials. The health check supplies the reporting password only to its `psql`
 process, so it cannot override replication authentication.
 
-For an existing primary, follow the [migration guide](../docs/architecture/service-boundaries.md#deployment-and-existing-databases).
+For fresh and existing Compose volumes, `docker compose up -d --build` runs
+`db-migrate` as the schema owner before Auth, Holdings, Orders and reporting setup.
+[startup-migrations.sql](startup-migrations.sql) currently applies migrations 017
+and 018, which are safe to repeat. It serializes concurrent runs with a database
+advisory lock and stops on SQL errors. Existing account data and passwords are
+preserved. Runtime application roles receive no new schema-changing permissions.
+Check failures with `docker compose logs db-migrate`; do not delete volumes to upgrade.
+Use `up`, not just `docker compose restart`, to run the setup dependency chain.
+
+Only reviewed, repeatable upgrades belong in the startup list. Older databases
+requiring migrations 007–015 still need the
+[migration guide](../docs/architecture/service-boundaries.md#deployment-and-existing-databases).
+Native `db/setup-local.sql` includes the same startup list; directly launching
+individual services outside Compose does not automatically upgrade a database.
 Init scripts do not rerun on restart. The reporting setup creates roles, grants,
 replication authentication and a physical slot. The slot retains at most 1 GB of
 WAL; a prolonged outage can require a replica rebuild.
@@ -86,7 +99,7 @@ WAL; a prolonged outage can require a replica rebuild.
   history before upgrading. Orders checks for the trigger at startup.
 - Apply [migration 009](migrations/009_cash_settlement_detail.sql) as schema owner before deploying portfolio summaries. Pause settlement writers; it backfills historical cash as settled, adds hold storage, preserves the legacy `v_account_cash.balance` column, and grants existing ledger readers SELECT on holds. New databases include these changes in the finalized schema.
 - Apply [migration 010](migrations/010_cash_transfers.sql) as schema owner before deploying account-to-account transfers (PS-05). It adds `TRANSFER` to `chk_transaction_type`; a transfer writes one negative and one positive `TRANSFER` row in a single transaction.
-- Apply [migration 018](migrations/018_trade_clients.sql) as schema owner before deploying Trade lookup from the database (BR-15). It adds `v_trade_clients` (a trader's id, name and email only) and grants it to `reporting_user` and `app_user`, so Insights can show who placed a trade without access to `users` or `customer_profiles`.
+- Compose applies [migration 017](migrations/017_user_status.sql) and [migration 018](migrations/018_trade_clients.sql) automatically through `db-migrate`. Migration 017 adds the login status field; 018 adds `v_trade_clients` (a trader's id, name and email only) and grants it to `reporting_user` and `app_user`.
 - Current fills settle immediately. Pending-cash and hold fields are available for reads; automatic reservation/release and delayed settlement workflows remain future work.
 - Orders records idempotent submissions and settles fills, ledger entries, caches,
   status and audit data atomically under account-level locking.

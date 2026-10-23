@@ -305,9 +305,14 @@ Important runtime behavior:
   and `auth` at `db:5432`, `insights` at `reporting-db:5432`.
 - DB initialization scripts (`db/finalized-schema.sql`, `db/init-app-role.sh`,
   the seed file) only run on the **first** startup of an empty `db_data`
-  volume — re-run them by clearing that volume (`docker compose down -v`).
+  volume. Keep that volume when updating the app.
+  `docker compose up -d --build` automatically runs the `db-migrate` service before
+  Auth, Holdings and Orders start. It applies the reviewed, repeatable upgrades in
+  [db/startup-migrations.sql](db/startup-migrations.sql), including the `user_status`
+  login fix, without resetting accounts or passwords. If an upgrade fails, dependent
+  services do not start; inspect `docker compose logs db-migrate`.
   The replica needs no setup, on a new or an existing volume: on every `docker compose up` the one-shot
-  `reporting-setup` service creates the reporting role, replication slot and trader-name view if they are
+  `reporting-setup` service creates the reporting role and replication slot after schema upgrades if they are
   missing, and `db` reads its replication rules from [db/pg_hba.conf](db/pg_hba.conf).
 - Holdings writes a synthetic quote for every catalog stock every
   `QUOTE_INTERVAL_SECONDS` (default 2); set `QUOTE_GENERATOR_ENABLED=false` to stop it.
