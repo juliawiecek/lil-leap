@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { signal } from '@angular/core';
 import { component } from './component-helper.mjs';
-const { InsightsChart } = await import('../src/app/shared/insights-chart.ts');
+const chartModule = await import('../src/app/shared/insights-chart.ts');
+const { InsightsChart } = chartModule;
 
 function chartWith(t, values) {
   const chart = component(t, InsightsChart);
@@ -27,8 +28,25 @@ test('chart endpoints span the plot and labels stay unique for short series', t 
   assert.equal(chart.x(0), 54); assert.equal(chart.x(1), 626);
   assert.ok(chart.y(20) < chart.y(10));
   assert.deepEqual(chart.tickIndices(), [0, 1]);
-  assert.match(chart.path(), /^M54,.* L626,/);
+  assert.match(chart.path(), /^M54,[\d.]+ C.* 626,[\d.]+$/, 'a smooth curve from the first point to the last');
   assert.match(chart.area(), /L626,186 L54,186 Z$/);
+});
+
+test('the curve is smooth but never overshoots: flat stretches stay flat and rises stay between their points', () => {
+  const { monotonePath } = chartModule;
+  const points = [[0, 100], [10, 100], [20, 60], [30, 60], [40, 10]];
+  const segments = monotonePath(points).split(' C').slice(1).map((s) => s.split(' ').map((xy) => xy.split(',').map(Number)));
+  assert.equal(segments.length, 4);
+  segments.forEach(([c1, c2, end], i) => {
+    const [from, to] = [points[i][1], points[i + 1][1]];
+    const [low, high] = [Math.min(from, to), Math.max(from, to)];
+    for (const [, y] of [c1, c2]) {
+      assert.ok(y >= low && y <= high, `segment ${i}: control point y=${y} stays within ${low}..${high}`);
+    }
+    assert.deepEqual(end, points[i + 1]);
+  });
+  assert.equal(monotonePath([]), '');
+  assert.equal(monotonePath([[5, 5]]), 'M5,5');
 });
 
 test('chart units and path recompute when input values change', t => {

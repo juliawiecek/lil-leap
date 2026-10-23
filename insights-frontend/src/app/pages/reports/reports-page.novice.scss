@@ -1,0 +1,86 @@
+// The Novice dashboard's look (shared/_novice.scss), layered over reports-page.scss: the period picker in a hero
+// card, presets as pills, the report list and exports as cards, cream primary buttons.
+@use '../../shared/novice' as nv;
+
+:host .band {
+  @include nv.page-header;
+}
+:host h1 {
+  font-size: 30px;
+}
+:host .field input {
+  @include nv.field;
+  padding: 0 12px;
+  color: var(--nt-text);
+  font: 600 13px var(--font-ui);
+}
+:host .presets {
+  @include nv.pill-group;
+}
+:host .presets button {
+  @include nv.pill('.active');
+  height: auto;
+}
+:host .period-note .mono {
+  font-family: var(--font-ui);
+  font-weight: 700;
+}
+:host .toast {
+  border: 1px solid var(--nv-border);
+  border-radius: 14px;
+  background: var(--nv-surface-raised);
+}
+
+/* The four reports as one card */
+:host .reports {
+  margin-top: 0;
+}
+:host .report-list {
+  @include nv.card;
+  padding: 4px 24px;
+}
+:host .report-card {
+  border-bottom-color: var(--nv-row-line);
+}
+:host .report-card:last-child {
+  border-bottom: 0;
+}
+:host .report-text h3 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+:host .generate {
+  @include nv.primary-button;
+  min-height: 36px;
+}
+
+/* Exports this session */
+:host .exports {
+  @include nv.card;
+  margin-top: 16px;
+  padding: 22px 24px;
+}
+:host .block-head {
+  border-bottom: 0;
+}
+:host .block-head h2 {
+  @include nv.card-heading;
+}
+:host .export-table td {
+  border-bottom-color: var(--nv-row-line);
+}
+:host .export-table tbody tr:hover {
+  background: var(--nv-surface-raised);
+}
+:host .export-table .mono,
+:host .export-table .when {
+  font-family: var(--font-ui);
+}
+:host .download {
+  @include nv.outline-button;
+  min-height: 32px;
+}
+:host .toast {
+  margin: 0 0 16px;
+}

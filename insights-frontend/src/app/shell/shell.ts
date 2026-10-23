@@ -15,7 +15,7 @@ const centralClock = (now: Date) => CENTRAL_CLOCK.format(now).replace(/\u202f/g,
   selector: 'app-insights-workspace',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, DashboardIcon],
   templateUrl: './shell.html',
-  styleUrl: './shell.scss',
+  styleUrls: ['./shell.scss', './shell.novice.scss'],
 })
 export class Shell implements OnDestroy {
   readonly auth = inject(AuthService, { optional: true });

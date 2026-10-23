@@ -47,7 +47,7 @@ const SOURCES: Record<string, string> = {
   selector: 'app-trade-lookup-page',
   imports: [RouterLink],
   templateUrl: './trade-lookup-page.html',
-  styleUrl: './trade-lookup-page.scss',
+  styleUrls: ['./trade-lookup-page.scss', './trade-lookup-page.novice.scss'],
 })
 export class TradeLookupPage implements OnDestroy {
   private readonly trades = inject(TRADE_RECORDS, { optional: true });

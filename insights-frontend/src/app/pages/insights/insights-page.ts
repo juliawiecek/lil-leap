@@ -20,7 +20,7 @@ const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', d
   selector: 'app-insights-page',
   imports: [DashboardIcon, InsightsChart],
   templateUrl: './insights-page.html',
-  styleUrl: './insights-page.scss',
+  styleUrls: ['./insights-page.scss', './insights-page.novice.scss'],
 })
 export class InsightsPage implements OnDestroy {
   private readonly reports = inject(LIVE_REPORTS, { optional: true });
@@ -47,7 +47,7 @@ export class InsightsPage implements OnDestroy {
   });
   /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
-  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock shown in the top bar. */
+  /** "Good morning" / "Good afternoon" / "Good evening" by the Central clock shown in the top bar. */
   readonly greeting = signal(greetingFor(centralHour()));
   /** Running total of today's trades, hour by hour, for the line under the traded value. */
   readonly cumulativePoints = computed(() => {
@@ -168,5 +168,8 @@ export class InsightsPage implements OnDestroy {
 
 /** The greeting for an hour on the Central clock, 0 to 23. */
 export function greetingFor(hour: number): string {
-  return hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+  if (hour < 12) {
+    return 'Good morning';
+  }
+  return hour < 18 ? 'Good afternoon' : 'Good evening';
 }

@@ -40,7 +40,7 @@ test('the greeting follows the Central clock, not the computer\'s time zone', as
   const { greetingFor } = await import('../src/app/pages/insights/insights-page.ts');
   const { centralHour } = await import('../src/app/shared/app-time.ts');
   assert.deepEqual([0, 11, 12, 17, 18, 23].map(greetingFor),
-    ['Good Morning', 'Good Morning', 'Good Afternoon', 'Good Afternoon', 'Good Evening', 'Good Evening']);
+    ['Good morning', 'Good morning', 'Good afternoon', 'Good afternoon', 'Good evening', 'Good evening']);
   // 03:00 UTC on October 23 is still 10 PM on the 22nd in Chicago; 18:28 UTC is 1:28 PM.
   assert.equal(centralHour(new Date('2026-10-23T03:00:00Z')), 22);
   assert.equal(centralHour(new Date('2026-10-22T18:28:00Z')), 13);

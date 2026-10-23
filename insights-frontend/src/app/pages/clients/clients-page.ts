@@ -56,7 +56,7 @@ export function filterParams(filters: ClientFilters): Params {
   selector: 'app-clients-page',
   imports: [RouterLink],
   templateUrl: './clients-page.html',
-  styleUrl: './clients-page.scss',
+  styleUrls: ['./clients-page.scss', './clients-page.novice.scss'],
 })
 export class ClientsPage {
   private readonly clients = inject(CLIENT_ACCOUNTS, { optional: true });

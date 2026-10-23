@@ -1,0 +1,192 @@
+// The trading app's Novice dashboard look, as mixins each Insights page applies in its *.novice.scss layer.
+// Colours come from the --nv-* tokens in styles.scss.
+
+/// A rounded card, like the Novice dashboard's panels.
+@mixin card($radius: 20px) {
+  border: 1px solid var(--nv-border);
+  border-radius: $radius;
+  background: var(--nv-surface);
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--nv-border-strong);
+  }
+}
+
+/// The large first card on a page, like the Novice portfolio card: soft light from the corners and a deep shadow.
+@mixin hero-card {
+  @include card(26px);
+  border-color: var(--nv-border-strong);
+  background:
+    radial-gradient(70% 90% at 92% 0%, var(--nv-glow), transparent 60%),
+    radial-gradient(50% 60% at 0% 100%, var(--nv-glow-soft), transparent 70%),
+    var(--nv-surface);
+  box-shadow: 0 40px 80px -30px var(--nv-shadow), inset 0 1px 0 var(--nv-inner-light);
+}
+
+/// A card heading: bold, tight, sentence case.
+@mixin card-heading {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-transform: none;
+}
+
+/// A headline figure in the app font, bold and tight, never monospace.
+@mixin figure($size) {
+  font-family: var(--font-ui);
+  font-size: $size;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+/// A group of choices in a rounded tray, like the Novice 1D/1W/1M picker.
+@mixin pill-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--nv-pill-track);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/// One choice in a pill group; the selected one is the cream pill.
+@mixin pill($selected-selector) {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--nt-subtle);
+  font: 700 13px var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    color: var(--nt-text);
+  }
+
+  &#{$selected-selector} {
+    background: var(--nv-cream);
+    color: var(--nv-on-cream);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--nv-cream);
+    outline-offset: 2px;
+  }
+}
+
+/// A small rounded status chip, like Novice's "Market opens in ..."; green by default.
+@mixin chip($color: var(--nt-green), $wash: var(--nv-green-wash)) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: $wash;
+  color: $color;
+  font: 700 12.5px var(--font-ui);
+}
+
+/// A thin rounded progress track; style its filled child with progress-fill.
+@mixin progress-track($height: 6px) {
+  display: block;
+  height: $height;
+  border-radius: 999px;
+  background: var(--nv-pill-track);
+  overflow: hidden;
+}
+
+@mixin progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+/// A page's header band as a hero card: title, summary figure and filters together.
+@mixin page-header {
+  @include hero-card;
+  margin: 0 0 16px;
+  padding: 26px 30px 22px;
+
+  &::after {
+    display: none;
+  }
+}
+
+/// A rounded text field with a soft focus ring, like the Novice trade dialog's inputs.
+@mixin field {
+  min-height: 42px;
+  border: 1px solid var(--nv-pill-track);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--nv-border-hover);
+    box-shadow: 0 0 0 4px rgba(242, 239, 230, 0.06);
+  }
+}
+
+/// A small rounded label such as a status or trader level.
+@mixin badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font: 700 12px var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/// A plain secondary button: rounded, outlined, brightening on hover.
+@mixin outline-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--nv-border-hover);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--nt-text);
+  font: 700 13px var(--font-ui);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #4a5048;
+    color: #ffffff;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+/// The main action on a card, like the Novice Buy button: a cream rounded button that brightens on hover.
+@mixin primary-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--nv-cream);
+  border-radius: 12px;
+  background: var(--nv-cream);
+  color: var(--nv-on-cream);
+  font: 800 13px var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.2s ease, transform 0.12s ease;
+
+  &:hover:not(:disabled) {
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(242, 239, 230, 0.12);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

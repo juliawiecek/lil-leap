@@ -26,6 +26,22 @@
   --nt-border: #1f231f;
   --nt-panel: #0b0d0c;
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  /* The trading app's Novice dashboard surfaces, so Insights' cards, pills and charts look the same. */
+  --nv-surface: #0c0c0c;
+  --nv-surface-raised: #161616;
+  --nv-border: #1a1d1a;
+  --nv-border-strong: #2c312b;
+  --nv-border-hover: #3a4038;
+  --nv-pill-track: #1f231f;
+  --nv-row-line: #171a17;
+  --nv-cream: #f2efe6;
+  --nv-on-cream: #0b0c0b;
+  --nv-text-soft: #d6d4cc;
+  --nv-glow: rgba(255, 255, 255, 0.04);
+  --nv-glow-soft: rgba(242, 239, 230, 0.035);
+  --nv-inner-light: rgba(242, 239, 230, 0.08);
+  --nv-shadow: rgba(0, 0, 0, 0.7);
+  --nv-green-wash: rgba(148, 201, 115, 0.1);
   color-scheme: dark;
 }
 html,

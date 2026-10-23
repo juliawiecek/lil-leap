@@ -1,0 +1,96 @@
+// The Novice dashboard's look (shared/_novice.scss), layered over clients-page.scss: the header as a hero card,
+// filters as pill groups, the table in a card, rounded badges and pager buttons.
+@use '../../shared/novice' as nv;
+
+:host .band {
+  @include nv.page-header;
+}
+:host h1 {
+  font-size: 30px;
+}
+:host .figure dt {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:host .figure dd {
+  @include nv.figure(34px);
+  line-height: 1.05;
+}
+:host .search {
+  @include nv.field;
+  height: auto;
+  padding: 0 14px;
+}
+:host .seg {
+  @include nv.pill-group;
+}
+:host .seg button {
+  @include nv.pill('.on');
+  height: auto;
+}
+:host .clear {
+  @include nv.outline-button;
+}
+
+/* The accounts table in a card */
+:host .accounts {
+  @include nv.card;
+  padding: 6px 0 0;
+  overflow: hidden;
+}
+:host th {
+  color: var(--nt-subtle);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:host td {
+  border-bottom-color: var(--nv-row-line);
+}
+:host tbody tr:hover {
+  background: var(--nv-surface-raised);
+}
+/* Level and status as chips tinted with their own colour, like Novice's market status chip */
+:host .level,
+:host .badge,
+:host .badge.neutral,
+:host .badge.rejected,
+:host .badge.closed {
+  @include nv.badge;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+:host .level::before {
+  display: none;
+}
+:host .pager {
+  padding: 14px 18px;
+}
+:host .pager button {
+  @include nv.outline-button;
+}
+
+/* Room inside the card, like the Novice holdings table, and sideways scrolling instead of clipping */
+:host .accounts .table-wrap {
+  overflow-x: auto;
+}
+:host th:first-child,
+:host td:first-child {
+  padding-left: 24px;
+}
+:host th:last-child,
+:host td:last-child {
+  padding-right: 24px;
+}
+:host .sort {
+  font: 600 12.5px var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+:host .when {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
