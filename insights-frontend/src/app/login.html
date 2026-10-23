@@ -1,17 +1,4 @@
 <div class="login-screen">
-  <div class="tape" aria-hidden="true">
-    <div class="tape-track">
-      @for (copy of [0, 1]; track copy) {
-        <div class="tape-group">
-          <span class="live"><i></i>Live</span>
-          @for (word of tape; track word) {
-            <span class="sep">·</span><span>{{ word }}</span>
-          }
-          <span class="sep">·</span>
-        </div>
-      }
-    </div>
-  </div>
   <section class="showcase" aria-labelledby="landing-title">
     <div class="backdrop-chart" aria-hidden="true">
       <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
