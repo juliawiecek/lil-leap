@@ -397,49 +397,48 @@
           <div class="secondary-column">
             <section class="panel allocation-panel" data-scan-group="Asset allocation">
               <div class="panel-heading">
-                <h2>Asset allocation</h2>
+                <h2>Allocation by sector</h2>
                 <button type="button" class="text-link" (click)="openModal('allocation')">
                   View details <app-dashboard-icon name="chevron" />
                 </button>
               </div>
-              <div class="allocation-content">
-                <div class="allocation-donut" tabindex="0" [appChartFocus]="allocationAccess" role="img" aria-label="Asset allocation">
-                  <!-- A rounded progress arc follows the actual stock share over a full cash track. -->
-                  <svg viewBox="0 0 42 42" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="allocation-stocks-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="var(--periwinkle-light)" />
-                        <stop offset="100%" stop-color="var(--periwinkle-deep)" />
-                      </linearGradient>
-                    </defs>
-                    <circle class="allocation-track" cx="21" cy="21" r="15.9155" />
-                    <circle
-                      class="ring stocks"
-                      cx="21"
-                      cy="21"
-                      r="15.9155"
-                      pathLength="100"
-                      stroke="url(#allocation-stocks-gradient)"
-                      [attr.stroke-dasharray]="stocksShare() + ' ' + (100 - stocksShare())"
-                      [attr.visibility]="stocksShare() > 0 ? 'visible' : 'hidden'"
-                    />
-                  </svg>
-                  <div class="donut-center"><strong>{{ allocationReady() ? (assetAllocation().total | currency) : '—' }}</strong><span>Total</span></div>
-                </div>
-                <div class="allocation-legend">
-                  <div class="allocation-item">
-                    <i class="asset-dot stocks" aria-hidden="true"></i><span class="allocation-label">Stocks<small>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</small></span
-                    ><b>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</b>
-                    <span class="allocation-meter stocks-meter" aria-hidden="true"><span [style.width.%]="stocksShare()"></span></span>
+              @if (sectorAllocation(); as alloc) {
+                <div class="allocation-content">
+                  <div class="allocation-donut" tabindex="0" [appChartFocus]="allocationAccess" role="img" aria-label="Allocation by sector">
+                    <!-- One arc per sector, in proportion to the money invested in it, starting at the top. -->
+                    <svg viewBox="0 0 42 42" aria-hidden="true">
+                      <circle class="allocation-track" cx="21" cy="21" r="15.9155" />
+                      @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
+                        <circle
+                          class="ring sector"
+                          cx="21"
+                          cy="21"
+                          r="15.9155"
+                          pathLength="100"
+                          [style.stroke]="sector.color"
+                          [attr.stroke-dasharray]="sector.dash"
+                          [attr.stroke-dashoffset]="sector.offset"
+                        />
+                      }
+                    </svg>
+                    <div class="donut-center"><strong>{{ allocationReady() ? (showBalance() ? (alloc.invested | currency) : '••••••') : '—' }}</strong><span>Invested</span></div>
                   </div>
-                  <div class="allocation-item">
-                    <i class="asset-dot cash" aria-hidden="true"></i><span class="allocation-label">Cash<small>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</small></span
-                    ><b>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</b>
-                    <span class="allocation-meter cash-meter" aria-hidden="true"><span [style.width.%]="allocationReady() ? assetAllocation().cashPercent : 0"></span></span>
+                  <div class="allocation-legend">
+                    @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
+                      <div class="allocation-item">
+                        <i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i><span class="allocation-label"
+                          >{{ sector.name }}<small>{{ sector.symbols.join(', ') }} · {{ showBalance() ? (sector.value | currency) : '••••••' }}</small></span
+                        ><b>{{ sector.percent }}%</b>
+                        <span class="allocation-meter" aria-hidden="true"><span [style.width.%]="sector.share" [style.background]="sector.color"></span></span>
+                      </div>
+                    } @empty {
+                      <p class="allocation-empty">{{ !portfolioLoaded() ? 'Loading allocation...' : !allocationReady() ? 'Allocation is unavailable until market quotes arrive.' : 'Buy a stock to see how your money is spread across sectors.' }}</p>
+                    }
                   </div>
                 </div>
-              </div>
-              <app-chart-access #allocationAccess id="novice-allocation" label="Asset allocation" [summary]="allocationDescription()" [table]="allocationTable()" [context]="selectedAccount()?.account_id ?? ''" />
+                <p class="allocation-cash"><span>Cash, not invested</span><b>{{ portfolioLoaded() ? (showBalance() ? (alloc.cash | currency) : '••••••') : '—' }}</b></p>
+              }
+              <app-chart-access #allocationAccess id="novice-allocation" label="Allocation by sector" [summary]="allocationDescription()" [table]="allocationTable()" [context]="selectedAccount()?.account_id ?? ''" />
               <button type="button" class="diversification" (click)="openModal('allocation')">
                 <span class="shield-icon"><app-dashboard-icon name="shield" /></span
                 ><span
@@ -665,9 +664,18 @@
     </div>
     </div>
   } @else if (modal() === 'allocation') {
-    <div class="asset-class-list">
-      <div><span>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</span></div>
-      <div><span>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</span></div>
+    <h3 class="modal-subhead">By sector</h3>
+    <div class="asset-class-list modal-allocation-list">
+      @for (sector of allocationReady() ? sectorAllocation().sectors : []; track sector.name) {
+        <div><span><i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i>{{ sector.name }}</span><strong>{{ sector.percent }}%</strong><span>{{ showBalance() ? (sector.value | currency) : '••••••' }}</span></div>
+      } @empty {
+        <div><span>No investments yet</span><strong>–</strong><span></span></div>
+      }
+    </div>
+    <h3 class="modal-subhead">By asset class</h3>
+    <div class="asset-class-list modal-allocation-list">
+      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

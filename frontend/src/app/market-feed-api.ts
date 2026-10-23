@@ -84,7 +84,13 @@ export interface PriceCandle {
 
 export function candleMetadata(row: { time: string; open?: unknown; high?: unknown; low?: unknown; close: unknown; volume?: unknown }): PriceCandle | undefined {
   const time = Date.parse(row.time), open = numericValue(row.open), high = numericValue(row.high), low = numericValue(row.low), close = numericValue(row.close);
-  if (!Number.isFinite(time) || open === null || high === null || low === null || close === null || Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
+  if (!Number.isFinite(time)) {
+    return undefined;
+  }
+  if (open === null || high === null || low === null || close === null) {
+    return undefined;
+  }
+  if (Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
     return undefined;
   }
   const volume = numericValue(row.volume);
@@ -177,7 +183,7 @@ export class MarketFeedClient {
   /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */
   async history(instrumentId: string, limit = HISTORY_ROWS, basis: 'midpoint' | 'bid' = 'midpoint'): Promise<PricePoint[]> {
     const rows = await this.#historyGet<QuoteRow[]>(`/quotes/history/${encodeURIComponent(instrumentId)}?limit=${limit}`);
-    if (!Array.isArray(rows)) throw new Error('Could not load prices.');
+    if (!Array.isArray(rows)) { throw new Error('Could not load prices.'); }
     return quoteHistoryPoints(rows, basis).filter(p => p.time <= Date.now()).map(p => ({ at: p.time, price: p.value }));
   }
 
@@ -188,11 +194,11 @@ export class MarketFeedClient {
       this.#cacheToken = this.#tokens.accessToken;
     }
     const saved = this.#historyCache.get(path);
-    if (saved && saved.expires > Date.now()) return saved.response as Promise<T>;
-    if (this.#historyCache.size >= 64) this.#historyCache.delete(this.#historyCache.keys().next().value!);
+    if (saved && saved.expires > Date.now()) { return saved.response as Promise<T>; }
+    if (this.#historyCache.size >= 64) { this.#historyCache.delete(this.#historyCache.keys().next().value!); }
     const entry = { expires: Date.now() + 5000, response: this.#get<T>(path) };
     this.#historyCache.set(path, entry);
-    entry.response.catch(() => { if (this.#historyCache.get(path) === entry) this.#historyCache.delete(path); });
+    entry.response.catch(() => { if (this.#historyCache.get(path) === entry) { this.#historyCache.delete(path); } });
     return entry.response;
   }
 

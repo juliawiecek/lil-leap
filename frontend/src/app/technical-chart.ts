@@ -77,7 +77,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const base = this.window();
     const first = [this.source().find(p => p.at >= base.start)?.at, ...this.trades().map(t => t.at)]
       .reduce<number>((min, at) => at !== undefined && at >= base.start && at <= base.end ? Math.min(min, at) : min, Infinity);
-    if (!Number.isFinite(first)) return base;
+    if (!Number.isFinite(first)) { return base; }
     // Keep at least half an hour on screen so a lone observation is not stretched edge to edge.
     const start = Math.max(base.start, Math.min(first, base.end - MIN_EXTENT_MS));
     return { start, end: base.end };

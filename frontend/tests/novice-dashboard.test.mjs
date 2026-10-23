@@ -594,18 +594,70 @@ test('the sidebar resizes from the keyboard and a double-click on its edge, with
   assert.equal(desk.sidebarCollapsed(), false);
 });
 
-test('the Overview retains the accessible stock/cash allocation with real shares and privacy', t => {
-  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([]))]);
+test('the Overview allocation groups what the account holds by sector, largest first, with cash kept out of the ring', t => {
+  const feed = fakeFeed([
+    { symbol: 'AAPL', price: 100, sector: 'Technology' }, { symbol: 'MSFT', price: 100, sector: 'Technology' },
+    { symbol: 'LLY', price: 100, sector: 'Health Care' }, { symbol: 'JPM', price: 100, sector: '' },
+  ]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  const held = (symbol, value) => ({ symbol, name: symbol, value, shares: 1, average: value, today: 0, change: 0, total: 0, totalPercent: 0, logo: '' });
+  desk.holdings.set([held('AAPL', 300), held('LLY', 500), held('MSFT', 100), held('JPM', 100)]);
+  desk.buyingPower.set(250);
+  const { invested, cash, sectors } = desk.sectorAllocation();
+  assert.equal(invested, 1000);
+  assert.equal(cash, 250, 'cash is reported beside the ring, not in it');
+  assert.deepEqual(sectors.map((s) => [s.name, s.percent, s.symbols.join(',')]),
+    [['Health Care', 50, 'LLY'], ['Technology', 40, 'AAPL,MSFT'], ['Other', 10, 'JPM']]);
+  assert.equal(sectors[0].offset, '22.65', 'the first arc starts just past the top of the ring, after half a gap');
+  assert.equal(sectors[0].dash, '45.30 54.70', 'each arc is its share less the gap that keeps the round ends apart');
+  assert.match(desk.sectorSummary(), /Health Care 50 percent, Technology 40 percent, Other 10 percent/);
+  desk.holdings.set([]);
+  assert.deepEqual(desk.sectorAllocation().sectors, []);
+});
+
+test('sector allocation alternatives match invested shares, separate cash and respect privacy', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([{ symbol: 'AAPL', price: 100, sector: 'Technology' }]))]);
   desk.holdings.set([{ symbol: 'AAPL', value: 1000 }]);
   desk.buyingPower.set(250);
   desk.portfolioLoaded.set(true);
   desk.allocationReady.set(true);
   assert.deepEqual(desk.allocationCategories(), [
-    { label: 'Stocks', value: 1000, percent: 80 }, { label: 'Cash', value: 250, percent: 20 },
+    { label: 'Technology', value: 1000, percent: 100 },
   ]);
-  assert.match(desk.allocationDescription(), /Stocks.*80/);
+  assert.match(desk.allocationDescription(), /Technology.*100/);
+  assert.deepEqual(desk.allocationTable().references, [{ label: 'Cash, not invested', value: '$250.00' }]);
+  assert.match(desk.allocationDescription(), /Cash, not invested: \$250\.00/);
   desk.showBalance.set(false);
   assert.doesNotMatch(JSON.stringify(desk.allocationTable()), /\$/);
+});
+
+test('a diverse portfolio groups smaller sectors without losing their invested value or symbols', t => {
+  const stocks = Array.from({ length: 9 }, (_, i) => ({ symbol: `STOCK${i}`, price: i + 1, sector: `Sector ${i}` }));
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed(stocks))]);
+  desk.holdings.set(stocks.map(s => ({ symbol: s.symbol, value: s.price })));
+  desk.buyingPower.set(25);
+  desk.portfolioLoaded.set(true); desk.allocationReady.set(true);
+  const { sectors, invested } = desk.sectorAllocation();
+  assert.equal(sectors.length, 7);
+  assert.equal(invested, 45);
+  assert.equal(sectors.reduce((sum, s) => sum + s.value, 0), invested);
+  const grouped = sectors.find(s => s.name === 'Other sectors');
+  assert.equal(grouped.value, 6);
+  assert.deepEqual(new Set(grouped.symbols), new Set(['STOCK0', 'STOCK1', 'STOCK2']));
+  assert.equal(desk.allocationTable().rows.length, 7);
+  assert.match(desk.allocationDescription(), /Other sectors/);
+});
+
+test('allocation alternatives distinguish loading, missing quotes and a genuinely empty portfolio', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([]))]);
+  assert.match(desk.allocationDescription(), /not loaded/);
+  assert.deepEqual(desk.allocationTable().rows, []);
+  desk.portfolioLoaded.set(true);
+  assert.match(desk.allocationTable().note, /unavailable/);
+  assert.match(desk.allocationDescription(), /unavailable/);
+  desk.allocationReady.set(true);
+  assert.match(desk.allocationDescription(), /No assets/);
+  assert.deepEqual(desk.sectorAllocation().sectors, []);
 });
 
 test('the ticket stock menu opens downwards, moves with the arrow keys and picks with Enter', t => {

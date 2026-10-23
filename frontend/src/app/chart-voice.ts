@@ -15,13 +15,13 @@ export class ChartVoice {
   }));
   constructor() {
     effect(() => {
-      if (this.#scan?.settings().enabled) this.narrator.stop(this.#owner);
+      if (this.#scan?.settings().enabled) { this.narrator.stop(this.#owner); }
     });
   }
   setEnabled(enabled: boolean): void {
     const saved = this.#store.read('voice', v => v && typeof v === 'object' ? v : {});
     this.#store.write('voice', { ...saved, chartSummaries: enabled });
-    if (!enabled) this.narrator.stop(this.#owner);
+    if (!enabled) { this.narrator.stop(this.#owner); }
   }
   #owner = '';
   #pending: { owner: string; timer: ReturnType<typeof setTimeout> } | undefined;
@@ -30,17 +30,17 @@ export class ChartVoice {
       // The scanner owns focus speech. Only an explicit Explain request adds narration,
       // after the scanner has given its normal button-selection confirmation.
       if (requested && this.#scan.settings().speak) {
-        if (this.#pending) clearTimeout(this.#pending.timer);
+        if (this.#pending) { clearTimeout(this.#pending.timer); }
         this.#pending = { owner, timer: setTimeout(() => {
           this.#pending = undefined;
-          if (this.#scan?.settings().enabled && this.#scan.settings().speak) this.#scan.announce(text);
+          if (this.#scan?.settings().enabled && this.#scan.settings().speak) { this.#scan.announce(text); }
         }, 0) };
       }
       return;
     }
-    if (!this.enabled()) return;
+    if (!this.enabled()) { return; }
     const navigationVoice = this.#store.read('voice', v => v as { enabled?: boolean; focus?: boolean; rate?: number } | null);
-    if (!requested && navigationVoice?.enabled && navigationVoice.focus) return;
+    if (!requested && navigationVoice?.enabled && navigationVoice.focus) { return; }
     this.#owner = owner;
     const rate = navigationVoice?.enabled ? navigationVoice.rate || 1 : this.#store.read('briefing', v => Number((v as { rate?: number } | null)?.rate) || 1);
     this.narrator.speak(speakable(text), owner, rate);

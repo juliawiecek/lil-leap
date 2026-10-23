@@ -526,10 +526,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.priceHistory.set(points);
       this.#addTick(this.selected());
     }
-    if (current() && !points.length && !this.historyError()) this.priceHistory.set([]);
+    if (current() && !points.length && !this.historyError()) { this.priceHistory.set([]); }
     if (current()) {
       this.historyLoading.set(false);
-      if (this.historyError()) this.#historyKey = '';
+      if (this.historyError()) { this.#historyKey = ''; }
     }
   }
   /** Adds the latest price to the line: it moves the open bar, or starts the next bar once that one has closed. */
@@ -750,11 +750,11 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     try {
       rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
     } catch (error) {
-      if (request !== this.#orderRequest || this.#destroyed) return false;
+      if (request !== this.#orderRequest || this.#destroyed) { return false; }
       this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
       return false;
     }
-    if (request !== this.#orderRequest || this.#destroyed) return false;
+    if (request !== this.#orderRequest || this.#destroyed) { return false; }
     const fills = newlyFilled(this.#lastOrderRows, rows);
     this.#lastOrderRows = rows;
     this.orders.set(rows.map(toOrder));
@@ -773,7 +773,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.applyPortfolio(portfolio);
       this.serviceDown.set(false);
     } catch (error) {
-      if (request !== this.#portfolioRequest || this.#destroyed) return;
+      if (request !== this.#portfolioRequest || this.#destroyed) { return; }
       this.serviceDown.set(true);
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
     }

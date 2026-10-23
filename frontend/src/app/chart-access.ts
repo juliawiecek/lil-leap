@@ -85,20 +85,20 @@ export class ChartAccess implements OnDestroy {
       const contextChanged = this.#previous !== undefined && context !== this.#context;
       const changed = this.#previous !== undefined && (text !== this.#previous || table !== this.#previousTable || contextChanged);
       const privacyChanged = /hidden/i.test(text) && !/hidden/i.test(this.#previous ?? '');
-      if (contextChanged) this.#pendingContext = true;
+      if (contextChanged) { this.#pendingContext = true; }
       const fullAnnouncement = this.#pendingContext || privacyChanged;
       this.#previous = text; this.#context = context; this.#previousTable = table;
       untracked(() => {
-        if (contextChanged || privacyChanged) this.voice.stop(this.id());
-        if (!changed) return;
+        if (contextChanged || privacyChanged) { this.voice.stop(this.id()); }
+        if (!changed) { return; }
         this.announcement.set('');
         // Live prices do not make every chart on a page talk at once. Announce the chart in use,
         // or the result of a deliberate period/security change, after updates have settled.
         if (fullAnnouncement || this.focused() || this.explained() || this.shown()) {
           const timer = setTimeout(() => {
             this.announcement.set(fullAnnouncement ? text : 'Chart data updated. Explain this chart to hear the latest summary.');
-            if (fullAnnouncement && (this.focused() || this.explained())) this.voice.speak(text, this.id());
-            if (!/loading|No recorded observations/i.test(text)) this.#pendingContext = false;
+            if (fullAnnouncement && (this.focused() || this.explained())) { this.voice.speak(text, this.id()); }
+            if (!/loading|No recorded observations/i.test(text)) { this.#pendingContext = false; }
           }, 600);
           onCleanup(() => clearTimeout(timer));
         }
@@ -108,7 +108,7 @@ export class ChartAccess implements OnDestroy {
   explain(): void {
     this.explained.set(!this.explained());
     if (this.explained()) { this.announcement.set(this.summary()); this.voice.speak(this.summary(), this.id(), true); }
-    else this.voice.stop(this.id());
+    else { this.voice.stop(this.id()); }
   }
   focusSummary(): void { this.focused.set(true); this.voice.speak(this.summary(), this.id()); }
   ngOnDestroy(): void { this.voice.stop(this.id()); }

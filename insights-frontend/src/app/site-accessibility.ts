@@ -34,7 +34,7 @@ export class SiteAccessibility {
   private started = false;
   constructor() { effect(() => { this.settings(); this.controller.apply(); }); }
   start(): void {
-    if (this.started) return;
+    if (this.started) { return; }
     this.started = true; this.controller.start();
     this.loginPage.set(/^\/login(?:[?#]|$)/.test(this.router?.url ?? ''));
     const subscription = this.router?.events?.subscribe(event => {
@@ -52,6 +52,6 @@ export class SiteAccessibility {
     const next = mergeAssistivePreferences(this.values().voice, this.values().visual, patch);
     this.values.set({ ...this.values(), ...next });
     try { globalThis.localStorage?.setItem(INSIGHTS_ACCESSIBILITY_KEY, JSON.stringify(this.values())); } catch {}
-    if (patch.enabled === false) for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) speechCoordinator.stop(owner);
+    if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) { speechCoordinator.stop(owner); } }
   }
 }

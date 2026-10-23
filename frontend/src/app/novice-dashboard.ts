@@ -1,6 +1,6 @@
 import { ChartAccess, ChartFocus } from './chart-access';
 import { allocation, chartPoints, type ChartSeries } from './chart-data';
-import { categoryDescription, categoryTable } from '../../../shared/chart-description';
+import { categoryDescription, categoryTable, chartValue } from '../../../shared/chart-description';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
@@ -70,6 +70,7 @@ function storedSidebarWidth(): number {
     return SIDEBAR_DEFAULT;
   }
 }
+const SECTOR_COLORS = Array.from({ length: 7 }, (_, i) => `var(--sector-${i + 1})`);
 /** How often prices, and so the overview chart's live line, refresh on the novice dashboard. */
 export const NOVICE_REFRESH_MS = 3000;
 /** Live values kept for the chart: a day of three-second updates. */
@@ -235,6 +236,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     } else if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault();
       this.#setSidebarWidth(event.key === 'Home' ? SIDEBAR_MIN : SIDEBAR_MAX);
+    } else {
+      // Other keys retain their native browser behavior.
     }
   }
 
@@ -371,7 +374,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
   readonly headerChangeText = computed(() => {
     const { amount, percent } = this.headerChange();
-    if (percent === null) return `${formatMoney(amount, true)} (percentage unavailable)`;
+    if (percent === null) { return `${formatMoney(amount, true)} (percentage unavailable)`; }
     let sign: string;
     if (amount > 0) {
       sign = '+';
@@ -410,7 +413,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   readonly chartPoints = computed(() => {
     const history = this.chartHistory();
-    if (!this.portfolioLoaded()) return history;
+    if (!this.portfolioLoaded()) { return history; }
     const range = this.chartSpan();
     // Quotes keep arriving outside order-execution hours. Keep their actual times instead of
     // moving the closing point's price while its timestamp (and the viewport) stays frozen.
@@ -524,15 +527,80 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     return { title: 'Spread across companies', detail: `${holdings.length} companies, none above ${Math.round(largest * 100)}% of your stocks.` };
   });
+  /**
+   * The Overview's allocation card: invested money split by industry sector, built from whatever the
+   * account holds right now (each stock's sector comes with its live price). Largest sector first; past
+   * the sixth, the rest are grouped as "Other sectors". Cash is reported beside it, not in the ring.
+   */
+  readonly sectorAllocation = computed(() => {
+    const sectorOf = new Map(this.feed.quotes().map((q) => [q.symbol, q.sector?.trim() || 'Other']));
+    const bySector = new Map<string, { value: number; symbols: string[] }>();
+    for (const holding of this.holdings()) {
+      if (holding.value <= 0) {
+        continue;
+      }
+      const sector = sectorOf.get(holding.symbol) ?? 'Other';
+      const entry = bySector.get(sector) ?? { value: 0, symbols: [] };
+      entry.value += holding.value;
+      entry.symbols.push(holding.symbol);
+      bySector.set(sector, entry);
+    }
+    const invested = [...bySector.values()].reduce((sum, s) => sum + s.value, 0);
+    let rows = [...bySector.entries()]
+      .map(([name, s]) => ({ name, value: s.value, symbols: s.symbols }))
+      .sort((a, b) => b.value - a.value);
+    if (rows.length > SECTOR_COLORS.length) {
+      const rest = rows.slice(SECTOR_COLORS.length - 1);
+      rows = [...rows.slice(0, SECTOR_COLORS.length - 1), {
+        name: 'Other sectors',
+        value: rest.reduce((sum, r) => sum + r.value, 0),
+        symbols: rest.flatMap((r) => r.symbols),
+      }];
+    }
+    let start = 0;
+    const sectors = rows.map((row, i) => {
+      const share = invested > 0 ? (row.value / invested) * 100 : 0;
+      // Round caps reach half the 3.8 stroke past each end of an arc, so the gap covers both caps
+      // plus about 0.9 of clear space between neighbours (the circle is 100 units around).
+      const gap = rows.length > 1 ? 4.7 : 0;
+      const length = Math.max(share - gap, 0.01);
+      const segment = {
+        ...row,
+        color: SECTOR_COLORS[i],
+        share,
+        percent: Math.round(share),
+        dash: `${length.toFixed(2)} ${(100 - length).toFixed(2)}`,
+        offset: (25 - start - gap / 2).toFixed(2),
+      };
+      start += share;
+      return segment;
+    });
+    return { invested, cash: this.buyingPower(), sectors };
+  });
+  /** Screen-reader summary of the sector ring. */
+  readonly sectorSummary = computed(() => {
+    const { sectors } = this.sectorAllocation();
+    return sectors.length
+      ? 'Investments by sector: ' + sectors.map((s) => `${s.name} ${s.percent} percent`).join(', ')
+      : 'No investments yet';
+  });
   readonly allocationSeries = computed<readonly ChartSeries[]>(() => this.allocationReady() ? this.allocationCategories().map(c => ({
     id: 'allocation:' + c.label, label: c.label, unit: 'USD', status: 'ready', points: [{ time: this.feed.now(), value: c.value }],
   })) : []);
   readonly allocationCategories = computed(() => {
-    const a = this.assetAllocation();
-    return [{ label: 'Stocks', value: a.stocksValue, percent: a.stocksPercent }, { label: 'Cash', value: a.cashValue, percent: a.cashPercent }];
+    return this.sectorAllocation().sectors.map(s => ({ label: s.name, value: s.value, percent: s.percent }));
   });
-  readonly allocationDescription = computed(() => !this.portfolioLoaded() ? 'Asset allocation. Balances have not loaded yet.' : !this.allocationReady() ? 'Asset allocation unavailable until all holdings have market quotes.' : categoryDescription('Asset allocation', this.allocationCategories(), !this.showBalance()));
-  readonly allocationTable = computed(() => this.portfolioLoaded() && this.allocationReady() ? categoryTable(this.allocationCategories(), !this.showBalance()) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
+  readonly allocationDescription = computed(() => !this.portfolioLoaded() ? 'Asset allocation. Balances have not loaded yet.' : !this.allocationReady() ? 'Asset allocation unavailable until all holdings have market quotes.' : categoryDescription('Allocation by sector', this.allocationCategories(), !this.showBalance()) + (this.showBalance() ? ' Shares are percentages of invested money. Cash, not invested: ' + chartValue(this.sectorAllocation().cash, { currency: 'USD' }) + '.' : ''));
+  readonly allocationTable = computed(() => {
+    if (!this.portfolioLoaded() || !this.allocationReady()) { return {
+      columns: ['Sector', 'Value (USD)', 'Share of investments'], rows: [],
+      note: !this.portfolioLoaded() ? 'Balances have not loaded yet.' : 'Allocation is unavailable until all holdings have market quotes.',
+    }; }
+    return { ...categoryTable(this.allocationCategories(), !this.showBalance()),
+      columns: ['Sector', 'Value (USD)', 'Share of investments'],
+      references: this.showBalance() ? [{ label: 'Cash, not invested', value: chartValue(this.sectorAllocation().cash, { currency: 'USD' }) }] : [],
+    };
+  });
   readonly assetAllocation = computed(() => allocation(
     this.holdings().reduce((sum, h) => sum + h.value, 0), this.buyingPower(),
   ));
@@ -721,6 +789,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.stockMenuOpen.set(false);
     } else if (event.key === 'Tab') {
       this.stockMenuOpen.set(false);
+    } else {
+      // Other keys retain their native browser behavior.
     }
   }
 
@@ -915,7 +985,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.applyPortfolio(portfolio);
       this.serviceDown.set(false);
     } catch {
-      if (request !== this.#portfolioRequest || this.destroyed) return;
+      if (request !== this.#portfolioRequest || this.destroyed) { return; }
       // A banner says so and offers a retry; the last values stay on screen.
       this.serviceDown.set(true);
     }
@@ -941,7 +1011,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return;
     }
     if (this.destroyed) { return; }
-    if (request !== this.#orderRequest) return;
+    if (request !== this.#orderRequest) { return; }
     const fills = newlyFilled(this.#lastOrderRows, rows);
     this.#lastOrderRows = rows;
     if (fills.length) {
@@ -996,7 +1066,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.chartLoading.set(true);
     try {
       const [movements, orders] = await Promise.all([this.cashActivityClient.list(filters), this.orderHistoryClient.list(filters)]);
-      if (request !== this.#chartRequest || this.destroyed) return;
+      if (request !== this.#chartRequest || this.destroyed) { return; }
       const now = Date.now();
       const { cash, shares: fills } = portfolioEvents(movements, orders);
       const range = chartRange(period, now, fundedAt(account?.created_at, cash));
@@ -1037,7 +1107,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     ]);
     const entries = await Promise.all(symbols.map(async symbol => {
       const id = ids.get(symbol);
-      if (!id) return [symbol, [] as PricePoint[]] as const;
+      if (!id) { return [symbol, [] as PricePoint[]] as const; }
       const [bars, recent] = await Promise.allSettled([
         this.feed.client.closes(id, interval, limit, now, 'bid'),
         Promise.resolve().then(() => this.feed.client.history(id, 1000, 'bid')),
@@ -1116,7 +1186,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#chartTimer);
     this.chartLoading.set(true);
     void this.refreshPortfolio().then(() => {
-      if (!this.destroyed && request === this.#chartRequest) void this.loadChart();
+      if (!this.destroyed && request === this.#chartRequest) { void this.loadChart(); }
     });
     void this.watchOrders();
   }

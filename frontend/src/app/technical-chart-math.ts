@@ -32,8 +32,10 @@ export function vwap(points: readonly PricePoint[]): PricePoint[] {
   for (const p of points) {
     const bar = p.candle;
     // A missing bar/volume makes a cumulative VWAP unknowable, including subsequent points.
-    if (!bar || bar.volume === null || !Number.isFinite(bar.volume) || bar.volume < 0 ||
-        ![bar.time, bar.open, bar.high, bar.low, bar.close].every(Number.isFinite) ||
+    if (!bar || bar.volume === null || !Number.isFinite(bar.volume) || bar.volume < 0) {
+      return [];
+    }
+    if (![bar.time, bar.open, bar.high, bar.low, bar.close].every(Number.isFinite) ||
         Math.min(bar.open, bar.high, bar.low, bar.close) <= 0 ||
         bar.high < Math.max(bar.open, bar.close) || bar.low > Math.min(bar.open, bar.close)) {
       return [];
@@ -54,14 +56,14 @@ export function vwap(points: readonly PricePoint[]): PricePoint[] {
  */
 export function rsi(points: readonly PricePoint[], period = 14): PricePoint[] {
   points = orderedPrices(points);
-  if (!Number.isInteger(period) || period < 1 || points.length <= period) return [];
+  if (!Number.isInteger(period) || period < 1 || points.length <= period) { return []; }
   let gain = 0, loss = 0;
   const output: PricePoint[] = [];
   for (let i = 1; i < points.length; i++) {
     const delta = points[i].price - points[i - 1].price;
     if (i <= period) { gain += Math.max(0, delta) / period; loss += Math.max(0, -delta) / period; }
     else { gain = (gain * (period - 1) + Math.max(0, delta)) / period; loss = (loss * (period - 1) + Math.max(0, -delta)) / period; }
-    if (i >= period) output.push({ at: points[i].at, price: loss === 0 ? gain === 0 ? 50 : 100 : Math.max(0, Math.min(100, 100 - 100 / (1 + gain / loss))) });
+    if (i >= period) { output.push({ at: points[i].at, price: loss === 0 ? gain === 0 ? 50 : 100 : Math.max(0, Math.min(100, 100 - 100 / (1 + gain / loss))) }); }
   }
   return output;
 }

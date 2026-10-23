@@ -72,9 +72,16 @@ test('novice portfolio and allocation expose real summaries, focus voice and equ
   const allocation = page.locator('app-chart-access').filter({ has: page.locator('#novice-allocation-summary') });
   await alternatives(page, donut, allocation);
   await expect(allocation.locator('tbody')).toContainText('$590.00');
-  await expect(allocation.locator('tbody')).toContainText('$4,500.00');
+  await expect(allocation.locator('thead')).toContainText('Share of investments');
+  await expect(allocation.locator('tfoot')).toContainText('$4,500.00');
+  await expect(page.locator('.allocation-panel h2')).toHaveText('Allocation by sector');
+  await expect(donut.locator('circle.ring.sector')).toHaveCount(1);
   await donut.focus();
-  await expect.poll(() => page.evaluate(() => window.chartSpeech.join(' '))).toContain('Asset allocation');
+  await expect.poll(() => page.evaluate(() => window.chartSpeech.join(' '))).toContain('Allocation by sector');
+  await page.locator('.allocation-panel').getByRole('button', { name: 'View details' }).click();
+  await expect(page.getByRole('dialog')).toContainText('By sector');
+  await expect(page.getByRole('dialog')).toContainText('By asset class');
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await portfolio.screenshot({ path: 'test-results/ps25-portfolio.png' });
   await page.locator('.allocation-panel').screenshot({ path: 'test-results/ps25-allocation.png' });
   const toggle = portfolio.locator('button[aria-controls$="-table"]');

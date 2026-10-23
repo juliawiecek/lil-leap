@@ -33,6 +33,6 @@ export class AssistiveTools {
     }
   }
   close(): void { this.panel()?.nativeElement.close(); }
-  closed(): void { if (this.trigger?.isConnected) this.trigger.focus({ preventScroll: true }); }
-  backdrop(event: Event): void { if (event.target === this.panel()?.nativeElement) this.close(); }
+  closed(): void { if (this.trigger?.isConnected) { this.trigger.focus({ preventScroll: true }); } }
+  backdrop(event: Event): void { if (event.target === this.panel()?.nativeElement) { this.close(); } }
 }

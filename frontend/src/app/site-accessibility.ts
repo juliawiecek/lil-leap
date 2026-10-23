@@ -35,12 +35,12 @@ export class SiteAccessibility {
     effect(() => { this.settings(); this.controller.apply(); });
     effect(() => {
       if (this.scan.settings().enabled) {
-        for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) speechCoordinator.stop(owner);
+        for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) { speechCoordinator.stop(owner); }
       }
     });
   }
   start(): void {
-    if (this.started) return;
+    if (this.started) { return; }
     this.started = true; this.controller.start();
     this.loginPage.set(/^\/(login|reset-password)(?:[?#]|$)/.test(this.router?.url ?? ''));
     const subscription = this.router?.events?.subscribe(event => {
@@ -55,6 +55,6 @@ export class SiteAccessibility {
   update(patch: Partial<AssistivePreferences>): void {
     const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
     this.store.write('voice', next.voice); this.store.write('visual', next.visual);
-    if (patch.enabled === false) for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) speechCoordinator.stop(owner);
+    if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) { speechCoordinator.stop(owner); } }
   }
 }

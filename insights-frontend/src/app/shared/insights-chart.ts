@@ -136,11 +136,11 @@ export class InsightsChart {
   focusSummary(): void { this.access()?.focusSummary(); }
   blurChart(): void { this.active.set(null); this.access()?.focused.set(false); }
   inspectKey(event: KeyboardEvent): void {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) return;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) { return; }
     event.preventDefault();
     if (event.key === 'Escape') { this.active.set(null); return; }
     const last = this.plotPoints().length - 1;
-    if (last < 0) return;
+    if (last < 0) { return; }
     const current = this.active() ?? (event.key === 'ArrowLeft' ? last + 1 : -1);
     this.active.set(event.key === 'Home' ? 0 : event.key === 'End' ? last : Math.max(0, Math.min(last, current + (event.key === 'ArrowLeft' ? -1 : 1))));
   }

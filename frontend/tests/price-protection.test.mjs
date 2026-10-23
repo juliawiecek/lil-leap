@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { render, input, button } from './dom-helper.mjs';
+import { render, input, button, browser } from './dom-helper.mjs';
 const {
   PriceProtectionStore, PROTECTION_STORAGE_KEY, parseProtection, protectionLimit, protectionText, validProtection,
 } = await import('../src/app/price-protection.ts');
@@ -101,4 +101,27 @@ test('settings set the default with a quick choice or a custom value, and manage
   fixture.nativeElement.querySelector('[aria-label="Remove MSFT override"]').click();
   fixture.detectChanges();
   assert.deepEqual(settings.overrides(), []);
+});
+
+test('the stock override picker supports keyboard selection and cancels without changing the stock', async t => {
+  withStorage(t);
+  const fixture = await render(t, PriceProtectionSettings, { symbols: ['AAPL', 'MSFT', 'NVDA'] });
+  const trigger = fixture.nativeElement.querySelector('.stock-trigger');
+  const settings = fixture.componentInstance;
+  const key = name => {
+    const event = new browser.KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
+    trigger.dispatchEvent(event); fixture.detectChanges(); return event;
+  };
+  assert.equal(key('ArrowDown').defaultPrevented, true);
+  assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+  key('End');
+  assert.equal(settings.picked(), 'AAPL', 'navigation alone does not select a stock');
+  key('Home'); key('ArrowDown'); key('ArrowUp'); key('End'); key('Enter');
+  assert.equal(settings.picked(), 'NVDA');
+  assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+  key('ArrowUp'); key('Home'); key('Escape');
+  assert.equal(settings.picked(), 'NVDA', 'Escape discards the highlighted candidate');
+  key('ArrowDown');
+  assert.equal(key('Tab').defaultPrevented, false, 'Tab leaves the picker naturally');
+  assert.equal(trigger.getAttribute('aria-expanded'), 'false');
 });

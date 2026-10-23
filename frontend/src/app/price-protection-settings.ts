@@ -258,6 +258,8 @@ export class PriceProtectionSettings {
       this.menuOpen.set(false);
     } else if (event.key === 'Tab') {
       this.menuOpen.set(false);
+    } else {
+      // Other keys retain their native browser behavior.
     }
   }
 

@@ -9,8 +9,8 @@ export class FocusAfterChange {
     const element = inject(ElementRef<HTMLElement>).nativeElement;
     const scanner = inject(SwitchScanService, { optional: true });
     afterNextRender(() => {
-      if (!this.appFocusAfterChange() || scanner?.settings().enabled || !element.isConnected) return;
-      if (element.tabIndex < 0) element.setAttribute('tabindex', '-1');
+      if (!this.appFocusAfterChange() || scanner?.settings().enabled || !element.isConnected) { return; }
+      if (element.tabIndex < 0) { element.setAttribute('tabindex', '-1'); }
       element.focus({ preventScroll: true });
     });
   }

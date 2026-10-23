@@ -38,7 +38,7 @@ export class InsightsPage implements OnDestroy {
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
   readonly topDescription = computed(() => {
     const rows = this.top();
-    if (!rows.length) return this.loading() ? 'Most traded stocks. Reports are loading.' : this.error() ? 'The stock ranking is unavailable because reports could not be loaded.' : 'Most traded stocks today. No trades are recorded yet.';
+    if (!rows.length) { return this.loading() ? 'Most traded stocks. Reports are loading.' : this.error() ? 'The stock ranking is unavailable because reports could not be loaded.' : 'Most traded stocks today. No trades are recorded yet.'; }
     const busiest = rows.reduce((a, b) => b.tradeCount > a.tradeCount ? b : a);
     return `Most traded stocks today. ${rows.length} stocks are shown. ${busiest.instrument} has the most trades, ${COUNT.format(busiest.tradeCount)}. `
       + rows.map(row => `${row.instrument}: ${COUNT.format(row.tradeCount)} trades, ${COUNT.format(row.tradeCount / this.topMax() * 100)} percent of the busiest stock`).join('; ') + '.';

@@ -55,7 +55,12 @@ export function tradeMarks(rows: readonly OrderHistoryRow[], symbol: string, loc
     .flatMap((row) => {
       const quantity = numericValue(row.filledQuantity), price = numericValue(row.fillPrice);
       const at = Date.parse(row.filledAt ?? '');
-      if (!['BUY', 'SELL'].includes(row.side) || quantity === null || quantity <= 0 || price === null || price <= 0 || !Number.isFinite(at)) return [];
+      if (!['BUY', 'SELL'].includes(row.side) || !Number.isFinite(at)) {
+        return [];
+      }
+      if (quantity === null || quantity <= 0 || price === null || price <= 0) {
+        return [];
+      }
       const side = row.side === 'SELL' ? 'SELL' : 'BUY';
       const verb = side === 'BUY' ? 'Bought' : 'Sold';
       return [{ side, quantity, price, at, label: `${verb} ${quantity} @ ${money.format(price)} · ${when.format(at)}` } as TradeMark];

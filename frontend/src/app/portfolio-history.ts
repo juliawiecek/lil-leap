@@ -100,7 +100,7 @@ export function chartRange(period: ChartPeriod, now: number, openedAt: number | 
 export function historyCoverage(range: ChartRange | null, points: readonly ValuePoint[]): ChartCoverage {
   const first = points[0], last = points.at(-1);
   const requested = { requestedStart: range?.start ?? null, requestedEnd: range?.end ?? null };
-  if (!first || !last) return { status: 'empty', start: null, end: null, ...requested };
+  if (!first || !last) { return { status: 'empty', start: null, end: null, ...requested }; }
   return { status: range && (first.at > range.start || last.at < range.end) ? 'partial' : 'complete',
     start: first.at, end: last.at, ...requested };
 }
@@ -111,8 +111,8 @@ export const PORTFOLIO_PERIOD_LABELS: Record<ChartPeriod, string> = {
 
 export function portfolioPeriodLabel(period: ChartPeriod, range: ChartRange | null, points: readonly ValuePoint[]): string {
   const coverage = historyCoverage(range, points);
-  if (coverage.status === 'empty') return 'Change unavailable';
-  if (coverage.status === 'partial') return 'Available history';
+  if (coverage.status === 'empty') { return 'Change unavailable'; }
+  if (coverage.status === 'partial') { return 'Available history'; }
   return range?.fromOpening ? 'Since first record' : PORTFOLIO_PERIOD_LABELS[period];
 }
 
@@ -213,11 +213,11 @@ export function portfolioSeries(
     const value = valueAt(at, sortedCash, sortedShares, recorded);
     // Keep only the continuous supported suffix. Connecting across an unknown valuation
     // would imply performance that cannot be established from the observations.
-    if (value === null) points.length = 0;
-    else points.push({ at, value });
+    if (value === null) { points.length = 0; }
+    else { points.push({ at, value }); }
   }
   if (liveValue !== null && Number.isFinite(liveValue)) {
-    if (points.at(-1)?.at === range.end) points.pop();
+    if (points.at(-1)?.at === range.end) { points.pop(); }
     points.push({ at: range.end, value: liveValue });
   }
   return points;
@@ -236,7 +236,7 @@ function valueAt(at: number, cash: readonly CashEvent[], shares: readonly ShareE
     if (quantity) {
       const series = prices.get(symbol) ?? [];
       const price = priceAt(series, at);
-      if (price === null || quantity < -1e-8) return null;
+      if (price === null || quantity < -1e-8) { return null; }
       total += quantity * price;
     }
   }
@@ -249,10 +249,13 @@ export function portfolioEvents(movements: readonly { transactionId?: string; oc
   const cash: CashEvent[] = [];
   const seen = new Set<string>();
   for (const row of orders) {
-    if (row.status !== 'FILLED' || seen.has(row.orderId)) continue;
+    if (row.status !== 'FILLED' || seen.has(row.orderId)) { continue; }
     seen.add(row.orderId);
     const at = Date.parse(row.filledAt ?? ''), price = numericValue(row.fillPrice), quantity = numericValue(row.filledQuantity);
-    if (!Number.isFinite(at) || price === null || price <= 0 || quantity === null || quantity <= 0 || !['BUY', 'SELL'].includes(row.side) || !row.symbol) {
+    if (!Number.isFinite(at) || !['BUY', 'SELL'].includes(row.side) || !row.symbol) {
+      throw new Error('Executed transaction details are incomplete.');
+    }
+    if (price === null || price <= 0 || quantity === null || quantity <= 0) {
       throw new Error('Executed transaction details are incomplete.');
     }
     const signed = row.side === 'SELL' ? -quantity : quantity;
@@ -265,11 +268,11 @@ export function portfolioEvents(movements: readonly { transactionId?: string; oc
   }
   seen.clear();
   for (const row of movements) {
-    if (row.settlementStatus && row.settlementStatus !== 'SETTLED') continue;
-    if (row.transactionId && seen.has(row.transactionId)) continue;
-    if (row.transactionId) seen.add(row.transactionId);
+    if (row.settlementStatus && row.settlementStatus !== 'SETTLED') { continue; }
+    if (row.transactionId && seen.has(row.transactionId)) { continue; }
+    if (row.transactionId) { seen.add(row.transactionId); }
     const at = Date.parse(row.occurredAt), amount = numericValue(row.amount);
-    if (!Number.isFinite(at) || amount === null) throw new Error('Cash history is incomplete.');
+    if (!Number.isFinite(at) || amount === null) { throw new Error('Cash history is incomplete.'); }
     cash.push({ at, amount });
   }
   return { cash, shares };
@@ -277,13 +280,20 @@ export function portfolioEvents(movements: readonly { transactionId?: string; oc
 
 /** A capped/imported ledger must agree with the current snapshot before claiming history. */
 export function ledgerMatches(snapshot: Portfolio, cash: readonly CashEvent[], shares: readonly ShareEvent[]): boolean {
-  if (!cash.every(e => Number.isFinite(e.at) && Number.isFinite(e.amount)) ||
-      !shares.every(e => Number.isFinite(e.at) && Number.isFinite(e.quantity) && Number.isFinite(e.price) && e.price > 0 && !!e.symbol) ||
-      !snapshot.holdings.every(h => !!h.symbol && Number.isFinite(h.quantity) && h.quantity > 0)) return false;
-  if (Math.abs(snapshot.cash - cash.reduce((sum, e) => sum + e.amount, 0)) > .011) return false;
+  if (!cash.every(e => Number.isFinite(e.at) && Number.isFinite(e.amount))) {
+    return false;
+  }
+  const validShares = shares.every(e => {
+    const finite = Number.isFinite(e.at) && Number.isFinite(e.quantity) && Number.isFinite(e.price);
+    return finite && e.price > 0 && !!e.symbol;
+  });
+  if (!validShares || !snapshot.holdings.every(h => !!h.symbol && Number.isFinite(h.quantity) && h.quantity > 0)) {
+    return false;
+  }
+  if (Math.abs(snapshot.cash - cash.reduce((sum, e) => sum + e.amount, 0)) > .011) { return false; }
   const quantities = new Map<string, number>();
-  for (const e of shares) quantities.set(e.symbol, (quantities.get(e.symbol) ?? 0) + e.quantity);
-  for (const h of snapshot.holdings) quantities.set(h.symbol, (quantities.get(h.symbol) ?? 0) - h.quantity);
+  for (const e of shares) { quantities.set(e.symbol, (quantities.get(e.symbol) ?? 0) + e.quantity); }
+  for (const h of snapshot.holdings) { quantities.set(h.symbol, (quantities.get(h.symbol) ?? 0) - h.quantity); }
   return Number.isFinite(snapshot.cash) && [...quantities.values()].every(q => Number.isFinite(q) && Math.abs(q) < 1e-8);
 }
 
@@ -305,9 +315,9 @@ export function priceAt(series: readonly PricePoint[], at: number): number | nul
  * Inputs are normalized chronologically by the chart; calculations retain the full source.
  */
 export function plotSeries(points: readonly ValuePoint[], limit: number): ValuePoint[] {
-  if (!Number.isFinite(limit) || limit < 2 || points.length <= limit) return [...points];
+  if (!Number.isFinite(limit) || limit < 2 || points.length <= limit) { return [...points]; }
   const count = Math.floor(limit);
-  if (count < 6) return [points[0], points[points.length - 1]];
+  if (count < 6) { return [points[0], points[points.length - 1]]; }
   const buckets = Math.max(1, Math.floor((count - 2) / 4));
   const first = points[0], last = points[points.length - 1];
   const span = Math.max(1, last.at - first.at);

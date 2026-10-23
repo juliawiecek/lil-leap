@@ -4,11 +4,11 @@ import type { TradeMark } from './trade-marks';
 import type { Indicator } from './technical-chart-math';
 
 export function describeTrades(trades: readonly TradeMark[], last: number | undefined, cost: number | null, hidden = false): string {
-  if (hidden) return 'Your trade details and average cost are hidden.';
+  if (hidden) { return 'Your trade details and average cost are hidden.'; }
   const recorded = trades.filter(t => Number.isFinite(t.at) && Number.isFinite(t.quantity) && t.quantity > 0 && Number.isFinite(t.price));
   const lines = recorded.slice(-3).map(t => `You ${t.side === 'BUY' ? 'bought' : 'sold'} ${t.quantity} ${t.quantity === 1 ? 'share' : 'shares'} on ${chartDate(t.at)} at ${chartValue(t.price, { currency: 'USD' })}.`);
-  if (recorded.length > 3) lines.unshift(`${recorded.length} trades are recorded in this view; the latest three follow. The table includes every trade.`);
-  if (last !== undefined && cost !== null && Number.isFinite(cost)) lines.push(`The latest price is ${last > cost ? 'above' : last < cost ? 'below' : 'equal to'} your average cost of ${chartValue(cost, { currency: 'USD' })}.`);
+  if (recorded.length > 3) { lines.unshift(`${recorded.length} trades are recorded in this view; the latest three follow. The table includes every trade.`); }
+  if (last !== undefined && cost !== null && Number.isFinite(cost)) { lines.push(`The latest price is ${last > cost ? 'above' : last < cost ? 'below' : 'equal to'} your average cost of ${chartValue(cost, { currency: 'USD' })}.`); }
   return lines.join(' ');
 }
 
@@ -27,7 +27,7 @@ export function technicalTable(points: readonly PricePoint[], series: readonly I
     const complete = bars.length === ps.length;
     const volumes = bars.map(b => b.volume);
     const matches = trades.filter(t => t.at >= first.at && t.at <= last.at && !includedTrades.has(t));
-    for (const trade of matches) includedTrades.add(trade);
+    for (const trade of matches) { includedTrades.add(trade); }
     return [grouped ? key : chartDate(first.at), number(complete ? bars[0].open : null),
       number(complete ? Math.max(...bars.map(b => b.high)) : null), number(complete ? Math.min(...bars.map(b => b.low)) : null),
       number(last.price), ...values.map(v => number(v.get(last.at))),
@@ -37,10 +37,10 @@ export function technicalTable(points: readonly PricePoint[], series: readonly I
   });
   // Fills can occur between price observations. Include them explicitly rather than rounding
   // their times or silently omitting markers that do not coincide with an OHLC close.
-  if (!hidden) for (const t of trades) {
-    if (includedTrades.has(t)) continue;
+  if (!hidden) { for (const t of trades) {
+    if (includedTrades.has(t)) { continue; }
     rows.push([chartDate(t.at), 'Not a price observation', '', '', '', ...series.map(() => ''), '', `${t.side === 'BUY' ? 'Bought' : 'Sold'} ${t.quantity} at ${chartValue(t.price, { currency: 'USD' })}`]);
-  }
+  } }
   return { grouped, columns: ['Time (New York)', 'Open (USD)', 'High (USD)', 'Low (USD)', 'Close / price (USD)', ...series.map(s => `${s.name} (USD)`), 'Reported volume (shares)', 'Your trades'], rows,
     references: !hidden && averageCost !== null && Number.isFinite(averageCost) ? [{ label: 'Average cost reference', value: chartValue(averageCost, { currency: 'USD' }) }] : [],
     note: grouped ? `Grouped by New York day from ${points.length} observations. Open is first, high/low retain extremes, close and indicators are last, and volume is summed only when every bar reports it. Trade times are preserved. Choose every observation for exact prices.` : 'Unavailable means the feed did not provide OHLC/volume or the indicator has insufficient data. Trades between observations have their own rows.' };

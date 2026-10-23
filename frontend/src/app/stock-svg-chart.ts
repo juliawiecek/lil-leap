@@ -202,7 +202,7 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       ...(this.accessOpening() !== null ? [{ label: 'Session open', value: chartValue(this.accessOpening()!, { currency: this.accessCurrency() }) }] : []),
       ...(!this.privateValues() && this.averageCost() !== null && Number.isFinite(this.averageCost()) ? [{ label: 'Average cost reference', value: chartValue(this.averageCost()!, { currency: this.accessCurrency() }) }] : []),
     ];
-    if (this.privateValues() || !this.viewTrades().length) return table;
+    if (this.privateValues() || !this.viewTrades().length) { return table; }
     return { ...table, columns: [...table.columns, 'Your trades'], rows: [
       ...table.rows.map(row => [...row, '']),
       ...this.viewTrades().map(t => [chartDate(t.at), ...table.columns.slice(1).map(() => ''), `${t.side === 'BUY' ? 'Bought' : 'Sold'} ${t.quantity} at ${chartValue(t.price, { currency: this.accessCurrency() })}`]),

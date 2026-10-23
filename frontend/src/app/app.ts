@@ -278,7 +278,7 @@ export class App implements AfterViewInit, OnDestroy {
     this.confirmationDraft.set('');
     this.passwordStarted.set(!!this.password.nativeElement.value);
     this.authMode.set(mode);
-    if (globalThis.document) globalThis.document.title = `${TITLES[mode]} · NextTrade`;
+    if (globalThis.document) { globalThis.document.title = `${TITLES[mode]} · NextTrade`; }
     this.formStatus.set('');
 
     if (this.focusTimer) {
