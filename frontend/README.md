@@ -54,7 +54,7 @@ the tab removes its recoverable session. Reloading never resets the ten-minute
 inactivity deadline (BR-03; keep `SESSION_INACTIVITY_MINUTES` in step with Identity).
 
 Pages use Angular routes: `/dashboard`, `/orders`, `/history`, `/settings`,
-`/watchlist`, `/portfolio`, and the advanced-tier `/markets`, `/screeners`.
+`/watchlist`, `/portfolio`, and the tier-specific `/learn`, `/markets`, `/screeners`.
 Search, chart/panel choices and history filters are URL parameters, so reload and
 Back/Forward restore them. API data reloads from the server; order drafts do not.
 Both nginx clients already fall back to `index.html` for deep links.

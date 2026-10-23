@@ -22,7 +22,7 @@
 </div>
 
 @if (notice()) {
-  <p class="activity-message notice" role="status" appFocusAfterChange>{{ notice() }}</p>
+  <p class="activity-message notice" role="status">{{ notice() }}</p>
 }
 @if (error()) {
   <p class="activity-message error" role="alert">{{ error() }}</p>
@@ -41,7 +41,7 @@
       }
     </p>
   } @else {
-    <ol class="activity-list" [class.refreshing]="loading()" aria-live="off" aria-label="Activity, newest first">
+    <ol class="activity-list" [class.refreshing]="loading()" aria-live="polite" aria-label="Activity, newest first">
       @for (item of items(); track item.id) {
         <li class="activity-item" [class.cash]="item.kind === 'cash'">
           <time [attr.datetime]="item.at">{{ when(item.at) }}</time>
@@ -57,13 +57,13 @@
           @if (canCancel(item)) {
             <span class="actions">
               @if (confirming() === item.orderId) {
-                <span class="confirm" role="group" appFocusAfterChange [attr.aria-label]="'Cancel ' + item.title + '?'">
+                <span class="confirm" role="group" [attr.aria-label]="'Cancel ' + item.title + '?'">
                   Cancel this order?
                   <button type="button" class="danger" [disabled]="cancelling()" (click)="confirmCancel(item)">Yes, cancel</button>
-                  <button type="button" (click)="keepOrder(item)">Keep</button>
+                  <button type="button" (click)="confirming.set(null)">Keep</button>
                 </span>
               } @else {
-                <button type="button" [appFocusAfterChange]="returnToOrder() === item.orderId" (click)="askCancel(item)">Cancel</button>
+                <button type="button" (click)="askCancel(item)">Cancel</button>
               }
             </span>
           }

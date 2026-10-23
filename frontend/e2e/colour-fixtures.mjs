@@ -22,12 +22,8 @@ export async function colourFixture(page, tier = 'NOVICE', { marketOpen = true }
     else if (path.includes('/quotes/candles/')) json = Array.from({ length: 121 }, (_, i) => ({ time: new Date(Date.parse('2026-10-21T13:29:00Z') + i * 60000).toISOString(), open: 195, high: 202, low: 190, close: 200 + Math.sin(i / 7) * 2 }));
     else if (path.includes('/quotes/history/')) json = Array.from({ length: 121 }, (_, i) => ({ ...quotes[0], quotedAt: new Date(Date.parse('2026-10-21T13:30:00Z') + i * 60000).toISOString(), midpoint: 200 + Math.sin(i / 7) * 2 }));
     else if (path.endsWith('/market/status')) json = { open: marketOpen, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-22T13:30:00Z', nextClose: '2026-10-21T20:00:00Z' };
-    else if (path.endsWith('/orders')) json = [
-      { orderId: uuid, symbol: 'AAPL', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: '2026-10-21T14:00:00Z', filledAt: '2026-10-21T14:00:00Z', filledQuantity: 2, fillPrice: 195 },
-      { orderId: second.instrumentId, symbol: 'MSFT', side: 'BUY', quantity: 1, status: 'FILLED', submittedAt: '2026-10-21T14:00:00Z', filledAt: '2026-10-21T14:00:00Z', filledQuantity: 1, fillPrice: 200 },
-    ];
-    // The complete test ledger must reconcile with every holding and the cash snapshot.
-    else if (path.endsWith('/accounts/cash-activity')) json = [{ transactionId: uuid, accountId: uuid, type: 'DEPOSIT', amount: 5090, occurredAt: '2026-10-19T12:00:00Z' }];
+    else if (path.endsWith('/orders')) json = [{ orderId: uuid, symbol: 'AAPL', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: '2026-10-21T14:00:00Z', filledAt: '2026-10-21T14:00:00Z', filledQuantity: 2, fillPrice: 195 }];
+    else if (path.endsWith('/accounts/cash-activity')) json = [{ transactionId: uuid, accountId: uuid, type: 'DEPOSIT', amount: 4890, occurredAt: '2026-10-19T12:00:00Z' }];
     await route.fulfill({ json });
   });
 }

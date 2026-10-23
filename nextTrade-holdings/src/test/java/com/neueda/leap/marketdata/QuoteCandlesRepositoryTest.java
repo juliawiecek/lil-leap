@@ -55,25 +55,9 @@ class QuoteCandlesRepositoryTest {
         when(rs.getBigDecimal("high")).thenReturn(new BigDecimal("225.47"));
         when(rs.getBigDecimal("low")).thenReturn(new BigDecimal("224.60"));
         when(rs.getBigDecimal("close")).thenReturn(new BigDecimal("225.28"));
-        when(rs.getBigDecimal("bid_close")).thenReturn(new BigDecimal("225.26789123"));
-        OffsetDateTime observed = bucket.plusSeconds(47);
-        when(rs.getObject("observed_at", OffsetDateTime.class)).thenReturn(observed);
 
         assertThat(mapper.getValue().mapRow(rs, 0)).isEqualTo(new PriceCandle(bucket,
-                new BigDecimal("225.12"), new BigDecimal("225.47"), new BigDecimal("224.60"), new BigDecimal("225.28"),
-                new BigDecimal("225.26789123"), observed));
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void historicalBidAndMidpointUseTheSameFinalObservationAndStableTieBreaks() {
-        when(jdbc.query(anyString(), any(RowMapper.class), any(), any(), any(), any())).thenReturn(List.of());
-        repository.findCandles(instrument, CandleInterval.ONE_DAY, 7);
-        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-        verify(jdbc).query(sql.capture(), any(RowMapper.class), any(), any(), any(), any());
-        assertThat(sql.getValue()).contains("q.mid ORDER BY q.quoted_at DESC, q.created_at DESC, q.quote_id DESC",
-                "q.bid ORDER BY q.quoted_at DESC, q.created_at DESC, q.quote_id DESC",
-                "MAX(q.quoted_at) AS observed_at", "quoted_at <= CURRENT_TIMESTAMP");
+                new BigDecimal("225.12"), new BigDecimal("225.47"), new BigDecimal("224.60"), new BigDecimal("225.28")));
     }
 
     @ParameterizedTest

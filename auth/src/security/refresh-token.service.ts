@@ -38,7 +38,7 @@ export class RefreshTokenService {
   async issue(user: User): Promise<string> {
     return this.sessionRepository.manager.transaction(async manager => {
       const current = await this.lockUser(manager, user.userId);
-      if (!current || current.passwordHash !== user.passwordHash) { throw new InvalidRefreshTokenException(); }
+      if (!current || current.passwordHash !== user.passwordHash) throw new InvalidRefreshTokenException();
       return this.createSession(current, manager.getRepository(Session));
     });
   }
@@ -59,7 +59,7 @@ export class RefreshTokenService {
   async rotate(rawRefreshToken: string): Promise<RotationResult> {
     const tokenHash = this.hash(rawRefreshToken);
     const session = await this.sessionRepository.findOne({ where: { tokenHash }, relations: ['user'] });
-    if (!session) { throw new InvalidRefreshTokenException(); }
+    if (!session) throw new InvalidRefreshTokenException();
     const result = await this.sessionRepository.manager.transaction(async manager => {
       const user = await this.lockUser(manager, session.user.userId);
       const repository = manager.getRepository(Session);
@@ -67,10 +67,10 @@ export class RefreshTokenService {
         throw new InvalidRefreshTokenException();
       }
       // Commit revocation for an inactive account before rejecting the refresh.
-      if (user.userStatus !== 'ACTIVE') { return null; }
+      if (user.userStatus !== 'ACTIVE') return null;
       return { user, newRawRefreshToken: await this.createSession(user, repository) };
     });
-    if (!result) { throw new InvalidRefreshTokenException(); }
+    if (!result) throw new InvalidRefreshTokenException();
     return result;
   }
 
@@ -88,7 +88,7 @@ export class RefreshTokenService {
    * refresh token stops working. Pass the caller's transaction manager to make it atomic with the change.
    */
   async revokeAllForUser(userId: string, manager?: EntityManager): Promise<void> {
-    if (!manager) { return this.sessionRepository.manager.transaction(tx => this.revokeAllForUser(userId, tx)); }
+    if (!manager) return this.sessionRepository.manager.transaction(tx => this.revokeAllForUser(userId, tx));
     await this.lockUser(manager, userId);
     const now = new Date();
     await manager.update(Session, { user: { userId }, revokedAt: IsNull() }, { revokedAt: now, lastActiveAt: now });

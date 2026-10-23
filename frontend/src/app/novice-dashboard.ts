@@ -1,6 +1,3 @@
-import { ChartAccess, ChartFocus } from './chart-access';
-import { allocation, chartPoints, type ChartSeries } from './chart-data';
-import { categoryDescription, categoryTable, chartValue } from '../../../shared/chart-description';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
@@ -21,7 +18,7 @@ import {
   hasOpenOrders,
   newlyFilled,
 } from './order-history-api';
-import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, hasMarketValuation, valuePortfolio } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { interval, Subject, startWith, takeUntil } from 'rxjs';
 import { closedMarketWarning, localOpeningTime, marketStatusLabel, marketStatusText } from './market-status-api';
@@ -38,7 +35,7 @@ import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, startValue, tradingSession,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
@@ -48,7 +45,6 @@ import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { SwitchScanService } from './switch-scan';
-import { FocusAfterChange } from './focus-after-change';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -69,12 +65,16 @@ function storedSidebarWidth(): number {
     return SIDEBAR_DEFAULT;
   }
 }
+/** Sector colours on the Overview allocation ring, largest sector first: NextTrade green, then muted hues. */
+/** Theme tokens (public/theme-tokens.css), so the colours follow the red-green and blue-yellow modes. */
 const SECTOR_COLORS = Array.from({ length: 7 }, (_, i) => `var(--sector-${i + 1})`);
 /** How often prices, and so the overview chart's live line, refresh on the novice dashboard. */
 export const NOVICE_REFRESH_MS = 3000;
 /** Live values kept for the chart: a day of three-second updates. */
 const LIVE_POINTS = 28800;
-
+const PERIOD_LABELS: Record<ChartPeriod, string> = {
+  '1D': 'Today', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
+};
 
 /**
  * When the account first held money: its first deposit, transfer or fill. Before that it was
@@ -124,7 +124,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, FocusAfterChange, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, AccountSettings,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -235,8 +235,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     } else if (event.key === 'Home' || event.key === 'End') {
       event.preventDefault();
       this.#setSidebarWidth(event.key === 'Home' ? SIDEBAR_MIN : SIDEBAR_MAX);
-    } else {
-      // Other keys retain their native browser behavior.
     }
   }
 
@@ -275,7 +273,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Balances could not be read: the service is down or unreachable (PS-11). */
   readonly serviceDown = signal(false);
   readonly query = signal('');
-  readonly showBalance = signal(true);
   /** "Good Morning" / "Good Afternoon" / "Good Evening" by the client's own clock (PS-06). */
   readonly greeting = computed(() => {
     const hour = this.marketClock().getHours();
@@ -317,7 +314,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly holdings = signal<Holding[]>([]);
   /** False until the first balances arrive, so placeholders never show as real zeroes (PS-06). */
   readonly portfolioLoaded = signal(false);
-  readonly allocationReady = signal(false);
   /** Today's move across holdings, from each stock's change since the day's first quote. */
   readonly todayReturn = signal(0);
   readonly todayReturnPercent = signal(0);
@@ -327,14 +323,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartHistory = signal<ValuePoint[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
-  #portfolioRequest = 0;
-  #orderRequest = 0;
-  readonly chartNotice = signal('');
-  readonly chartSeries = computed<ChartSeries>(() => ({ id: 'portfolio:' + (this.selectedAccount()?.account_id ?? 'all'),
-    label: 'Portfolio value', unit: 'USD', points: this.chartLoading() || this.chartError() ? [] : chartPoints(this.chartPoints(), p => p.at, p => p.value),
-    coverage: historyCoverage(this.chartSpan(), this.chartLoading() || this.chartError() ? [] : this.chartPoints()),
-    status: this.chartLoading() ? 'loading' : this.chartError() ? 'error' : this.chartPoints().length ? 'ready' : 'unavailable',
-    note: this.chartError() || this.chartNotice() }));
   /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
   readonly spokenStock = spokenCompany;
   /** The last chart summary said aloud, for screen readers (a polite live region). */
@@ -344,22 +332,21 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartScrub = signal<ValuePoint | null>(null);
   /** The big number: the scrubbed point's value, otherwise the live total. */
   readonly headerValue = computed(() => this.chartScrub()?.value ?? this.portfolioValue());
-  readonly chartChangeAvailable = computed(() => !this.chartLoading() && !this.chartError() && this.chartPoints().length >= 2);
   /**
    * The line under the big number: how much the value moved over the chosen period (or up to the
-   * scrubbed point). The template waits for a usable history before displaying a change.
+   * scrubbed point), as brokerage apps show it. Before the chart loads, today's move.
    */
   readonly headerChange = computed(() => {
     const points = this.chartPoints();
     if (points.length < 2) {
-      return { amount: 0, percent: 0, label: 'Change unavailable' };
+      return { amount: this.todayReturn(), percent: this.todayReturnPercent(), label: 'Today' };
     }
-    // A real zero balance at the range start must not be replaced by a later deposit.
+    // Measured from when the account first held money, not from the $0 before it existed.
     const start = startValue(points);
     const scrub = this.chartScrub();
     const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
     const span = this.chartSpan();
-    let label = portfolioPeriodLabel(this.chartPeriod(), span, points);
+    let label = span?.fromOpening ? 'Since opening' : PERIOD_LABELS[this.chartPeriod()];
     if (span?.session && centralDay(span.session.open) !== centralDay(this.marketClock())) {
       // Before today's open: the last session's move, named by its day.
       label = centralTime(span.session.open, { weekday: 'long' });
@@ -367,12 +354,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (scrub) {
       label = `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`;
     }
-    return { amount, percent: start > 0 ? (amount / start) * 100 : null, label };
+    return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
   });
   /** "+$1.30 (+0.01%)" / "−$0.90 (−0.00%)". */
   readonly headerChangeText = computed(() => {
     const { amount, percent } = this.headerChange();
-    if (percent === null) { return `${formatMoney(amount, true)} (percentage unavailable)`; }
     let sign: string;
     if (amount > 0) {
       sign = '+';
@@ -395,10 +381,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const now = this.feed.now();
     return this.feed.quotes().some((q) => held.has(q.symbol) && isDelayed(q.quotedAt, now));
   });
-  /** Stocks' share of the total, unrounded, so even small holdings retain their arc. */
+  /** Stocks' share of the total, unrounded, for the allocation ring. */
   readonly stocksShare = computed(() => {
     const { total, stocksValue } = this.assetAllocation();
-    return this.allocationReady() && total > 0 ? stocksValue / total * 100 : 0;
+    return total > 0 ? Math.min(100, Math.max(0, (stocksValue / total) * 100)) : 0;
   });
   /**
    * The value at every live update since the page opened (one per price update, about every five
@@ -411,13 +397,16 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   readonly chartPoints = computed(() => {
     const history = this.chartHistory();
-    if (!this.portfolioLoaded()) { return history; }
+    if (history.length < 2 || !this.portfolioLoaded()) {
+      return history;
+    }
     const range = this.chartSpan();
+    const session = range?.session;
     // Quotes keep arriving outside order-execution hours. Keep their actual times instead of
     // moving the closing point's price while its timestamp (and the viewport) stays frozen.
-    let live = this.chartLive().filter((p) => p.at >= (history[0]?.at ?? range?.start ?? 0));
-    if (range && this.chartPeriod() !== '1D') {
-      // Longer periods retain the last live observation per price bar.
+    let live = this.chartLive().filter((p) => p.at >= history[0].at);
+    if (range && !session) {
+      // Longer periods space points evenly, so live values are kept one per price bar, as the history is.
       live = lastPerBar(live, barStep(range).ms);
     }
     if (!live.length) {
@@ -447,15 +436,17 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly stockChartLive = signal<ValuePoint[]>([]);
   readonly stockChartLoading = signal(false);
   readonly stockChartError = signal('');
-  readonly stockChartChangeAvailable = computed(() => !this.stockChartLoading() && !this.stockChartError() && this.stockChartPoints().length >= 2);
   readonly stockChartScrub = signal<ValuePoint | null>(null);
   #stockChartRequest = 0;
   #stockChartTimer: ReturnType<typeof setTimeout> | undefined;
   readonly stockChartPoints = computed(() => {
     const history = this.stockChartHistory();
+    if (history.length < 2) {
+      return history;
+    }
     const range = this.stockChartSpan();
-    let live = this.stockChartLive().filter((p) => p.at >= (history[0]?.at ?? range?.start ?? 0));
-    if (range && this.stockChartPeriod() !== '1D') {
+    let live = this.stockChartLive().filter((p) => p.at >= history[0].at);
+    if (range && !range.session) {
       live = lastPerBar(live, barStep(range).ms);
     }
     return live.length ? [...history.filter((p) => p.at < live[0].at), ...live] : history;
@@ -467,15 +458,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const points = this.stockChartPoints();
     const scrub = this.stockChartScrub();
     if (points.length < 2) {
-      return { amount: 0, percent: null, label: 'Change unavailable' };
+      return { amount: 0, percent: 0, label: PERIOD_LABELS[this.stockChartPeriod()] };
     }
     // Measured from the same starting value the chart draws its dotted baseline at, as on Overview.
     const start = startValue(points);
     const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
     const label = scrub
       ? `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`
-      : portfolioPeriodLabel(this.stockChartPeriod(), this.stockChartSpan(), points);
-    return { amount, percent: start > 0 ? (amount / start) * 100 : null, label };
+      : PERIOD_LABELS[this.stockChartPeriod()];
+    return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
   });
   readonly side = signal('Buy');
   readonly quantity = signal('');
@@ -582,33 +573,26 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       ? 'Investments by sector: ' + sectors.map((s) => `${s.name} ${s.percent} percent`).join(', ')
       : 'No investments yet';
   });
-  readonly allocationSeries = computed<readonly ChartSeries[]>(() => this.allocationReady() ? this.allocationCategories().map(c => ({
-    id: 'allocation:' + c.label, label: c.label, unit: 'USD', status: 'ready', points: [{ time: this.feed.now(), value: c.value }],
-  })) : []);
-  readonly allocationCategories = computed(() => {
-    return this.sectorAllocation().sectors.map(s => ({ label: s.name, value: s.value, percent: s.percent }));
-  });
-  readonly allocationDescription = computed(() => !this.portfolioLoaded() ? 'Asset allocation. Balances have not loaded yet.' : !this.allocationReady() ? 'Asset allocation unavailable until all holdings have market quotes.' : categoryDescription('Allocation by sector', this.allocationCategories(), !this.showBalance()) + (this.showBalance() ? ' Shares are percentages of invested money. Cash, not invested: ' + chartValue(this.sectorAllocation().cash, { currency: 'USD' }) + '.' : ''));
-  readonly allocationTable = computed(() => {
-    if (!this.portfolioLoaded() || !this.allocationReady()) { return {
-      columns: ['Sector', 'Value (USD)', 'Share of investments'], rows: [],
-      note: !this.portfolioLoaded() ? 'Balances have not loaded yet.' : 'Allocation is unavailable until all holdings have market quotes.',
-    }; }
-    return { ...categoryTable(this.allocationCategories(), !this.showBalance()),
-      columns: ['Sector', 'Value (USD)', 'Share of investments'],
-      references: this.showBalance() ? [{ label: 'Cash, not invested', value: chartValue(this.sectorAllocation().cash, { currency: 'USD' }) }] : [],
+  readonly assetAllocation = computed(() => {
+    const stocksValue = this.holdings().reduce((sum, h) => sum + h.value, 0);
+    const cashValue = this.buyingPower();
+    const total = stocksValue + cashValue;
+    if (total <= 0) {
+      return { total: 0, stocksValue: 0, stocksPercent: 0, cashValue: 0, cashPercent: 100 };
+    }
+    return {
+      total,
+      stocksValue,
+      stocksPercent: Math.round((stocksValue / total) * 100),
+      cashValue,
+      cashPercent: Math.round((cashValue / total) * 100),
     };
   });
-  readonly assetAllocation = computed(() => allocation(
-    this.holdings().reduce((sum, h) => sum + h.value, 0), this.buyingPower(),
-  ));
-
   navigate(tab: string): void {
     this.activeTab.set(tab);
     this.routing?.go(tab);
     this.notifications.set(false);
   }
-
   openModal(kind: string): void {
     this.modal.set(kind);
     this.dialog()?.nativeElement.showModal();
@@ -616,8 +600,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   closeModal(): void {
     this.stockMenuOpen.set(false);
     clearTimeout(this.#stockChartTimer);
-    ++this.#stockChartRequest;
-    this.stockChartScrub.set(null);
     this.dialog()?.nativeElement.close();
   }
   /** "?" opens Keyboard Shortcuts from anywhere, unless another dialog is already open (PS-17). */
@@ -669,7 +651,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.stockChartLive.set([]);
     this.stockChartHistory.set([]);
     this.stockChartSpan.set(null);
-    this.stockChartError.set('');
     void this.loadStockChart();
   }
 
@@ -686,23 +667,24 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.feed.quotes().find((q) => q.symbol === quote.symbol)?.instrumentId;
     if (!quote.symbol || !id) {
       this.stockChartHistory.set([]);
-      this.stockChartLoading.set(false);
-      this.stockChartError.set('Price history is unavailable for this stock.');
       return;
     }
     this.stockChartLoading.set(true);
     try {
       const now = Date.now();
+      const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
       // A stock has no "opening" date like an account; ALL reaches back five years.
-      const range = chartRange(this.stockChartPeriod(), now, now - 5 * 365 * 24 * 60 * 60 * 1000);
-      range.fromOpening = false;
+      const range = chartRange(this.stockChartPeriod(), now, now - 5 * 365 * 24 * 60 * 60 * 1000, session);
+      if (this.stockChartPeriod() === '1D') {
+        range.end = now;
+      }
       const { interval, limit } = barStep(range);
       const closes = await this.feed.client.closes(id, interval, limit, now);
       if (request !== this.#stockChartRequest || this.destroyed) {
         return;
       }
       this.stockChartSpan.set(range);
-      this.stockChartHistory.set(chartPoints(closes, p => p.at, p => p.price).filter(p => p.time >= range.start && p.time <= range.end).map(p => ({ at: p.time, value: p.value })));
+      this.stockChartHistory.set(closes.filter((p) => p.at >= range.start && p.at <= range.end).map((p) => ({ at: p.at, value: p.price })));
       this.stockChartError.set('');
     } catch {
       if (request === this.#stockChartRequest) {
@@ -787,8 +769,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.stockMenuOpen.set(false);
     } else if (event.key === 'Tab') {
       this.stockMenuOpen.set(false);
-    } else {
-      // Other keys retain their native browser behavior.
     }
   }
 
@@ -975,15 +955,12 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   /** Reloads buying power and holdings; prices come from the shared feed. A failure keeps the last values. */
   async refreshPortfolio(): Promise<void> {
-    const request = ++this.#portfolioRequest;
-    const accountId = this.selectedAccount()?.account_id;
     try {
-      const portfolio = await this.portfolioClient.load(accountId);
-      if (this.destroyed || request !== this.#portfolioRequest) { return; }
+      const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
+      if (this.destroyed) { return; }
       this.applyPortfolio(portfolio);
       this.serviceDown.set(false);
     } catch {
-      if (request !== this.#portfolioRequest || this.destroyed) { return; }
       // A banner says so and offers a retry; the last values stay on screen.
       this.serviceDown.set(true);
     }
@@ -1000,7 +977,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    * fills, so a fill from an order queued for the open shows without a page reload (PS-10).
    */
   async watchOrders(): Promise<void> {
-    const request = ++this.#orderRequest;
     clearTimeout(this.#ordersTimer);
     let rows: OrderHistoryRow[];
     try {
@@ -1009,7 +985,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       return;
     }
     if (this.destroyed) { return; }
-    if (request !== this.#orderRequest) { return; }
     const fills = newlyFilled(this.#lastOrderRows, rows);
     this.#lastOrderRows = rows;
     if (fills.length) {
@@ -1043,9 +1018,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       end: points.at(-1)?.value ?? this.portfolioValue(),
       // A period reaching back before the account had money starts from its first deposit.
       fromOpening: !!this.chartSpan()?.fromOpening || (points[0]?.value ?? 0) === 0,
-      balanceHidden: !this.showBalance(),
+      balanceHidden: false,
       hasHistory: points.length >= 2 && !this.chartError(),
-      partial: historyCoverage(this.chartSpan(), points).status === 'partial',
     });
     this.chartAnnouncement.set(text);
     this.#switchScan?.announce(text);
@@ -1059,28 +1033,34 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const request = ++this.#chartRequest;
     clearTimeout(this.#chartTimer);
     const account = this.selectedAccount();
-    const period = this.chartPeriod();
     const filters = account ? { accountId: account.account_id } : {};
     this.chartLoading.set(true);
     try {
       const [movements, orders] = await Promise.all([this.cashActivityClient.list(filters), this.orderHistoryClient.list(filters)]);
-      if (request !== this.#chartRequest || this.destroyed) { return; }
       const now = Date.now();
-      const { cash, shares: fills } = portfolioEvents(movements, orders);
-      const range = chartRange(period, now, fundedAt(account?.created_at, cash));
+      const fills = orders
+        .filter((o) => o.status === 'FILLED' && o.fillPrice !== null && o.filledAt)
+        .map((o) => ({
+          at: Date.parse(o.filledAt!), symbol: o.symbol, price: o.fillPrice!,
+          quantity: (o.side.toUpperCase() === 'SELL' ? -1 : 1) * (o.filledQuantity ?? o.quantity),
+        }));
+      const cash = [
+        ...movements.map((m) => ({ at: Date.parse(m.occurredAt), amount: m.amount })),
+        ...fills.map((f) => ({ at: f.at, amount: -f.quantity * f.price })),
+      ].filter((e) => Number.isFinite(e.at));
+      const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
+      const range = chartRange(this.chartPeriod(), now, fundedAt(account?.created_at, cash), session);
+      if (this.chartPeriod() === '1D') {
+        // The demo quote feed runs after the regular session too; market hours gate fills,
+        // not the history we display. Include those recorded quotes on reload as well.
+        range.end = now;
+      }
       const prices = await this.#closes([...new Set(fills.map((f) => f.symbol))], range, now);
       if (request !== this.#chartRequest || this.destroyed) {
         return;
       }
       this.chartSpan.set(range);
-      const complete = ledgerMatches(this.#portfolio, cash, fills);
-      const points = complete ? portfolioSeries(range, cash, fills, prices) : [];
-      this.chartHistory.set(points);
-      this.chartNotice.set(!complete
-        ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
-        : !points.length || points[0].at > range.start
-          ? 'Earlier valuations are unavailable because historical prices are missing. Only the supported portion is shown.'
-          : 'Account value includes deposits and transfers.');
+      this.chartHistory.set(portfolioSeries(range, cash, fills, prices));
       this.chartError.set('');
     } catch {
       if (request === this.#chartRequest) {
@@ -1095,25 +1075,33 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       }
     }
   }
-  /** Historical bids, never today's spread applied to old midpoints. Raw recent quotes
-   * supplement coarse bid closes without replacing older observations. */
+  /**
+   * Recorded prices of each stock over the range; a stock whose prices fail falls back to its fill
+   * price. Recorded prices are midpoints while live values use the bid, so each is moved by the
+   * stock's current bid-to-midpoint ratio, and the history meets the live line without a jump.
+   */
   async #closes(symbols: string[], range: ChartRange, now: number): Promise<Map<string, PricePoint[]>> {
     const { interval, limit } = barStep(range);
     const ids = new Map([
-      ...this.instruments().map(i => [i.symbol, i.instrumentId] as const),
-      ...this.feed.quotes().map(q => [q.symbol, q.instrumentId] as const),
+      ...this.instruments().map((i) => [i.symbol, i.instrumentId] as const),
+      ...this.feed.quotes().map((q) => [q.symbol, q.instrumentId] as const),
     ]);
-    const entries = await Promise.all(symbols.map(async symbol => {
+    const prices = new Map<string, PricePoint[]>();
+    await Promise.all(symbols.map(async (symbol) => {
       const id = ids.get(symbol);
-      if (!id) { return [symbol, [] as PricePoint[]] as const; }
-      const [bars, recent] = await Promise.allSettled([
-        this.feed.client.closes(id, interval, limit, now, 'bid'),
-        Promise.resolve().then(() => this.feed.client.history(id, 1000, 'bid')),
-      ]);
-      const points = [...(bars.status === 'fulfilled' ? bars.value : []), ...(recent.status === 'fulfilled' ? recent.value : [])];
-      return [symbol, chartPoints(points, p => p.at, p => p.price).map(p => ({ at: p.time, price: p.value }))] as const;
+      if (!id) {
+        return;
+      }
+      const quote = this.feed.quotes().find((q) => q.symbol === symbol);
+      const toBid = quote && quote.bid > 0 && quote.price > 0 ? quote.bid / quote.price : 1;
+      try {
+        const closes = await this.feed.client.closes(id, interval, limit, now);
+        prices.set(symbol, closes.map((p) => ({ at: p.at, price: p.price * toBid })));
+      } catch {
+        // Valued at its last fill price instead.
+      }
     }));
-    return new Map(entries);
+    return prices;
   }
   #scheduleOrderWatch(): void {
     clearTimeout(this.#ordersTimer);
@@ -1123,7 +1111,6 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   #render(): void {
     const valuation = valuePortfolio(this.#portfolio, this.#bids, this.#dayChanges);
-    this.allocationReady.set(hasMarketValuation(this.#portfolio, this.#bids));
     this.holdings.set(
       valuation.holdings.map((h) => ({
         symbol: h.symbol,
@@ -1143,7 +1130,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.portfolioValue.set(valuation.total);
     this.todayReturn.set(valuation.dayGain);
     this.todayReturnPercent.set(valuation.dayGainPercent);
-    if (this.#liveRecording && this.allocationReady()) {
+    if (this.#liveRecording) {
       const at = Math.max(Date.now(), (this.chartLive().at(-1)?.at ?? 0) + 1);
       this.chartLive.update((points) => [...points.slice(-(LIVE_POINTS - 1)), { at, value: valuation.total }]);
     }
@@ -1176,17 +1163,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     // The other account's live values start once its balances arrive.
     this.#liveRecording = false;
     this.chartLive.set([]);
-    this.chartHistory.set([]);
-    this.chartScrub.set(null);
-    this.portfolioLoaded.set(false);
-    this.allocationReady.set(false);
-    const request = ++this.#chartRequest;
-    clearTimeout(this.#chartTimer);
-    this.chartLoading.set(true);
-    void this.refreshPortfolio().then(() => {
-      if (!this.destroyed && request === this.#chartRequest) { void this.loadChart(); }
-    });
+    void this.refreshPortfolio();
     void this.watchOrders();
+    void this.loadChart();
   }
 
   /** The plain-English reason an order was rejected; a generic one if it cannot be read. */
@@ -1222,7 +1201,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       accountId,
       now,
       market: this.marketStatus(),
-      balanceHidden: !this.showBalance(),
+      balanceHidden: false,
       total: this.portfolioValue(),
       gain: this.totalReturn(),
       gainPercent: this.totalReturnPercent(),

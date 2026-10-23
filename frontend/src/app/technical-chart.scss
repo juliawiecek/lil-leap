@@ -1,4 +1,4 @@
-:host { --plot-gutter: 156px; display: block; min-width: 0; padding: 0 12px; color: var(--text); }
+:host { display: block; min-width: 0; padding: 0 12px; color: var(--text); }
 .chart-tools { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 .chart-tools button { min-height: 28px; padding: 3px 9px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .chart-tools button:disabled { color: var(--text-muted); border-style: dashed; cursor: default; }
@@ -7,10 +7,6 @@
 .indicator-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .indicator-legend path, .indicator-label path { stroke-width: 2; stroke-linecap: round; }
 .indicator-legend small { display: block; color: var(--text-muted); font-size: 10px; }
-.swatch-up, .swatch-down, .swatch-flat { stroke-width: 1.25; }
-.swatch-up { fill: none; stroke: var(--chart-gain); }
-.swatch-down { fill: var(--chart-loss); stroke: var(--chart-loss); }
-.swatch-flat { stroke: var(--chart-neutral); stroke-width: 1.5; }
 .chart-conventions, .volume-unavailable { color: var(--text-muted); font-size: 11px; line-height: 1.5; margin: 8px 0; }
 .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 96px 52px; gap: 4px; }
 .technical-plot { width: 100%; height: 180px; display: block; overflow: hidden; }
@@ -38,14 +34,9 @@
 .price-axis { display: flex; flex-direction: column; justify-content: space-between; border-left: 1px solid var(--control-border); padding-left: 4px; font-size: 10px; color: var(--text-muted); }
 .chart-times { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0 6px; font-size: 9px; color: var(--text-muted); }
 .candle-detail { font-size: 11px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
-.volume-plot { display: block; height: 44px; width: calc(100% - var(--plot-gutter)); }
-.rsi-wrap { position: relative; }
-.rsi-plot { display: block; height: 60px; width: calc(100% - var(--plot-gutter)); }
-.rsi-band { fill: var(--surface-tone-08); }
-.rsi-guide { stroke: var(--control-border); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.rsi-level { position: absolute; left: calc(100% - var(--plot-gutter) + 8px); transform: translateY(-50%); font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.volume-plot { display: block; height: 44px; width: calc(100% - 156px); }
 .volume-bar { stroke: var(--chart-loss); stroke-width: 1.25; vector-effect: non-scaling-stroke; }
 .volume-bar.up { stroke: var(--chart-gain); }
 .volume-bar.flat { stroke: var(--chart-neutral); stroke-dasharray: 2 2; }
 .hatch-line { stroke: var(--chart-loss); stroke-width: 1; }
-@media (max-width: 480px) { :host { --plot-gutter: 125px; } .chart-layout { grid-template-columns: minmax(0, 1fr) 75px 42px; } .indicator-label { font-size: 10px; } }
+@media (max-width: 480px) { .chart-layout { grid-template-columns: minmax(0, 1fr) 75px 42px; } .volume-plot { width: calc(100% - 125px); } .indicator-label { font-size: 10px; } }

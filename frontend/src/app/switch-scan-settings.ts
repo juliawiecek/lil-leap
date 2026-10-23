@@ -67,8 +67,7 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
   `,
   styles: [
     `
-      :host { display: block; min-width: 0; }
-      .card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: var(--setting-card-padding, 14px 20px); border: var(--setting-card-border, 1px solid var(--surface-tone-04));
+      .card { display: grid; gap: 14px; padding: var(--setting-card-padding, 14px 20px); border: var(--setting-card-border, 1px solid var(--surface-tone-04));
         border-bottom: var(--setting-card-divider, 1px solid var(--surface-tone-04)); border-radius: var(--setting-card-radius, 8px); background: var(--setting-card-bg, var(--surface-tone-03)); }
       .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
       .card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -81,8 +80,8 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
       .scan-toggle[aria-pressed='false'] { border-color: color-mix(in srgb, var(--loss) 40%, transparent); background: color-mix(in srgb, var(--loss) 10%, transparent); color: var(--loss); }
       .scan-toggle[aria-pressed='true'] { border-color: color-mix(in srgb, var(--gain) 45%, transparent); background: color-mix(in srgb, var(--gain) 14%, transparent); color: var(--gain); }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
-      label { display: grid; min-width: 0; max-width: 100%; gap: 4px; color: var(--text-muted); font-size: 12px; }
-      select { box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: var(--background);
+      label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
+      select { min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);
         color: var(--text); font: inherit; }
       label.check { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--text); font-size: 13px; }
       label.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }

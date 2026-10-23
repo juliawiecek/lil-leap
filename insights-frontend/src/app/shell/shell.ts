@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { AppSessionService } from '../app-session.service';
@@ -22,8 +22,6 @@ export class Shell implements OnDestroy {
   private readonly session = inject(AppSessionService, { optional: true });
   private readonly router = inject(Router, { optional: true });
   readonly mobileNav = signal(false);
-  readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
-  closeNavigation(): void { this.mobileNav.set(false); this.menuButton()?.nativeElement.focus(); }
   /** The time in Central, refreshed twice a minute. */
   readonly clock = signal(centralClock(new Date()));
   readonly #clockTimer = setInterval(() => this.clock.set(centralClock(new Date())), 30_000);

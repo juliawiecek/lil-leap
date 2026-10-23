@@ -52,12 +52,6 @@ export interface Valuation {
   dayGainPercent: number;
 }
 
-/** Allocation cannot label book-cost fallbacks as current market value. */
-export function hasMarketValuation(portfolio: Portfolio, bids: ReadonlyMap<string, number>): boolean {
-  return Number.isFinite(portfolio.cash) && portfolio.cash >= 0 && portfolio.holdings.every(h =>
-    Number.isFinite(h.quantity) && h.quantity > 0 && Number.isFinite(bids.get(h.instrumentId)) && bids.get(h.instrumentId)! > 0);
-}
-
 /**
  * Values each holding at its latest bid -- what selling now would fetch -- falling back to
  * average cost when no quote is available, so a missing quote never shows as a loss. Today's

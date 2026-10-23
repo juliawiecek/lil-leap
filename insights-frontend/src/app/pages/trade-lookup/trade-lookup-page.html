@@ -48,7 +48,7 @@
         <dd>{{ dateTime(trade.filledAt) }}</dd>
       </dl>
     </section>
-    <section aria-labelledby="client-title" data-a11y-sensitive>
+    <section aria-labelledby="client-title">
       <div class="section-head">
         <div>
           <span class="kicker">Client</span>
@@ -90,15 +90,15 @@
       <h2 id="trail-title">Recorded steps</h2>
       <span class="count">{{ trade.events.length }} steps, oldest first</span>
     </div>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
+    <div class="table-wrap">
       <table class="steps">
         <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
         <thead>
           <tr>
-            <th scope="col">Recorded</th>
-            <th scope="col">Record</th>
-            <th scope="col">Step</th>
-            <th scope="col">Details</th>
+            <th>Recorded</th>
+            <th>Record</th>
+            <th>Step</th>
+            <th>Details</th>
           </tr>
         </thead>
         <tbody>

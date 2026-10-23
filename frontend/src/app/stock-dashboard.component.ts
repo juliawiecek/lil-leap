@@ -1,4 +1,3 @@
-import type { TradeMark } from './trade-marks';
 import { FinancialChange } from './financial-change';
 import { CurrencyPipe, DecimalPipe, NgClass, isPlatformBrowser } from '@angular/common';
 import {
@@ -46,7 +45,6 @@ import { StockSvgChart } from './stock-svg-chart';
 import { samplingInterval, type ChartSampleMs } from './stock-chart-stream';
 import type { StockPriceTick } from './stock-price-ticks';
 import { validPrice } from './stock-chart-math';
-import { quoteHistoryPoints } from './chart-data';
 
 export interface StockAsset {
   readonly symbol: string;
@@ -122,9 +120,19 @@ function createStockDashboardFeed(
             history: history
               ? of(history)
               : quotes.getHistory(quote.instrumentId, 1000).pipe(
-                  map(rows => quoteHistoryPoints(rows)
-                    .filter(point => sessionDay(point.time) === sessionDay(Date.parse(quote.quotedAt)))
-                    .map(point => ({ time: point.time / 1000, price: point.value }))),
+                  map((rows) =>
+                    [...rows]
+                      .reverse()
+                      .filter(
+                        (row) =>
+                          sessionDay(Date.parse(row.quotedAt)) ===
+                          sessionDay(Date.parse(quote.quotedAt)),
+                      )
+                      .map((row) => ({
+                        time: Date.parse(row.quotedAt) / 1000,
+                        price: Number(row.midpoint),
+                      })),
+                  ),
                   catchError(() => of([])),
                 ),
           }).pipe(
@@ -225,9 +233,6 @@ function currentSessionOpen(
 export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDestroy {
   readonly selectedAsset = input<StockAsset | null>(null);
   readonly windowSeconds = input(86400);
-  readonly trades = input<readonly TradeMark[]>([]);
-  readonly averageCost = input<number | null>(null);
-  readonly privateValues = input(false);
   readonly sampleMs = input<ChartSampleMs>(5000);
   readonly #sampleClock = new BehaviorSubject<ChartSampleMs>(5000);
   readonly #state = signal<StockDashboardState>({

@@ -93,10 +93,7 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "proxyConfig": "proxy.conf.json",
-            "prebundle": {
-              "exclude": ["@lilleap/session-core"]
-            }
+            "proxyConfig": "proxy.conf.json"
           }
         }
       }

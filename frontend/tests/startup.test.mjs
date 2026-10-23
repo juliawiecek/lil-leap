@@ -6,7 +6,6 @@ import { APP_BOOTSTRAP_LISTENER, ErrorHandler, destroyPlatform } from '@angular/
 const { appConfig } = await import('../src/app/app.config.ts');
 const { SafeErrorHandler } = await import('../src/app/safe-error-handler.ts');
 await import('../src/app/app.ts');
-await import('../src/app/app-root.ts');
 
 test('real entry point bootstraps the auth screen with the safe error handler', { timeout: 15000 }, async t => {
   await resolveTemplates();

@@ -32,8 +32,6 @@ test('financial changes and statuses keep their meaning in every palette and gra
   await colourFixture(page);
   await page.goto('/dashboard');
   await expect(page.locator('.holdings-table')).toContainText('MSFT');
-  const allocation = page.locator('.allocation-panel');
-  await allocation.getByRole('button', { name: 'Show as table', exact: true }).click();
   for (const value of modes) {
     await mode(page, value);
     const changes = page.locator('app-financial-change');
@@ -45,15 +43,8 @@ test('financial changes and statuses keep their meaning in every palette and gra
       expect(s.visible).toMatch({ up: /^▲ \+/, down: /^▼ −/, flat: /^—/ }[s.direction]);
       expect(s.spoken).toMatch({ up: /^Increased by/, down: /^Decreased by/, flat: /^Unchanged/ }[s.direction]);
     }
-    // The deliberate allocation simplification (bf0cf08) removed the old hatch overlay.
-    // Meaning must still survive grayscale through labels, numeric shares and the exact table.
-    await expect(allocation.getByRole('img')).toHaveAttribute('aria-label', 'Asset allocation');
-    await expect(allocation.locator('#novice-allocation-summary')).toContainText('Stocks: $590.00, 12 percent');
-    await expect(allocation.locator('#novice-allocation-summary')).toContainText('Cash: $4,500.00, 88 percent');
-    await expect(allocation.locator('tbody tr').filter({ hasText: 'Stocks' })).toContainText('$590.00');
-    await expect(allocation.locator('tbody tr').filter({ hasText: 'Stocks' })).toContainText('12%');
-    await expect(allocation.locator('tbody tr').filter({ hasText: 'Cash' })).toContainText('$4,500.00');
-    await expect(allocation.locator('tbody tr').filter({ hasText: 'Cash' })).toContainText('88%');
+    await expect(page.locator('.allocation-pattern')).toHaveAttribute('stroke', 'url(#allocation-stocks-pattern)');
+    await expect(page.locator('.allocation-panel .asset-dot.stocks')).toHaveCSS('background-image', /repeating-linear-gradient/);
     await page.screenshot({ path: info.outputPath(`novice-${value}.png`), animations: 'disabled' });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setEmulatedVisionDeficiency', { type: 'achromatopsia' });
@@ -141,7 +132,7 @@ test('when volume is reported its bars use outlines/hatching and VWAP has a dott
   await expect(chart.locator('.indicator-label[data-indicator="VWAP"]')).toContainText('VWAP');
 });
 
-test('forced colours retain chart semantics, allocation labels, controls and focus in all palettes', async ({ page }, info) => {
+test('forced colours retain chart semantics, allocation patterns, controls and focus in all palettes', async ({ page }, info) => {
   const chart = await historical(page, true);
   await page.emulateMedia({ forcedColors: 'active' });
   const system = await page.evaluate(() => {
@@ -175,15 +166,8 @@ test('forced colours retain chart semantics, allocation labels, controls and foc
   await novice.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
   await colourFixture(novice);
   await novice.goto('/dashboard');
-  const allocation = novice.locator('.allocation-panel');
-  await expect(allocation.getByRole('img')).toHaveAttribute('aria-describedby', 'novice-allocation-summary');
-  await expect(allocation.locator('.ring.stocks')).toHaveCSS('stroke', system.ink);
-  await expect(allocation.locator('.allocation-track')).toHaveCSS('stroke', system.canvas);
-  await allocation.getByRole('button', { name: 'Show as table', exact: true }).click();
-  await expect(allocation.locator('tbody')).toContainText('Stocks');
-  await expect(allocation.locator('tbody')).toContainText('Cash');
-  await expect(allocation.locator('tbody')).toContainText('12%');
-  await expect(allocation.locator('tbody')).toContainText('88%');
+  await expect(novice.locator('.allocation-pattern')).toHaveAttribute('stroke', 'url(#allocation-stocks-pattern)');
+  await expect(novice.locator('.allocation-boundary')).toHaveCSS('stroke', system.ink);
   await expect(novice.locator('.allocation-panel .asset-dot.stocks')).toHaveCSS('border-style', 'double');
   await expect(novice.locator('.allocation-panel .asset-dot.cash')).toHaveCSS('border-style', 'dashed');
   await novice.screenshot({ path: info.outputPath('novice-forced-colors.png') });
