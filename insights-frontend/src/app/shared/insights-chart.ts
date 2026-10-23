@@ -1,5 +1,15 @@
 import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+
+/** One point on the chart. */
+export interface ChartPoint {
+  label: string;
+  value: number;
+  /** When it happened, in milliseconds since 1970; places the point at its real time. */
+  at?: number;
+  /** A detail shown after the label when the point is hovered or focused. */
+  note?: string;
+}
 @Component({
   selector: 'app-insights-chart',
   imports: [DecimalPipe],
@@ -26,7 +36,7 @@ import { DecimalPipe } from '@angular/common';
             r="12"
             fill="transparent"
             tabindex="0"
-            [attr.aria-label]="p.label + ': ' + prefix() + p.value"
+            [attr.aria-label]="p.label + ': ' + prefix() + p.value + (p.note ? ', ' + p.note : '')"
             (mouseenter)="active.set($index)"
             (mouseleave)="active.set(null)"
             (focus)="active.set($index)"
@@ -35,14 +45,20 @@ import { DecimalPipe } from '@angular/common';
             <title>{{ p.label }}: {{ prefix() }}{{ p.value | number: '1.0-2' }}</title>
           </circle>
         }
-        @for (i of tickIndices(); track i) {
-          <text
-            [attr.x]="x(i)"
-            [attr.y]="height() - 9"
-            [attr.text-anchor]="i === 0 ? 'start' : i === points().length - 1 ? 'end' : 'middle'"
-          >
-            {{ shortLabel(points()[i].label) }}
-          </text>
+        @if (ticks().length) {
+          @for (tick of ticks(); track tick.at) {
+            <text [attr.x]="xAt(tick.at)" [attr.y]="height() - 9" [attr.text-anchor]="anchorAt(xAt(tick.at))">{{ tick.label }}</text>
+          }
+        } @else {
+          @for (i of tickIndices(); track i) {
+            <text
+              [attr.x]="x(i)"
+              [attr.y]="height() - 9"
+              [attr.text-anchor]="i === 0 ? 'start' : i === points().length - 1 ? 'end' : 'middle'"
+            >
+              {{ shortLabel(points()[i].label) }}
+            </text>
+          }
         }
         @if (active() !== null && points()[active()!]; as p) {
           <circle
@@ -56,8 +72,14 @@ import { DecimalPipe } from '@angular/common';
       </svg>
       <div class="chart-readout" aria-live="polite">
         @if (active() !== null && points()[active()!]; as p) {
-          <span>{{ p.label }}</span
-          ><strong>{{ prefix() }}{{ p.value | number: '1.0-2' }}</strong>
+          <span>{{ p.label }}</span>
+          @if (p.note) {
+            <span class="note">{{ p.note }}</span>
+          }
+          @if (valueLabel()) {
+            <span>{{ valueLabel() }}</span>
+          }
+          <strong>{{ prefix() }}{{ p.value | number: '1.0-2' }}</strong>
         } @else if (hint()) {
           <span>{{ hint() }}</span>
         }
@@ -95,6 +117,9 @@ import { DecimalPipe } from '@angular/common';
         align-items: center;
         color: var(--muted);
         font: 12px var(--font-ui);
+      }
+      .chart-readout .note {
+        color: var(--text);
       }
       .chart-readout strong {
         color: var(--text);
@@ -153,7 +178,12 @@ export class InsightsChart {
       timeZone: 'UTC',
     });
   }
-  readonly points = input<{ label: string; value: number }[]>([]);
+  /** Each point's label and value; `at` (milliseconds) places it at its real time, `note` adds a detail line. */
+  readonly points = input<ChartPoint[]>([]);
+  /** Labels along the bottom at real times; used instead of point labels when the points are timed. */
+  readonly ticks = input<{ at: number; label: string }[]>([]);
+  /** Words before the value in the readout, e.g. "Orders so far". */
+  readonly valueLabel = input('');
   readonly label = input('Trading volume over time');
   /** Text under the chart until a point is hovered or focused. */
   readonly hint = input('Hover or focus a point to explore values');
@@ -192,8 +222,27 @@ export class InsightsChart {
     }
     return this.divisor() === 1000 ? 'K' : '';
   });
+  /** True when every point has a time, so points sit at their real times instead of evenly apart. */
+  readonly timed = computed(() => this.points().length > 1 && this.points().every((p) => p.at !== undefined));
   x(i: number) {
+    if (this.timed()) {
+      return this.xAt(this.points()[i].at!);
+    }
     return 54 + (i / Math.max(1, this.points().length - 1)) * (this.right() - 54);
+  }
+  /** Horizontal position of a time, between the first and last timed points. */
+  xAt(at: number) {
+    const points = this.points();
+    const first = points[0]?.at ?? 0;
+    const span = (points.at(-1)?.at ?? first) - first || 1;
+    return 54 + ((at - first) / span) * (this.right() - 54);
+  }
+  /** Keeps labels near either edge inside the chart. */
+  anchorAt(x: number) {
+    if (x < 90) {
+      return 'start';
+    }
+    return x > this.right() - 36 ? 'end' : 'middle';
   }
   y(v: number) {
     return this.bottom() - (v / this.max()) * (this.bottom() - 18);

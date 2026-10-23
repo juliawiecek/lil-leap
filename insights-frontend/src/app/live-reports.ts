@@ -23,10 +23,28 @@ export interface ActivityPoint {
   hour: string;
   tradeCount: number;
 }
+/** One order placed today, at the exact second it was placed. */
+export interface PlacedOrder {
+  /** When the order was submitted, as an ISO instant. */
+  placedAt: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  status: string;
+  /** Value of its fills so far; zero when nothing has filled. */
+  filledValue: number | string;
+}
+/** Today's orders, oldest first, with the instant the Central day began. */
+export interface OrdersToday {
+  date: string;
+  dayStart: string;
+  orders: PlacedOrder[];
+}
 export interface LiveReports {
   load(): Promise<ReportSummary>;
   topInstruments(): Promise<TopInstrument[]>;
   activityTrend(): Promise<ActivityPoint[]>;
+  ordersToday(): Promise<OrdersToday>;
 }
 export const LIVE_REPORTS = new InjectionToken<LiveReports>('Live reporting API');
 

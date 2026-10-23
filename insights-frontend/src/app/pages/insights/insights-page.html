@@ -26,12 +26,20 @@
           <span class="hero-note"><span class="mono up">+{{ count(thisHour()) }}</span> this hour</span>
         }
       </div>
-      @if (tradesToday()) {
+      @if (orderPoints().length) {
         <div class="hero-chart">
-          <app-insights-chart [points]="cumulativePoints()" [height]="210" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
+          <app-insights-chart
+            [points]="orderPoints()"
+            [ticks]="orderTicks()"
+            [height]="210"
+            label="Orders placed today, each at the exact time it was placed, Central time"
+            prefix=""
+            valueLabel="Orders so far"
+            hint="Each step is one order, at the second it was placed. Hover or focus a step to see it."
+          />
         </div>
       } @else {
-        <p class="hero-empty">No trades yet today. The line fills in as trades execute.</p>
+        <p class="hero-empty">No orders yet today. The line steps up at the exact time each order is placed.</p>
       }
     </div>
     <dl class="stats">

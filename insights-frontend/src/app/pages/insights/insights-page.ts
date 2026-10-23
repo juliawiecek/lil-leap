@@ -1,10 +1,11 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
+import { LIVE_REPORTS, type ActivityPoint, type OrdersToday, type PlacedOrder, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
-import { InsightsChart } from '../../shared/insights-chart';
-import { centralHour, centralTime, twelveHour } from '../../shared/app-time';
+import { InsightsChart, type ChartPoint } from '../../shared/insights-chart';
+import { centralClockSeconds, centralHour, centralTime, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
+const HOUR_MS = 3_600_000;
 /** How often the page re-reads today's figures, in milliseconds. */
 const REFRESH_MS = 5_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -27,6 +28,10 @@ export class InsightsPage implements OnDestroy {
   readonly summary = signal<ReportSummary | null>(null);
   readonly top = signal<TopInstrument[]>([]);
   readonly trend = signal<ActivityPoint[]>([]);
+  /** Today's orders with the exact time each was placed. */
+  readonly orders = signal<OrdersToday | null>(null);
+  /** The time of the last refresh; the order line runs level up to it. */
+  readonly now = signal(Date.now());
   readonly loading = signal(false);
   readonly error = signal('');
   /** Hourly points for the shared chart. */
@@ -49,13 +54,40 @@ export class InsightsPage implements OnDestroy {
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
   /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock shown in the top bar. */
   readonly greeting = signal(greetingFor(centralHour()));
-  /** Running total of today's trades, hour by hour, for the line under the traded value. */
-  readonly cumulativePoints = computed(() => {
-    // Running total up to the current hour; later hours have not happened yet, so they are left off.
-    const now = `${CENTRAL_HOUR.format(new Date())}:00`;
-    const upToNow = this.trend().filter((point) => point.hour <= now);
+  /**
+   * Running count of today's orders: level from midnight, one step up at the exact second each order was placed,
+   * then level again up to now. Hovering a step names the order.
+   */
+  readonly orderPoints = computed<ChartPoint[]>(() => {
+    const day = this.orders();
+    if (!day?.orders.length) {
+      return [];
+    }
     let total = 0;
-    return (upToNow.length ? upToNow : this.trend()).map((point) => ({ label: twelveHour(point.hour), value: (total += point.tradeCount) }));
+    const steps = day.orders.map((order) => ({
+      at: Date.parse(order.placedAt), label: centralClockSeconds(order.placedAt), value: ++total, note: this.describeOrder(order),
+    }));
+    const end = Math.max(this.now(), steps.at(-1)!.at);
+    return [
+      { at: Date.parse(day.dayStart), label: 'Midnight', value: 0 },
+      ...steps,
+      { at: end, label: `Now, ${centralClockSeconds(new Date(end))}`, value: total },
+    ];
+  });
+  /** Hour labels under the order line: every hour early in the day, then every 2, 3 or 6 hours. */
+  readonly orderTicks = computed(() => {
+    const points = this.orderPoints();
+    if (!points.length) {
+      return [];
+    }
+    const start = points[0].at!;
+    const end = points.at(-1)!.at!;
+    const every = [1, 2, 3, 6].find((hours) => (end - start) / HOUR_MS / hours <= 5) ?? 6;
+    const ticks: { at: number; label: string }[] = [];
+    for (let at = start; at <= end; at += every * HOUR_MS) {
+      ticks.push({ at, label: twelveHour(`${String(centralHour(new Date(at))).padStart(2, '0')}:00`) });
+    }
+    return ticks;
   });
   /** The traded value split so its cents can be set lighter than the dollars. */
   readonly valueParts = computed(() => {
@@ -121,10 +153,11 @@ export class InsightsPage implements OnDestroy {
     }
     this.loading.set(true);
     this.error.set('');
-    const [summary, top, trend] = await Promise.allSettled([
+    const [summary, top, trend, orders] = await Promise.allSettled([
       this.reports.load(),
       this.reports.topInstruments(),
       this.reports.activityTrend(),
+      this.reports.ordersToday(),
     ]);
     if (this.destroyed) {
       return;
@@ -140,13 +173,26 @@ export class InsightsPage implements OnDestroy {
     if (trend.status === 'fulfilled') {
       this.trend.set(trend.value);
     }
-    if ([summary, top, trend].some((result) => result.status === 'fulfilled')) {
+    if (orders.status === 'fulfilled') {
+      this.orders.set(orders.value);
+    }
+    this.now.set(Date.now());
+    if ([summary, top, trend, orders].some((result) => result.status === 'fulfilled')) {
       this.updatedAt.set(centralTime(new Date()));
     }
-    if ([summary, top, trend].some((result) => result.status === 'rejected')) {
+    if ([summary, top, trend, orders].some((result) => result.status === 'rejected')) {
       this.error.set('Some reporting figures could not be loaded. Trying again in a few seconds.');
     }
     this.loading.set(false);
+  }
+
+  /** "Buy 3 MSFT · $1,524.46" for a filled order; "Sell 5 AAPL · Cancelled" for one that never filled. */
+  describeOrder(order: PlacedOrder): string {
+    const side = order.side.charAt(0) + order.side.slice(1).toLowerCase();
+    const status = order.status.charAt(0) + order.status.slice(1).toLowerCase().replace(/_/g, ' ');
+    const filled = Number(order.filledValue) > 0 ? this.money(order.filledValue) : '';
+    const outcome = order.status === 'FILLED' ? filled : [filled, status].filter(Boolean).join(' · ');
+    return `${side} ${this.count(order.quantity)} ${order.symbol} · ${outcome}`;
   }
 
   /** "fill" or "fills" to match a count. */

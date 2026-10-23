@@ -24,4 +24,11 @@ public class ReportingController {
      */
     @GetMapping("/summary")
     public Map<String, Object> summary() { return reports.summary(); }
+
+    /**
+     * Returns today's orders with the exact time each was placed, without customer identity data.
+     * @return the day, when it began and its orders, oldest first
+     */
+    @GetMapping("/orders-today")
+    public ReportingQueryService.OrdersToday ordersToday() { return reports.ordersToday(); }
 }
