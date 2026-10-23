@@ -27,8 +27,9 @@
   background: var(--surface-tone-03);
   --muted: var(--text-muted);
   --line: var(--surface-tone-98);
-  --protection-selected-bg: var(--gain-tone-26);
-  --protection-selected-text: var(--gain-tone-25);
+  /* Selected choice: solid brand green (the "Trade" in the NextTrade logo) with dark text, not a dim green tint. */
+  --protection-selected-bg: var(--gain);
+  --protection-selected-text: var(--on-accent);
 }
 .settings-list { min-width: 0; margin: 0; }
 .settings-list > div {
@@ -89,3 +90,66 @@
   .settings-list > div { gap: 16px; flex-wrap: wrap; }
   .settings-list dd { text-align: left; }
 }
+
+/* ==========================================================================
+   Settings in the dashboard's card style (look only; every item stays as it was):
+   each section is its own panel -- the same surface, border and 20px corners as
+   the Overview cards -- on the page background, with plain hairline rows inside
+   instead of boxes within boxes.
+   ========================================================================== */
+.settings-page {
+  display: grid;
+  gap: 16px;
+  max-width: 1040px;
+  padding: 0;
+  background: none;
+}
+.settings-profile,
+.settings-section,
+.settings-page > app-accessibility-settings,
+.settings-session {
+  margin: 0;
+  padding: 26px 28px;
+  border: 1px solid var(--surface-tone-13);
+  border-radius: 20px;
+  background: var(--surface);
+  animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.settings-profile { padding-block: 24px; }
+.settings-avatar { box-shadow: none; }
+.settings-identity h2 { margin: 6px 0 4px; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+.settings-intro h2,
+.settings-session h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.settings-session h2 { margin-bottom: 6px; }
+
+/* Price protection sits straight in its card rather than in a second box. */
+.safeguards-group { padding: 0; border: 0; border-radius: 0; background: none; }
+
+/* Accessibility: the card frames the section, and its settings become rows split by hairlines. */
+.settings-page > app-accessibility-settings {
+  display: block;
+  --a11y-padding: 0;
+  --a11y-divider: 0;
+  --a11y-cards-gap: 0;
+  --setting-card-padding: 16px 0;
+  --setting-card-border: 0;
+  --setting-card-divider: 1px solid var(--surface-tone-15);
+  --setting-card-radius: 0;
+  --setting-card-bg: transparent;
+}
+
+/* Sign out: an outlined button in the loss colour, flat like the rest of the page's buttons. */
+.settings-session .secondary-button { min-height: 38px; padding: 0 18px; border-radius: 10px; background: transparent; }
+.settings-session .secondary-button:hover { background: transparent; }
+
+@media (max-width: 900px) {
+  .settings-page { padding-inline: 0; }
+  .settings-profile, .settings-section, .settings-page > app-accessibility-settings, .settings-session { padding: 22px 20px; }
+}
+@media (max-width: 480px) {
+  .settings-profile, .settings-section, .settings-page > app-accessibility-settings, .settings-session { padding: 20px 16px; border-radius: 16px; }
+}
+
+/* Each card animates in, which makes it its own layer; lift the card whose stock menu is open so the
+   menu opens over the cards below it instead of behind them. */
+.settings-section:has(.stock-menu) { position: relative; z-index: 2; }

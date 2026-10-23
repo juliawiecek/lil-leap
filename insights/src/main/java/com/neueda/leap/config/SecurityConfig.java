@@ -32,7 +32,7 @@ public class SecurityConfig {
      * @throws Exception when the chain cannot be built
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService tokens, com.neueda.leap.security.AuthSessionClient sessions) throws Exception {
         // All supported API routes are read-only GETs; retain CSRF protection for unsafe methods.
         return http.csrf(Customizer.withDefaults())
                 .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
@@ -59,7 +59,13 @@ public class SecurityConfig {
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\":\"ACCESS_DENIED\",\"message\":\"Access is denied.\"}");
                         }))
-                .addFilterBefore(new JwtAuthenticationFilter(tokens), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthenticationFilter(tokens, sessions), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+    @Bean
+    public com.neueda.leap.security.AuthSessionClient authSessionClient(
+            @org.springframework.beans.factory.annotation.Value("${AUTH_SESSION_URL:http://localhost:8081/auth/me/session}") String url) {
+        return new com.neueda.leap.security.AuthSessionClient(url);
+    }
+
 }

@@ -131,6 +131,24 @@ test('portfolio loading hides the old plot and values until its new period is re
   assert.deepEqual(fixture.componentInstance.dataTable().rows.map(row => row[1]), ['$200.00', '$220.00']);
 });
 
+test('trade charts name the selected stock in their image, summary and table', async t => {
+  environment(t);
+  const at = Date.parse('2026-10-21T14:00:00Z');
+  const fixture = await render(t, PortfolioChart, {
+    subject: 'AAPL price', points: [{ at, value: 100 }, { at: at + 1000, value: 110 }],
+  });
+  const chart = fixture.componentInstance;
+  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]').getAttribute('aria-label'), 'AAPL price chart');
+  assert.match(chart.description(), /AAPL price/);
+  assert.equal(chart.chartSeries().label, 'AAPL price');
+  const toggle = [...fixture.nativeElement.querySelectorAll('button')].find(b => b.textContent.includes('Show as table'));
+  toggle.click(); fixture.detectChanges();
+  assert.match(fixture.nativeElement.querySelector('caption').textContent, /AAPL price/);
+  fixture.componentRef.setInput('subject', 'MSFT price'); fixture.detectChanges();
+  assert.match(chart.description(), /MSFT price/);
+  assert.match(fixture.nativeElement.querySelector('caption').textContent, /MSFT price/);
+});
+
 test('recent-hour alternatives retain the drawn full-period baseline and redact it with hidden balances', async t => {
   environment(t);
   const at = Date.parse('2026-10-21T14:00:00Z');
@@ -226,7 +244,10 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   fixture.detectChanges();
   assert.equal(chart.active().value, 100);
   assert.match(chart.cursorTime(), /CT$/);
-  assert.ok(chart.labelLeft() > 0);
+  assert.equal(chart.labelLeft(), 0, 'Home aligns the first point label to the left edge');
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'End' }));
+  fixture.detectChanges();
+  assert.equal(chart.labelLeft(), 100, 'End aligns the last point label to the right edge');
   svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: 300 }));
   fixture.detectChanges();
   assert.ok(chart.active());

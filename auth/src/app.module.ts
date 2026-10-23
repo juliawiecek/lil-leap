@@ -23,6 +23,8 @@ import { PasswordResetToken } from './password-reset/entities/password-reset-tok
 import { PasswordResetController } from './password-reset/password-reset.controller';
 import { PasswordResetService } from './password-reset/password-reset.service';
 import { mailDeliveryProvider } from './mail/mail-delivery.provider';
+import { AccountSettingsController } from './account-settings/account-settings.controller';
+import { AccountSettingsService } from './account-settings/account-settings.service';
 
 @Module({
   imports: [
@@ -39,7 +41,7 @@ import { mailDeliveryProvider } from './mail/mail-delivery.provider';
     }),
     TypeOrmModule.forFeature([User, Session, CustomerProfile, FinancialProfile, Account, AnalystProfile, PasswordResetToken]),
   ],
-  controllers: [AuthController, PasswordResetController, RulesController, HealthController],
+  controllers: [AuthController, PasswordResetController, AccountSettingsController, RulesController, HealthController],
   providers: [
     UserService,
     RegistrationService,
@@ -50,6 +52,7 @@ import { mailDeliveryProvider } from './mail/mail-delivery.provider';
     PasswordEncoderService,
     AccessTokenGuard,
     PasswordResetService,
+    AccountSettingsService,
     // MAIL_DELIVERY=outbox (default, the VM) writes .eml files; smtp sends to Mailpit on dev laptops.
     mailDeliveryProvider,
   ],

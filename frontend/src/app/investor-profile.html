@@ -28,27 +28,31 @@
             <div class="fields" [class.disclosure-fields]="i === 2">
               @for (field of section.fields; track field.id) {
                 <div class="profile-field" [class.disclosure-question]="i === 2 && field.options && field.id !== 'account_type'" [class.disclosure-detail]="i === 2 && !!field.when" [hidden]="!visible(field)">
-                  <label [for]="'profile-' + field.id">{{ field.label }}</label>
+                  <label [id]="'profile-' + field.id + '-label'" [for]="labelTarget(field)">{{ field.label }}</label>
                   @if (field.id === 'account_type') {
                     <input [id]="'profile-' + field.id" [value]="display(field)" readonly aria-readonly="true" [attr.aria-describedby]="field.id + '-hint'" />
-                  } @else if (field.options) {
-                    <select [id]="'profile-' + field.id" [name]="field.id" [value]="values()[field.id] || ''" [required]="!field.optional && visible(field)" [disabled]="!visible(field)" (change)="update(field, $event)" [attr.aria-describedby]="field.hint ? field.id + '-hint' : null">
+                  } @else if (field.id === 'country') {
+                    <!-- NextTrade accounts are for U.S. residents, so the country is fixed. -->
+                    <input [id]="'profile-' + field.id" [name]="field.id" value="United States" readonly aria-readonly="true" [attr.aria-describedby]="describedBy(field)" />
+                  } @else if (field.id === 'date_of_birth') {
+                    <!-- Month, day and year menus in the page's style; the hidden date field keeps the age check. -->
+                    <input class="native-control" tabindex="-1" aria-hidden="true" [id]="'profile-' + field.id" [name]="field.id" type="date" [value]="values()[field.id] || ''" [required]="!field.optional && visible(field)" [disabled]="!visible(field)" [attr.max]="latestBirthDate" (input)="update(field, $event)" />
+                    <div class="date-parts" role="group" [attr.aria-labelledby]="'profile-' + field.id + '-label'">
+                      <app-select-menu [triggerId]="'profile-' + field.id + '-menu'" placeholder="Month" [options]="months" [value]="birthPart('month')" [labelledBy]="'profile-' + field.id + '-label'" [describedBy]="describedBy(field)" [invalid]="!!errors()[field.id]" [disabled]="!visible(field)" (picked)="setBirthPart('month', $event)" />
+                      <app-select-menu [triggerId]="'profile-' + field.id + '-day'" placeholder="Day" [options]="birthDays()" [value]="birthPart('day')" [labelledBy]="'profile-' + field.id + '-label'" [invalid]="!!errors()[field.id]" [disabled]="!visible(field)" (picked)="setBirthPart('day', $event)" />
+                      <app-select-menu [triggerId]="'profile-' + field.id + '-year'" placeholder="Year" [options]="birthYears" [value]="birthPart('year')" [labelledBy]="'profile-' + field.id + '-label'" [invalid]="!!errors()[field.id]" [disabled]="!visible(field)" (picked)="setBirthPart('year', $event)" />
+                    </div>
+                  } @else if (field.options || field.id === 'state_province') {
+                    <!-- The hidden native select keeps the form's own validation; the menu beside it is what people use. -->
+                    <select class="native-control" tabindex="-1" aria-hidden="true" [id]="'profile-' + field.id" [name]="field.id" [value]="values()[field.id] || ''" [required]="!field.optional && visible(field)" [disabled]="!visible(field)" (change)="update(field, $event)" (input)="update(field, $event)">
                       <option value="" disabled>Select an option</option>
-                      @for (option of field.options; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+                      @for (option of optionsFor(field); track option.value) { <option [value]="option.value">{{ option.label }}</option> }
                     </select>
+                    <app-select-menu [triggerId]="'profile-' + field.id + '-menu'" [placeholder]="field.id === 'state_province' ? 'Choose a state' : 'Select an option'" [options]="optionsFor(field)" [value]="values()[field.id] || ''" [labelledBy]="'profile-' + field.id + '-label'" [describedBy]="describedBy(field)" [invalid]="!!errors()[field.id]" [disabled]="!visible(field)" (picked)="choose(field, $event)" />
                   } @else {
-                    <input [id]="'profile-' + field.id" [name]="field.id" [value]="values()[field.id] || ''" [attr.maxlength]="field.maxLength || null" [attr.inputmode]="field.inputMode || null" [placeholder]="field.id === 'country' ? 'Start typing a country…' : (field.placeholder || '')" [attr.list]="field.id === 'country' ? 'residence-countries' : field.id === 'state_province' ? 'residence-states' : null" [type]="field.type || 'text'" [required]="!field.optional && visible(field)" [disabled]="!visible(field)" [attr.autocomplete]="field.autocomplete || 'off'" [attr.pattern]="field.pattern || null" [attr.max]="field.type === 'date' ? latestBirthDate : null" [attr.aria-describedby]="field.hint ? field.id + '-hint' : null" (input)="update(field, $event)" />
+                    <input [id]="'profile-' + field.id" [name]="field.id" [value]="values()[field.id] || ''" [attr.maxlength]="field.maxLength || null" [attr.inputmode]="field.inputMode || null" [placeholder]="field.placeholder || ''" [type]="field.type || 'text'" [required]="!field.optional && visible(field)" [disabled]="!visible(field)" [attr.autocomplete]="field.autocomplete || 'off'" [attr.pattern]="field.pattern || null" [attr.aria-describedby]="describedBy(field)" [attr.aria-invalid]="errors()[field.id] ? 'true' : null" (input)="update(field, $event)" />
                   }
-                  @if (field.id === 'country') {
-                    <datalist id="residence-countries">
-                      @for (country of countries; track country) { <option [value]="country"></option> }
-                    </datalist>
-                  }
-                  @if (field.id === 'state_province') {
-                    <datalist id="residence-states">
-                      @for (state of states; track state) { <option [value]="state"></option> }
-                    </datalist>
-                  }
+                  @if (errors()[field.id]; as message) { <p class="field-error" [id]="field.id + '-error'" role="alert">{{ message }}</p> }
                   @if (field.hint) { <small [id]="field.id + '-hint'">{{ field.hint }}</small> }
                 </div>
               }

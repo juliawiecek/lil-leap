@@ -239,9 +239,9 @@ test('hovering or arrow keys scrub along the line and report the point under the
   chart.endScrub();
   assert.deepEqual(chart.placed().map((p) => p.x), [0, 400, 800], 'evenly spaced');
   chart.scrubKey(key('Home'));
-  assert.equal(chart.labelLeft(), 8, 'the time label stays inside the chart at the left edge');
+  assert.equal(chart.labelLeft(), 0, 'at the left edge the label starts at the cursor (shifted by 0% of its width)');
   chart.scrubKey(key('End'));
-  assert.equal(chart.labelLeft(), 92);
+  assert.equal(chart.labelLeft(), 100, 'at the right edge it ends at the cursor, so it never runs off either side');
   let picked = null;
   chart.periodChange.subscribe((p) => { picked = p; });
   chart.periodChange.emit('1M');

@@ -346,6 +346,230 @@
         ]
       }
     },
+    "/auth/me/session": {
+      "get": {
+        "operationId": "AccountSettingsController_session",
+        "summary": "Check whether the bearer token belongs to an active session",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "The token is valid and its session is active."
+          },
+          "401": {
+            "description": "INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "account settings"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me/profile": {
+      "patch": {
+        "operationId": "AccountSettingsController_updateProfile",
+        "summary": "Change your address and/or phone number",
+        "description": "Send only the fields that change. Writes PROFILE_UPDATED to audit_log.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: neither field sent, a blank address, or a malformed phone number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PROFILE_NOT_FOUND: the caller has no contact profile (staff accounts).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "account settings"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me/email": {
+      "post": {
+        "operationId": "AccountSettingsController_changeEmail",
+        "summary": "Change your sign-in email",
+        "description": "Requires the current password. The new email must not belong to another account. Notices go to the old and new address. Writes EMAIL_CHANGED to audit_log. Refresh the session afterwards to get an access token carrying the new email.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: malformed email, or the same as the current one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INCORRECT_PASSWORD: the current password is wrong or the account is locked. Counts toward the 3-failure sign-in lockout. Nothing is changed. Or INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "EMAIL_IN_USE: another account already uses this email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "account settings"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me/password": {
+      "post": {
+        "operationId": "AccountSettingsController_changePassword",
+        "summary": "Change your password",
+        "description": "Requires the current password; the new one follows the registration rule. Signs out every other session and returns a new token pair for this one -- the refresh token the caller held is no longer valid. Writes PASSWORD_CHANGED to audit_log and emails a notice.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST: the new password breaks the 8-128 character rule.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INCORRECT_PASSWORD: the current password is wrong or the account is locked. Counts toward the 3-failure sign-in lockout. Nothing is changed. Or INVALID_ACCESS_TOKEN: missing, invalid or expired Bearer token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "account settings"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/rules/tier-eligibility": {
       "get": {
         "operationId": "RulesController_tierEligibility",
@@ -849,6 +1073,61 @@
         },
         "required": [
           "token",
+          "newPassword"
+        ]
+      },
+      "UpdateProfileRequestDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "123 Main Street, Apt 4, Chicago, IL, 60601"
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20,
+            "example": "312-555-0123",
+            "description": "At least 7 digits; may start with + and a country code."
+          }
+        }
+      },
+      "ChangeEmailRequestDto": {
+        "type": "object",
+        "properties": {
+          "newEmail": {
+            "type": "string",
+            "example": "ada@example.com",
+            "maxLength": 255
+          },
+          "currentPassword": {
+            "type": "string",
+            "format": "password",
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "newEmail",
+          "currentPassword"
+        ]
+      },
+      "ChangePasswordRequestDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "format": "password",
+            "maxLength": 128
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "format": "password"
+          }
+        },
+        "required": [
+          "currentPassword",
           "newPassword"
         ]
       },

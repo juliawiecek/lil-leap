@@ -26,6 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SettlementController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class})
 class SettlementControllerTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     private static final String RECOVER = "/settlements/recover";
     private static final String ROLLBACK = "/settlements/rollback";
         private static final String STATUS = "/settlements/status/";

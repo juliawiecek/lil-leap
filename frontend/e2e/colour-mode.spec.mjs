@@ -85,7 +85,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
 test('palette changes recolour existing SVG paths, gradients and financial values without changing geometry', async ({ page }) => {
   await colourFixture(page);
   await page.goto('/dashboard');
-  const chart = page.locator('app-portfolio-chart svg[role="img"]');
+  const chart = page.locator('.portfolio-panel app-portfolio-chart svg[role="img"]');
   const line = chart.locator('.line');
   await expect(line).toHaveAttribute('d', /^M/);
   const original = await line.getAttribute('d');

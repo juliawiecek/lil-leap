@@ -277,7 +277,7 @@ test('greeting, diversification and loading states come from the real data (PS-0
   const fresh = component(t, NoviceDashboard, [feedProvider(feedWith())]);
   assert.equal(fresh.portfolioLoaded(), false);
   assert.equal(fresh.diversification().title, 'No investments yet');
-  for (const [hour, greeting] of [[9, 'Good morning'], [14, 'Good afternoon'], [20, 'Good evening']]) {
+  for (const [hour, greeting] of [[9, 'Good Morning'], [14, 'Good Afternoon'], [20, 'Good Evening']]) {
     fresh.marketClock.set(new Date(2026, 9, 16, hour));
     assert.equal(fresh.greeting(), greeting);
   }
@@ -482,9 +482,9 @@ test('the spoken briefing reads the portfolio as shown, live moves and this acco
 
   desk.showBalance.set(false);
   desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
-  const hidden = await desk.briefingSource();
-  assert.equal(hidden.balanceHidden, true);
-  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+  const failed = await desk.briefingSource();
+  assert.equal(failed.balanceHidden, true, 'the spoken briefing respects balance hiding');
+  assert.deepEqual(failed.orders, [], 'a failed order load leaves orders out');
 });
 
 test('choosing a chart period says where the portfolio started and where it is now', async t => {
@@ -571,4 +571,113 @@ test('the header counts down to the market close from the shared market status',
   feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-20T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
   assert.match(desk.marketStatusLine(), /^Market closed · Opens /);
   assert.equal(desk.marketStatusLine().match(/closed/gi).length, 1);
+});
+
+test('the sidebar resizes from the keyboard and a double-click on its edge, within its limits, and snaps open to the last width', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  const key = (k) => desk.resizeSidebarWithKeys({ key: k, preventDefault() {} });
+  desk.sidebarWidth.set(224);
+  key('ArrowRight');
+  assert.equal(desk.sidebarWidth(), 240);
+  key('End');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMax, 'never wider than the maximum');
+  key('ArrowRight');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMax);
+  desk.sidebarWidth.set(280);
+  desk.toggleSidebar();
+  assert.equal(desk.sidebarWidth(), desk.sidebarMin);
+  assert.equal(desk.sidebarCollapsed(), true, 'the icon strip hides labels');
+  key('ArrowLeft');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMin, 'never narrower than the icon strip');
+  desk.toggleSidebar();
+  assert.equal(desk.sidebarWidth(), 280, 'a double-click re-opens at the last open width');
+  assert.equal(desk.sidebarCollapsed(), false);
+});
+
+test('the Overview retains the accessible stock/cash allocation with real shares and privacy', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([]))]);
+  desk.holdings.set([{ symbol: 'AAPL', value: 1000 }]);
+  desk.buyingPower.set(250);
+  desk.portfolioLoaded.set(true);
+  desk.allocationReady.set(true);
+  assert.deepEqual(desk.allocationCategories(), [
+    { label: 'Stocks', value: 1000, percent: 80 }, { label: 'Cash', value: 250, percent: 20 },
+  ]);
+  assert.match(desk.allocationDescription(), /Stocks.*80/);
+  desk.showBalance.set(false);
+  assert.doesNotMatch(JSON.stringify(desk.allocationTable()), /\$/);
+});
+
+test('the ticket stock menu opens downwards, moves with the arrow keys and picks with Enter', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([
+    { symbol: 'AAPL', price: 100, sector: 'Technology' }, { symbol: 'MSFT', price: 200, sector: 'Technology' },
+  ]))]);
+  const key = (k) => ({ key: k, preventDefault() {}, stopPropagation() {} });
+  desk.chooseTradeSymbol('AAPL');
+  desk.stockMenuKey(key('ArrowDown'));
+  assert.equal(desk.stockMenuOpen(), true, 'an arrow key opens the menu on the current stock');
+  const start = desk.stockMenuIndex();
+  desk.stockMenuKey(key('ArrowDown'));
+  assert.equal(desk.stockMenuIndex(), Math.min(start + 1, desk.tradableQuotes().length - 1));
+  desk.stockMenuKey(key('End'));
+  const last = desk.tradableQuotes().at(-1).symbol;
+  desk.stockMenuKey(key('Enter'));
+  assert.equal(desk.tradeQuote().symbol, last);
+  assert.equal(desk.stockMenuOpen(), false, 'picking closes the menu');
+  desk.toggleStockMenu();
+  desk.stockMenuKey(key('Escape'));
+  assert.equal(desk.stockMenuOpen(), false, 'Escape closes just the menu');
+});
+
+test('the Buy/Sell window charts the chosen stock from its recorded prices, follows a switch and changes period', async t => {
+  const feed = fakeFeed([{ symbol: 'AAPL', price: 110 }, { symbol: 'MSFT', price: 400 }]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  desk.quotes.set(feed.quotes());
+  const asked = [];
+  feed.client = {
+    closes: async (id, interval, limit, now) => {
+      asked.push([id, interval]);
+      return id === 'aapl-uuid'
+        ? [{ at: now - 3 * 60_000, price: 100 }, { at: now - 60_000, price: 110 }]
+        : [{ at: now - 3 * 60_000, price: 400 }, { at: now - 60_000, price: 380 }];
+    },
+  };
+  desk.openTrade('Buy', 'AAPL');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.deepEqual(desk.stockChartPoints().map((p) => p.value), [100, 110]);
+  assert.equal(desk.stockChartChange().amount, 10, 'the change is measured over the period shown');
+  desk.stockChartScrub.set(desk.stockChartPoints()[0]);
+  assert.equal(desk.stockChartPrice(), 100, 'hovering shows that point’s price');
+
+  desk.chooseTradeSymbol('MSFT');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.deepEqual(desk.stockChartPoints().map((p) => p.value), [400, 380], 'switching the stock redraws its chart');
+  assert.equal(desk.stockChartScrub(), null);
+
+  desk.setStockChartPeriod('1M');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.equal(desk.stockChartPeriod(), '1M');
+  assert.equal(asked.at(-1)[0], 'msft-uuid');
+  desk.closeModal();
+});
+
+test('trade chart loading and missing history never report a zero gain as observed performance', async t => {
+  const { desk, feed } = await tradingDesk(t);
+  let answer;
+  feed.client = { closes: () => new Promise(resolve => { answer = resolve; }) };
+  desk.openTrade('Buy', 'AAPL');
+  assert.equal(desk.stockChartChangeAvailable(), false);
+  answer([]); await flush();
+  assert.equal(desk.stockChartChangeAvailable(), false);
+  assert.equal(desk.stockChartChange().percent, null);
+  // With no backfilled history, real live observations still form a useful chart.
+  desk.stockChartLive.set([{ at: Date.now() - 1000, value: 100 }, { at: Date.now(), value: 110 }]);
+  assert.equal(desk.stockChartChangeAvailable(), true);
+  assert.equal(desk.stockChartChange().label, 'Available history');
+  assert.equal(desk.stockChartChange().amount, 10);
+  desk.setStockChartPeriod('1M');
+  assert.equal(desk.stockChartChangeAvailable(), false);
+  desk.closeModal();
+  answer([{ at: Date.now(), price: 999 }]); await flush();
+  assert.deepEqual(desk.stockChartHistory(), [], 'closing a ticket invalidates its pending request');
 });

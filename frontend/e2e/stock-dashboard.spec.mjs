@@ -106,7 +106,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     if (tier === 'NOVICE') {
       await expect(page.getByRole('region', { name:'Explore a stock', exact:true })).toHaveCount(0);
       await expect(page.locator('app-retail-stock-dashboard')).toHaveCount(0);
-      await expect(page.locator('app-portfolio-chart')).toBeVisible();
+      await expect(page.locator('.portfolio-panel app-portfolio-chart')).toBeVisible();
       expect(requests).toEqual([]);
       expect(errors).toEqual([]);
       return;
@@ -280,7 +280,7 @@ test('portfolio day chart keeps its whole line connected to the endpoint on load
   });
   await page.goto('/dashboard');
   await ready(page);
-  const chart = page.locator('app-portfolio-chart');
+  const chart = page.locator('.portfolio-panel app-portfolio-chart');
   const line = chart.locator('path.line');
   await expect(line).toHaveAttribute('d', /^M.+C/);
   await expect(chart.getByRole('button', { name: 'Recent hour', exact: true })).toHaveAttribute(

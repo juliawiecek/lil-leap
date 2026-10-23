@@ -37,14 +37,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Service used to validate incoming bearer tokens.
      */
     private final JwtService jwtService;
+    private final java.util.function.Predicate<String> activeSession;
 
     /**
      * Creates a new filter backed by the given JWT service.
      *
      * @param jwtService the service used to validate incoming bearer tokens
      */
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, java.util.function.Predicate<String> activeSession) {
         this.jwtService = jwtService;
+        this.activeSession = activeSession;
     }
 
     /**
@@ -67,7 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = header.substring(BEARER_PREFIX.length());
         Optional<JwtPrincipal> principal = validate(token);
 
-        if (principal.isEmpty()) {
+        if (principal.isEmpty() || !sessionActive(token)) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write(
@@ -92,4 +94,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return Optional.empty();
         }
     }
+    private boolean sessionActive(String token) {
+        try { return activeSession.test(token); }
+        catch (RuntimeException exception) { return false; }
+    }
+
 }

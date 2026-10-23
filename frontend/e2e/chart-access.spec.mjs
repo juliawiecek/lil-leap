@@ -25,6 +25,34 @@ async function alternatives(page, image, access) {
   return page.locator(`[id="${id}"]`);
 }
 
+for (const side of ['Buy', 'Sell']) {
+  test(`${side} chart shares portfolio controls, stock-specific alternatives and keyboard inspection`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'NextTrade');
+    await colourFixture(page);
+    await page.goto('/dashboard');
+    await page.locator('.trade-actions').getByRole('button', { name: side, exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    const chart = dialog.locator('app-portfolio-chart');
+    await expect(chart.locator('.line')).toHaveAttribute('d', /^M/);
+    const image = chart.locator('svg[role="img"]');
+    await expect(image).toHaveAttribute('aria-label', 'AAPL price chart');
+    await dialog.screenshot({ path: `test-results/merge-${side.toLowerCase()}-chart.png` });
+    const description = await alternatives(page, image, chart.locator('app-chart-access'));
+    await expect(description).toContainText('AAPL price');
+    await expect(chart.locator('caption')).toContainText('AAPL price');
+    await image.focus(); await page.keyboard.press('ArrowRight');
+    await expect(chart.locator('.cursor-time')).toBeVisible();
+    await chart.getByRole('button', { name: '1W', exact: true }).click();
+    await expect(chart.getByRole('button', { name: '1W', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chart.locator('.recorded-range')).toContainText('Partial history');
+    await dialog.locator('#novice-stock').click();
+    await dialog.getByRole('option').filter({ hasText: 'MSFT' }).click();
+    await expect(image).toHaveAttribute('aria-label', 'MSFT price chart');
+    await expect(description).toContainText('MSFT price');
+    await expect(chart.locator('caption')).toContainText('MSFT price');
+  });
+}
+
 test('novice portfolio and allocation expose real summaries, focus voice and equivalent tables', async ({ page }, info) => {
   test.skip(info.project.name !== 'NextTrade');
   await colourFixture(page);
@@ -34,7 +62,7 @@ test('novice portfolio and allocation expose real summaries, focus voice and equ
     Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speaking: false, speak(u) { window.chartSpeech.push(u.text); }, cancel() {} } });
   });
   await page.goto('/dashboard');
-  const portfolio = page.locator('app-portfolio-chart');
+  const portfolio = page.locator('.portfolio-panel app-portfolio-chart');
   await expect(portfolio.locator('.line')).toHaveAttribute('d', /^M/);
   const description = await alternatives(page, portfolio.locator('svg[role="img"]'), portfolio.locator('app-chart-access'));
   await expect(description).toContainText('Low was');
@@ -163,7 +191,7 @@ test('chart alternatives reflow at mobile width and the exact table scrolls with
   await page.setViewportSize({ width: 390, height: 844 });
   await colourFixture(page);
   await page.goto('/dashboard');
-  const chart = page.locator('app-portfolio-chart');
+  const chart = page.locator('.portfolio-panel app-portfolio-chart');
   await expect(chart.locator('.line')).toHaveAttribute('d', /^M/);
   await alternatives(page, chart.locator('svg[role="img"]'), chart.locator('app-chart-access'));
   const scroll = chart.locator('.table-scroll');

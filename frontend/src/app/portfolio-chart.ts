@@ -64,9 +64,7 @@ let nextPortfolioChartId = 0;
     } @else if (loading() || history().length < 2) {
       <div class="chart-empty" aria-live="polite">
         {{
-          loading()
-            ? 'Loading your portfolio history…'
-            : 'Your portfolio history will appear here as prices are recorded.'
+          loading() ? 'Loading ' + historyName() + '…' : emptyText()
         }}
       </div>
     } @else {
@@ -85,7 +83,7 @@ let nextPortfolioChartId = 0;
           role="img"
           [attr.data-performance]="tone() === 'flat' ? 'neutral' : tone() === 'down' ? 'loss' : 'gain'"
           tabindex="0"
-          aria-label="Portfolio value chart" [appChartFocus]="access"
+          [attr.aria-label]="subject() + ' chart'" [appChartFocus]="access"
           (pointermove)="scrubAt($event)"
           (pointerdown)="scrubAt($event)"
           (pointerleave)="endScrub()"
@@ -181,7 +179,7 @@ let nextPortfolioChartId = 0;
           <button
             type="button"
             [attr.aria-pressed]="dayView() === 'full'"
-            title="Current Central-time calendar day, including deposits and transfers"
+            [attr.title]="subject() === 'Portfolio value' ? 'Current Central-time calendar day, including deposits and transfers' : 'Current Central-time calendar day'"
             (click)="setDayView('full')"
           >
             Full day
@@ -197,7 +195,7 @@ let nextPortfolioChartId = 0;
       </p>
     }
     @if (notice()) { <p class="chart-note" role="status">{{ notice() }}</p> }
-    <app-chart-access #access [id]="gradientId" label="Portfolio value" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="period() + dayView() + accountKey()" />
+    <app-chart-access #access [id]="gradientId" [label]="subject()" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="subject() + period() + dayView() + accountKey()" />
     @if (delayed() && history().length >= 2) {
       <p class="chart-note delayed" role="status">
         Live prices are delayed, so the line ends at the last known value.
@@ -347,6 +345,8 @@ let nextPortfolioChartId = 0;
       .chart-note.delayed {
         color: var(--warning);
       }
+      /* The plot's top margin reserves space for inspection. Shift the label by its
+         position across the chart to keep both ends inside the plot. */
       .cursor-time {
         box-sizing: border-box;
         width: max-content;
@@ -554,6 +554,13 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   }
 
   readonly points = input<readonly ValuePoint[]>([]);
+  /** What the line shows, for screen readers and the empty state: the portfolio by default, or e.g. "AAPL price". */
+  readonly subject = input('Portfolio value');
+  readonly historyName = computed(() => (this.subject() === 'Portfolio value' ? 'your portfolio history' : `${this.subject()} history`));
+  readonly emptyText = computed(() =>
+    this.subject() === 'Portfolio value'
+      ? 'Your portfolio history will appear here as prices are recorded.'
+      : `${this.subject()} history will appear here as prices are recorded.`);
   readonly range = input<ChartRange | null>(null);
   readonly period = input<ChartPeriod>('1D');
   readonly loading = input(false);
@@ -565,8 +572,8 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly accountKey = input('');
   readonly accessiblePoints = computed(() => this.loading() || this.error() ? [] : this.plotPoints());
   readonly description = computed(() => describeSeries(this.accessiblePoints(), {
-    name: 'Portfolio value', period: this.periodDescription(), currency: 'USD', hidden: this.balanceHidden(),
-    empty: this.loading() ? 'History is loading.' : this.error() || 'No portfolio history is available for this period.',
+    name: this.subject(), period: this.periodDescription(), currency: 'USD', hidden: this.balanceHidden(),
+    empty: this.loading() ? 'History is loading.' : this.error() || 'No ' + this.subject().toLowerCase() + ' history is available for this period.',
   }) + (this.references().length ? ` The reference line marks the period starting value of ${this.references()[0].value}.` : '')
     + (this.delayed() ? ' Live prices are delayed; these are the last recorded values.' : '')
     + (this.coverage().status === 'partial' ? ' Only part of the requested period has recorded values.' : '') + ' ' + this.notice());
@@ -590,7 +597,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly periodDescription = computed(() => this.focused() ? 'most recent hour'
     : this.coverage().status === 'partial' ? 'available recorded history'
     : this.range()?.fromOpening ? 'since first record' : PERIOD_WORDS[this.period()]);
-  readonly chartSeries = computed<ChartSeries>(() => ({ id: this.accountKey() + ':portfolio', label: 'Portfolio value', unit: 'USD',
+  readonly chartSeries = computed<ChartSeries>(() => ({ id: this.accountKey() + ':' + this.subject(), label: this.subject(), unit: 'USD',
     points: this.loading() || this.error() ? [] : chartPoints(this.plotPoints(), p => p.at, p => p.value),
     coverage: this.loading() || this.error() ? historyCoverage(this.range(), []) : this.coverage(),
     status: this.loading() ? 'loading' : this.error() ? 'error' : this.plotPoints().length ? 'ready' : 'empty', note: this.error() || this.notice() }));
@@ -685,7 +692,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Where the cursor's time label sits, kept far enough from the edges to stay readable. */
   readonly labelLeft = computed(() => {
     const point = this.active();
-    return point ? Math.min(92, Math.max(8, (point.x / WIDTH) * 100)) : 0;
+    return point ? Math.min(100, Math.max(0, (point.x / WIDTH) * 100)) : 0;
   });
   readonly path = computed(() => smoothPricePath(this.placed()));
   readonly areaPath = computed(() => {
@@ -729,7 +736,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly summary = computed(() => {
     const points = this.history();
     if (points.length < 2) {
-      return 'Portfolio value chart';
+      return `${this.subject()} chart`;
     }
     const first = startValue(points);
     const last = points.at(-1)!.value;
@@ -742,7 +749,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     } else {
       word = 'unchanged';
     }
-    return `Portfolio value ${this.periodDescription()}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${percent === null ? 'percentage change unavailable' : word + ' ' + percent.toFixed(2) + '%'}. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
+    return `${this.subject()} ${this.periodDescription()}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${percent === null ? 'percentage change unavailable' : word + ' ' + percent.toFixed(2) + '%'}. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
   });
 
   /** Moves the cursor to the point nearest the pointer: mouse, pen, or a finger dragged across. */

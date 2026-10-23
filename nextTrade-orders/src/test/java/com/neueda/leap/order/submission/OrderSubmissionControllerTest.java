@@ -27,6 +27,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(OrderSubmissionController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class})
 class OrderSubmissionControllerTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JwtServiceImpl tokens;

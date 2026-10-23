@@ -61,7 +61,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
       } });
     }, key);
     await page.goto('/dashboard');
-    if (tier === 'NOVICE') await expect(page.locator('app-portfolio-chart svg[role="img"]')).toBeVisible();
+    if (tier === 'NOVICE') await expect(page.locator('.portfolio-panel app-portfolio-chart svg[role="img"]')).toBeVisible();
     else await expect(page.locator('app-stock-svg-chart svg[role="img"]')).toBeVisible();
     await page.clock.pauseAt(new Date('2026-10-21T15:30:10Z'));
     const press = async () => { await page.keyboard.press(key); await page.clock.runFor(65); };
@@ -76,7 +76,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
 
     await scanTo(page, state => state.name === 'Explain this chart');
     await press();
-    const chart = page.locator(tier === 'NOVICE' ? 'app-portfolio-chart' : 'app-stock-svg-chart');
+    const chart = page.locator(tier === 'NOVICE' ? '.portfolio-panel app-portfolio-chart' : 'app-stock-svg-chart');
     const access = chart.locator('app-chart-access');
     await expect(access.getByRole('button', { name: 'Explain this chart', exact: true })).toHaveAttribute('aria-expanded', 'true');
     const summary = await access.locator('p[id$="-summary"]').textContent();
@@ -155,7 +155,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
       };
     });
     await page.goto('/dashboard');
-    await expect(page.locator(tier === 'NOVICE' ? 'app-portfolio-chart svg[role="img"]' : 'app-stock-svg-chart svg[role="img"]')).toBeVisible();
+    await expect(page.locator(tier === 'NOVICE' ? '.portfolio-panel app-portfolio-chart svg[role="img"]' : 'app-stock-svg-chart svg[role="img"]')).toBeVisible();
     await expect.poll(() => page.evaluate(() => speechSynthesis.getVoices().length)).toBeGreaterThan(0);
     await page.keyboard.press('Alt+s');
     await expect(page.locator('.scan-ring')).toBeVisible();

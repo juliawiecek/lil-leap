@@ -32,6 +32,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtServiceImpl.class, ClientFinancialQueryService.class,
         HoldingsEndpointsTest.DatabaseConfiguration.class})
 class HoldingsEndpointsTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     @TestConfiguration
     @EnableTransactionManagement
     static class DatabaseConfiguration {

@@ -33,6 +33,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @EnabledIfEnvironmentVariable(named = "TEST_POSTGRES_URL", matches = ".+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrderIdempotencyPostgresTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     private static final String SCHEMA = "idempotency_" + UUID.randomUUID().toString().replace("-", "");
 
     @Autowired JdbcTemplate jdbc;

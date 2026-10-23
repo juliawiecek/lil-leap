@@ -58,10 +58,11 @@ import { AssistiveSettings } from './assistive-tools';
   styles: [
     `
       :host { display: block; }
-      .a11y { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 32px; padding: 26px 0; border-top: 1px solid var(--surface-tone-05); }
+      /* The --a11y-* and --setting-card-* hooks let a page restyle the section's frame without touching its content. */
+      .a11y { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 32px; padding: var(--a11y-padding, 26px 0); border-top: var(--a11y-divider, 1px solid var(--surface-tone-05)); }
       .a11y-intro h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
       .a11y-intro p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
-      .a11y-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+      .a11y-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--a11y-cards-gap, 12px); min-width: 0; }
       .a11y-card.colour-mode { display: block; margin: 0; min-width: 0; }
       .colour-mode legend { float: left; width: 100%; margin-bottom: 4px; padding: 0; font-size: 14px; font-weight: 600; }
       .colour-mode legend + * { clear: both; }
@@ -73,8 +74,9 @@ import { AssistiveSettings } from './assistive-tools';
       .colour-option:hover { border-color: var(--focus); }
       .colour-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
       .colour-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--buy); }
-      .a11y-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 20px;
-        border: 1px solid var(--surface-tone-04); border-radius: 8px; background: var(--surface-tone-03); }
+      .a11y-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: var(--setting-card-padding, 14px 20px);
+        border: var(--setting-card-border, 1px solid var(--surface-tone-04)); border-bottom: var(--setting-card-divider, 1px solid var(--surface-tone-04));
+        border-radius: var(--setting-card-radius, 8px); background: var(--setting-card-bg, var(--surface-tone-03)); }
       .a11y-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .a11y-text b { font-size: 14px; font-weight: 600; }
       .a11y-text small { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }

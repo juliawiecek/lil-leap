@@ -1,3 +1,4 @@
+import { PASSWORD_RULES } from './password-rules';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AppSessionService } from './app-session.service';
 import { safeReturnUrl } from './page-state';
@@ -56,11 +57,28 @@ interface VolumeBar {
   accent: boolean;
 }
 
+
+
+
+const rgb = (channels: number[]) => `rgb(${channels.join(',')})`;
+
+// The opening candle animation plays on every fresh page load; once it has played, later in-app
+// redirects to sign-in (for example when a session expires) go straight to the form.
+let introPlayed = false;
+
+function introSeen(): boolean {
+  return introPlayed;
+}
+
+function markIntroSeen(): void {
+  introPlayed = true;
+}
+
 @Component({
   selector: 'app-login',
   imports: [InvestorProfile, SkipLink],
   templateUrl: './app.html',
-  styleUrls: ['./app.scss', './app.refresh.scss'],
+  styleUrls: ['./app.scss', './app.refresh.scss', './app.signin.scss'],
   encapsulation: ViewEncapsulation.None,
 })
 export class App implements AfterViewInit, OnDestroy {
@@ -101,6 +119,20 @@ export class App implements AfterViewInit, OnDestroy {
   readonly submitLabel = computed(() => this.labelFor(this.authMode(), this.signingIn()));
   readonly pageReady = signal(false);
   // Decorative login chart; independent of the opening animation and market data.
+  /** Words in the moving strip across the top of the sign-in page. */
+  // Sample quotes for the sign-in tape; a still snapshot, not live prices.
+  readonly tapeQuotes = [
+    { symbol: 'AAPL', price: '228.52' },
+    { symbol: 'MSFT', price: '431.17' },
+    { symbol: 'NVDA', price: '138.06' },
+    { symbol: 'AMZN', price: '187.43' },
+    { symbol: 'GOOGL', price: '164.12' },
+    { symbol: 'META', price: '576.80' },
+    { symbol: 'TSLA', price: '219.16' },
+    { symbol: 'JPM', price: '214.35' },
+    { symbol: 'LLY', price: '903.90' },
+    { symbol: 'V', price: '281.62' },
+  ];
   readonly loginCandles = Array.from({ length: 44 }, (_, index) => {
     const progress = index / 43;
     const priceAt = (step: number) => 440 - 340 * (step / 43)
@@ -165,16 +197,12 @@ export class App implements AfterViewInit, OnDestroy {
     this.setAuthMode('signup');
   }
   readonly passwordVisible = signal(false);
+  /** True while Caps Lock is on as a password is typed (same hint as the Insights sign-in). */
+  readonly capsLock = signal(false);
   readonly passwordDraft = signal('');
   readonly confirmationDraft = signal('');
   readonly passwordStarted = signal(false);
-  readonly passwordRules = [
-    { label: 'At least 12 characters', test: (value: string) => value.length >= 12 },
-    { label: 'An uppercase letter', test: (value: string) => /[A-Z]/.test(value) },
-    { label: 'A lowercase letter', test: (value: string) => /[a-z]/.test(value) },
-    { label: 'A number', test: (value: string) => /\d/.test(value) },
-    { label: 'A symbol (such as !, @, or #)', test: (value: string) => /[^A-Za-z0-9\s]/.test(value) },
-  ];
+  readonly passwordRules = PASSWORD_RULES;
 
   updatePassword(value: string): void {
     this.passwordDraft.set(value);
@@ -197,7 +225,7 @@ export class App implements AfterViewInit, OnDestroy {
   private animationFrameId = 0;
 
   ngAfterViewInit(): void {
-    if (this.route?.snapshot.queryParamMap.has('returnUrl') || this.signedOutNotice()) { this.showAuthPage(); }
+    if ((this.route?.snapshot.queryParamMap.has('returnUrl') && introSeen()) || this.signedOutNotice()) { this.showAuthPage(); }
     if (this.resetToken) {
       this.showAuthPage();
       // Drop the token from the address bar (and history); the same route keeps this component.
@@ -266,6 +294,10 @@ export class App implements AfterViewInit, OnDestroy {
       return this.fullName;
     }
     return mode === 'reset' ? this.password : this.email;
+  }
+
+  checkCapsLock(event: KeyboardEvent): void {
+    this.capsLock.set(typeof event.getModifierState === 'function' && event.getModifierState('CapsLock'));
   }
 
   togglePassword(): void {
@@ -481,6 +513,7 @@ export class App implements AfterViewInit, OnDestroy {
       return;
     }
     this.pageReady.set(true);
+    markIntroSeen();
     this.renderer.addClass(document.body, 'auth-phase');
   }
 
@@ -556,10 +589,23 @@ export class App implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Laptops and up get a range of greens in the opening chart (see introOpacity). */
+  private get fullScreenIntro(): boolean {
+    return this.width > 900;
+  }
+
   private priceY(price: number): number {
     const chartHeight = Math.min(this.height * 0.63, 660);
     const top = this.height * 0.22;
     return top + (1 - price) * chartHeight;
+  }
+
+  private get introStartX(): number {
+    return Math.max(24, this.width * 0.035);
+  }
+
+  private get introBodyWidth(): number {
+    return Math.max(2, Math.min(10, this.candleStep * 0.32));
   }
 
   private get candleStep(): number {
@@ -580,13 +626,29 @@ export class App implements AfterViewInit, OnDestroy {
       Math.min(candle.open, animatedClose) -
       (Math.min(candle.open, candle.close) - candle.low) * progress;
     const color = animatedClose >= candle.open ? this.riseColor : this.neutralColor;
-    const bodyWidth = Math.max(2, Math.min(10, this.candleStep * 0.32));
+    const bodyWidth = this.introBodyWidth;
     const openY = this.priceY(candle.open);
     const closeY = this.priceY(animatedClose);
     const highY = this.priceY(animatedHigh);
     const lowY = this.priceY(animatedLow);
     const bodyTop = Math.min(openY, closeY);
     const bodyHeight = Math.max(8, Math.abs(closeY - openY));
+
+    // Laptops and up: draw the opening candles exactly like the sign-in chart (solid bodies, thin wicks, same greens).
+    if (this.width > 900) {
+      const rising = animatedClose >= candle.open;
+      context.globalAlpha = opacity;
+      context.strokeStyle = rising ? rgb(readThemeRgb('--signin-gain')) : readThemeColour('--signin-loss-wick');
+      context.lineWidth = this.signinWickWidth();
+      context.beginPath();
+      context.moveTo(x, highY);
+      context.lineTo(x, lowY);
+      context.stroke();
+      context.fillStyle = rgb(rising ? readThemeRgb('--signin-gain') : readThemeRgb('--signin-loss'));
+      context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+      context.globalAlpha = 1;
+      return;
+    }
 
     context.globalAlpha = opacity;
     context.strokeStyle = color;
@@ -610,6 +672,11 @@ export class App implements AfterViewInit, OnDestroy {
     context.shadowBlur = 0;
     context.shadowColor = 'transparent';
     context.globalAlpha = 1;
+  }
+
+  /** The sign-in SVG draws wicks 0.4 units wide in a 420-unit-wide box that spans 60% of the screen. */
+  private signinWickWidth(): number {
+    return Math.max(0.6, (0.4 * this.width * 0.6) / 420);
   }
 
   private refreshChartColours(): void {
@@ -637,18 +704,31 @@ export class App implements AfterViewInit, OnDestroy {
     const revealed = this.candles.length * this.reveal;
     const fullyVisible = Math.floor(revealed);
     const partialProgress = revealed - fullyVisible;
-    const startX = Math.max(24, this.width * 0.035);
+    const startX = this.introStartX;
 
     for (let index = 0; index < fullyVisible; index += 1) {
       const x = startX + index * this.candleStep;
-      const edgeFade = this.clamp(x / 90, 0.18, 1);
-      this.drawCandle(this.candles[index], x, 1, edgeFade);
+      this.drawCandle(this.candles[index], x, 1, this.introOpacity(index, x));
     }
 
     if (fullyVisible < this.candles.length) {
       const x = startX + fullyVisible * this.candleStep;
-      this.drawCandle(this.candles[fullyVisible], x, partialProgress, partialProgress);
+      this.drawCandle(this.candles[fullyVisible], x, partialProgress, partialProgress * this.introOpacity(fullyVisible, x));
     }
+  }
+
+  /**
+   * How strongly a building candle is drawn: full strength, fading in only at the left edge. The
+   * morph then eases each candle to its sign-in chart strength, so the hand-off stays smooth.
+   */
+  private introOpacity(index: number, x: number): number {
+    if (!this.fullScreenIntro) {
+      return this.clamp(x / 90, 0.18, 1);
+    }
+    // A range of greens rather than one flat shade: each candle is a little stronger or softer, in
+    // step with its sign-in candle, but never dim (57% to 100%).
+    const target = this.loginCandles[index]?.opacity ?? 0.5;
+    return Math.min(1, 0.5 + target * 0.7);
   }
 
   private drawChartMorph(): void {
@@ -661,35 +741,37 @@ export class App implements AfterViewInit, OnDestroy {
     const t = this.chartMorph ** 2 * (3 - 2 * this.chartMorph);
     const mix = (from: number, to: number) => from + (to - from) * t;
     const mobile = this.width <= 900;
-    const left = mobile ? 5 : 10;
-    const scaleX = (mobile ? this.width - 10 : (this.width - 20) * 0.6) / 420;
-    const scaleY = (mobile ? 340 : this.height - 49) / 500;
-    const startX = Math.max(24, this.width * 0.035);
-    const introWidth = Math.max(2, Math.min(10, this.candleStep * 0.32));
+    const left = mobile ? 5 : 0;
+    const chartTop = mobile ? 39 : 32;
+    const scaleX = (mobile ? this.width - 10 : this.width * 0.6) / 420;
+    const scaleY = (mobile ? 340 : this.height - chartTop) / 500;
+    const startX = this.introStartX;
+    const introWidth = this.introBodyWidth;
     for (let index = 0; index < this.candles.length; index += 1) {
       const candle = this.candles[index];
       const target = this.loginCandles[index];
       const x = mix(startX + index * this.candleStep, left + target.x * scaleX);
-      const top = mix(Math.min(this.priceY(candle.open), this.priceY(candle.close)), 39 + target.top * scaleY);
+      const top = mix(Math.min(this.priceY(candle.open), this.priceY(candle.close)), chartTop + target.top * scaleY);
       const height = mix(Math.max(8, Math.abs(this.priceY(candle.close) - this.priceY(candle.open))), target.height * scaleY);
       const width = mix(introWidth, 3.6 * scaleX);
-      const fromColor = candle.close >= candle.open ? this.morphGain : this.morphLoss;
-      const toColor = target.falling ? this.targetLoss : this.targetGain;
+      const fromColor = mobile ? (candle.close >= candle.open ? this.morphGain : this.morphLoss) : (candle.close >= candle.open ? readThemeRgb('--signin-gain') : readThemeRgb('--signin-loss'));
+      // On laptops the morph lands on the sign-in chart's own candle colours so the hand-off to the SVG is seamless.
+      const toColor = mobile ? (target.falling ? this.targetLoss : this.targetGain) : (target.falling ? readThemeRgb('--signin-loss') : readThemeRgb('--signin-gain'));
       const color = `rgb(${fromColor.map((value, channel) => Math.round(mix(value, toColor[channel]))).join(',')})`;
-      context.globalAlpha = mix(this.clamp((startX + index * this.candleStep) / 90, 0.18, 1), target.opacity);
+      context.globalAlpha = mix(this.introOpacity(index, startX + index * this.candleStep), target.opacity);
       context.strokeStyle = color;
-      context.lineWidth = mix(1, 0.4 * scaleX);
+      context.lineWidth = mobile ? mix(1, 0.4 * scaleX) : this.signinWickWidth();
       context.beginPath();
-      context.moveTo(x, mix(this.priceY(candle.high), 39 + target.high * scaleY));
+      context.moveTo(x, mix(this.priceY(candle.high), chartTop + target.high * scaleY));
       context.lineTo(x, top);
       context.moveTo(x, top + height);
-      context.lineTo(x, mix(this.priceY(candle.low), 39 + target.low * scaleY));
+      context.lineTo(x, mix(this.priceY(candle.low), chartTop + target.low * scaleY));
       context.stroke();
       context.fillStyle = color;
       // The seeded walk and the SVG target disagree on direction, so the hollow/filled convention
       // changes with the geometry at the midpoint rather than flipping on the first morph frame.
       const falling = t < 0.5 ? candle.close < candle.open : target.falling;
-      if (falling) {
+      if (falling || !mobile) {
         context.fillRect(x - width / 2, top, width, height);
       } else {
         context.strokeRect(x - width / 2, top, width, height);
@@ -703,9 +785,9 @@ export class App implements AfterViewInit, OnDestroy {
     this.lastFrameTime = now;
 
     if (this.reveal < 1) {
-      this.reveal = Math.min(1, this.reveal + delta / 2500);
+      this.reveal = Math.min(1, this.reveal + delta / 1800);
     } else {
-      this.chartMorph = this.reduceMotion ? 1 : Math.min(1, this.chartMorph + delta / 1500);
+      this.chartMorph = this.reduceMotion ? 1 : Math.min(1, this.chartMorph + delta / 800);
     }
 
     if (!this.pageReady() && this.chartMorph >= 1) {

@@ -98,14 +98,14 @@ class TokenRejectionTest {
 
     @Test
     void anExpiredTokenGetsA401AndNeverReachesTheEndpoint() throws Exception {
-        assertRejectedByFilter(new JwtAuthenticationFilter(jwt), token(b -> b.expiration(in(-1))));
+        assertRejectedByFilter(new JwtAuthenticationFilter(jwt, tokenValue -> true), token(b -> b.expiration(in(-1))));
     }
 
     @Test
     void aValidatorThatThrowsUnexpectedlyDeniesAccessWithA401() throws Exception {
         JwtService broken = mock(JwtService.class);
         when(broken.validate(anyString())).thenThrow(new IllegalStateException("verification bug"));
-        assertRejectedByFilter(new JwtAuthenticationFilter(broken), token(b -> b));
+        assertRejectedByFilter(new JwtAuthenticationFilter(broken, tokenValue -> true), token(b -> b));
     }
 
     private static void assertRejectedByFilter(JwtAuthenticationFilter filter, String token) throws Exception {

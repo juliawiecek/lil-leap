@@ -1,5 +1,24 @@
-<div class="novice-shell">
+<div
+  class="novice-shell resizable"
+  [class.collapsed]="sidebarCollapsed()"
+  [class.resizing]="resizingSidebar()"
+  [style.--sidebar-width.px]="sidebarWidth()"
+>
   <aside class="novice-sidebar" aria-label="Menu" data-scan-group="Menu">
+    <div
+      class="sidebar-resizer"
+      role="separator"
+      tabindex="0"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      [attr.aria-valuemin]="sidebarMin"
+      [attr.aria-valuemax]="sidebarMax"
+      [attr.aria-valuenow]="sidebarWidth()"
+      title="Drag to resize"
+      (pointerdown)="startSidebarResize($event)"
+      (keydown)="resizeSidebarWithKeys($event)"
+      (dblclick)="toggleSidebar()"
+    ></div>
     <a class="wordmark" href="/" aria-label="NextTrade home" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span
       ><svg class="wordmark-trend" viewBox="0 0 22 16" aria-hidden="true">
@@ -14,6 +33,7 @@
           [class.active]="activeTab() === item.label"
           [attr.aria-label]="item.label"
           [attr.aria-current]="activeTab() === item.label ? 'page' : null"
+          [attr.title]="sidebarCollapsed() ? item.label : null"
           (click)="navigate(item.label)"
         >
           <app-dashboard-icon [name]="item.icon" /><span>{{ item.label }}</span>
@@ -21,7 +41,9 @@
       }
     </nav>
     <div class="sidebar-account">
-      <button type="button" (click)="signOut.emit()">Sign out ↗</button>
+      <button type="button" class="sign-out" [attr.title]="sidebarCollapsed() ? 'Sign out' : null" (click)="signOut.emit()">
+        <app-dashboard-icon name="signout" /><span>Sign out</span>
+      </button>
     </div>
   </aside>
   <div class="novice-main">
@@ -324,14 +346,11 @@
                     <p>{{ userProfile.email }}</p>
                   </div>
                 </header>
-                <div class="settings-section">
-                  <div class="settings-intro"><h2>Personal details</h2><p>Your contact information.</p></div>
-                  <dl class="settings-list" data-a11y-sensitive>
-                    <div><dt>Phone</dt><dd>{{ userProfile.phone || 'Not provided' }}</dd></div>
-                    <div><dt>Address</dt><dd>{{ userProfile.address || 'Not provided' }}</dd></div>
-                  </dl>
-                </div>
               }
+              <div class="settings-section">
+                <div class="settings-intro"><h2>Personal details</h2><p>Your contact information, sign-in email and password. Changing your email or password needs your current password.</p></div>
+                <app-account-settings />
+              </div>
               <div class="settings-section">
                 <div class="settings-intro"><h2>Account</h2><p>Your trading account and the experience it uses.</p></div>
                 <dl class="settings-list account-details">
@@ -505,6 +524,31 @@
     </button>
   </div>
   @if (modal() === 'trade') {
+    <div class="trade-layout">
+    <!-- The stock's own chart, built like the Overview portfolio chart: periods, hover readout and live updates. -->
+    <section class="trade-chart" [attr.aria-label]="tradeQuote().symbol + ' price chart'" data-scan-group="Price chart">
+      <div class="trade-chart-price">
+        <div class="trade-chart-value">{{ stockChartPrice() | currency }}</div>
+        <div class="portfolio-gain" [class.up]="stockChartChange().amount > 0" [class.down]="stockChartChange().amount < 0">
+          <strong>@if (stockChartChangeAvailable()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Change unavailable }</strong
+          ><span>{{ stockChartChange().label }}</span>
+        </div>
+      </div>
+      <app-portfolio-chart
+        [subject]="tradeQuote().symbol + ' price'"
+        [accountKey]="tradeQuote().symbol"
+        [notice]="stockChartPeriod() === 'ALL' ? 'Available recorded prices, up to the past five years.' : ''"
+        [points]="stockChartPoints()"
+        [range]="stockChartSpan()"
+        [period]="stockChartPeriod()"
+        [loading]="stockChartLoading()"
+        [error]="stockChartError()"
+        [delayed]="tradePriceDelayed()"
+        (periodChange)="setStockChartPeriod($event)"
+        (scrub)="stockChartScrub.set($event)"
+      />
+    </section>
+    <div class="trade-side">
     <div class="trade-quote">
       <span
         >{{ tradeQuote().name }}<strong>{{ tradeQuote().price | currency }}</strong
@@ -513,15 +557,44 @@
         {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
       </button>
     </div>
-    <form method="post" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
-      <label for="novice-stock">Stock</label
-      ><select id="novice-stock" (change)="chooseTradeSymbol($any($event.target).value)">
-        @for (q of tradableQuotes(); track q.symbol) {
-          <option [value]="q.symbol" [selected]="q.symbol === tradeQuote().symbol" [attr.data-speak]="spokenStock(q.name, q.symbol)">
-            {{ q.symbol }} · {{ q.name }}
-          </option>
+    <form class="trade-form" method="post" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+      <label id="novice-stock-label" for="novice-stock">Stock</label>
+      <div class="stock-picker" (focusout)="stockMenuOpen.set(false)">
+        <button
+          id="novice-stock"
+          type="button"
+          class="stock-trigger"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-controls="novice-stock-menu"
+          aria-labelledby="novice-stock-label novice-stock"
+          [attr.aria-expanded]="stockMenuOpen()"
+          [attr.aria-activedescendant]="stockMenuOpen() ? 'novice-stock-' + stockMenuIndex() : null"
+          (click)="toggleStockMenu()"
+          (keydown)="stockMenuKey($event)"
+        >
+          <span class="stock-choice"><b>{{ tradeQuote().symbol }}</b>{{ tradeQuote().name }}</span>
+          <app-dashboard-icon name="chevron" />
+        </button>
+        @if (stockMenuOpen()) {
+          <ul id="novice-stock-menu" class="stock-menu" role="listbox" aria-labelledby="novice-stock-label">
+            @for (q of tradableQuotes(); track q.symbol; let i = $index) {
+              <li
+                [id]="'novice-stock-' + i"
+                role="option"
+                [attr.aria-selected]="q.symbol === tradeQuote().symbol"
+                [class.active]="i === stockMenuIndex()"
+                [attr.data-speak]="spokenStock(q.name, q.symbol)"
+                (mousedown)="$event.preventDefault()"
+                (mouseenter)="stockMenuIndex.set(i)"
+                (click)="pickStock(q.symbol)"
+              >
+                <b>{{ q.symbol }}</b><span>{{ q.name }}</span><em>{{ q.price | currency }}</em>
+              </li>
+            }
+          </ul>
         }
-      </select>
+      </div>
       <div class="side-picker">
         @for (action of ['Buy', 'Sell']; track action) {
           <button
@@ -550,7 +623,7 @@
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
-      <p>Buying power: {{ buyingPower() | currency }}</p>
+      <p>Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
       @if (protectionNote()) {
         <div class="protection-row">
           <div class="protection-copy">
@@ -589,6 +662,8 @@
       }
       <output id="novice-trade-message">{{ tradeMessage() }}</output>
     </form>
+    </div>
+    </div>
   } @else if (modal() === 'allocation') {
     <div class="asset-class-list">
       <div><span>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</span></div>

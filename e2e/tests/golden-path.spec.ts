@@ -1,4 +1,4 @@
-import { test, expect, uniqueCredentials, registerThroughBrowser, openedAccount, login, authedGet } from './fixtures';
+import { test, expect, uniqueCredentials, registerThroughBrowser, openedAccount, login, authedGet, chooseMenuOption } from './fixtures';
 
 test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }, async ({ page, request }) => {
   const credentials = uniqueCredentials('trader');
@@ -13,7 +13,7 @@ test('AC1/AC4: register, login, real order fill and holdings', { tag: '@smoke' }
 
   await page.getByRole('button', { name: 'Buy', exact: true }).first().click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Stock', { exact: true }).selectOption('AAPL');
+  await chooseMenuOption(page, 'novice-stock', /^AAPL\b/);
   await dialog.getByLabel('Number of shares').fill('1');
   await dialog.getByRole('button', { name: 'Review buy', exact: true }).click();
   const submitted = page.waitForResponse(r => r.url().endsWith('/api/v1/orders') && r.request().method() === 'POST');

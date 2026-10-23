@@ -15,6 +15,18 @@ test('login exposes the Accessibility button and its named dialog', async ({ pag
   await page.keyboard.press('Escape'); await expect(trigger).toBeFocused();
 });
 
+test('main sign-in animation completes and preserves the Accessibility launcher', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/login');
+  await expect(page.locator('#market-chart')).toBeVisible();
+  await expect(page.locator('.login-screen')).toHaveClass(/auth-visible/, { timeout: 12000 });
+  await expect(page.locator('.auth-shell')).toHaveCSS('opacity', '1');
+  await expect(page.getByRole('heading', { name: 'Welcome back', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Accessibility', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/merge-animated-login.png' });
+});
+
 for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} accesses accessibility through Settings and restores the launcher after sign-out`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade');

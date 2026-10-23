@@ -58,6 +58,20 @@ describe('JwtService', () => {
     expect((jwt.decode(anyToken()) as jwt.JwtPayload).trader_level).toBeUndefined();
   });
 
+  it('binds access tokens to a session without exposing the raw refresh token', () => {
+    const service = new JwtService();
+    const token = service.issueToken('user-id', 'trader@example.com', null, 'TRADER', null, 'raw-refresh-secret');
+    const session = service.verifySessionToken(token);
+    expect(session.userId).toBe('user-id');
+    expect(session.sessionHash).toMatch(/^[A-Za-z0-9+/]{43}=$/);
+    expect(JSON.stringify(jwt.decode(token))).not.toContain('raw-refresh-secret');
+  });
+
+  it.each([undefined, '', 'invalid-session-hash', 123])('rejects a missing or malformed session binding: %s', sid => {
+    const token = jwt.sign({ sid }, process.env.APP_JWT_SECRET as string, { subject: 'user-id', expiresIn: '5m' });
+    expect(() => new JwtService().verifySessionToken(token)).toThrow(InvalidAccessTokenException);
+  });
+
   describe('verifyToken', () => {
     const userId = '11111111-1111-1111-1111-111111111111';
 
