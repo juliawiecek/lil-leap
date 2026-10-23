@@ -5,9 +5,8 @@ import { InsightsChart } from '../../shared/insights-chart';
 import { centralHour, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
-/** How often the page re-reads today's figures, in milliseconds. */
-/** How often the figures and the chart are re-read: every 3 seconds, so new trades appear almost at once. */
-const REFRESH_MS = 3_000;
+/** How often the figures and the chart are re-read: every 5 seconds, so new trades appear almost at once. */
+const REFRESH_MS = 5_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 /** The hour it is now in Central time, as the trend labels it ("14:00"). */
 const CENTRAL_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
