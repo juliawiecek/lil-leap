@@ -11,7 +11,7 @@ import { homePath } from './roles';
 @Component({
   selector: 'app-insights-login',
   templateUrl: './login.html',
-  styleUrl: './login.scss',
+  styleUrls: ['./login.scss', './login.novice.scss'],
 })
 export class Login {
   private readonly auth = inject(AuthService);

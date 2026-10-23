@@ -1,0 +1,21 @@
+// The trading app's sign-in background (app.refresh.scss), layered over login.scss: the same graph-paper grid as
+// every page inside the app, showing behind the chart panel and softly through the form panel.
+.login-screen {
+  background-color: #070707;
+  background-image: radial-gradient(ellipse at center, rgba(7, 7, 7, 0.65), transparent 75%),
+    radial-gradient(45% 55% at 80% 30%, rgba(242, 239, 230, 0.05), transparent 70%),
+    radial-gradient(40% 50% at 15% 85%, rgba(255, 255, 255, 0.035), transparent 70%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+  background-attachment: fixed;
+}
+.showcase {
+  background: transparent;
+}
+.tape,
+.auth {
+  background: rgba(7, 7, 7, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
