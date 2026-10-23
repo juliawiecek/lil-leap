@@ -139,7 +139,7 @@ const FAILED = 'Something went wrong. Please try again.';
       .edit small { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       .actions { display: flex; justify-content: flex-end; margin-top: 6px; }
       .save {
-        min-height: 38px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--gain); color: var(--on-accent, #050805);
+        min-height: 38px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--gain); color: var(--on-accent);
         font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
       }
       .save:disabled { opacity: 0.6; cursor: progress; }

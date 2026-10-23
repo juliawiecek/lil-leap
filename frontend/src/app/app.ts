@@ -56,9 +56,9 @@ interface VolumeBar {
   accent: boolean;
 }
 
-const SIGNIN_GAIN = [127, 164, 89];
-const SIGNIN_LOSS = [75, 91, 66];
-const SIGNIN_LOSS_WICK = '#647653';
+
+
+
 const rgb = (channels: number[]) => `rgb(${channels.join(',')})`;
 
 // The opening candle animation plays on every fresh page load; once it has played, later in-app
@@ -636,13 +636,13 @@ export class App implements AfterViewInit, OnDestroy {
     if (this.width > 900) {
       const rising = animatedClose >= candle.open;
       context.globalAlpha = opacity;
-      context.strokeStyle = rising ? rgb(SIGNIN_GAIN) : SIGNIN_LOSS_WICK;
+      context.strokeStyle = rising ? rgb(readThemeRgb('--signin-gain')) : readThemeColour('--signin-loss-wick');
       context.lineWidth = this.signinWickWidth();
       context.beginPath();
       context.moveTo(x, highY);
       context.lineTo(x, lowY);
       context.stroke();
-      context.fillStyle = rgb(rising ? SIGNIN_GAIN : SIGNIN_LOSS);
+      context.fillStyle = rgb(rising ? readThemeRgb('--signin-gain') : readThemeRgb('--signin-loss'));
       context.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
       context.globalAlpha = 1;
       return;
@@ -752,9 +752,9 @@ export class App implements AfterViewInit, OnDestroy {
       const top = mix(Math.min(this.priceY(candle.open), this.priceY(candle.close)), chartTop + target.top * scaleY);
       const height = mix(Math.max(8, Math.abs(this.priceY(candle.close) - this.priceY(candle.open))), target.height * scaleY);
       const width = mix(introWidth, 3.6 * scaleX);
-      const fromColor = mobile ? (candle.close >= candle.open ? this.morphGain : this.morphLoss) : (candle.close >= candle.open ? SIGNIN_GAIN : SIGNIN_LOSS);
+      const fromColor = mobile ? (candle.close >= candle.open ? this.morphGain : this.morphLoss) : (candle.close >= candle.open ? readThemeRgb('--signin-gain') : readThemeRgb('--signin-loss'));
       // On laptops the morph lands on the sign-in chart's own candle colours so the hand-off to the SVG is seamless.
-      const toColor = mobile ? (target.falling ? this.targetLoss : this.targetGain) : (target.falling ? SIGNIN_LOSS : SIGNIN_GAIN);
+      const toColor = mobile ? (target.falling ? this.targetLoss : this.targetGain) : (target.falling ? readThemeRgb('--signin-loss') : readThemeRgb('--signin-gain'));
       const color = `rgb(${fromColor.map((value, channel) => Math.round(mix(value, toColor[channel]))).join(',')})`;
       context.globalAlpha = mix(this.introOpacity(index, startX + index * this.candleStep), target.opacity);
       context.strokeStyle = color;
