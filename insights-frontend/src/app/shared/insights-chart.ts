@@ -105,8 +105,11 @@ export interface ChartPoint {
       line {
         opacity: 0.65;
       }
-      circle:focus-visible {
+      /* No browser focus box: clicking a point would draw a square over the line. Keyboard focus gets a round ring. */
+      circle:focus {
         outline: none;
+      }
+      circle:focus-visible {
         stroke: var(--accent);
         stroke-width: 2px;
       }
