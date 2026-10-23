@@ -129,20 +129,6 @@
   color: #94c973;
   font-weight: 600;
 }
-:host .updated {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #8b8f86;
-}
-:host .updated i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #94c973;
-}
 :host .hero-empty {
   margin: 18px 0 0;
   color: #7e8279;

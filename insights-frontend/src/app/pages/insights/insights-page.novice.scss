@@ -15,10 +15,6 @@
   font-size: 30px;
   word-spacing: normal;
 }
-:host .updated {
-  @include nv.chip;
-  margin-top: 12px;
-}
 :host .hero-label,
 :host .stats dt {
   color: var(--nt-subtle);

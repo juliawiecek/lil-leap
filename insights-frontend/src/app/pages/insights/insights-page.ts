@@ -2,11 +2,12 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
 import { InsightsChart } from '../../shared/insights-chart';
-import { centralHour, centralTime, twelveHour } from '../../shared/app-time';
+import { centralHour, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
 /** How often the page re-reads today's figures, in milliseconds. */
-const REFRESH_MS = 5_000;
+/** How often the figures and the chart are re-read: every 3 seconds, so new trades appear almost at once. */
+const REFRESH_MS = 3_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 /** The hour it is now in Central time, as the trend labels it ("14:00"). */
 const CENTRAL_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
@@ -37,8 +38,6 @@ export class InsightsPage implements OnDestroy {
     const now = `${CENTRAL_HOUR.format(new Date())}:00`;
     return this.trend().find((point) => point.hour === now)?.tradeCount ?? 0;
   });
-  /** When the figures were last read successfully, e.g. "4:02 PM CT"; empty until the first read. */
-  readonly updatedAt = signal('');
   /** Names the day the figures cover, once the server has said which day that is. */
   readonly subtitle = computed(() => {
     const day = this.summary()?.date;
@@ -139,9 +138,6 @@ export class InsightsPage implements OnDestroy {
     }
     if (trend.status === 'fulfilled') {
       this.trend.set(trend.value);
-    }
-    if ([summary, top, trend].some((result) => result.status === 'fulfilled')) {
-      this.updatedAt.set(centralTime(new Date()));
     }
     if ([summary, top, trend].some((result) => result.status === 'rejected')) {
       this.error.set('Some reporting figures could not be loaded. Trying again in a few seconds.');

@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { signal } from '@angular/core';
 import { component } from './component-helper.mjs';
-const chartModule = await import('../src/app/shared/insights-chart.ts');
-const { InsightsChart } = chartModule;
+const { InsightsChart } = await import('../src/app/shared/insights-chart.ts');
 
 function chartWith(t, values) {
   const chart = component(t, InsightsChart);
@@ -13,56 +12,40 @@ function chartWith(t, values) {
   return chart;
 }
 
-test('empty and zero-valued charts have finite scales and no invalid path coordinates', t => {
+test('empty and single-point charts have finite coordinates', t => {
   const chart = chartWith(t, []);
   assert.equal(chart.path(), '');
   assert.ok(Number.isFinite(chart.y(0)));
+  assert.equal(chart.last(), 0);
   chart.points.set([{ label: 'Zero', value: 0 }]);
-  assert.equal(chart.path(), 'M54,186');
-  assert.deepEqual(chart.tickIndices(), [0]);
-  assert.doesNotMatch(chart.area(), /NaN|Infinity/);
+  assert.equal(chart.path(), 'M10,210', 'a lone zero sits on the floor, inside the padding');
+  assert.ok(Number.isFinite(chart.startY()));
 });
 
-test('chart endpoints span the plot and labels stay unique for short series', t => {
-  const chart = chartWith(t, [10, 20]);
-  assert.equal(chart.x(0), 54); assert.equal(chart.x(1), 626);
-  assert.ok(chart.y(20) < chart.y(10));
-  assert.deepEqual(chart.tickIndices(), [0, 1]);
-  assert.match(chart.path(), /^M54,[\d.]+ C.* 626,[\d.]+$/, 'a smooth curve from the first point to the last');
-  assert.match(chart.area(), /L626,186 L54,186 Z$/);
+test('the line runs in straight segments across the full width, higher values higher up', t => {
+  const chart = chartWith(t, [10, 20, 15]);
+  assert.equal(chart.x(0), 10);
+  assert.equal(chart.x(2), 630);
+  assert.ok(chart.y(20) < chart.y(15) && chart.y(15) < chart.y(10));
+  assert.match(chart.path(), /^M10,[\d.]+ L320,[\d.]+ L630,[\d.]+$/);
+  assert.ok(chart.y(20) > 10, 'the highest point keeps some headroom below the top');
 });
 
-test('the curve is smooth but never overshoots: flat stretches stay flat and rises stay between their points', () => {
-  const { monotonePath } = chartModule;
-  const points = [[0, 100], [10, 100], [20, 60], [30, 60], [40, 10]];
-  const segments = monotonePath(points).split(' C').slice(1).map((s) => s.split(' ').map((xy) => xy.split(',').map(Number)));
-  assert.equal(segments.length, 4);
-  segments.forEach(([c1, c2, end], i) => {
-    const [from, to] = [points[i][1], points[i + 1][1]];
-    const [low, high] = [Math.min(from, to), Math.max(from, to)];
-    for (const [, y] of [c1, c2]) {
-      assert.ok(y >= low && y <= high, `segment ${i}: control point y=${y} stays within ${low}..${high}`);
-    }
-    assert.deepEqual(end, points[i + 1]);
-  });
-  assert.equal(monotonePath([]), '');
-  assert.equal(monotonePath([[5, 5]]), 'M5,5');
+test('the dotted line marks the starting value, and a falling series turns red', t => {
+  const rising = chartWith(t, [0, 4, 9]);
+  assert.equal(rising.startY(), rising.y(0));
+  assert.equal(rising.falling(), false);
+  assert.equal(rising.last(), 9);
+  const falling = chartWith(t, [9, 4, 2]);
+  assert.equal(falling.startY(), falling.y(9));
+  assert.equal(falling.falling(), true);
+  assert.equal(chartWith(t, [5, 5]).falling(), false, 'level counts as not falling');
 });
 
-test('chart units and path recompute when input values change', t => {
+test('the path recomputes when the values change', t => {
   const chart = chartWith(t, [10, 20]);
   const before = chart.path();
-  assert.equal(chart.suffix(), ''); assert.equal(chart.divisor(), 1);
-  chart.points.set([{ label: 'Large', value: 2000 }]);
-  assert.equal(chart.suffix(), 'K'); assert.equal(chart.divisor(), 1000);
+  chart.points.set([{ label: 'a', value: 2000 }, { label: 'b', value: 100 }]);
   assert.notEqual(chart.path(), before);
-  chart.points.set([{ label: 'Larger', value: 2000000 }]);
-  assert.equal(chart.suffix(), 'M'); assert.equal(chart.divisor(), 1000000);
-});
-
-test('date labels use the UTC calendar date and preserve non-date labels', t => {
-  const chart = chartWith(t, []);
-  assert.equal(chart.shortLabel('2026-09-01'), 'Sep 1');
-  assert.equal(chart.shortLabel('2026-01-01'), 'Jan 1');
-  assert.equal(chart.shortLabel('Week 1'), 'Week 1');
+  assert.doesNotMatch(chart.path(), /NaN|Infinity/);
 });

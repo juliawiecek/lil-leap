@@ -74,6 +74,24 @@ test('one failed call keeps the other figures and shows only a fixed safe messag
   assert.equal(fixture.componentInstance.trend().length, 24);
 });
 
+test('the figures and the chart are re-read every 3 seconds', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  let calls = 0;
+  const page = component(t, InsightsPage, [{ provide: LIVE_REPORTS, useValue: service({ load: async () => { calls++; return summary; } }) }]);
+  await settle();
+  assert.equal(calls, 1, 'read once when the page opens');
+  t.mock.timers.tick(2_999);
+  await settle();
+  assert.equal(calls, 1, 'not yet');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(calls, 2, 'again after 3 seconds');
+  t.mock.timers.tick(3_000);
+  await settle();
+  assert.equal(calls, 3);
+  page.ngOnDestroy();
+});
+
 test('loading is single-flight and never applies a response after the page closes', async (t) => {
   let finish;
   let calls = 0;

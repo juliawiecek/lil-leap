@@ -3,9 +3,6 @@
     <div>
       <h1>{{ greeting() }}</h1>
       <p class="subtitle">{{ subtitle() }}</p>
-      @if (updatedAt(); as at) {
-        <p class="updated"><i aria-hidden="true"></i>Live · updated {{ at }}</p>
-      }
     </div>
     @if (summary(); as s) {
       <p class="sentence">
