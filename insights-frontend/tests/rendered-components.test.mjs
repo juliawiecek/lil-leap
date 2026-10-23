@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { render, browser } from './dom-helper.mjs';
+import { render, browser, animateFrame } from './dom-helper.mjs';
 import { provideRouter, Router } from '@angular/router';
 const { DashboardIcon } = await import('../src/app/shared/dashboard-icon.ts');
 const { InsightsChart } = await import('../src/app/shared/insights-chart.ts');
@@ -18,21 +18,44 @@ test('insights icons bind known names and fall back for unknown names', async t 
   assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('aria-hidden'), 'true');
 });
 
-test('chart renders empty state, binds points, and exposes values on keyboard focus and hover', async t => {
+test('chart renders empty state, binds points, follows the pointer and the keyboard, and glides to new values', async t => {
   const fixture = await render(t, InsightsChart);
   assert.match(fixture.nativeElement.textContent, /No observations/);
   fixture.componentRef.setInput('points', [{ label: '2026-09-01', value: 1234 }, { label: '2026-09-02', value: 2500 }]);
   fixture.componentRef.setInput('label', 'Filtered volume'); fixture.detectChanges();
-  assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('aria-label'), 'Filtered volume');
-  const points = fixture.nativeElement.querySelectorAll('circle[tabindex]'); assert.equal(points.length, 2);
-  points[0].dispatchEvent(new Event('focus')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /2026-09-01.*1,234/);
-  points[0].dispatchEvent(new Event('blur')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /Hover or focus/);
-  points[1].dispatchEvent(new Event('mouseenter')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /2,500/);
-  points[1].dispatchEvent(new Event('mouseleave')); fixture.detectChanges();
+  const svg = fixture.nativeElement.querySelector('svg');
+  assert.equal(svg.getAttribute('aria-label'), 'Filtered volume');
+  assert.equal(svg.getAttribute('tabindex'), '0', 'one tab stop for the whole chart');
+  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /arrow keys/);
+  assert.match(fixture.nativeElement.querySelector('.area').getAttribute('fill'), /^url\(#insights-chart-fill-\d+\)$/);
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' })); fixture.detectChanges();
+  assert.match(fixture.nativeElement.querySelector('.cursor-label').textContent, /2026-09-01 · \$1,234/);
+  svg.dispatchEvent(new Event('blur')); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('.cursor-label'), null);
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' })); fixture.detectChanges();
+  assert.match(fixture.nativeElement.querySelector('.cursor-label').textContent, /2,500/);
+  svg.dispatchEvent(new Event('pointerleave')); fixture.detectChanges();
   assert.equal(fixture.componentInstance.active(), null);
+
+  const chart = fixture.componentInstance;
+  const before = chart.path();
+  fixture.componentRef.setInput('points', [{ label: 'a', value: 1234 }, { label: 'b', value: 900 }, { label: 'c', value: 3000 }]);
+  fixture.detectChanges();
+  const target = chart.placed();
+  assert.equal(chart.shown().length, 3, 'the added point grows out of the old last point');
+  assert.deepEqual(chart.shown()[2], chart.shown()[1]);
+  assert.notDeepEqual(chart.shown(), target);
+  const started = performance.now();
+  animateFrame(started + 120);
+  assert.notEqual(chart.path(), before);
+  assert.notDeepEqual(chart.shown(), target, 'halfway through the glide');
+  animateFrame(started + 1000);
+  assert.deepEqual(chart.shown(), target, 'the glide ends exactly on the real values');
+
+  fixture.componentRef.setInput('points', [{ label: 'a', value: 5 }, { label: 'b', value: 6 }]);
+  fixture.detectChanges();
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+  assert.deepEqual(chart.shown(), chart.placed(), 'using the chart finishes a glide at once');
 });
 
 const signedInAs = (role, session = { logout: async () => {} }) => [

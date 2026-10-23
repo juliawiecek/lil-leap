@@ -25,7 +25,7 @@
       </div>
       @if (tradesToday()) {
         <div class="hero-chart">
-          <app-insights-chart [points]="cumulativePoints()" [height]="210" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
+          <app-insights-chart [points]="cumulativePoints()" [height]="260" label="Trades so far today, hour by hour, Central time" prefix="" hint="" />
         </div>
       } @else {
         <p class="hero-empty">No trades yet today. The line fills in as trades execute.</p>
