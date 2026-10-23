@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 /**
- * Inclusive calendar-date range for a report, interpreted as New York trading days
+ * Inclusive calendar-date range for a report, interpreted as Central-time days
  * (see {@link MarketDay}), so reports agree with the Insights page.
  *
  * <p>Construction validates the range, so any instance is safe to pass to a
@@ -42,7 +42,7 @@ public record ReportDateRange(LocalDate startDate, LocalDate endDate) {
     }
 
     /**
-     * Returns the first instant included in the range (midnight starting {@code startDate} in New York).
+     * Returns the first instant included in the range (midnight starting {@code startDate} Central time).
      *
      * @return inclusive lower bound
      */
@@ -51,7 +51,7 @@ public record ReportDateRange(LocalDate startDate, LocalDate endDate) {
     }
 
     /**
-     * Returns the first instant after the range (midnight ending {@code endDate} in New York).
+     * Returns the first instant after the range (midnight ending {@code endDate} Central time).
      *
      * @return exclusive upper bound
      */

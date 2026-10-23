@@ -1,47 +1,52 @@
-<app-page-heading title="Clients" subtitle="Every trading account in the reporting dataset, who owns it, its trader level and trades." />
-<form class="filter-bar" role="search" method="get" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
-  <label class="grow"
-    >Search<input
-      #searchBox
-      name="search"
-      type="search"
-      autocomplete="off"
-      spellcheck="false"
-      [placeholder]="operations() ? 'Account, client name or email, or a full order ID' : 'Account, client name or email'"
-      [value]="filters().search"
-      (input)="search($any($event.target).value)"
-  /></label>
-  <label
-    >Trader level<select name="level" [value]="filters().level" (change)="update({ level: $any($event.target).value })">
-      <option value="">All levels</option>
-      <option value="NOVICE">Novice</option>
-      <option value="ADVANCED">Advanced</option>
-    </select></label
-  >
-  <label
-    >Status<select name="status" [value]="filters().status" (change)="update({ status: $any($event.target).value })">
-      <option value="">All statuses</option>
-      <option value="ACTIVE">Active</option>
-      <option value="PENDING">Pending</option>
-      <option value="BLOCKED">Blocked</option>
-      <option value="CLOSED">Closed</option>
-    </select></label
-  >
-  @if (filtered()) {
-    <button type="button" (click)="clear()">Clear filters</button>
-  }
-</form>
-@if (operations()) {
-  <p class="hint muted">Looking for an order? Paste its order ID above to find the account, or open an account's Orders tab.</p>
-}
+<section class="band" aria-labelledby="clients-heading">
+  <div class="head">
+    <div>
+      <h1 id="clients-heading">Clients</h1>
+      <p class="lede">Every trading account in the reporting dataset, who owns it, its trader level and trades.</p>
+    </div>
+    @if (result(); as page) {
+      <dl class="figure">
+        <dt>{{ filtered() ? 'Matching accounts' : 'Accounts' }}</dt>
+        <dd>{{ count(page.totalElements) }}</dd>
+      </dl>
+    }
+  </div>
+  <form class="filters" role="search" method="get" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
+    <label class="search"
+      ><span class="sr-only">Search</span
+      ><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg
+      ><input
+        #searchBox
+        name="search"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        [placeholder]="operations() ? 'Account, client name or email, or a full order ID' : 'Account, client name or email'"
+        [value]="filters().search"
+        (input)="search($any($event.target).value)"
+    /></label>
+    <div class="seg" role="group" aria-label="Trader level">
+      @for (option of levelOptions; track option.value) {
+        <button type="button" [class.on]="filters().level === option.value" [attr.aria-pressed]="filters().level === option.value" (click)="update({ level: option.value })">{{ option.label }}</button>
+      }
+    </div>
+    <div class="seg" role="group" aria-label="Account status">
+      @for (option of statusOptions; track option.value) {
+        <button type="button" [class.on]="filters().status === option.value" [attr.aria-pressed]="filters().status === option.value" (click)="update({ status: option.value })">{{ option.label }}</button>
+      }
+    </div>
+    @if (filtered()) {
+      <button type="button" class="clear" (click)="clear()">Clear filters</button>
+    }
+    <span class="range" aria-live="polite">{{ loading() ? 'Loading…' : range() }}</span>
+  </form>
+</section>
+
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
-<section class="panel" aria-labelledby="clients-title" [attr.aria-busy]="loading()">
-  <div class="panel-heading">
-    <h2 id="clients-title">Trading accounts</h2>
-    <span class="muted" aria-live="polite">{{ loading() ? 'Loading…' : range() }}</span>
-  </div>
+<section class="accounts" aria-labelledby="clients-title" [attr.aria-busy]="loading()">
+  <h2 id="clients-title" class="sr-only">Trading accounts</h2>
   @if (result(); as page) {
     @if (page.content.length) {
       <div class="table-wrap">
@@ -64,15 +69,21 @@
                 <td>
                   <a class="account-link" [routerLink]="['/clients', client.accountId]" queryParamsHandling="preserve">{{ client.accountNumber }}</a>
                 </td>
-                <td><strong>{{ client.clientName }}</strong><small>{{ client.email }}</small></td>
-                <td>{{ client.accountName }}</td>
-                <td>{{ label(client.traderLevel) }}</td>
+                <td class="owner"><strong>{{ client.clientName }}</strong><small>{{ client.email }}</small></td>
+                <td class="quiet">{{ client.accountName }}</td>
+                <td><span class="level" [class.advanced]="client.traderLevel === 'ADVANCED'">{{ label(client.traderLevel) }}</span></td>
                 <td>
-                  <span class="badge" [class.rejected]="client.status === 'BLOCKED' || client.status === 'CLOSED'" [class.neutral]="client.status === 'PENDING'">{{ label(client.status) }}</span>
+                  <span
+                    class="badge"
+                    [class.rejected]="client.status === 'BLOCKED' || client.status === 'CLOSED'"
+                    [class.closed]="client.status === 'CLOSED'"
+                    [class.neutral]="client.status === 'PENDING'"
+                    >{{ label(client.status) }}</span
+                  >
                 </td>
                 <td class="numeric">{{ money(client.tradedValue) }}</td>
                 <td class="numeric">{{ count(client.tradeCount) }}</td>
-                <td>{{ dayTime(client.lastTradeAt) }}</td>
+                <td class="when">{{ dayTime(client.lastTradeAt) }}</td>
               </tr>
             }
           </tbody>
@@ -86,18 +97,16 @@
         </nav>
       }
     } @else {
-      <div class="empty">
-        <app-dashboard-icon name="users" />
+      <div class="empty-state">
         <h2>{{ filtered() ? 'No accounts match these filters' : 'No client accounts yet' }}</h2>
         <p>{{ filtered() ? 'Try a different search, level or status.' : 'Accounts appear here once the reporting dataset has their trades.' }}</p>
         @if (filtered()) {
-          <button type="button" (click)="clear()">Clear filters</button>
+          <button type="button" class="clear" (click)="clear()">Clear filters</button>
         }
       </div>
     }
   } @else if (!loading() && !error()) {
-    <div class="empty">
-      <app-dashboard-icon name="users" />
+    <div class="empty-state">
       <h2>No client accounts to show</h2>
       <p>Trading accounts will appear here with their owner, status and trades.</p>
     </div>

@@ -120,7 +120,7 @@ test('operations staff are told they can paste an order ID; empty and failed lis
   ]);
   await settle(); fixture.detectChanges();
   const host = fixture.nativeElement;
-  assert.match(host.textContent, /Paste its order ID above to find the account/);
+  assert.doesNotMatch(host.textContent, /Paste its order ID above/, 'the search placeholder already says a full order ID works');
   assert.equal(host.querySelector('input[name="search"]').placeholder, 'Account, client name or email, or a full order ID');
   assert.match(host.textContent, /Could not load client accounts/);
   assert.doesNotMatch(host.textContent, /do-not-display/);
@@ -160,19 +160,35 @@ function detailPage(t, overrides = {}, userRole = 'ANALYST') {
 
 test('the client detail shows the summary, traded value and holdings, with a back link to the list', async (t) => {
   const { fixture } = await detailPage(t);
-  await settle(); fixture.detectChanges();
+  await settle(); await settle(); fixture.detectChanges();
   const host = fixture.nativeElement;
-  assert.equal(host.querySelector('h1').textContent.trim(), 'NT-DEMO-0001');
-  assert.equal(host.querySelector('.subtitle').textContent.trim(), 'Maya Chen · maya.chen@example.test · Individual account');
+  assert.equal(host.querySelector('h1').textContent.trim(), 'Maya Chen');
+  assert.equal(host.querySelector('.subtitle').textContent.trim(), 'NT-DEMO-0001 · Individual account · maya.chen@example.test');
   assert.equal(host.querySelector('[data-testid="client-value"]').textContent.trim(), '$5,200.50');
   assert.equal(host.querySelector('[data-testid="client-positions"]').textContent.trim(), '1');
   assert.equal(host.querySelector('[data-testid="client-trades"]').textContent.trim(), '2');
   assert.equal(host.querySelector('[data-testid="client-last-trade"]').textContent.trim(), 'Oct 16');
   assert.match(host.textContent, /1:30 PM CT/);
   const holding = [...host.querySelectorAll('tbody tr td')].map((cell) => cell.textContent.trim());
-  assert.deepEqual(holding, ['AAPLApple Inc.', '2', '$225.10', '$450.20']);
-  assert.match(host.textContent, /\$450\.20 at cost/);
+  assert.deepEqual(holding, ['AAPLApple Inc.', '2', '$225.10', '$450.20', '100.0%']);
+  assert.equal(host.querySelector('[data-testid="client-cost-basis"]').textContent.trim(), '$450.20');
+  assert.deepEqual([...host.querySelectorAll('.legend li')].map((item) => item.textContent.trim()), ['AAPL100.0%']);
+  const flows = [...host.querySelectorAll('.flow')].map((row) => row.getAttribute('aria-label'));
+  assert.deepEqual(flows, ['MSFT: bought $0.00, sold $505.00', 'AAPL: bought $450.20, sold $0.00'], 'bought and sold value per stock, from the fills');
   assert.equal(host.querySelector('.back-link').getAttribute('href'), '/clients');
+});
+
+test('the allocation ring names the largest single holding, even when "Other" is bigger', async (t) => {
+  // One $30 holding and eleven $10 ones: the ring shows six, and the other six ($60) become "Other".
+  const symbols = ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF', 'GGG', 'HHH', 'III', 'JJJ', 'KKK', 'LLL'];
+  const holdings = symbols.map((symbol, i) => ({ symbol, instrumentName: symbol, quantity: 1, averageCost: i ? 10 : 30, costBasis: i ? 10 : 30 }));
+  const { fixture } = await detailPage(t, { detail: async () => ({ ...detail, holdings }) });
+  await settle(); await settle(); fixture.detectChanges();
+  const host = fixture.nativeElement;
+  const legend = [...host.querySelectorAll('.legend li')].map((item) => item.textContent.trim());
+  assert.equal(legend.at(-1), 'Other42.9%', 'the six smallest holdings are grouped');
+  assert.equal(host.querySelector('.ring-value').textContent.trim(), '21%', 'AAA is 30 of 140, not the 60 grouped as Other');
+  assert.match(host.querySelector('.allocation svg').getAttribute('aria-label'), /largest holding 21\.4%/);
 });
 
 test('the orders tab loads once, searches by symbol or order ID, and pages', async (t) => {
@@ -180,20 +196,28 @@ test('the orders tab loads once, searches by symbol or order ID, and pages', asy
   const { fixture } = await detailPage(t, { orders: async (id, filters) => { calls.push([id, filters]); return { ...orders, totalPages: 2, totalElements: 30 }; } });
   await settle(); fixture.detectChanges();
   const instance = fixture.componentInstance;
-  assert.equal(calls.length, 0, 'orders wait until their tab opens');
+  await settle();
+  assert.deepEqual(calls.map(([, filters]) => filters), [{ search: '', page: 0 }, { search: '', page: 1 }], 'the overview chart reads every page of fills');
+  assert.match(fixture.nativeElement.textContent, /From the latest 4 of 30 fills/);
   button(fixture, 'Orders');
   await settle(); fixture.detectChanges();
   const host = fixture.nativeElement;
-  assert.deepEqual(calls, [[ACCOUNT, { search: '', page: 0 }]]);
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls.at(-1), [ACCOUNT, { search: '', page: 0 }], 'the Orders tab loads its own first page');
   assert.match(host.querySelector('[role="tab"][aria-selected="true"]').textContent, /Orders \(30\)/);
   const cells = [...host.querySelectorAll('tbody tr:first-child td')].map((cell) => cell.textContent.trim());
-  assert.deepEqual(cells, ['Oct 16, 2026, 1:30:00 PM CT', '3f2c9a1e…', 'AAPL', 'Buy', '2', '$225.10']);
-  assert.equal(host.querySelector('tbody tr:nth-child(2) td:last-child').textContent.trim(), '$505.00');
+  assert.deepEqual(cells, ['Oct 16, 2026, 1:30:00 PM CT', 'AAPL', 'Buy', '2', '$225.10', '$450.20', '3f2c9a1e…']);
+  assert.equal(host.querySelector('tbody tr:nth-child(2) td:nth-child(5)').textContent.trim(), '$505.00');
+  assert.ok(host.querySelector('tbody tr:nth-child(2) .side-mark.sell'), 'sells are marked');
+  assert.equal(host.querySelector('[data-testid="client-bought"]').textContent.trim(), '$900.40');
+  assert.equal(host.querySelector('[data-testid="client-sold"]').textContent.trim(), '$1,010.00');
+  assert.equal(host.querySelector('[data-testid="client-net"]').textContent.trim(), '-$109.60');
+  assert.match(host.textContent, /Latest 4 of 30 fills/);
   assert.equal(host.querySelector('select[name="orderStatus"]'), null, 'every order in the dataset is filled');
   assert.equal(host.querySelector(`[title="${ORDER}"]`).tagName, 'SPAN', 'analysts see the ID without a link');
   assert.equal(host.querySelectorAll('tbody a').length, 0);
   instance.show('overview'); instance.show('orders');
-  assert.equal(calls.length, 1, 'switching back does not reload');
+  assert.equal(calls.length, 3, 'switching back does not reload');
   instance.ordersPage(1);
   await settle();
   assert.deepEqual(calls.at(-1)[1], { search: '', page: 1 });

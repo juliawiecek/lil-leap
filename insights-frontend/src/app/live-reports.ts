@@ -1,6 +1,6 @@
 import { InjectionToken } from '@angular/core';
 
-/** Today's totals for the New York trading day (midnight to midnight, America/New_York). */
+/** Today's totals for the current day, midnight to midnight US Central time (America/Chicago). */
 export interface ReportSummary {
   /** The trading day, yyyy-mm-dd. */
   date: string;
@@ -23,10 +23,28 @@ export interface ActivityPoint {
   hour: string;
   tradeCount: number;
 }
+/** One order placed today, at the exact second it was placed. */
+export interface PlacedOrder {
+  /** When the order was submitted, as an ISO instant. */
+  placedAt: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  status: string;
+  /** Value of its fills so far; zero when nothing has filled. */
+  filledValue: number | string;
+}
+/** Today's orders, oldest first, with the instant the Central day began. */
+export interface OrdersToday {
+  date: string;
+  dayStart: string;
+  orders: PlacedOrder[];
+}
 export interface LiveReports {
   load(): Promise<ReportSummary>;
   topInstruments(): Promise<TopInstrument[]>;
   activityTrend(): Promise<ActivityPoint[]>;
+  ordersToday(): Promise<OrdersToday>;
 }
 export const LIVE_REPORTS = new InjectionToken<LiveReports>('Live reporting API');
 
@@ -55,16 +73,16 @@ export const MAX_REPORT_DAYS = 366;
 const DAY_MS = 86_400_000;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-const NEW_YORK_DAY = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
+const CENTRAL_DAY = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Chicago',
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
 });
 
-/** New York calendar date `daysBack` days before `now`, as yyyy-mm-dd, matching the API's trading days. */
-export function newYorkDate(now: Date = new Date(), daysBack = 0): string {
-  const part = (type: string) => NEW_YORK_DAY.formatToParts(now).find((p) => p.type === type)?.value;
+/** Central calendar date `daysBack` days before `now`, as yyyy-mm-dd, matching the API's days. */
+export function centralIsoDate(now: Date = new Date(), daysBack = 0): string {
+  const part = (type: string) => CENTRAL_DAY.formatToParts(now).find((p) => p.type === type)?.value;
   const today = Date.parse(`${part('year')}-${part('month')}-${part('day')}T00:00:00Z`);
   return new Date(today - daysBack * DAY_MS).toISOString().slice(0, 10);
 }

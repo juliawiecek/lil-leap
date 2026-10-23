@@ -1,65 +1,304 @@
-// Report cards and the reporting period, moved with the Reports page from the old single component.
+// Reports: a green header band (the NextTrade "Trade" green, darkened) holds the title and period;
+// the reports and this session's exports sit on the shell's grid below as plain rows.
 :host {
   display: block;
 }
-.notice button {
-  padding: 0 5px;
+
+:host .band {
+  margin: -24px -32px 0;
+  padding: 26px 32px 24px;
+  position: relative;
   background: none;
-  border: 0;
-  font-size: 20px;
+  border-bottom: 1px solid #1f231f;
 }
-.report-period {
-  gap: 16px;
-  margin: 0 0 16px;
+/* NextTrade green on the left of the header's bottom line, like the underline of a selected tab. */
+:host .band::after {
+  content: '';
+  position: absolute;
+  left: var(--band-inset, 32px);
+  bottom: -1px;
+  width: 160px;
+  height: 2px;
+  background: var(--nt-green);
 }
-.report-period legend {
-  color: var(--muted);
+:host h1 {
+  margin: 0;
+  font: 800 26px/1.15 var(--font-ui);
+  letter-spacing: -0.03em;
+  color: var(--nt-text);
 }
-.report-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+:host .lede {
+  margin: 6px 0 0;
+  color: #a4a79e;
+  font-size: 13.5px;
 }
-.report-card {
+
+:host .period {
   display: flex;
-  flex-direction: column;
-  align-items: start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+:host .field {
+  display: block;
+}
+:host .field input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #2a2f29;
+  border-radius: 4px;
+  background: #070807;
+  color: var(--nt-text);
+  font: 500 12.5px var(--font-mono);
+  color-scheme: dark;
+}
+:host .field input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+  filter: invert(0.85) sepia(0.2) hue-rotate(40deg);
+}
+:host .field input::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+:host .field input:focus {
+  outline: none;
+  border-color: #4a5048;
+}
+:host .field input[aria-invalid='true'] {
+  border-color: rgba(255, 122, 110, 0.6);
+}
+:host .arrow {
+  color: #4a5048;
+}
+:host .presets {
+  display: flex;
+  gap: 2px;
+  margin-left: 6px;
+  padding: 2px;
+  border: 1px solid #2a2f29;
+  border-radius: 5px;
+  background: #070807;
+}
+:host .presets button {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #7e8279;
+  font: 600 12px var(--font-mono);
+}
+:host .presets button:hover {
+  background: transparent;
+  color: var(--nt-text);
+}
+:host .presets button.active {
+  background: #1f231f;
+  color: var(--nt-text);
+}
+:host .period-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: #7e8279;
+}
+:host .period-note .mono {
+  font: 500 12px var(--font-mono);
+}
+:host .field-error {
+  margin: 12px 0 0;
+  color: #ff9c92;
+  font-size: 13px;
+}
+
+:host .toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #11191b;
+  margin: 20px 0 0;
+  padding: 10px 12px 10px 14px;
+  border-left: 2px solid var(--nt-green);
+  background: #0e110f;
+  color: #d6d4cc;
+  font-size: 13.5px;
 }
-.report-card p {
-  flex: 1;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
+:host .toast button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #7e8279;
+  font-size: 18px;
+  line-height: 1;
 }
-.report-card button {
-  width: 100%;
-  min-height: 40px;
-  margin-top: 8px;
-  font-size: 11px;
-  text-align: left;
+:host .toast button:hover {
+  background: #1a1d1a;
+  color: #f2f0e9;
 }
-@media (max-width: 1200px) {
-  .report-grid {
+
+:host .reports {
+  margin-top: 28px;
+}
+:host .report-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #1f231f;
+}
+:host .report-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #141714;
+}
+:host .report-text h3 {
+  margin: 0;
+  font: 700 14.5px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .report-text p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--nt-muted);
+}
+:host .last-export {
+  text-align: right;
+  font-size: 12px;
+  color: var(--nt-subtle);
+}
+:host .generate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 116px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: #94c973;
+  color: #0b140a;
+  font: 800 12.5px var(--font-ui);
+}
+:host .generate:hover:not(:disabled) {
+  background: #a7d68a;
+}
+:host .generate:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:host .spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(11, 20, 10, 0.25);
+  border-top-color: #0b140a;
+  border-radius: 50%;
+  animation: reports-spin 0.8s linear infinite;
+}
+@keyframes reports-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:host .exports {
+  margin-top: 34px;
+}
+:host .block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #1f231f;
+}
+:host .block-head h2 {
+  margin: 0;
+  font: 700 14px var(--font-ui);
+  color: var(--nt-text);
+}
+:host .block-head span {
+  font-size: 12px;
+  color: var(--nt-subtle);
+}
+:host .export-table {
+  font-size: 13px;
+}
+:host .export-table td {
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid #141714;
+  color: var(--nt-text);
+}
+:host .export-table td:first-child {
+  padding-left: 0;
+}
+:host .export-table td:last-child {
+  padding-right: 0;
+}
+:host .export-table tbody tr:hover {
+  background: #0e100e;
+}
+:host .export-table .name {
+  font-weight: 600;
+}
+:host .export-table .mono {
+  font: 500 12.5px var(--font-mono);
+  color: var(--nt-muted);
+}
+:host .export-table .when {
+  color: var(--nt-subtle);
+  font-size: 12px;
+}
+:host .export-table .action {
+  text-align: right;
+}
+:host .download {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nt-green);
+  font: 700 12.5px var(--font-ui);
+}
+:host .download:hover {
+  background: none;
+  color: #b5df99;
+}
+:host .history-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: var(--nt-subtle);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host .spinner {
+    animation: none;
+  }
+}
+@media (max-width: 760px) {
+  :host .band {
+    margin: -20px -16px 0;
+    --band-inset: 16px;
+    padding: 20px 16px 18px;
+  }
+  :host .period-note {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  :host .report-card {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
-}
-@media (max-width: 980px) {
-  .report-card {
-    display: grid;
-    grid-template-columns: 45px 1fr;
-  }
-  .report-card p {
-    grid-column: 2;
-  }
-  .report-card button {
-    grid-column: 1 / -1;
-  }
-  .report-card h3 {
-    align-self: center;
+  :host .last-export {
+    text-align: left;
   }
 }

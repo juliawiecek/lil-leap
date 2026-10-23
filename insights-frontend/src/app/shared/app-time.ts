@@ -1,11 +1,12 @@
 /**
  * Every time Insights shows is US Central time on a 12-hour clock ("2:30 PM CT"), as in the NextTrade
- * trading app, so a trade reads the same in both. Trading days are still New York market days.
+ * trading app, so a trade reads the same in both. Days and hours are counted in Central time too.
  * Angular's DatePipe only takes fixed offsets, which would be an hour off for half the year, so
  * these use Intl.
  */
 export const APP_TIME_ZONE = 'America/Chicago';
 
+const HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: APP_TIME_ZONE });
 const DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: APP_TIME_ZONE });
 const DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: APP_TIME_ZONE });
 const TIME = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: APP_TIME_ZONE });
@@ -45,11 +46,15 @@ export function centralClockSeconds(when: string | Date): string {
 export function centralDateTimeSeconds(when: string | Date): string {
   return `${centralDate(when)}, ${plain(SECONDS.format(at(when)))} CT`;
 }
-/**
- * The Central clock hour of a New York hour bucket ("2026-10-19T14:00" is "1 PM"). Both zones move
- * their clocks on the same dates, so Central is always one hour behind New York.
- */
-export function centralHourLabel(newYorkBucket: string): string {
-  const hour = (Number(newYorkBucket.slice(11, 13)) + 23) % 24;
+/** The hour on the Central clock, 0 to 23, whatever time zone the analyst's computer is set to. */
+export function centralHour(when: Date = new Date()): number {
+  return Number(HOUR.format(when));
+}
+/** A 24-hour "HH:00" label on a 12-hour clock: "14:00" is "2 PM", "00:00" is "12 AM". */
+export function twelveHour(label: string): string {
+  const hour = Number(label.slice(0, 2));
+  if (!Number.isFinite(hour)) {
+    return label;
+  }
   return `${hour % 12 || 12} ${hour < 12 ? 'AM' : 'PM'}`;
 }

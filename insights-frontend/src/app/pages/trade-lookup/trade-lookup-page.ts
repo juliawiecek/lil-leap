@@ -2,8 +2,6 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TRADE_RECORDS, type TradeEvent, type TradeRecord } from '../../trade-records';
-import { DashboardIcon } from '../../shared/dashboard-icon';
-import { PageHeading } from '../../shared/page-heading';
 import { codeLabel } from '../../client-accounts';
 import { centralClockSeconds, centralDateTimeSeconds } from '../../shared/app-time';
 import { tradeCase } from './trade-case';
@@ -47,7 +45,7 @@ const SOURCES: Record<string, string> = {
  */
 @Component({
   selector: 'app-trade-lookup-page',
-  imports: [RouterLink, DashboardIcon, PageHeading],
+  imports: [RouterLink],
   templateUrl: './trade-lookup-page.html',
   styleUrl: './trade-lookup-page.scss',
 })

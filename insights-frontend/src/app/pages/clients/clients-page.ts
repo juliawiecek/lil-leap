@@ -5,9 +5,7 @@ import {
   type ClientFilters, type ClientSummary, type Page,
 } from '../../client-accounts';
 import { AuthService } from '../../auth.service';
-import { DashboardIcon } from '../../shared/dashboard-icon';
 import { centralDayTime } from '../../shared/app-time';
-import { PageHeading } from '../../shared/page-heading';
 
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const COUNT = new Intl.NumberFormat('en-US');
@@ -56,7 +54,7 @@ export function filterParams(filters: ClientFilters): Params {
  */
 @Component({
   selector: 'app-clients-page',
-  imports: [RouterLink, DashboardIcon, PageHeading],
+  imports: [RouterLink],
   templateUrl: './clients-page.html',
   styleUrl: './clients-page.scss',
 })
@@ -65,6 +63,19 @@ export class ClientsPage {
   private readonly router = inject(Router, { optional: true });
   private readonly auth = inject(AuthService, { optional: true });
   readonly columns = COLUMNS;
+  /** Filter choices; an empty value means no filter. */
+  readonly levelOptions = [
+    { value: '', label: 'All levels' },
+    { value: 'NOVICE', label: 'Novice' },
+    { value: 'ADVANCED', label: 'Advanced' },
+  ];
+  readonly statusOptions = [
+    { value: '', label: 'All statuses' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'BLOCKED', label: 'Blocked' },
+    { value: 'CLOSED', label: 'Closed' },
+  ];
   readonly filters = signal<ClientFilters>(filtersFrom({}));
   readonly result = signal<Page<ClientSummary> | null>(null);
   readonly loading = signal(false);

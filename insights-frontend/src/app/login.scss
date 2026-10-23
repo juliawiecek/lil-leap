@@ -1,381 +1,472 @@
-// Matches the NextTrade sign-in (frontend/src/app/_login-layout.scss): framed screen, split dark
-// background, moving band and candle chart, brand lockup top left, headline left, form on the right.
+// Insights sign-in in the NextTrade split layout: a chart panel with the headline on the left,
+// a plain form panel on the right. Only analyst and operations staff sign in here.
 :host {
-  --login-green: #80b95c;
-  --font-display: 'Playfair Display', 'Merriweather', serif;
   display: block;
-  color: #e1e5dc;
+  color: #f2f0e9;
   font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 .login-screen {
-  position: fixed;
-  inset: 0;
-  overflow: auto;
-  border: 10px solid #181918;
-  border-top-width: 5px;
-  background: linear-gradient(90deg, #050907 0%, #050907 60%, #0b0e0c 60%, #090c0a 100%);
-  animation: arrive 900ms ease both;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 60% 40%;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #0a0a0a;
 }
-.market-tape {
-  position: fixed;
-  z-index: 2;
-  inset: 5px 10px auto;
-  height: 34px;
-  padding: 0 20px;
+
+/* Moving band across the top: small, quiet, like a terminal's status line */
+.tape {
+  grid-column: 1 / -1;
+  height: 32px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: #090b09;
-  border-bottom: 1px solid #141714;
-  pointer-events: none;
+  border-bottom: 1px solid #1a1a1a;
+  background: #070807;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
 }
 .tape-track {
   display: flex;
   width: max-content;
-  color: #747a70;
-  font: 500 clamp(10px, 1vw, 12px) var(--font-mono);
-  text-transform: uppercase;
-  white-space: nowrap;
-  animation: tape-scroll 65s linear infinite;
+  animation: login-tape 70s linear infinite;
+}
+.tape:hover .tape-track {
+  animation-play-state: paused;
 }
 .tape-group {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  min-width: calc(100vw - 60px);
-  gap: 20px;
-  padding-right: 20px;
-}
-.tape-group .divider {
-  color: #3c423a;
-}
-.signin-stock-background {
-  position: fixed;
-  z-index: 0;
-  inset: 39px auto 10px 10px;
-  width: calc((100% - 20px) * 0.6);
-  border-right: 1px solid #1b2018;
-  pointer-events: none;
-}
-.signin-stock-background svg {
-  width: 100%;
-  height: 100%;
-}
-// Soften the chart behind the copy and keep the right-hand candles crisp, as NextTrade does.
-.signin-stock-background::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(5, 9, 7, 0.62);
-  backdrop-filter: blur(4px);
-  mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
-  mask-composite: intersect;
-}
-.login-candles {
-  fill: #7fa459;
-  stroke: #7fa459;
-  stroke-width: 0.4;
-}
-.login-candles .falling {
-  fill: #4b5b42;
-  stroke: #647653;
-}
-.login-candles rect {
-  stroke: none;
-}
-.brand-lockup {
-  position: absolute;
-  z-index: 2;
-  top: 11%;
-  left: 3.2%;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #eeeeee;
-}
-.brand-mark {
-  width: 48px;
-  height: 48px;
-}
-.brand-copy {
-  display: flex;
-  flex-direction: column;
-}
-.brand-name {
-  display: flex;
-  align-items: baseline;
-  font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.05;
-  letter-spacing: -0.055em;
+  gap: 14px;
+  padding-right: 14px;
+  color: #7e8279;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
-.brand-next,
-.brand-accent,
-.brand-product {
-  font-weight: 700;
+.tape-group .sep {
+  color: #2c312b;
 }
-.brand-accent {
-  color: #78a85f;
-  margin-left: 1.5px;
-}
-.brand-product {
-  color: #eeeeee;
-}
-.auth-shell {
-  position: fixed;
-  z-index: 1;
-  inset: 39px 10px 10px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 28px 4% 22px;
-}
-.auth-header {
-  display: flex;
-  justify-content: flex-end;
-  min-height: 18px;
-}
-.secure-status {
+.tape-group .live {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #93958f;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding-left: 14px;
+  color: #94c973;
 }
-.secure-status::before {
-  content: '';
+.tape-group .live i {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--login-green);
+  background: #94c973;
+  animation: login-pulse 2.4s ease-out infinite;
 }
-.auth-content {
-  display: grid;
-  grid-template-columns: 59% 41%;
-  align-items: center;
+@keyframes login-tape {
+  to { transform: translateX(-50%); }
+}
+@keyframes login-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.5); }
+  70% { box-shadow: 0 0 0 5px rgba(148, 201, 115, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+}
+
+/* Left: chart panel */
+.showcase {
+  position: relative;
+  min-height: calc(100dvh - 33px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 36px 56px 32px;
+  overflow: hidden;
+  border-right: 1px solid #1a1a1a;
+  background: #070807;
+}
+.backdrop-chart {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.backdrop-chart svg {
+  display: block;
   width: 100%;
+  height: 100%;
+  animation: login-chart-in 1.2s ease both;
+}
+/* Quiet the chart behind the copy (a plain left-to-right fade, no glow); the right-hand candles stay crisp. */
+.backdrop-chart::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7, 8, 7, 0.92) 0%, rgba(7, 8, 7, 0.78) 38%, rgba(7, 8, 7, 0.15) 75%, transparent 100%);
+}
+.candles {
+  fill: #94c973;
+  stroke: #94c973;
+  opacity: 0.7;
+}
+.candles .falling {
+  fill: #3f4a3a;
+  stroke: #3f4a3a;
+}
+.candles path {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.brand-lockup,
+.copy,
+.legal {
+  position: relative;
+  z-index: 1;
+}
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+}
+.brand-lockup b {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.brand-lockup b span {
+  color: #94c973;
+}
+.brand-lockup .rule {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #2c312b;
+}
+.brand-lockup em {
+  font-style: normal;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #d6d4cc;
+}
+.brand-lockup small {
+  margin-left: 4px;
+  padding: 2px 6px;
+  border: 1px solid #2c312b;
+  border-radius: 4px;
+  color: #a4a79e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.copy {
   margin: auto 0;
+  max-width: 560px;
+  animation: login-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.auth-copy {
-  padding-right: 15%;
-}
-.auth-eyebrow {
-  margin: 0 0 26px;
-  color: #90aa81;
-  font: 600 clamp(9px, 0.85vw, 11px) / 1 var(--font-ui);
-  letter-spacing: 0.13em;
+.eyebrow {
+  margin: 0 0 20px;
+  color: #94c973;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.auth-copy h1 {
+.copy h1 {
   margin: 0;
-  font-size: clamp(42px, 5.2vw, 72px);
-  font-weight: 500;
-  letter-spacing: -0.045em;
-  line-height: 1.12;
-}
-.auth-copy h1 em {
-  display: block;
-  font-style: normal;
-  color: var(--login-green);
-}
-.auth-copy > p {
-  max-width: min(100%, 34vw);
-  margin: 24px 0 0;
-  font-size: clamp(14px, 1.4vw, 18px);
-  line-height: 1.7;
-  color: #a4a6a0;
-}
-.auth-panel {
-  position: relative;
-  left: 1.8vw;
-  justify-self: center;
-  width: 88%;
-  max-width: 520px;
-}
-.auth-panel h2 {
-  margin: 0 0 9px;
-  font-size: clamp(32px, 3vw, 44px);
-  font-weight: 500;
+  font-size: clamp(46px, 5vw, 76px);
+  font-weight: 700;
+  line-height: 1.02;
   letter-spacing: -0.04em;
 }
+.copy h1 span {
+  color: #94c973;
+}
+.lede {
+  max-width: 440px;
+  margin: 24px 0 0;
+  color: #a4a79e;
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+.legal {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  color: #858980;
+  font-size: 12px;
+}
+
+/* Right: form panel */
+/* Right: form panel, in three rows that line up with the left panel's logo, copy and legal line */
+.auth {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 36px clamp(28px, 3.5vw, 56px) 32px;
+  background: #090909;
+}
+.auth-top {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 28px;
+}
+.secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #1f1f1f;
+  border-radius: 999px;
+  color: #a4a79e;
+  font-size: 12px;
+  font-weight: 600;
+}
+.secure svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: #94c973;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.auth-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid #1a1a1a;
+  color: #858980;
+  font-size: 12px;
+}
+.auth-body {
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 460px;
+  animation: login-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+}
+.auth h2 {
+  margin: 0;
+  font-size: clamp(30px, 2.5vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
 .auth-subtitle {
-  margin: 0 0 30px;
-  font-size: 16px;
-  color: #93958f;
+  margin: 8px 0 0;
+  color: #a4a79e;
+  font-size: 15px;
+}
+/* The header line from the app's pages: a hairline with a short NextTrade-green segment on the left. */
+.auth-heading {
+  position: relative;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #1f231f;
+}
+.auth-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 72px;
+  height: 2px;
+  background: #94c973;
 }
 form {
-  display: grid;
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
 }
-.field-group {
-  display: grid;
-  gap: 7px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-label {
-  font-size: 16px;
+.field label {
+  color: #d6d4cc;
+  font-size: 13px;
+  font-weight: 600;
 }
-input {
-  box-sizing: border-box;
-  width: 100%;
-  height: 56px;
-  padding: 0 15px;
-  border: 1px solid #3b4237;
+.input-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 8px 0 16px;
+  border: 1px solid #262626;
   border-radius: 6px;
-  background: #090a09;
-  color: #eeeeee;
-  font: inherit;
-  font-size: 17px;
+  background: #050505;
+  transition: border-color 0.15s ease;
 }
-input::placeholder {
-  color: #858982;
+.input-shell:hover {
+  border-color: #333333;
 }
-input:focus {
-  border-color: var(--login-green);
-  outline: none;
+.input-shell:focus-within {
+  border-color: #94c973;
 }
-.input-wrap {
-  position: relative;
+.input-shell input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f2f0e9;
+  font: 500 15px var(--font-ui);
 }
-.input-wrap input {
-  padding-right: 64px;
+/* Keep browser autofill from painting the boxes pale blue or yellow. */
+.input-shell input:-webkit-autofill,
+.input-shell input:-webkit-autofill:hover,
+.input-shell input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #050505 inset;
+  -webkit-text-fill-color: #f2f0e9;
+  caret-color: #f2f0e9;
+  transition: background-color 9999s ease-out 0s;
+}
+.input-shell.invalid {
+  border-color: #a94a40;
+}
+.field-error,
+.field-hint {
+  margin: 0;
+  font-size: 12.5px;
+}
+.field-error {
+  color: #ff9c92;
+}
+.field-hint {
+  color: #e2b65a;
+}
+.input-shell input::placeholder {
+  color: #62675f;
 }
 .password-toggle {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
-  padding: 4px 6px;
+  padding: 6px 8px;
   border: 0;
-  background: none;
-  color: #a3a69e;
-  font: inherit;
-  font-size: 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: #a4a79e;
+  font: 600 12px var(--font-ui);
   cursor: pointer;
+}
+.password-toggle:hover {
+  color: #f2f0e9;
 }
 .form-status {
   margin: 0;
-  color: #f7abab;
+  padding: 10px 12px;
+  border: 1px solid #4a2723;
+  border-left: 2px solid #ff7a6e;
+  border-radius: 4px;
+  background: #120a09;
+  color: #ffb4ab;
+  font-size: 13px;
   line-height: 1.5;
 }
 .primary-action {
-  min-height: 56px;
-  border: 1px solid #80b95c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  min-height: 52px;
+  border: 0;
   border-radius: 6px;
-  background: var(--login-green);
-  color: #101710;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
+  background: #94c973;
+  color: #0b130a;
+  font: 700 15px var(--font-ui);
   cursor: pointer;
-  transition: background 180ms;
+  transition: background-color 0.15s ease;
 }
-.primary-action:hover {
-  background: #90c66d;
+.primary-action:hover:not(:disabled) {
+  background: #a6d48a;
 }
 .primary-action:disabled {
-  opacity: 0.65;
-  cursor: wait;
+  opacity: 0.6;
+  cursor: progress;
 }
-.auth-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #8b9088;
-  font-size: clamp(9px, 0.95vw, 11px);
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(11, 19, 10, 0.3);
+  border-top-color: #0b130a;
+  border-radius: 50%;
+  animation: login-spin 0.8s linear infinite;
 }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--login-green);
-  outline-offset: 3px;
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
-@media (max-width: 900px) {
+.forgot {
+  margin: 4px 0 0;
+  color: #7e8279;
+  font-size: 12.5px;
+  text-align: center;
+}
+.input-shell input:focus-visible {
+  outline: none;
+}
+.password-toggle:focus-visible,
+.primary-action:focus-visible {
+  outline: 2px solid #f2efe6;
+  outline-offset: 2px;
+}
+.auth-note {
+  margin: 26px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid #1f1f1f;
+  color: #7e8279;
+  font-size: 12.5px;
+  text-align: center;
+}
+
+@keyframes login-chart-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes login-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 960px) {
   .login-screen {
-    border-width: 5px;
-    background: #090a09;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .market-tape {
-    inset-inline: 5px;
+  .showcase {
+    min-height: 0;
+    padding: 24px 22px 28px;
+    border-right: 0;
+    border-bottom: 1px solid #1a1a1a;
   }
-  .signin-stock-background {
-    inset: 39px 5px auto;
-    width: auto;
-    height: 340px;
-    opacity: 0.55;
-    border: 0;
+  .copy {
+    margin: 48px 0 8px;
   }
-  .brand-lockup {
-    top: 53px;
-    left: 17px;
+  .legal {
+    display: none;
   }
-  .brand-name {
-    font-size: 28px;
+  .tape {
+    height: 28px;
   }
-  .brand-mark {
-    width: 40px;
-    height: 40px;
-  }
-  .auth-shell {
-    inset: 39px 5px 5px;
-    padding: 22px 20px;
-    gap: 28px;
-  }
-  .auth-content {
-    grid-template-columns: 1fr;
-    gap: 38px;
-    max-width: 520px;
-    margin: 96px auto 0;
-  }
-  .auth-copy {
-    padding: 0;
-  }
-  .auth-copy h1 {
-    font-size: 42px;
-  }
-  .auth-copy > p {
-    max-width: 350px;
-    font-size: 14px;
-  }
-  .auth-panel {
-    width: 100%;
-    left: 0;
-  }
-  .auth-panel h2 {
-    font-size: 32px;
-  }
-  input {
-    height: 52px;
-    font-size: 16px;
-  }
-  .primary-action {
-    min-height: 52px;
-  }
-  .auth-footer {
-    flex-direction: column;
-    align-items: center;
+  .auth {
+    padding: 20px 22px 28px;
+    row-gap: 32px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .login-screen,
-  .tape-track {
+  .backdrop-chart svg,
+  .copy,
+  .auth-body,
+  .spinner,
+  .tape-track,
+  .tape-group .live i {
     animation: none;
-  }
-}
-@keyframes tape-scroll {
-  to {
-    transform: translateX(-50%);
-  }
-}
-@keyframes arrive {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }

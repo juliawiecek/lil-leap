@@ -67,8 +67,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by instrument.
      *
-     * @param startDate first New York trading day included (ISO date, required)
-     * @param endDate last New York trading day included (ISO date, required)
+     * @param startDate first Central-time day included (ISO date, required)
+     * @param endDate last Central-time day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/instrument-report", produces = "text/csv")
@@ -81,8 +81,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by client segment.
      *
-     * @param startDate first New York trading day included (ISO date, required)
-     * @param endDate last New York trading day included (ISO date, required)
+     * @param startDate first Central-time day included (ISO date, required)
+     * @param endDate last Central-time day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/client-segment-report", produces = "text/csv")
@@ -95,8 +95,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report aggregated by trading activity.
      *
-     * @param startDate first New York trading day included (ISO date, required)
-     * @param endDate last New York trading day included (ISO date, required)
+     * @param startDate first Central-time day included (ISO date, required)
+     * @param endDate last Central-time day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/trading-activity-report", produces = "text/csv")
@@ -109,8 +109,8 @@ public class ReportingController {
     /**
      * Returns the downloadable CSV report comparing bought and sold quantity and notional per instrument.
      *
-     * @param startDate first New York trading day included (ISO date, required)
-     * @param endDate last New York trading day included (ISO date, required)
+     * @param startDate first Central-time day included (ISO date, required)
+     * @param endDate last Central-time day included (ISO date, required)
      * @return CSV file response
      */
     @GetMapping(value = "/generate/buy-sell-balance-report", produces = "text/csv")

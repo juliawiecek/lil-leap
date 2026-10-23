@@ -4,7 +4,7 @@ import { render, input } from './dom-helper.mjs';
 import { component } from './component-helper.mjs';
 const { ReportsPage } = await import('../src/app/pages/reports/reports-page.ts');
 const {
-  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, newYorkDate,
+  REPORT_FILES, MAX_REPORT_DAYS, attachmentFilename, reportFailureMessage, reportRangeError, centralIsoDate,
 } = await import('../src/app/live-reports.ts');
 
 const csv = 'instrument_symbol,trade_count\nAAPL,7\nJPM,4\n';
@@ -40,19 +40,21 @@ test('report ranges must have both dates, be ordered, real, and at most a year l
   assert.match(reportRangeError('2025-01-01', '2026-01-02'), /at most 366 days/);
 });
 
-test('report dates follow the New York calendar, not UTC or the local time zone', () => {
-  // 22:30 in Chicago is 23:30 in New York, but already October 20 in UTC.
+test('report dates follow the Central calendar, not UTC or New York', () => {
+  // 22:30 in Chicago is already October 20 in UTC.
   const lateEvening = new Date('2026-10-19T22:30:00-05:00');
-  assert.equal(newYorkDate(lateEvening), '2026-10-19');
-  assert.equal(newYorkDate(lateEvening, 29), '2026-09-20');
-  // Just after New York midnight the date moves on.
-  assert.equal(newYorkDate(new Date('2026-10-20T04:05:00Z')), '2026-10-20');
+  assert.equal(centralIsoDate(lateEvening), '2026-10-19');
+  assert.equal(centralIsoDate(lateEvening, 29), '2026-09-20');
+  // 23:05 in Chicago is past midnight in New York, but still October 19 here.
+  assert.equal(centralIsoDate(new Date('2026-10-20T04:05:00Z')), '2026-10-19');
+  // Just after Central midnight the date moves on.
+  assert.equal(centralIsoDate(new Date('2026-10-20T05:05:00Z')), '2026-10-20');
 });
 
 test('the reports page always starts with a valid 30-day range ending today', t => {
   const { instance } = app(t);
-  assert.equal(instance.reportEnd(), newYorkDate());
-  assert.equal(instance.reportStart(), newYorkDate(new Date(), 29));
+  assert.equal(instance.reportEnd(), centralIsoDate());
+  assert.equal(instance.reportStart(), centralIsoDate(new Date(), 29));
   assert.equal(instance.reportDateError(), '');
 });
 
@@ -150,7 +152,7 @@ test('the rendered reports page requires both dates before any report can be gen
   assert.equal(host.querySelectorAll('.report-card').length, 4);
   assert.doesNotMatch(host.textContent, /Scheduled Reports|No scheduled reports/, 'there is no scheduled reports placeholder');
   assert.match(host.textContent, /Buy\/Sell Balance Report/);
-  assert.match(host.textContent, /Reporting period \(New York time, inclusive\)/);
+  assert.match(host.textContent, /Reporting period \(inclusive\)/);
   for (const id of ['report-start', 'report-end']) {
     const field = host.querySelector(`[data-testid="${id}"]`);
     assert.equal(field.required, true);
