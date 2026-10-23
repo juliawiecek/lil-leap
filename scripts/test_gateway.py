@@ -27,7 +27,7 @@ def main():
     config = config.replace('include /etc/nginx/routes/proxy-headers.conf;',
                             (ROOT / 'gateway/proxy-headers.conf').read_text())
     upstreams = {'holdings:8080': 18080, 'auth:8081': 18081, 'orders:8082': 18082,
-                 'quote-service:8083': 18083, 'insights:8084': 18084,
+                 'insights:8084': 18084,
                  'frontend:8080': 18085, 'insights-frontend:8080': 18086}
     for name, port in sorted(upstreams.items(), key=lambda entry: -len(entry[0])):
         config = config.replace(name, f'127.0.0.1:{port}')
@@ -65,7 +65,8 @@ def main():
             (18420, 'GET', '/api/v1/holdings', 'holdings:8080'),
             (18420, 'GET', '/api/v1/accounts', 'holdings:8080'),
             (18420, 'GET', '/api/v1/instruments/test', 'holdings:8080'),
-            (18420, 'GET', '/api/v1/quotes/AAPL', 'quote-service:8083'),
+            # Holdings serves every quote read; there is no separate quote service.
+            (18420, 'GET', '/api/v1/quotes/AAPL', None),
             (18420, 'GET', '/api/v1/quotes/latest/by-instrument/test', 'holdings:8080'),
             (18420, 'GET', '/api/v1/quotes/history/test?limit=5', 'holdings:8080'),
             (18420, 'GET', '/api/v1/quotes/candles/test?interval=1m', 'holdings:8080'),

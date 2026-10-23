@@ -91,10 +91,21 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
-<div class="col-second even-row-color"><span class="type-name-label">QuoteController.</span><code><a href="../../controller/QuoteController.html#getHistory(java.util.UUID,int)" class="member-name-link">getHistory</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
- int&nbsp;limit)</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">QuoteController.</span><code><a href="../../controller/QuoteController.html#getDayOpens(java.util.List)" class="member-name-link">getDayOpens</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</code></div>
 <div class="col-last even-row-color">
+<div class="block">Reads session baselines independently of the recent-history page limit.</div>
+</div>
+<div class="col-first odd-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color"><span class="type-name-label">QuoteController.</span><code><a href="../../controller/QuoteController.html#getHistory(java.util.UUID,int)" class="member-name-link">getHistory</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ int&nbsp;limit)</code></div>
+<div class="col-last odd-row-color">
 <div class="block">Retrieves bounded historical quotes for an instrument, ordered newest first.</div>
+</div>
+<div class="col-first even-row-color"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">QuoteController.</span><code><a href="../../controller/QuoteController.html#getLatestByInstruments(java.util.List)" class="member-name-link">getLatestByInstruments</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Retrieves the latest quote for several instruments in one request, so a dashboard makes one
+ price request per refresh instead of one per stock (PS-10).</div>
 </div>
 </div>
 </section>

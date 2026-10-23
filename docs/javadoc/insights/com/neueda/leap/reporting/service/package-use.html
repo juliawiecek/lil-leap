@@ -54,17 +54,35 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.reporting.controller">com.neueda.leap.reporting.controller</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.reporting.clients">com.neueda.leap.reporting.clients</a></div>
 <div class="col-last even-row-color">
+<div class="block">Clients page API: trading accounts, their holdings and orders, without client identity data.</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.reporting.controller">com.neueda.leap.reporting.controller</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Analyst-only REST endpoints for trading reports and dashboard insights.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.reporting.service">com.neueda.leap.reporting.service</a></div>
-<div class="col-last odd-row-color">
+<div class="col-first even-row-color"><a href="#com.neueda.leap.reporting.service">com.neueda.leap.reporting.service</a></div>
+<div class="col-last even-row-color">
 <div class="block">Reporting use cases built on the read-only reporting repository.</div>
 </div>
 </div>
 <section class="package-uses">
 <ul class="block-list">
+<li>
+<section class="detail" id="com.neueda.leap.reporting.clients">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.reporting.service</a> used by <a href="../clients/package-summary.html">com.neueda.leap.reporting.clients</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/TradeDataset.html#com.neueda.leap.reporting.clients">TradeDataset</a></div>
+<div class="col-last even-row-color">
+<div class="block">Every fill, read from the reporting replica (BR-16) so the Reports and Clients pages never compete with live
+ trading for database capacity.</div>
+</div>
+</div>
+</section>
+</li>
 <li>
 <section class="detail" id="com.neueda.leap.reporting.controller">
 <div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.reporting.service</a> used by <a href="../controller/package-summary.html">com.neueda.leap.reporting.controller</a></span></div>
@@ -73,7 +91,7 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><a href="class-use/ReportingService.html#com.neueda.leap.reporting.controller">ReportingService</a></div>
 <div class="col-last even-row-color">
-<div class="block">Read-only dashboard insights and placeholder report-generation use cases.</div>
+<div class="block">Read-only dashboard insights and date-bounded CSV report-generation use cases.</div>
 </div>
 </div>
 </section>
@@ -86,7 +104,16 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><a href="class-use/ReportingService.html#com.neueda.leap.reporting.service">ReportingService</a></div>
 <div class="col-last even-row-color">
-<div class="block">Read-only dashboard insights and placeholder report-generation use cases.</div>
+<div class="block">Read-only dashboard insights and date-bounded CSV report-generation use cases.</div>
+</div>
+<div class="col-first odd-row-color"><a href="class-use/TradeDataset.html#com.neueda.leap.reporting.service">TradeDataset</a></div>
+<div class="col-last odd-row-color">
+<div class="block">Every fill, read from the reporting replica (BR-16) so the Reports and Clients pages never compete with live
+ trading for database capacity.</div>
+</div>
+<div class="col-first even-row-color"><a href="class-use/TradeDataset.Trade.html#com.neueda.leap.reporting.service">TradeDataset.Trade</a></div>
+<div class="col-last even-row-color">
+<div class="block">One fill in the dataset.</div>
 </div>
 </div>
 </section>

@@ -54,13 +54,46 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Package</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.cancel">com.neueda.leap.order.cancel</a></div>
 <div class="col-last even-row-color">
+<div class="block">Client cancellation of an order that is still waiting to execute (PS-14).</div>
+</div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-last odd-row-color">
 <div class="block">Caller-scoped reads of a single order's detail and current status.</div>
 </div>
 </div>
 <section class="class-uses">
 <ul class="block-list">
+<li>
+<section class="detail" id="com.neueda.leap.order.cancel">
+<h2>Uses of <a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a> in <a href="../../cancel/package-summary.html">com.neueda.leap.order.cancel</a></h2>
+<div class="caption"><span>Methods in <a href="../../cancel/package-summary.html">com.neueda.leap.order.cancel</a> that return <a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code><a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderCancellationService.</span><code><a href="../../cancel/OrderCancellationService.html#cancel(java.util.UUID,java.util.UUID)" class="member-name-link">cancel</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;orderId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;userId)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Cancels the order if it belongs to the caller and is still waiting to execute.</div>
+</div>
+</div>
+<div class="caption"><span>Methods in <a href="../../cancel/package-summary.html">com.neueda.leap.order.cancel</a> that return types with arguments of type <a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a></span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Method</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a>&gt;</code></div>
+<div class="col-second even-row-color"><span class="type-name-label">OrderCancellationController.</span><code><a href="../../cancel/OrderCancellationController.html#cancel(com.neueda.leap.security.JwtPrincipal,java.util.UUID)" class="member-name-link">cancel</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;id)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Cancels the caller's waiting order.</div>
+</div>
+</div>
+</section>
+</li>
 <li>
 <section class="detail" id="com.neueda.leap.order.query">
 <h2>Uses of <a href="../OrderStatusResponse.html" title="class in com.neueda.leap.order.query">OrderStatusResponse</a> in <a href="../package-summary.html">com.neueda.leap.order.query</a></h2>

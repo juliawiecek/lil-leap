@@ -10,6 +10,7 @@ const { StockDashboard } = await import('../src/app/stock-dashboard.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 const { AdvancedChart } = await import('../src/app/advanced-chart.ts');
+const { StockDashboardComponent } = await import('../src/app/stock-dashboard.component.ts');
 
 test('icons render requested paths and fall back for unknown names', async t => {
   const fixture = await render(t, DashboardIcon, { name: 'apple' });
@@ -23,6 +24,7 @@ test('icons render requested paths and fall back for unknown names', async t => 
 });
 
 test('server tier selects the visible dashboard and child sign-out reaches the parent', async t => {
+  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
   const fixture = await render(t, StockDashboard, { name: 'Ada', level: 'NOVICE' });
   const root = fixture.nativeElement;
   assert.ok(root.querySelector('app-novice-dashboard'));
@@ -59,16 +61,19 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   assert.match(desk.message(), /whole number/); assert.equal(review.mock.callCount(), 1);
 });
 
-test('chart period buttons update accessible labels; the chart shows recorded prices, not made-up indicators', async t => {
+test('chart periods update accessible labels and unavailable indicators are explained without invented data', async t => {
+  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
   const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
   const fixture = await render(t, AdvancedChart, { desk });
-  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1D price chart"]'));
-  assert.match(fixture.nativeElement.textContent, /Collecting prices for AAPL/);
-  assert.doesNotMatch(fixture.nativeElement.textContent, /EMA|VWAP|RSI|Volume/);
+  assert.match(fixture.nativeElement.querySelector('.technical-plot').getAttribute('aria-label'), /AAPL 1D recorded prices/);
+  assert.match(fixture.nativeElement.textContent, /Collecting recorded prices for AAPL/);
+  assert.match(fixture.nativeElement.textContent, /Needs 200 recorded bars/);
+  assert.match(fixture.nativeElement.textContent, /Volume unavailable/);
+  assert.equal(fixture.nativeElement.querySelectorAll('.indicator-line').length, 0);
   const weekly = button(fixture, '1W');
   assert.equal(weekly.getAttribute('aria-pressed'), 'true');
   assert.equal(desk.period(), '1W');
-  assert.ok(fixture.nativeElement.querySelector('svg[aria-label="AAPL 1W price chart"]'));
+  assert.match(fixture.nativeElement.querySelector('.technical-plot').getAttribute('aria-label'), /AAPL 1W recorded prices/);
   // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
   desk.quote('NVDA').change = -2.36;
   desk.choose(desk.quote('NVDA')); fixture.detectChanges();

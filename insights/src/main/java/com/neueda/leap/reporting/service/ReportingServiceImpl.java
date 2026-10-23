@@ -10,7 +10,6 @@ import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import com.neueda.leap.reporting.service.TradeDataset.Trade;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -106,13 +105,13 @@ public class ReportingServiceImpl implements ReportingService {
      * Creates the reporting service.
      *
      * @param repository existing read-only reporting repository used by the dashboard insights endpoints
-     * @param clock source of the current instant, used to find today (Central time)
-     * @param resourceLoader classpath resource loader used to read the BR-16 CSV dataset
+     * @param clock source of the current instant, used to find today's Central-time day
+     * @param dataset every fill, read from the reporting replica (BR-16)
      */
-    public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, ResourceLoader resourceLoader) {
+    public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, TradeDataset dataset) {
         this.repository = repository;
         this.clock = clock;
-        this.dataset = new TradeDataset(resourceLoader);
+        this.dataset = dataset;
     }
 
     @Override
@@ -391,8 +390,8 @@ public class ReportingServiceImpl implements ReportingService {
     }
 
     private static ActivityKey activityKey(Trade trade) {
-        ZonedDateTime local = trade.filledAt().atZone(MarketDay.ZONE);
-        return new ActivityKey(local.toLocalDate(), local.getHour());
+        ZonedDateTime centralTime = trade.filledAt().atZone(MarketDay.ZONE);
+        return new ActivityKey(centralTime.toLocalDate(), centralTime.getHour());
     }
 
     private record InstrumentKey(String instrumentSymbol, String instrumentName, String assetClass, String marketCode) {

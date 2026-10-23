@@ -6,6 +6,7 @@ com.neueda.leap.instrument.repository
 com.neueda.leap.instrument.service
 com.neueda.leap.marketdata
 com.neueda.leap.order
+com.neueda.leap.order.cancel
 com.neueda.leap.order.execution
 com.neueda.leap.order.execution.cash
 com.neueda.leap.order.execution.event
@@ -15,6 +16,7 @@ com.neueda.leap.order.query
 com.neueda.leap.order.rules
 com.neueda.leap.order.service
 com.neueda.leap.order.settlement
+com.neueda.leap.order.submission.audit
 com.neueda.leap.order.submission.controller
 com.neueda.leap.order.submission.dto
 com.neueda.leap.order.submission.repository

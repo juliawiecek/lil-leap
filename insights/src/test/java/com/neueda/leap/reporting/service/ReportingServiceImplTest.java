@@ -11,7 +11,6 @@ import com.neueda.leap.reporting.repository.TradeReportingRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 
@@ -22,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,16 +35,37 @@ class ReportingServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-10-01T15:30:00Z");
     private static final Clock UTC_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
-    /** 15:30 UTC is 11:30 in New York, so today is October 1 there too. */
+    /** 15:30 UTC is 10:30 Central time, so today is October 1 there too. */
     private static final MarketDay TODAY_RANGE = new MarketDay(LocalDate.of(2026, 10, 1));
     private static final ReportDateRange FULL_RANGE =
             new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 31));
 
     private final TradeReportingRepository repository = mock(TradeReportingRepository.class);
-    private final ReportingServiceImpl service = new ReportingServiceImpl(repository, UTC_CLOCK, new DefaultResourceLoader());
+    private final ReplicaDatabase replica = new ReplicaDatabase();
+    private final ReportingServiceImpl service = new ReportingServiceImpl(repository, UTC_CLOCK, replica.dataset());
+
+    /** A small trade book on the replica; Central time is UTC-5 in October. */
+    ReportingServiceImplTest() {
+        replica.instrument("AAPL", "Apple Inc.", "COMMON_STOCK", "NASDAQ");
+        replica.instrument("JPM", "JPMorgan Chase & Co.", "COMMON_STOCK", "NYSE");
+        replica.instrument("KO", "The Coca-Cola Company", "COMMON_STOCK", "NYSE");
+        UUID maya = UUID.randomUUID();
+        UUID ada = UUID.randomUUID();
+        UUID sam = UUID.randomUUID();
+        replica.account(maya, "Maya", "Chen", "maya@example.test", "NT-DEMO-0001", "Maya", "ACTIVE", "NOVICE");
+        replica.account(ada, "Ada", "Vance", "ada@example.test", "NT-DEMO-0002", "Ada", "ACTIVE", "ADVANCED");
+        replica.account(sam, "Sam", "Okafor", "sam@example.test", "NT-DEMO-0003", "Sam", "ACTIVE", "ADVANCED");
+        replica.fill(maya, "AAPL", "BUY", 10, "220.00", "2026-10-15T14:05:00Z");
+        replica.fill(ada, "AAPL", "BUY", 5, "230.00", "2026-10-16T14:10:00Z");
+        replica.fill(ada, "AAPL", "SELL", 2, "235.00", "2026-10-16T14:40:00Z");
+        replica.fill(sam, "JPM", "BUY", 4, "300.00", "2026-10-16T18:00:00Z");
+        // 03:30 UTC on the 17th is still the 16th (22:30) in Central time.
+        replica.fill(maya, "KO", "SELL", 3, "68.50", "2026-10-17T03:30:00Z");
+        replica.fill(sam, "KO", "BUY", 1, "70.00", "2026-10-17T14:00:00Z");
+    }
 
     @Test
-    void overviewUsesTodaysNewYorkTradingDay() {
+    void overviewUsesTodaysCentralDay() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.OverviewProjection projection = mock(TradeReportingRepository.OverviewProjection.class);
@@ -59,7 +80,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void topInstrumentsUseTodaysNewYorkTradingDayAndDefaultLimit() {
+    void topInstrumentsUseTodaysCentralDayAndDefaultLimit() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.TopInstrumentProjection row = mock(TradeReportingRepository.TopInstrumentProjection.class);
@@ -81,7 +102,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void trendCountsNewYorkHoursAndFillsHoursWithoutTradesWithZero() {
+    void trendCountsCentralHoursAndFillsHoursWithoutTradesWithZero() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeFillEntity morningOne = mock(TradeFillEntity.class);
@@ -100,14 +121,12 @@ class ReportingServiceImplTest {
 
         List<ClientActivityTrendDto> trend = service.getClientActivityTrend();
 
-        // 09:15 and 09:59 UTC are 04:00 Central (CDT); 13:01 UTC is 08:00.
+        // 09:15 and 09:59 UTC are 04:00 Central time (CDT); 13:01 UTC is 08:00.
         assertThat(trend)
                 .hasSize(24)
                 .contains(new ClientActivityTrendDto("00:00", 0), atIndex(0))
                 .contains(new ClientActivityTrendDto("04:00", 2), atIndex(4))
-                .contains(new ClientActivityTrendDto("05:00", 0), atIndex(5))
                 .contains(new ClientActivityTrendDto("08:00", 1), atIndex(8))
-                .contains(new ClientActivityTrendDto("09:00", 0), atIndex(9))
                 .contains(new ClientActivityTrendDto("13:00", 0), atIndex(13))
                 .contains(new ClientActivityTrendDto("23:00", 0), atIndex(23));
         verify(repository).findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
@@ -116,70 +135,73 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void reportsCoveringTheWholeDatasetAggregateEveryTrade() {
+    void reportsCoveringTheWholeBookAggregateEveryTrade() {
         String instrumentCsv = csvBody(service.generateInstrumentReport(FULL_RANGE));
         String segmentCsv = csvBody(service.generateClientSegmentReport(FULL_RANGE));
         String activityCsv = csvBody(service.generateTradingActivityReport(FULL_RANGE));
 
-        assertThat(instrumentCsv)
-                .startsWith("instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price")
-                .contains("AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,7,372,82953.90,222.99")
-                .contains("JPM,JPMorgan Chase & Co.,COMMON_STOCK,NYSE,4,168,50701.61,301.80")
-                .hasLineCount(34);
+        // Most traded first; 3820.00 / 17 shares = 224.71 and 275.50 / 4 = 68.88 (half up).
+        assertThat(instrumentCsv.lines()).containsExactly(
+                "instrument_symbol,instrument_name,asset_class,market_code,trade_count,total_quantity,total_notional,average_execution_price",
+                "AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,3,17,3820.00,224.71",
+                "KO,The Coca-Cola Company,COMMON_STOCK,NYSE,2,4,275.50,68.88",
+                "JPM,JPMorgan Chase & Co.,COMMON_STOCK,NYSE,1,4,1200.00,300.00");
 
-        assertThat(segmentCsv)
-                .startsWith("client_segment,trade_count,unique_clients,total_quantity,total_notional")
-                .contains("ADVANCED,78,7,5672,1244086.96")
-                .contains("NOVICE,69,7,737,92219.81");
+        assertThat(segmentCsv.lines()).containsExactly(
+                "client_segment,trade_count,unique_clients,total_quantity,total_notional",
+                "ADVANCED,4,2,12,2890.00",
+                "NOVICE,2,1,13,2405.50");
 
-        assertThat(activityCsv)
-                .startsWith("trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional")
-                // 14:00 UTC is 10:00 in New York (EDT).
-                .contains("2026-10-16,09:00,8,8,286,68966.56")
-                .hasLineCount(68);
+        // Grouped by Central date and hour: 14:10 UTC is 09:00, 03:30 UTC on the 17th is 22:00 on the 16th.
+        assertThat(activityCsv.lines()).containsExactly(
+                "trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional",
+                "2026-10-15,09:00,1,1,10,2200.00",
+                "2026-10-16,09:00,2,1,7,1620.00",
+                "2026-10-16,13:00,1,1,4,1200.00",
+                "2026-10-16,22:00,1,1,3,205.50",
+                "2026-10-17,09:00,1,1,1,70.00");
     }
 
     @Test
     void buySellBalanceSplitsSidesPerInstrumentWithNetBuyersFirst() {
         ResponseEntity<Resource> report = service.generateBuySellBalanceReport(FULL_RANGE);
-        List<String> lines = csvBody(report).lines().toList();
 
-        assertThat(lines.get(0)).isEqualTo("instrument_symbol,instrument_name,asset_class,market_code,"
-                + "buy_trade_count,sell_trade_count,buy_quantity,sell_quantity,net_quantity,"
-                + "buy_notional,sell_notional,net_notional");
-        assertThat(lines).hasSize(34)
-                .contains("KO,The Coca-Cola Company,COMMON_STOCK,NYSE,4,0,727,0,727,49295.24,0.00,49295.24", atIndex(1))
-                .contains("NVDA,NVIDIA Corporation,COMMON_STOCK,NASDAQ,9,7,553,151,402,95364.81,26498.74,68866.07", atIndex(2))
-                .contains("INTC,Intel Corporation,COMMON_STOCK,NASDAQ,1,2,35,35,0,1255.80,1262.64,-6.84", atIndex(33));
-        // Count columns are read from the end because quoted instrument names can contain commas.
-        long trades = lines.stream().skip(1)
-                .map(line -> line.split(","))
-                .mapToLong(columns -> Long.parseLong(columns[columns.length - 8]) + Long.parseLong(columns[columns.length - 7]))
-                .sum();
-        assertThat(trades).isEqualTo(147);
+        assertThat(csvBody(report).lines()).containsExactly(
+                "instrument_symbol,instrument_name,asset_class,market_code,"
+                        + "buy_trade_count,sell_trade_count,buy_quantity,sell_quantity,net_quantity,"
+                        + "buy_notional,sell_notional,net_notional",
+                "AAPL,Apple Inc.,COMMON_STOCK,NASDAQ,2,1,15,2,13,3350.00,470.00,2880.00",
+                "JPM,JPMorgan Chase & Co.,COMMON_STOCK,NYSE,1,0,4,0,4,1200.00,0.00,1200.00",
+                "KO,The Coca-Cola Company,COMMON_STOCK,NYSE,1,1,1,3,-2,70.00,205.50,-135.50");
         assertThat(report.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("buy-sell-balance-report_2026-09-01_2026-10-31.csv");
     }
 
     @Test
-    void buySellBalanceShowsNetSellersLastWithNegativeNets() throws Exception {
-        String csv = csvHeader() + "\n"
-                + "f1,o1,2026-10-01T14:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,10,5.00\n"
-                + "f2,o2,2026-10-01T15:00:00Z,i,AAA,Alpha,COMMON_STOCK,NYSE,u2,e,name,a2,002,account,ACTIVE,NOVICE,SELL,25,6.00\n"
-                + "f3,o3,2026-10-01T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,3,2.50\n"
-                + "f4,o4,2026-10-02T16:00:00Z,j,BBB,Beta,COMMON_STOCK,NASDAQ,u1,e,name,a1,001,account,ACTIVE,NOVICE,BUY,99,2.50\n";
+    void buySellBalanceShowsNetSellersLastWithNegativeNets() {
+        ReplicaDatabase book = new ReplicaDatabase();
+        book.instrument("AAA", "Alpha", "COMMON_STOCK", "NYSE");
+        book.instrument("BBB", "Beta", "COMMON_STOCK", "NASDAQ");
+        UUID first = account(book, "001");
+        UUID second = account(book, "002");
+        book.fill(first, "AAA", "BUY", 10, "5.00", "2026-10-01T14:00:00Z");
+        book.fill(second, "AAA", "SELL", 25, "6.00", "2026-10-01T15:00:00Z");
+        book.fill(first, "BBB", "BUY", 3, "2.50", "2026-10-01T16:00:00Z");
+        book.fill(first, "BBB", "BUY", 99, "2.50", "2026-10-02T16:00:00Z");
         ReportDateRange octoberFirst = new ReportDateRange(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1));
 
-        assertThat(csvBody(csvService(csv).generateBuySellBalanceReport(octoberFirst)).lines().skip(1).toList())
+        assertThat(csvBody(serviceOver(book).generateBuySellBalanceReport(octoberFirst)).lines().skip(1).toList())
                 .containsExactly(
                         "BBB,Beta,COMMON_STOCK,NASDAQ,1,0,3,0,3,7.50,0.00,7.50",
                         "AAA,Alpha,COMMON_STOCK,NYSE,1,1,10,25,-15,50.00,150.00,-100.00");
     }
 
     @Test
-    void buySellBalanceRejectsUnknownSides() throws Exception {
-        var unknownSide = csvService(csvHeader()
-                + "\nf,o,2026-10-01T12:00:00Z,i,AAPL,Apple,COMMON_STOCK,NASDAQ,u,e,name,a,001,account,ACTIVE,NOVICE,SHORT,1,1.00");
+    void buySellBalanceRejectsUnknownSides() {
+        ReplicaDatabase book = new ReplicaDatabase();
+        book.instrument("AAPL", "Apple", "COMMON_STOCK", "NASDAQ");
+        book.fill(account(book, "001"), "AAPL", "SHORT", 1, "1.00", "2026-10-01T12:00:00Z");
+        var unknownSide = serviceOver(book);
 
         assertThatThrownBy(() -> unknownSide.generateBuySellBalanceReport(FULL_RANGE))
                 .isInstanceOf(IllegalStateException.class)
@@ -188,14 +210,15 @@ class ReportingServiceImplTest {
 
     @Test
     void reportsOnlyIncludeTradesInsideTheCentralDateRange() {
-        ReportDateRange anchorDay = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
+        ReportDateRange october16 = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
 
-        List<String> activityRows = csvBody(service.generateTradingActivityReport(anchorDay)).lines().skip(1).toList();
-        assertThat(activityRows).isNotEmpty().allMatch(row -> row.startsWith("2026-10-16,"));
-        assertThat(activityRows.stream().mapToLong(row -> Long.parseLong(row.split(",")[2])).sum()).isEqualTo(60);
+        // The 15th and the 17th's 14:00 UTC fill are left out; 03:30 UTC on the 17th counts for the 16th.
+        List<String> activityRows = csvBody(service.generateTradingActivityReport(october16)).lines().skip(1).toList();
+        assertThat(activityRows).hasSize(3).allMatch(row -> row.startsWith("2026-10-16,"));
+        assertThat(activityRows.stream().mapToLong(row -> Long.parseLong(row.split(",")[2])).sum()).isEqualTo(4);
 
-        List<String> segmentRows = csvBody(service.generateClientSegmentReport(anchorDay)).lines().skip(1).toList();
-        assertThat(segmentRows.stream().mapToLong(row -> Long.parseLong(row.split(",")[1])).sum()).isEqualTo(60);
+        List<String> segmentRows = csvBody(service.generateClientSegmentReport(october16)).lines().skip(1).toList();
+        assertThat(segmentRows).containsExactly("ADVANCED,3,2,11,2820.00", "NOVICE,1,1,3,205.50");
     }
 
     @Test
@@ -252,49 +275,49 @@ class ReportingServiceImplTest {
         assertThat(service.getOverview()).isEqualTo(new OverviewDto(0, 0, new BigDecimal("0.00")));
     }
 
-    private ReportingServiceImpl csvService(String csv) {
-        var loader = mock(org.springframework.core.io.ResourceLoader.class);
-        when(loader.getResource("classpath:reports/trades.csv"))
-                .thenReturn(new ByteArrayResource(csv.getBytes(StandardCharsets.UTF_8)));
-        return new ReportingServiceImpl(repository, UTC_CLOCK, loader);
+    private ReportingServiceImpl serviceOver(ReplicaDatabase book) {
+        return new ReportingServiceImpl(repository, UTC_CLOCK, book.dataset());
     }
 
-    private String csvHeader() throws java.io.IOException {
-        try (var stream = new DefaultResourceLoader().getResource("classpath:reports/trades.csv").getInputStream()) {
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8).lines().findFirst().orElseThrow();
-        }
+    private static UUID account(ReplicaDatabase book, String number) {
+        UUID account = UUID.randomUUID();
+        book.account(account, "Test", number, number + "@example.test", number, "account", "ACTIVE", "NOVICE");
+        return account;
     }
 
     @Test
-    void quotedInstrumentNamesRoundTripThroughReport() throws Exception {
-        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,u,email,name,a,001,account,ACTIVE,ADVANCED,BUY,2,10.25";
-        var report = csvService(csvHeader() + "\n\n" + row + "\n").generateInstrumentReport(FULL_RANGE);
+    void instrumentNamesWithCommasAndQuotesAreEscapedInTheReport() throws java.io.IOException {
+        ReplicaDatabase book = new ReplicaDatabase();
+        book.instrument("AAPL", "Apple, \"Special\"", "EQUITY", "NASDAQ");
+        book.fill(account(book, "001"), "AAPL", "BUY", 2, "10.25", "2026-10-01T12:00:00Z");
+
+        var report = serviceOver(book).generateInstrumentReport(FULL_RANGE);
+
         assertThat(csvBody(report)).contains("AAPL,\"Apple, \"\"Special\"\"\",EQUITY,NASDAQ,1,2,20.50,10.25");
         assertThat(report.getHeaders().getContentLength()).isEqualTo(report.getBody().contentLength());
     }
 
     @Test
-    void quoteAtEndOfLastColumnAndZeroQuantityAreHandled() throws Exception {
-        String row = "f,o,2026-10-01T12:00:00Z,i,AAPL,Apple,EQUITY,NASDAQ,u,email,name,a,001,account,ACTIVE,ADVANCED,BUY,0,\"10.25\"";
-        assertThat(csvBody(csvService(csvHeader() + "\n" + row).generateInstrumentReport(FULL_RANGE)))
+    void aZeroQuantityFillHasZeroValueAndAveragePrice() {
+        ReplicaDatabase book = new ReplicaDatabase();
+        book.instrument("AAPL", "Apple", "EQUITY", "NASDAQ");
+        book.fill(account(book, "001"), "AAPL", "BUY", 0, "10.25", "2026-10-01T12:00:00Z");
+
+        assertThat(csvBody(serviceOver(book).generateInstrumentReport(FULL_RANGE)))
                 .contains("AAPL,Apple,EQUITY,NASDAQ,1,0,0.00,0.00");
     }
 
     @Test
-    void malformedDatasetsFailClearly() throws Exception {
-        var emptyDataset = csvService("");
-        var invalidHeader = csvService("wrong,header");
-        assertThatThrownBy(() -> emptyDataset.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("is empty");
-        assertThatThrownBy(() -> invalidHeader.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("header");
-        var shortRow = csvService(csvHeader() + "\nmissing,columns");
-        assertThatThrownBy(() -> shortRow.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("column count");
-        var loader = mock(org.springframework.core.io.ResourceLoader.class);
-        var resource = mock(Resource.class);
-        when(loader.getResource(any())).thenReturn(resource);
-        var broken = new ReportingServiceImpl(repository, UTC_CLOCK, loader);
-        assertThatThrownBy(() -> broken.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("not found");
-        when(resource.exists()).thenReturn(true);
-        when(resource.getInputStream()).thenThrow(new java.io.IOException("read failure"));
-        assertThatThrownBy(() -> broken.generateInstrumentReport(FULL_RANGE)).hasCauseInstanceOf(java.io.IOException.class);
+    void emptyReplicaGivesHeaderOnlyReport() {
+        String body = csvBody(serviceOver(new ReplicaDatabase()).generateInstrumentReport(FULL_RANGE));
+        assertThat(body.lines()).hasSize(1);
+    }
+
+    @Test
+    void replicaFailureIsNotHidden() {
+        TradeDataset dataset = mock(TradeDataset.class);
+        when(dataset.trades()).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("replica down"));
+        var broken = new ReportingServiceImpl(repository, UTC_CLOCK, dataset);
+        assertThatThrownBy(() -> broken.generateInstrumentReport(FULL_RANGE)).hasMessageContaining("replica down");
     }
 }

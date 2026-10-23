@@ -13,7 +13,6 @@ sonarqube-config/
 │   ├── html-profile.xml
 │   ├── java-profile.xml
 │   ├── javascript-profile.xml
-│   ├── python-profile.xml
 │   ├── typescript-profile.xml
 │   └── xml-profile.xml
 └── docker-compose.yml
@@ -74,7 +73,6 @@ profiles, configure a gate, create a project, or configure Jenkins.
 | Profile | SonarQube language key | Files in the configured scan | Exported rules |
 | --- | --- | --- | --- |
 | java-profile | java | Java sources and tests in the three Maven services | 37 |
-| python-profile | py | Data-pipeline sources and tests | 41 |
 | typescript-profile | ts | Auth and both Angular applications | 39 |
 | javascript-profile | js | Frontend `.mjs` tests | 35 |
 | html-profile | web | Angular HTML templates | 15 |

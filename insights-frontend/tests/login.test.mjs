@@ -39,9 +39,10 @@ function setup(t, options = {}) {
       provide: ActivatedRoute,
       useValue: {
         snapshot: {
-          queryParamMap: convertToParamMap(
-            options.returnUrl ? { returnUrl: options.returnUrl } : {},
-          ),
+          queryParamMap: convertToParamMap({
+            ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
+            ...(options.reason ? { reason: options.reason } : {}),
+          }),
         },
       },
     },
@@ -54,6 +55,13 @@ test('Analyst sign-in starts the idle keeper and restores a trade lookup URL', a
   assert.equal(f.starts(), 1);
   assert.equal(f.login.pending(), false);
   assert.equal(f.navigations[0], '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f');
+});
+test('after the inactivity sign-out the sign-in page says why (PS-30)', (t) => {
+  assert.equal(
+    setup(t, { reason: 'inactive' }).login.message(),
+    'You were signed out after 10 minutes of inactivity. Please sign in again.',
+  );
+  assert.equal(setup(t).login.message(), '');
 });
 test('unsafe, retired and missing destinations use the home page', async (t) => {
   for (const returnUrl of [undefined, '//external.test', '/compliance', '/clients/CLIENT-001/orders']) {

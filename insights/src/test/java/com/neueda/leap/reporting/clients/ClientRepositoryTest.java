@@ -1,58 +1,44 @@
 package com.neueda.leap.reporting.clients;
 
-import com.neueda.leap.reporting.service.TradeDataset;
+import com.neueda.leap.reporting.service.ReplicaDatabase;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.ResourceLoader;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+/** Clients worked out from fills on a database shaped like the reporting replica. */
 class ClientRepositoryTest {
-
-    private static final String HEADER = "fill_id,order_id,filled_at,instrument_id,instrument_symbol,instrument_name,"
-            + "asset_class,market_code,user_id,client_email,client_name,account_id,account_number,account_name,"
-            + "account_status,trader_level,side,filled_quantity,execution_price";
 
     private final UUID maya = UUID.randomUUID();
     private final UUID jordan = UUID.randomUUID();
     private final UUID blocked = UUID.randomUUID();
     private final UUID mayaFirstOrder = UUID.randomUUID();
     private final UUID mayaSell = UUID.randomUUID();
-    private final List<String> rows = new ArrayList<>();
     private final ClientRepository clients;
 
     ClientRepositoryTest() {
-        fill(maya, mayaFirstOrder, "AAPL", "BUY", 2, "225.10", "2026-10-15T14:00:00Z");
-        fill(maya, UUID.randomUUID(), "MSFT", "BUY", 1, "500.00", "2026-10-16T14:00:00Z");
-        fill(maya, UUID.randomUUID(), "AAPL", "BUY", 2, "230.10", "2026-10-17T14:00:00Z");
-        fill(maya, mayaSell, "AAPL", "SELL", 1, "240.00", "2026-10-18T14:00:00Z");
-        fill(maya, UUID.randomUUID(), "MSFT", "SELL", 1, "510.00", "2026-10-18T15:00:00Z");
-        fill(jordan, UUID.randomUUID(), "AAPL", "BUY", 5, "226.00", "2026-10-14T14:00:00Z");
-        fill(blocked, UUID.randomUUID(), "TSLA", "BUY", 1, "250.00", "2026-10-10T14:00:00Z");
-        ResourceLoader loader = mock(ResourceLoader.class);
-        when(loader.getResource("classpath:reports/trades.csv")).thenAnswer(ignored ->
-                new ByteArrayResource((HEADER + "\n" + String.join("\n", rows) + "\n").getBytes(StandardCharsets.UTF_8)));
-        clients = new ClientRepository(new TradeDataset(loader));
-    }
-
-    private void fill(UUID account, UUID order, String symbol, String side, long quantity, String price, String at) {
-        String[] owner = account.equals(maya)
-                ? new String[]{"maya.chen@example.test", "Maya Chen", "NT-DEMO-0001", "Novice 100% cash_account", "ACTIVE", "NOVICE"}
-                : account.equals(jordan)
-                ? new String[]{"jordan.lee@example.test", "Jordan Lee", "NT-DEMO-0002", "Advanced account", "ACTIVE", "ADVANCED"}
-                : new String[]{"noah.bennett@example.test", "Noah Bennett", "NT-DEMO-0003", "Blocked account", "BLOCKED", "NOVICE"};
-        rows.add(String.join(",", UUID.randomUUID().toString(), order.toString(), at, UUID.randomUUID().toString(), symbol,
-                "\"" + symbol + ", Inc.\"", "COMMON_STOCK", "NASDAQ", UUID.randomUUID().toString(), owner[0], owner[1],
-                account.toString(), owner[2], owner[3], owner[4], owner[5], side, Long.toString(quantity), price));
+        ReplicaDatabase replica = new ReplicaDatabase();
+        for (String symbol : List.of("AAPL", "MSFT", "TSLA")) {
+            replica.instrument(symbol, symbol + ", Inc.", "COMMON_STOCK", "NASDAQ");
+        }
+        replica.account(maya, "Maya", "Chen", "maya.chen@example.test", "NT-DEMO-0001", "Novice 100% cash_account",
+                "ACTIVE", "NOVICE");
+        replica.account(jordan, "Jordan", "Lee", "jordan.lee@example.test", "NT-DEMO-0002", "Advanced account",
+                "ACTIVE", "ADVANCED");
+        replica.account(blocked, "Noah", "Bennett", "noah.bennett@example.test", "NT-DEMO-0003", "Blocked account",
+                "BLOCKED", "NOVICE");
+        replica.fill(mayaFirstOrder, maya, "AAPL", "BUY", 2, "225.10", "2026-10-15T14:00:00Z");
+        replica.fill(maya, "MSFT", "BUY", 1, "500.00", "2026-10-16T14:00:00Z");
+        replica.fill(maya, "AAPL", "BUY", 2, "230.10", "2026-10-17T14:00:00Z");
+        replica.fill(mayaSell, maya, "AAPL", "SELL", 1, "240.00", "2026-10-18T14:00:00Z");
+        replica.fill(maya, "MSFT", "SELL", 1, "510.00", "2026-10-18T15:00:00Z");
+        replica.fill(jordan, "AAPL", "BUY", 5, "226.00", "2026-10-14T14:00:00Z");
+        replica.fill(blocked, "TSLA", "BUY", 1, "250.00", "2026-10-10T14:00:00Z");
+        clients = new ClientRepository(replica.dataset());
     }
 
     private ClientQuery query(String search, String level, String status, String sort) {

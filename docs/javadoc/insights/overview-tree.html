@@ -56,6 +56,7 @@ loadScripts(document, 'script');</script>
 <li><a href="com/neueda/leap/common/exception/package-tree.html">com.neueda.leap.common.exception</a>, </li>
 <li><a href="com/neueda/leap/config/package-tree.html">com.neueda.leap.config</a>, </li>
 <li><a href="com/neueda/leap/reporting/package-tree.html">com.neueda.leap.reporting</a>, </li>
+<li><a href="com/neueda/leap/reporting/clients/package-tree.html">com.neueda.leap.reporting.clients</a>, </li>
 <li><a href="com/neueda/leap/reporting/controller/package-tree.html">com.neueda.leap.reporting.controller</a>, </li>
 <li><a href="com/neueda/leap/reporting/dto/package-tree.html">com.neueda.leap.reporting.dto</a>, </li>
 <li><a href="com/neueda/leap/reporting/entity/package-tree.html">com.neueda.leap.reporting.entity</a>, </li>
@@ -64,13 +65,17 @@ loadScripts(document, 'script');</script>
 <li><a href="com/neueda/leap/reporting/model/package-tree.html">com.neueda.leap.reporting.model</a>, </li>
 <li><a href="com/neueda/leap/reporting/repository/package-tree.html">com.neueda.leap.reporting.repository</a>, </li>
 <li><a href="com/neueda/leap/reporting/service/package-tree.html">com.neueda.leap.reporting.service</a>, </li>
-<li><a href="com/neueda/leap/security/package-tree.html">com.neueda.leap.security</a></li>
+<li><a href="com/neueda/leap/security/package-tree.html">com.neueda.leap.security</a>, </li>
+<li><a href="com/neueda/leap/trades/package-tree.html">com.neueda.leap.trades</a></li>
 </ul>
 <section class="hierarchy">
 <h2 title="Class Hierarchy">Class Hierarchy</h2>
 <ul>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" class="type-name-link external-link" title="class or interface in java.lang">Object</a>
 <ul>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientController.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientController</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientRepository.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientRepository</a></li>
 <li class="circle">ch.qos.logback.core.pattern.Converter&lt;E&gt;
 <ul>
 <li class="circle">ch.qos.logback.core.pattern.FormattingConverter&lt;E&gt;
@@ -124,7 +129,10 @@ loadScripts(document, 'script');</script>
 </li>
 </ul>
 </li>
+<li class="circle">com.neueda.leap.trades.<a href="com/neueda/leap/trades/TradeController.html" class="type-name-link" title="class in com.neueda.leap.trades">TradeController</a></li>
+<li class="circle">com.neueda.leap.reporting.service.<a href="com/neueda/leap/reporting/service/TradeDataset.html" class="type-name-link" title="class in com.neueda.leap.reporting.service">TradeDataset</a></li>
 <li class="circle">com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/TradeFillEntity.html" class="type-name-link" title="class in com.neueda.leap.reporting.entity">TradeFillEntity</a></li>
+<li class="circle">com.neueda.leap.trades.<a href="com/neueda/leap/trades/TradeLookup.html" class="type-name-link" title="class in com.neueda.leap.trades">TradeLookup</a></li>
 <li class="circle">com.neueda.leap.reporting.entity.<a href="com/neueda/leap/reporting/entity/TradeOrderEntity.html" class="type-name-link" title="class in com.neueda.leap.reporting.entity">TradeOrderEntity</a></li>
 </ul>
 </li>
@@ -200,17 +208,28 @@ loadScripts(document, 'script');</script>
 <li class="circle">java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Record.html" class="type-name-link external-link" title="class or interface in java.lang">Record</a>
 <ul>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ClientActivityTrendDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ClientActivityTrendDto</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.ClientDetail.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos.ClientDetail</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.ClientSummary.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos.ClientSummary</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.Holding.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos.Holding</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.Order.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos.Order</a></li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientDtos.Page.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientDtos.Page</a>&lt;T&gt;</li>
+<li class="circle">com.neueda.leap.reporting.clients.<a href="com/neueda/leap/reporting/clients/ClientQuery.html" class="type-name-link" title="class in com.neueda.leap.reporting.clients">ClientQuery</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ClientSegmentActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ClientSegmentActivityResponse</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/DailyTradeActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">DailyTradeActivityResponse</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/InsightsOverviewResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">InsightsOverviewResponse</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/InstrumentActivityResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">InstrumentActivityResponse</a></li>
 <li class="circle">com.neueda.leap.security.<a href="com/neueda/leap/security/JwtPrincipal.html" class="type-name-link" title="class in com.neueda.leap.security">JwtPrincipal</a></li>
+<li class="circle">com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/MarketDay.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">MarketDay</a></li>
 <li class="circle">com.neueda.leap.reporting.kafka.<a href="com/neueda/leap/reporting/kafka/OrderLifecycleEvent.html" class="type-name-link" title="class in com.neueda.leap.reporting.kafka">OrderLifecycleEvent</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/OverviewDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">OverviewDto</a></li>
 <li class="circle">com.neueda.leap.reporting.model.<a href="com/neueda/leap/reporting/model/ReportDateRange.html" class="type-name-link" title="class in com.neueda.leap.reporting.model">ReportDateRange</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/ReportGenerationResponseDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">ReportGenerationResponseDto</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/TopInstrumentDto.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">TopInstrumentDto</a></li>
 <li class="circle">com.neueda.leap.reporting.dto.<a href="com/neueda/leap/reporting/dto/TopInstrumentResponse.html" class="type-name-link" title="class in com.neueda.leap.reporting.dto">TopInstrumentResponse</a></li>
+<li class="circle">com.neueda.leap.reporting.service.<a href="com/neueda/leap/reporting/service/TradeDataset.Trade.html" class="type-name-link" title="class in com.neueda.leap.reporting.service">TradeDataset.Trade</a></li>
+<li class="circle">com.neueda.leap.trades.<a href="com/neueda/leap/trades/TradeRecord.html" class="type-name-link" title="class in com.neueda.leap.trades">TradeRecord</a></li>
+<li class="circle">com.neueda.leap.trades.<a href="com/neueda/leap/trades/TradeRecord.Account.html" class="type-name-link" title="class in com.neueda.leap.trades">TradeRecord.Account</a></li>
+<li class="circle">com.neueda.leap.trades.<a href="com/neueda/leap/trades/TradeRecord.Event.html" class="type-name-link" title="class in com.neueda.leap.trades">TradeRecord.Event</a></li>
 </ul>
 </li>
 </ul>

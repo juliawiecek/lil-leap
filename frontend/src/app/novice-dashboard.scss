@@ -5,13 +5,13 @@
   z-index: 31;
   overflow: auto;
   scrollbar-width: none;
-  background: #0c0c0c;
-  color: #f2f0e9;
+  background: var(--surface);
+  color: var(--text);
   font: 12px/1.4 var(--font-ui);
   color-scheme: dark;
-  --muted: #a4a79e;
-  --green: #94c973;
-  --line: #1a1d1a;
+  --muted: var(--text-muted);
+  --green: var(--gain);
+  --line: var(--surface-tone-13);
 }
 * {
   box-sizing: border-box;
@@ -68,13 +68,13 @@ h2 {
   color: var(--green);
 }
 .negative {
-  color: #ff7a6e;
+  color: var(--loss);
 }
 .novice-shell {
   display: grid;
   grid-template-columns: 185px minmax(0, 1fr);
   min-height: 100dvh;
-  background: radial-gradient(ellipse at 60% 45%, #11111144, transparent 75%);
+  background: radial-gradient(ellipse at 60% 45%, var(--surface-wash-95), transparent 75%);
 }
 .novice-sidebar {
   position: sticky;
@@ -83,14 +83,14 @@ h2 {
   display: flex;
   flex-direction: column;
   padding: 20px 15px 12px 14px;
-  border-right: 1px solid #161616;
-  background: linear-gradient(110deg, #0c0c0c, #0c0c0c);
+  border-right: 1px solid var(--surface-raised);
+  background: linear-gradient(110deg, var(--surface), var(--surface));
 }
 .wordmark {
   display: flex;
   align-items: center;
   margin: 0 11px;
-  color: #f2f0e9;
+  color: var(--text);
   font-size: 21px;
   font-weight: 650;
   letter-spacing: -0.8px;
@@ -98,14 +98,14 @@ h2 {
   white-space: nowrap;
 }
 .wordmark > span {
-  color: #94c973;
+  color: var(--gain);
 }
 .wordmark-trend {
   width: 19px;
   height: 15px;
   margin-left: 5px;
   overflow: visible;
-  color: #f2f0e9;
+  color: var(--text);
 }
 .wordmark-trend path {
   fill: none;
@@ -128,12 +128,12 @@ h2 {
   padding: 0 14px;
   border-radius: 6px;
   text-align: left;
-  color: #d6d4cc;
+  color: var(--text-tone-19);
   font-size: 13px;
 }
 .novice-sidebar nav button.active {
-  background: #161616;
-  color: #c6e2b2;
+  background: var(--surface-raised);
+  color: var(--gain-tone-21);
 }
 .novice-sidebar nav app-dashboard-icon {
   width: 21px;
@@ -142,7 +142,7 @@ h2 {
 .sidebar-account {
   margin: auto 12px 0;
   padding-top: 16px;
-  border-top: 1px solid #1f231f;
+  border-top: 1px solid var(--surface-tone-08);
   display: grid;
   gap: 7px;
   font-size: 12px;
@@ -158,12 +158,12 @@ h2 {
 .novice-topbar {
   height: 58px;
   padding: 0 25px;
-  border-bottom: 1px solid #161616;
+  border-bottom: 1px solid var(--surface-raised);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  background: linear-gradient(100deg, #11111170, #11111180);
+  background: linear-gradient(100deg, var(--surface-wash-93), var(--surface-wash-26));
 }
 .company-search {
   position: relative;
@@ -175,22 +175,22 @@ h2 {
   max-width: 55%;
   padding: 0 12px;
   border-radius: 7px;
-  border: 1px solid #1f231f;
-  background: #161616b0;
-  color: #d6d4cc;
+  border: 1px solid var(--surface-tone-08);
+  background: var(--surface-wash-94);
+  color: var(--text-tone-19);
 }
 .company-search input {
   min-width: 0;
   width: 100%;
   height: 100%;
   background: none;
-  color: #f2f0e9;
+  color: var(--text);
   border: 0;
   font-size: 12px;
   outline-offset: 0;
 }
 .company-search input::placeholder {
-  color: #d6d4cc;
+  color: var(--text-tone-19);
   opacity: 1;
 }
 .company-search app-dashboard-icon {
@@ -203,10 +203,10 @@ h2 {
   left: 0;
   right: 0;
   z-index: 8;
-  background: #161616;
-  border: 1px solid #2c312b;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-tone-10);
   border-radius: 7px;
-  box-shadow: 0 12px 35px #0008;
+  box-shadow: 0 12px 35px var(--shadow-40);
 }
 .company-results button {
   width: 100%;
@@ -237,11 +237,11 @@ h2 {
 .workspace-choice .tier-badge {
   display: flex;
   align-items: center;
-  border: 1px solid #1f231f;
+  border: 1px solid var(--surface-tone-08);
   border-radius: 7px;
   padding: 8px 12px;
-  background: #111111;
-  color: #f2f0e9;
+  background: var(--surface-tone-03);
+  color: var(--text);
   width: 160px;
   height: 35px;
 }
@@ -257,7 +257,7 @@ h2 {
   position: relative;
   padding: 3px;
   display: flex;
-  color: #d6d4cc;
+  color: var(--text-tone-19);
 }
 .notification-button app-dashboard-icon {
   width: 23px;
@@ -267,8 +267,8 @@ h2 {
   position: absolute;
   top: 0;
   right: 0;
-  background: #94c973;
-  border: 1px solid #161616;
+  background: var(--gain);
+  border: 1px solid var(--surface-raised);
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -283,8 +283,8 @@ h2 {
   top: 40px;
   width: 235px;
   padding: 18px;
-  background: #161616;
-  border: 1px solid #2c312b;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-tone-10);
   border-radius: 8px;
 }
 .notification-popover p {
@@ -297,12 +297,16 @@ h2 {
   border-radius: 50%;
   width: 32px;
   height: 32px;
-  background: linear-gradient(140deg, #3a4038, #1f231f);
-  color: #fff;
+  background: linear-gradient(140deg, var(--surface-tone-58), var(--surface-tone-08));
+  color: var(--white);
   font-size: 14px;
 }
 .novice-content {
   padding: 20px 31px 24px;
+}
+/* The skip link focuses <main> itself (PS-20); its controls keep their own focus rings. */
+.novice-content:focus {
+  outline: none;
 }
 .page-heading {
   display: flex;
@@ -316,7 +320,7 @@ h2 {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 1.4px;
-  color: #a4a79e;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 .market-status {
@@ -324,7 +328,7 @@ h2 {
   align-items: center;
   gap: 20px;
   font-size: 12px;
-  color: #a4a79e;
+  color: var(--text-muted);
 }
 .market-status > span {
   display: flex;
@@ -339,10 +343,10 @@ h2 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #94c973;
+  background: var(--gain);
 }
 .market-status .closed i {
-  background: #ff7a6e;
+  background: var(--loss);
 }
 .overview-grid {
   display: grid;
@@ -362,7 +366,7 @@ h2 {
 .panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(120deg, #111111, #11111170);
+  background: linear-gradient(120deg, var(--surface-tone-03), var(--surface-wash-93));
   overflow: hidden;
 }
 .panel-heading {
@@ -439,24 +443,24 @@ h2 {
   color: var(--green);
 }
 .portfolio-gain.down strong {
-  color: #ff7a6e;
+  color: var(--loss);
 }
 .period-picker button.selected,
 .green-button {
-  background: linear-gradient(#c6e2b2, #94c973);
-  color: #121a0f;
-  box-shadow: inset 0 0 0 1px #c6e2b236;
+  background: linear-gradient(var(--gain-tone-21), var(--gain));
+  color: var(--surface-tone-09);
+  box-shadow: inset 0 0 0 1px var(--gain-wash-24);
 }
 .portfolio-stats {
   display: grid;
   grid-template-columns: 0.95fr 1.05fr 1.18fr 1.02fr;
-  border-top: 1px solid #1f231f;
+  border-top: 1px solid var(--surface-tone-08);
   margin-top: 6px;
   padding-top: 19px;
 }
 .portfolio-stats > div {
   padding: 0 21px;
-  border-left: 1px solid #1f231f;
+  border-left: 1px solid var(--surface-tone-08);
   white-space: nowrap;
 }
 .portfolio-stats > div:first-child {
@@ -496,8 +500,8 @@ h2 {
   border-bottom: 2px solid transparent;
 }
 .investment-tabs button.selected {
-  border-color: #94c973;
-  color: #f2f0e9;
+  border-color: var(--gain);
+  color: var(--text);
 }
 .table-scroll {
   position: relative;
@@ -572,12 +576,12 @@ th {
   height: 22px;
 }
 .company-logo.vanguard {
-  background: #4a2a24;
+  background: var(--loss-tone-15);
   border-radius: 50%;
   font:
     bold 23px/1 Georgia,
     serif;
-  color: #fff;
+  color: var(--white);
 }
 .company-logo.microsoft {
   width: 21px;
@@ -590,19 +594,19 @@ th {
 .microsoft i {
   width: 100%;
   height: 100%;
-  background: #f25022;
+  background: var(--brand-microsoft-red);
 }
 .microsoft i:nth-child(2) {
-  background: #7fba00;
+  background: var(--brand-microsoft-green);
 }
 .microsoft i:nth-child(3) {
-  background: #00a4ef;
+  background: var(--brand-microsoft-blue);
 }
 .microsoft i:nth-child(4) {
-  background: #ffb900;
+  background: var(--brand-microsoft-yellow);
 }
 .company-logo.nvidia {
-  color: #85c600;
+  color: var(--gain-tone-23);
 }
 .company-logo.nvidia svg {
   width: 26px;
@@ -643,10 +647,10 @@ th {
   stroke-width: 6;
 }
 .allocation-donut .ring.cash {
-  stroke: #7e8279;
+  stroke: var(--text-subtle);
 }
 .allocation-donut .ring.stocks {
-  stroke: #2e4424;
+  stroke: var(--gain-tone-22);
   transition: stroke-dasharray 0.6s ease;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -691,7 +695,7 @@ th {
   display: block;
   margin-top: 1px;
   font-size: 12px;
-  color: #a4a79e;
+  color: var(--text-muted);
 }
 .asset-dot {
   width: 14px;
@@ -703,18 +707,18 @@ th {
   margin-top: 2px;
 }
 .stocks {
-  background: #94c973;
+  background: var(--gain);
 }
 .cash {
-  background: #7e8279;
+  background: var(--text-subtle);
 }
 .diversification {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(100deg, #161616, #161616);
-  border: 1px solid #1a1d1a;
+  background: linear-gradient(100deg, var(--surface-raised), var(--surface-raised));
+  border: 1px solid var(--surface-tone-13);
   border-radius: 7px;
   padding: 7px 8px;
   text-align: left;
@@ -730,18 +734,18 @@ th {
   width: 13px;
   height: 13px;
   margin-left: auto;
-  color: #d6d4cc;
+  color: var(--text-tone-19);
 }
 .shield-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #1f231f;
+  background: var(--surface-tone-08);
   border-radius: 50%;
   height: 32px;
   width: 32px;
   flex-shrink: 0;
-  color: #c6e2b2;
+  color: var(--gain-tone-21);
 }
 .shield-icon app-dashboard-icon {
   height: 22px;
@@ -784,16 +788,16 @@ th {
 }
 .green-button {
   font-weight: 500;
-  border: 1px solid #94c973;
+  border: 1px solid var(--gain);
 }
 .secondary-button {
-  background: #161616;
-  border: 1px solid #1f231f;
-  color: #d6d4cc;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-tone-08);
+  color: var(--text-tone-19);
 }
 .outline-button {
-  border: 1px solid #2c312b;
-  color: #d6d4cc;
+  border: 1px solid var(--surface-tone-10);
+  color: var(--text-tone-19);
 }
 .watchlist-panel {
   padding: 15px 16px 10px;
@@ -846,8 +850,8 @@ th {
 .article-card {
   min-height: 78px;
   padding: 11px;
-  background: #1a1d1a;
-  border: 1px solid #1a1d1a;
+  background: var(--surface-tone-13);
+  border: 1px solid var(--surface-tone-13);
   border-radius: 7px;
   text-align: left;
   display: flex;
@@ -862,7 +866,7 @@ th {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #1f231f;
+  background: var(--surface-tone-08);
   flex-shrink: 0;
 }
 .article-icon app-dashboard-icon {
@@ -926,25 +930,25 @@ th {
 }
 .settings-panel select {
   padding: 8px 12px;
-  background: #161616;
-  border: 1px solid #2c312b;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-tone-10);
   border-radius: 6px;
-  color: #f2f0e9;
+  color: var(--text);
 }
 .detail-dialog {
   width: min(520px, calc(100% - 32px));
   max-height: calc(100dvh - 40px);
   overflow: auto;
   margin: auto;
-  border: 1px solid #2c312b;
+  border: 1px solid var(--surface-tone-10);
   border-radius: 12px;
   padding: 24px;
-  background: #111111;
-  color: #f2f0e9;
-  box-shadow: 0 30px 100px #000a;
+  background: var(--surface-tone-03);
+  color: var(--text);
+  box-shadow: 0 30px 100px var(--shadow-92);
 }
 .detail-dialog::backdrop {
-  background: #000a;
+  background: var(--shadow-92);
   backdrop-filter: blur(5px);
 }
 .dialog-heading {
@@ -983,11 +987,11 @@ th {
   flex: 1;
   padding: 10px;
   border-radius: 6px;
-  border: 1px solid #2c312b;
+  border: 1px solid var(--surface-tone-10);
 }
 .side-picker .selected {
-  color: #1a2614;
-  background: #94c973;
+  color: var(--surface-tone-24);
+  background: var(--gain);
 }
 .detail-dialog label {
   display: block;
@@ -997,10 +1001,10 @@ th {
 .detail-dialog select {
   width: 100%;
   padding: 12px;
-  border: 1px solid #2c312b;
+  border: 1px solid var(--surface-tone-10);
   border-radius: 6px;
-  background: #0c0c0c;
-  color: #fff;
+  background: var(--surface);
+  color: var(--white);
 }
 .trade-total {
   display: flex;
@@ -1012,7 +1016,7 @@ th {
 }
 .review-confirmation {
   padding: 12px;
-  background: #1a1d1a;
+  background: var(--surface-tone-13);
   border-radius: 6px;
 }
 .article-body {
@@ -1358,16 +1362,16 @@ th {
   align-items: center;
   margin: 12px 24px 0;
   padding: 10px 14px;
-  border: 1px solid #ff7a6e;
+  border: 1px solid var(--loss);
   border-radius: 8px;
-  background: #2a1512;
-  color: #ffb4ab;
+  background: var(--loss-tone-07);
+  color: var(--loss-tone-06);
   font-size: 13px;
 }
 .service-banner button {
   margin-left: auto;
 }
 .muted-note {
-  color: #7e8279;
+  color: var(--text-subtle);
   font-size: 12px;
 }

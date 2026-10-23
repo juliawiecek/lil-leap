@@ -1,6 +1,13 @@
 :host {
-  display: contents;
+  display: block;
+  min-width: 0;
+  grid-column: 1 / 9;
+  grid-row: 2;
 }
+.live-stock-panel { min-width: 0; }
+.historical-chart { margin-top: 12px; }
+.historical-chart summary { cursor: pointer; padding: 10px 4px; color: var(--text-tone-06); font-size: 12px; }
+.historical-chart summary:focus-visible { outline: 2px solid var(--gain-tone-05); outline-offset: 2px; }
 * {
   box-sizing: border-box;
 }
@@ -16,20 +23,20 @@ button {
 }
 button:focus-visible,
 select:focus-visible {
-  outline: 2px solid #94c973;
+  outline: 2px solid var(--gain);
   outline-offset: 2px;
 }
 .gain {
   color: var(--green);
 }
 .loss {
-  color: #ff7a6e;
+  color: var(--loss);
 }
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: linear-gradient(130deg, #11111180, #111111a0);
+  background: linear-gradient(130deg, var(--surface-wash-26), var(--surface-wash-25));
 }
 .sr-only {
   position: absolute;
@@ -69,7 +76,7 @@ select:focus-visible {
   gap: 17px;
   font-size: 12px;
   margin-left: 7px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .indicators span {
   display: flex;
@@ -86,22 +93,22 @@ select:focus-visible {
   margin-left: 2px;
 }
 .blue {
-  background: #ededed;
+  background: var(--text-tone-03);
 }
 .blue-text {
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .purple {
-  background: #ededed;
+  background: var(--text-tone-03);
 }
 .purple-text {
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .yellow {
-  background: #e2b65a;
+  background: var(--warning);
 }
 .yellow-text {
-  color: #e2b65a;
+  color: var(--warning);
 }
 .indicators .yellow {
   height: 2px;
@@ -112,7 +119,7 @@ select:focus-visible {
   align-items: center;
   padding: 2px;
   margin-left: auto;
-  border: 1px solid #1e1e1e;
+  border: 1px solid var(--surface-tone-19);
   border-radius: 4px;
 }
 .chart-periods button {
@@ -121,8 +128,8 @@ select:focus-visible {
   border-radius: 4px;
 }
 .chart-periods .active {
-  background: #94c973;
-  color: #121a0f;
+  background: var(--gain);
+  color: var(--surface-tone-09);
   font-weight: 600;
 }
 .technical-chart {
@@ -146,12 +153,12 @@ select:focus-visible {
   width: 34px;
   padding-left: 5px;
   font-size: 12px;
-  border-left: 1px solid #3a3a3a;
+  border-left: 1px solid var(--surface-tone-23);
 }
 .price-axis b {
   margin-left: -5px;
-  background: #94c973;
-  color: #1a2614;
+  background: var(--gain);
+  color: var(--surface-tone-24);
   padding: 1px 5px;
   border-radius: 2px;
   font-weight: 600;
@@ -161,7 +168,7 @@ select:focus-visible {
   position: relative;
   padding-top: 17px;
   padding-right: 34px;
-  border-top: 1px solid #262626;
+  border-top: 1px solid var(--surface-tone-17);
 }
 .volume-pane {
   height: 62px;
@@ -192,7 +199,7 @@ select:focus-visible {
   top: 17px;
   bottom: 0;
   width: 34px;
-  border-left: 1px solid #3a3a3a;
+  border-left: 1px solid var(--surface-tone-23);
   display: flex;
   flex-direction: column;
   justify-content: space-around;
@@ -202,11 +209,11 @@ select:focus-visible {
 .time-axis {
   display: flex;
   justify-content: space-around;
-  border-top: 1px solid #3a3a3a;
+  border-top: 1px solid var(--surface-tone-23);
   margin-right: 34px;
   padding-top: 6px;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 
 @media (max-width: 1500px) {
@@ -304,30 +311,30 @@ select:focus-visible {
   font-size: 12px;
 }
 .trade-summary b {
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .average-cost line {
-  stroke: #e2b65a;
+  stroke: var(--warning);
   stroke-width: 1;
 }
 .average-cost text {
-  fill: #e2b65a;
+  fill: var(--warning);
   font-size: 12px;
 }
 .trade-mark path {
-  stroke: #111111;
+  stroke: var(--surface-tone-03);
   stroke-width: 0.8;
 }
 .trade-mark.buy path {
-  fill: #94c973;
+  fill: var(--gain);
 }
 .trade-mark.sell path {
-  fill: #ff7a6e;
+  fill: var(--loss);
 }
 
 .chart-note {
   margin: 6px 0 0;
-  color: #7a7a7a;
+  color: var(--text-tone-04);
   font-size: 12px;
 }
 
@@ -337,7 +344,7 @@ select:focus-visible {
    ========================================================================== */
 @keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes nt-draw { to { stroke-dashoffset: 0; } }
-.panel { border-color: #1e1e1e; border-radius: 20px; background: radial-gradient(60% 50% at 50% 0%, rgba(148, 201, 115, 0.05), transparent 70%), #111111; animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.panel { border-color: var(--surface-tone-19); border-radius: 20px; background: radial-gradient(60% 50% at 50% 0%, var(--gain-wash-04), transparent 70%), var(--surface-tone-03); animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .chart-panel { grid-column: 1 / 9; grid-row: 2; min-height: 440px; }
 .chart-toolbar {
   display: grid;
@@ -351,7 +358,7 @@ select:focus-visible {
   white-space: normal;
 }
 .chart-company { grid-area: company; }
-.chart-company b { margin-right: 8px; color: #ededed; font-size: 15px; font-weight: 800; }
+.chart-company b { margin-right: 8px; color: var(--text-tone-03); font-size: 15px; font-weight: 800; }
 .quote-price { grid-area: price; }
 .chart-toolbar > b { grid-area: change; }
 .chart-periods { grid-area: periods; align-self: start; order: 0; margin-left: 0; }
@@ -359,25 +366,25 @@ select:focus-visible {
 .price-pane { position: relative; }
 .price-pane svg > rect { display: none; }
 .average-cost text { display: none; }
-.avg-cost-label { position: absolute; right: 64px; padding: 2px 8px; border-radius: 6px; background: #232323; color: #d4d4d4; font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; transform: translateY(-125%); }
-.chart-company { max-width: none; color: #a1a1a1; font-size: 14px; font-weight: 700; }
+.avg-cost-label { position: absolute; right: 64px; padding: 2px 8px; border-radius: 6px; background: var(--surface-tone-22); color: var(--text-tone-05); font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; transform: translateY(-125%); }
+.chart-company { max-width: none; color: var(--text-tone-02); font-size: 14px; font-weight: 700; }
 .quote-price { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; }
 .chart-toolbar > b { font-size: 14px; font-weight: 700; }
-.trade-summary { flex-basis: 100%; order: 3; color: #a1a1a1; font-size: 13px; }
+.trade-summary { flex-basis: 100%; order: 3; color: var(--text-tone-02); font-size: 13px; }
 .trade-summary b { font-weight: 700; }
-.chart-periods { gap: 2px; padding: 3px; border-color: #262626; border-radius: 10px; background: rgba(10, 10, 10, 0.6); }
-.chart-periods button { min-width: 38px; min-height: 30px; padding: 0 8px; border-radius: 8px; color: #7a7a7a; font-size: 12.5px; font-weight: 700; transition: background-color 0.15s ease, color 0.15s ease; }
-.chart-periods button:hover { color: #ededed; }
-.chart-periods .active { background: #ededed; color: #0a0a0a; font-weight: 700; }
+.chart-periods { gap: 2px; padding: 3px; border-color: var(--surface-tone-17); border-radius: 10px; background: var(--surface-wash-21); }
+.chart-periods button { min-width: 38px; min-height: 30px; padding: 0 8px; border-radius: 8px; color: var(--text-tone-04); font-size: 12.5px; font-weight: 700; transition: background-color 0.15s ease, color 0.15s ease; }
+.chart-periods button:hover { color: var(--text-tone-03); }
+.chart-periods .active { background: var(--text-tone-03); color: var(--surface-tone-20); font-weight: 700; }
 .technical-chart { padding: 12px 20px 14px; }
 .price-pane { height: 300px; }
-.price-pane .price-line { stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: nt-draw 1.6s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards; filter: drop-shadow(0 0 6px rgba(148, 201, 115, 0.35)); }
-.price-axis { width: 56px; padding-left: 10px; border-left-color: #262626; color: #7a7a7a; font-weight: 600; }
-.price-axis b { background: #ededed; color: #0a0a0a; border-radius: 6px; }
-.time-axis { margin-right: 56px; padding-top: 10px; border-top-color: #262626; color: #7a7a7a; font-weight: 600; }
-.average-cost line { stroke: #ededed; stroke-opacity: 0.45; stroke-dasharray: 5 4; }
-.average-cost text { fill: #d4d4d4; font-weight: 700; }
-.trade-mark path { stroke: #0a0a0a; }
+.price-pane .price-line { stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: nt-draw 1.6s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards; filter: drop-shadow(0 0 6px var(--gain-wash-03)); }
+.price-axis { width: 56px; padding-left: 10px; border-left-color: var(--surface-tone-17); color: var(--text-tone-04); font-weight: 600; }
+.price-axis b { background: var(--text-tone-03); color: var(--surface-tone-20); border-radius: 6px; }
+.time-axis { margin-right: 56px; padding-top: 10px; border-top-color: var(--surface-tone-17); color: var(--text-tone-04); font-weight: 600; }
+.average-cost line { stroke: var(--text-tone-03); stroke-opacity: 0.45; stroke-dasharray: 5 4; }
+.average-cost text { fill: var(--text-tone-05); font-weight: 700; }
+.trade-mark path { stroke: var(--surface-tone-20); }
 .chart-note { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .panel, .price-pane .price-line { animation: none; }
@@ -399,26 +406,31 @@ select:focus-visible {
 }
 
 /* Middle ground (flatter, sharper): 8px corners, flat neutral surface, no glow. */
-.panel { border-color: #1e1e1e; border-radius: 8px; background: #111111; box-shadow: none; animation: none; }
+.panel { border-color: var(--surface-tone-19); border-radius: 8px; background: var(--surface-tone-03); box-shadow: none; animation: none; }
 .chart-toolbar { padding: 14px 20px 2px; }
 .chart-company { font-size: 13.5px; font-weight: 600; }
 .chart-company b { font-size: 14px; }
 .quote-price { font-size: 28px; letter-spacing: -0.02em; }
 .chart-toolbar > b { font-size: 13.5px; }
 .chart-periods { gap: 2px; padding: 0; border: 0; border-radius: 0; background: none; }
-.chart-periods button { min-width: 34px; min-height: 26px; padding: 0 6px; border-radius: 3px; color: #7a7a7a; font-size: 12px; }
-.chart-periods button:hover { background: #1a1a1a; color: #ededed; }
-.chart-periods .active, .chart-periods .active:hover { background: #262626; color: #ededed; }
+.chart-periods button { min-width: 34px; min-height: 26px; padding: 0 6px; border-radius: 3px; color: var(--text-tone-04); font-size: 12px; }
+.chart-periods button:hover { background: var(--surface-tone-18); color: var(--text-tone-03); }
+.chart-periods .active, .chart-periods .active:hover { background: var(--surface-tone-17); color: var(--text-tone-03); }
 .technical-chart { padding: 10px 20px 12px; }
 .price-pane .price-line { filter: none; }
-.avg-cost-label { border-radius: 2px; background: #262626; }
+.avg-cost-label { border-radius: 2px; background: var(--surface-tone-17); }
 .price-axis b { border-radius: 2px; }
-.average-cost line { stroke: #a1a1a1; stroke-opacity: 0.55; stroke-dasharray: 4 4; }
+.average-cost line { stroke: var(--text-tone-02); stroke-opacity: 0.55; stroke-dasharray: 4 4; }
 
 /* Live price flash: a number briefly lights green or red when its price moves. */
 .tick { display: inline-block; margin: -1px -4px; padding: 1px 4px; border-radius: 4px; }
 .tick-up { animation: nt-tick-up 1.2s ease-out; }
 .tick-down { animation: nt-tick-down 1.2s ease-out; }
-@keyframes nt-tick-up { from { background-color: rgba(148, 201, 115, 0.28); } to { background-color: rgba(148, 201, 115, 0); } }
-@keyframes nt-tick-down { from { background-color: rgba(255, 122, 110, 0.28); } to { background-color: rgba(255, 122, 110, 0); } }
+@keyframes nt-tick-up { from { background-color: var(--gain-wash-02); } to { background-color: var(--gain-wash-01); } }
+@keyframes nt-tick-down { from { background-color: var(--loss-wash-03); } to { background-color: var(--loss-wash-02); } }
 @media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }
+
+/* The chart component, rather than its nested historical panel, is the grid item. */
+@media (max-width: 1200px) { :host { grid-column: 1 / 8; } }
+@media (max-width: 950px) { :host { grid-column: 1 / -1; } }
+@media (max-width: 760px) { :host { width: 100%; order: 2; } }

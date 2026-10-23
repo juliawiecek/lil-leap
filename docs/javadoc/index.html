@@ -19,9 +19,9 @@
     <p>Generated Javadoc for the production Java APIs. Each service has its own site
       because the services share some package and class names.</p>
     <ul>
-      <li><a href="insights/index.html">Insights</a> - read-only reporting and analytics APIs, and the Kafka order-event consumers.</li>
-      <li><a href="nextTrade-orders/index.html">Orders</a> - order submission, execution, settlement, order queries and market hours.</li>
-      <li><a href="nextTrade-holdings/index.html">Holdings</a> - accounts and transfers, holdings, cash, instrument, and order-history APIs.</li>
+      <li><a href="insights/index.html">Insights</a> - read-only reporting on the reporting replica: today's figures, Clients, report exports and Trade lookup, plus the Kafka order-event consumers.</li>
+      <li><a href="nextTrade-orders/index.html">Orders</a> - order submission and its audit trail, execution, cancellation, settlement and settlement status, order queries and market hours.</li>
+      <li><a href="nextTrade-holdings/index.html">Holdings</a> - accounts and transfers, holdings, cash and cash activity, instruments, order history, and market data: synthetic quote generation, quotes and price candles.</li>
     </ul>
     <p>From the repository root, regenerate with JDK 21, Maven and Python 3:</p>
     <pre><code>python scripts/generate_javadocs.py</code></pre>

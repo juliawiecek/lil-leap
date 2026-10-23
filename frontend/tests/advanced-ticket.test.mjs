@@ -4,12 +4,15 @@ import { of } from 'rxjs';
 import { render, input, button } from './dom-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
+const { StockDashboardComponent } = await import('../src/app/stock-dashboard.component.ts');
 const { OrderSubmissionClient } = await import('../src/app/order-submission-api.ts');
 const REVIEW_DIALOG = 'dialog[aria-labelledby="pro-dialog-title"]';
 
 async function ticket(t, { cash = 1000, side = 'Buy' } = {}) {
   // Isolate the ticket's rendered flow from background loading and execution polling.
   t.mock.method(AdvancedDashboard.prototype, 'ngOnInit', () => {});
+  // Canvas rendering is covered by browser tests; these cases exercise the order ticket.
+  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const feed = fakeFeed([
     { symbol: 'AAPL', name: 'Apple Inc.', price: 100 },

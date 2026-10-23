@@ -215,6 +215,31 @@
     background: #1a1d1a;
     border-color: #2c312b;
   }
+  .segmented {
+    display: inline-flex;
+    border: 1px solid #2b343b;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .segmented button {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--muted);
+    padding: 7px 13px;
+    font-size: 12px;
+  }
+  .segmented button + button {
+    border-left: 1px solid #2b343b;
+  }
+  .segmented button.active {
+    background: #192b21;
+    color: var(--accent);
+  }
+  .segmented.small button {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
   .details {
     display: grid;
     grid-template-columns: 1fr 1.6fr;

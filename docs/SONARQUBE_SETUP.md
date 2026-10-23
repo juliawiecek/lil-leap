@@ -37,7 +37,7 @@ must match `sonar.host.url` so analysis and the gate check use the same server.
 The existing Linux agent also needs the configured `maven` and `JDK21` tools,
 Docker with Compose, and permission to run containers. Node tests use
 `node:24-alpine`; the Angular tests rely on Node's TypeScript support and module
-hooks. Python tests use `python:3.12-slim`.
+hooks. The Sonar preparation scripts run in `python:3.12-slim`.
 
 The Node containers run as the Jenkins agent's numeric UID/GID and set
 `npm_config_cache=/tmp/npm-cache`. This keeps the npm cache writable even when
@@ -92,7 +92,7 @@ A local scan can override the server with
 ## Pipeline and coverage
 
 Jenkins checks out the repository, validates Compose, builds/tests the Java
-services, runs PostgreSQL integration tests, runs Node and Python tests, and
+services, runs PostgreSQL integration tests, runs Node tests, and
 archives coverage. It validates scan paths, profile languages, compiled classes,
 and coverage reports using `scripts/validate_sonar_config.py --require-reports`.
 It then submits SonarQube analysis, waits up to **five minutes**
@@ -108,7 +108,6 @@ stage from running.
 | Identity | `auth/coverage/lcov.info` |
 | Trading UI | `frontend/coverage/lcov.info` |
 | Insights UI | `insights-frontend/coverage/lcov.info` |
-| Quote pipeline | `data-pipeline/coverage.xml` |
 
 After the Java builds, **Prepare Java Analysis Dependencies** copies each Maven
 service's resolved dependencies, including test dependencies, into its
@@ -116,7 +115,6 @@ service's resolved dependencies, including test dependencies, into its
 `sonar.java.test.libraries` reference these JARs; `sonar.java.test.binaries`
 references each service's `target/test-classes`. The preflight check requires
 these inputs so a missing classpath cannot silently reduce analysis precision.
-`sonar.python.version=3.12` matches the Python Docker image and Jenkins tests.
 
 For a local scan, after building each Java service, run this command from each
 of `nextTrade-orders`, `nextTrade-holdings`, and `insights` before validation:
@@ -128,9 +126,7 @@ mvn -B -ntp org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependen
 `scripts/prepare_sonar_coverage.py` prefixes each LCOV source path with its
 service directory. This distinguishes files such as `src/main.ts` across the
 three Node services. It runs after all Node coverage reports are generated and
-fails if a referenced source is missing. The Python container mounts the
-workspace at the same absolute path used by Jenkins so its XML source paths
-remain valid when the scanner runs outside the container.
+fails if a referenced source is missing.
 
 ## Validate the first build
 
@@ -147,5 +143,4 @@ Repository configuration alone does not verify live authentication, profile
 assignment, webhook delivery, or gate behavior; these require a Jenkins run.
 
 References: [Jenkins SonarQube pipeline steps](https://www.jenkins.io/doc/pipeline/steps/sonar/),
-[JavaScript/TypeScript coverage](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/test-coverage/javascript-typescript-test-coverage),
-[Python coverage](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/test-coverage/python-test-coverage).
+[JavaScript/TypeScript coverage](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/test-coverage/javascript-typescript-test-coverage).

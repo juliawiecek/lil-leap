@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { signedOutMessage } from '@lilleap/session-core/core';
 import { AuthService } from './auth.service';
 import { AuthApiError } from './auth-api';
 import { AppSessionService } from './app-session.service';
@@ -18,7 +19,8 @@ export class Login {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly pending = signal(false);
-  readonly message = signal('');
+  /** Starts with why the user is back here, e.g. after the inactivity sign-out (PS-30). */
+  readonly message = signal(signedOutMessage(this.route.snapshot.queryParamMap.get('reason')));
   readonly passwordVisible = signal(false);
   /** Shown under a field left empty, instead of sending an empty sign-in. */
   readonly emailError = signal('');

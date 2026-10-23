@@ -27,10 +27,10 @@ const samplePortfolio = { cash: 6420.18, holdings: [holding('AAPL', 42, 154.2), 
 
 // A dashboard wired to fake backends: records submitted orders, returns scripted order history
 // and portfolios (one per load, repeating the last). Timers are mocked so tracking never waits.
-async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'], chart = false } = {}) {
+async function tradingDesk(t, { history = [[]], portfolios = [samplePortfolio], account = true, symbols = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL'], chart = false, providers = [] } = {}) {
   if (!t.mockTimersEnabled) { t.mock.timers.enable({ apis: ['setTimeout'] }); t.mockTimersEnabled = true; }
   const feed = feedWith();
-  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed), ...providers]);
   let loads = 0;
   desk.portfolioClient = { load: async () => portfolios[Math.min(loads++, portfolios.length - 1)] };
   const submitted = [];
@@ -149,15 +149,39 @@ test('every live value is added to the line, so its dips and rises stay instead 
   assert.deepEqual(desk.chartPoints().map((p) => p.value), [20000, 19000, 19100], 'a reload keeps the live values it covers');
   feed.push(listed());
   assert.equal(desk.chartPoints().length, 4, 'each price update adds a point, even with only cash');
-  // 1D: a live value after the session's close is left off; it shows above the chart.
+  // Market closure gates executions, not the continuously running demo quote feed.
   const session = { open: loaded - 3600000, close: loaded + 500 };
   desk.chartHistory.set([{ at: loaded - 3600000, value: 20000 }, { at: loaded, value: 20000 }]);
   desk.chartSpan.set({ start: session.open, end: loaded, fromOpening: false, session });
-  assert.ok(desk.chartPoints().every((p) => p.at <= session.close));
+  assert.equal(desk.chartPoints().at(-1).at, desk.chartLive().at(-1).at);
+  assert.ok(desk.chartPoints().at(-1).at > session.close);
+  assert.deepEqual(desk.chartPoints().slice(0, 2), desk.chartHistory(), 'closing history keeps its original values and times');
+  desk.chartLive.set([]);
+  assert.deepEqual(desk.chartPoints(), desk.chartHistory(), 'without a new observation, live balances cannot rewrite the closing price');
+  desk.chartLive.set(times.slice(-2).map((at, i) => ({ at, value: [19000, 19100][i] })));
   // Longer periods keep one live value per price bar, as the history has.
   desk.chartSpan.set({ start: loaded - 7 * 86400000, end: loaded, fromOpening: false });
   assert.equal(desk.chartPoints().length, 3, 'the history, then only the latest of the live values in their hour');
   assert.equal(desk.chartPoints().at(-1).value, desk.portfolioValue());
+  desk.ngOnDestroy();
+});
+
+test('reloading the day after close includes recorded after-hours quotes', async t => {
+  const now = Date.parse('2026-10-20T21:30:00Z');
+  t.mock.method(Date, 'now', () => now);
+  const { desk, feed } = await tradingDesk(t, { portfolios: [{ cash: 900, holdings: [] }], chart: true });
+  desk.cashActivityClient = { list: async () => [{ occurredAt: '2026-10-19T13:00:00Z', amount: 1000 }] };
+  desk.orderHistoryClient = { list: async () => [historyRow('FILLED', {
+    quantity: 1, filledQuantity: 1, fillPrice: 100, filledAt: '2026-10-20T14:00:00Z',
+  })] };
+  feed.client = { closes: async () => [
+    { at: Date.parse('2026-10-20T19:30:00Z'), price: 110 },
+    { at: Date.parse('2026-10-20T21:29:00Z'), price: 115 },
+  ] };
+  await desk.loadChart();
+  assert.equal(desk.chartSpan().session.close, Date.parse('2026-10-20T20:00:00Z'));
+  assert.equal(desk.chartSpan().end, now);
+  assert.ok(desk.chartHistory().some(p => p.at === Date.parse('2026-10-20T21:29:00Z') && p.value === 1015));
   desk.ngOnDestroy();
 });
 
@@ -219,6 +243,10 @@ test('the allocation ring is the real share in stocks', async t => {
   assert.equal(desk.stocksShare().toFixed(2), ((13691.76 / 20111.94) * 100).toFixed(2));
   desk.applyPortfolio({ cash: 100, holdings: [] });
   assert.equal(desk.stocksShare(), 0);
+  desk.applyPortfolio({ cash: 0, holdings: [holding('AAPL', 1, 100)] });
+  assert.equal(desk.stocksShare(), 100);
+  desk.applyPortfolio({ cash: 9999, holdings: [holding('AAPL', 1, 1)] });
+  assert.ok(desk.stocksShare() > 0 && desk.stocksShare() < 1, 'small allocations retain their real share');
   desk.applyPortfolio({ cash: 0, holdings: [] });
   assert.equal(desk.stocksShare(), 0, 'an empty account draws no arc');
 });
@@ -419,6 +447,67 @@ test('the ticket follows live prices, flags a stale quote, and reviews in one li
   assert.equal(desk.activeTab(), 'Activity');
 });
 
+test('the spoken briefing reads the portfolio as shown, live moves and this account\'s orders (PS-18)', async t => {
+  const fill = historyRow('FILLED', { fillPrice: 176.5, filledQuantity: 2, filledAt: new Date().toISOString() });
+  const { desk, feed } = await tradingDesk(t);
+  feed.push(listed().map((q) => ({ ...q, change: q.symbol === 'NVDA' ? 2.5 : 0.4 })));
+  let asked;
+  desk.orderHistoryClient = { list: async (filters) => { asked = filters; return [fill]; } };
+  const snapshot = await desk.briefingSource();
+  assert.equal(asked.accountId, 'acct-1');
+  assert.equal(snapshot.accountId, 'acct-1', 'so this account remembers its own last briefing');
+  assert.equal(snapshot.total, desk.portfolioValue());
+  assert.equal(snapshot.gain, desk.totalReturn());
+  assert.equal(snapshot.buyingPower, 6420.18);
+  const cost = samplePortfolio.holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
+  assert.ok(Math.abs(snapshot.gainPercent - (desk.totalReturn() / cost) * 100) < 0.01, 'percent of what the shares cost');
+  assert.deepEqual(snapshot.holdings.map((h) => [h.symbol, h.dayChangePercent]), [['AAPL', 0.4], ['MSFT', 0.4], ['NVDA', 2.5]]);
+  assert.deepEqual(snapshot.orders, [fill]);
+  assert.equal(snapshot.balanceHidden, false);
+  assert.equal(snapshot.pricesDelayed, false);
+
+  desk.showBalance.set(false);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+});
+
+test('choosing a chart period says where the portfolio started and where it is now', async t => {
+  const { desk } = await tradingDesk(t, { chart: true });
+  desk.feed.client = { closes: async () => [] };
+  desk.setChartPeriod('1W');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 week\. /);
+  desk.showBalance.set(false);
+  desk.setChartPeriod('1M');
+  for (let i = 0; i < 5; i++) await flush();
+  assert.match(desk.chartAnnouncement(), /^1 month\. (Your balance is hidden|There is no history)/);
+  assert.ok(!desk.chartAnnouncement().includes('$'), 'no amounts while the balance is hidden');
+});
+
+test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
+  const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+  const said = [];
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const { desk } = await tradingDesk(t, { providers: [{ provide: SwitchScanService, useValue: scan }] });
+  desk.openTrade('Buy', 'AAPL');
+  desk.quantity.set('2');
+  desk.reviewTrade();
+  assert.equal(said.length, 1);
+  assert.match(said[0][0], /^You're about to buy 2 shares of Apple for \$353\. .*Press Confirm buy to place the order\.$/);
+  assert.equal(said[0][1], true, 'cuts in on whatever switch control was saying');
+  await desk.confirmTrade();
+  assert.equal(said.length, 1, 'confirming re-checks the order but does not read it again');
+  desk.openTrade('Sell', 'AAPL');
+  desk.quantity.set('1');
+  desk.reviewTrade();
+  assert.match(said.at(-1)[0], /^You're about to sell 1 share of Apple/);
+  desk.quantity.set('3'); desk.reviewing.set(false);
+  desk.reviewTrade();
+  assert.match(said.at(-1)[0], /^You're about to sell 3 shares of Apple/, 'an edited order is read again');
+});
+
 test('an order still running past the tracking limit points the user to Activity', async t => {
   const { desk } = await tradingDesk(t, { history: [[historyRow('ACCEPTED')]] });
   await desk.trackOrder('o1', Date.now() - ORDER_TRACK_LIMIT_MS);
@@ -461,6 +550,11 @@ test('the header counts down to the market close from the shared market status',
   assert.equal(desk.marketOpen(), true);
   assert.equal(desk.marketText(), 'Market closes in 2h 14m');
   assert.equal(desk.closedWarning(), '');
+  assert.equal(desk.marketStatusLine(), 'Open · Market closes in 2h 14m');
   desk.marketClock.set(new Date('2026-10-14T19:00:00Z'));
   assert.equal(desk.marketText(), 'Market closes in 1h 0m');
+  // The far-off closed wording already names the state; it must not gain a second "Closed ·".
+  feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-20T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
+  assert.match(desk.marketStatusLine(), /^Market closed · Opens /);
+  assert.equal(desk.marketStatusLine().match(/closed/gi).length, 1);
 });

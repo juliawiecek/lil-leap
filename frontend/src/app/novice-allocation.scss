@@ -1,0 +1,256 @@
+/* Reference-style allocation card. All colours and layout changes stay in this panel. */
+.allocation-panel {
+  container-type: inline-size;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 24px 22px 22px;
+  border: 1px solid var(--surface-tone-83);
+  border-radius: 24px;
+  background: linear-gradient(140deg, var(--surface-tone-03) 0%, var(--surface-tone-82) 75%);
+  box-shadow: inset 0 1px 0 var(--text-wash-58), 0 18px 40px var(--shadow-81);
+
+  .panel-heading {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .panel-heading h2 {
+    font-size: clamp(18px, 5.2cqw, 24px);
+    font-weight: 750;
+    letter-spacing: -0.04em;
+  }
+
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    min-height: 36px;
+    font-size: clamp(11px, 3.1cqw, 15px);
+    color: var(--text-tone-57);
+  }
+
+  .text-link app-dashboard-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--text-tone-56);
+  }
+
+  .allocation-content {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: clamp(14px, 5cqw, 30px);
+    margin: 26px 0 28px;
+  }
+
+  .allocation-donut {
+    width: 100%;
+    height: auto;
+    max-width: 260px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  .allocation-donut svg {
+    display: block;
+    overflow: visible;
+    transform: none;
+  }
+
+  .allocation-track {
+    fill: none;
+    stroke: var(--surface-tone-80);
+    stroke-width: 4.5;
+    filter: drop-shadow(0 0.6px 0.8px var(--shadow-79));
+  }
+
+  .allocation-donut .ring {
+    fill: none;
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    transition: stroke-dasharray 400ms ease;
+  }
+
+  .allocation-donut .ring.stocks {
+    stroke: url(#allocation-stocks-gradient);
+    filter: drop-shadow(0 0.6px 0.9px var(--category-wash-05));
+  }
+
+  .allocation-donut strong {
+    max-width: 76%;
+    font-size: clamp(13px, 4.3cqw, 24px);
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.045em;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .allocation-donut .donut-center > span {
+    margin-top: 5px;
+    color: var(--text-tone-55);
+    font-size: clamp(10px, 2.8cqw, 14px);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .allocation-legend {
+    min-width: 0;
+  }
+
+  .allocation-legend > .allocation-item {
+    display: grid;
+    grid-template-columns: 11px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 11px;
+    row-gap: 10px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--surface-tone-78);
+  }
+
+  .allocation-legend > .allocation-item:last-child {
+    border-bottom: 0;
+  }
+
+  .allocation-label {
+    color: var(--text-tone-53);
+    font-size: clamp(14px, 4cqw, 19px);
+    font-weight: 650;
+    line-height: 1.3;
+  }
+
+  .allocation-legend small {
+    margin-top: 3px;
+    color: var(--text-tone-54);
+    font-size: clamp(11px, 3.2cqw, 15px);
+    font-weight: 450;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  .allocation-legend b {
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(17px, 5cqw, 24px);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+  }
+
+  .asset-dot {
+    width: 10px;
+    height: 10px;
+    margin: 0;
+    border-radius: 3px;
+  }
+
+  .asset-dot.stocks {
+    background: linear-gradient(135deg, var(--periwinkle-light), var(--periwinkle-deep));
+    box-shadow: 0 0 10px var(--category-wash-04);
+  }
+
+  .asset-dot.cash {
+    background: var(--chart-cash);
+  }
+
+  .allocation-meter {
+    grid-column: 2 / -1;
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-tone-77);
+  }
+
+  .allocation-meter > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 400ms ease;
+  }
+
+  .stocks-meter > span {
+    background: linear-gradient(90deg, var(--periwinkle-deep), var(--periwinkle-light));
+  }
+
+  .cash-meter > span {
+    background: var(--chart-cash);
+  }
+
+  .diversification {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 14px;
+    align-items: center;
+    gap: 13px;
+    padding: 16px;
+    border: 1px solid var(--surface-tone-76);
+    border-radius: 16px;
+    background: var(--surface-tone-75);
+    color: var(--text-tone-53);
+    font-size: clamp(13px, 3.6cqw, 17px);
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .diversification:hover {
+    border-color: var(--category-tone-03);
+    background: var(--surface-tone-74);
+  }
+
+  .diversification small {
+    margin-top: 5px;
+    color: var(--text-tone-52);
+    font-size: clamp(11px, 3.2cqw, 15px);
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .shield-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--category-tone-02);
+    border-radius: 11px;
+    background: var(--category-tone-01);
+    color: var(--periwinkle-light);
+  }
+
+  .shield-icon app-dashboard-icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .diversification > app-dashboard-icon {
+    margin: 0;
+    color: var(--text-tone-51);
+  }
+
+  @media (max-width: 400px) {
+    padding: 20px 16px 16px;
+
+    .allocation-content {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+      margin-block: 22px;
+    }
+
+    .allocation-donut {
+      max-width: 180px;
+    }
+
+    .allocation-legend > .allocation-item {
+      grid-template-columns: 12px minmax(0, 1fr) auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .allocation-donut .ring,
+    .allocation-meter > span {
+      transition: none;
+    }
+  }
+}

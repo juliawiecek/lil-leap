@@ -19,7 +19,6 @@ checked in under [coverage-reports/](../../coverage-reports/README.md).
 | NextTrade UI (Angular) | c8 | 212 | 96.4% | 91.6% | [open](../../coverage-reports/nexttrade-ui/index.html) |
 | Insights UI (Angular) | c8 | 48 | 100% | 96.9% | [open](../../coverage-reports/insights-ui/index.html) |
 | Session package (shared) | c8 | 70 | 98.6% | 94.3% | [open](../../coverage-reports/session-core/index.html) |
-| Quote service (Python data pipeline) | pytest-cov | 85 | 92.3% | 82.3% | [open](../../coverage-reports/data-pipeline/index.html) |
 | **All code** | | **1,136** | **94.7%** | **90.4%** | |
 
 The Spring Boot figures come from `mvn clean verify`, which skips the opt-in PostgreSQL tests
@@ -35,14 +34,12 @@ for every file listed under `sonar.sources` in [sonar-project.properties](../../
 |---|---|
 | Java | `*/target/site/jacoco/sonar-jacoco.xml` (JaCoCo XML, path-fixed by `scripts/prepare_sonar_coverage.py`) |
 | TypeScript / JavaScript | `auth`, `frontend`, `insights-frontend` and `shared/session-core` `coverage/lcov.info` |
-| Python | `data-pipeline/coverage.xml` |
 
 Its **Coverage** metric mixes lines and branches: (covered lines + covered branch outcomes) ÷
 (coverable lines + branch outcomes). By that measure the whole codebase is at about 93.8%.
 A Quality Gate usually checks **coverage on new code** (the "Sonar way" default is at least
 80% of lines changed since the reference point), so a new class with no tests can fail the
 gate even when overall coverage is high. Files with no report at all count as 0% covered.
-Jenkins runs pytest without `--cov-branch`, so SonarQube sees Python line coverage only.
 
 ## Generating a report
 
@@ -54,7 +51,6 @@ Run each command from the repository root.
 | Holdings | `cd nextTrade-holdings && mvn clean verify` | `nextTrade-holdings/target/site/jacoco/index.html` |
 | Insights | `cd insights && mvn clean verify` | `insights/target/site/jacoco/index.html` |
 | Auth | `cd auth && npm ci && npm run test:cov` | `auth/coverage/lcov-report/index.html` |
-| Quote service | see [below](#quote-service-pytest-cov) | `data-pipeline/htmlcov/index.html` |
 | NextTrade UI | `cd frontend && npm ci && npm run test:coverage` | `frontend/coverage/index.html` |
 | Insights UI | `cd insights-frontend && npm ci && npm run test:coverage` | `insights-frontend/coverage/index.html` |
 
@@ -68,19 +64,6 @@ method coverage per package and class. Jenkins archives all three reports on eve
 
 Requires Node.js 24. The figures cover the unit tests; the end-to-end suite
 (`npm run test:e2e`) needs a running database and is not included.
-
-### Quote service (pytest-cov)
-
-Requires Python 3.12.
-
-```bash
-cd data-pipeline
-python -m pip install -r requirements-coverage.txt
-python -m pytest --cov=src --cov-report=term-missing --cov-report=html:htmlcov
-```
-
-Jenkins runs the same command and archives the report. More detail:
-[data-pipeline/PYTEST_COVERAGE.md](../../data-pipeline/PYTEST_COVERAGE.md).
 
 ### Angular apps (c8)
 

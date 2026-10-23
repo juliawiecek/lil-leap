@@ -1,9 +1,9 @@
 <div class="pro-shell" [class.collapsed]="collapsed()">
-  <aside class="pro-sidebar">
+  <aside class="pro-sidebar" aria-label="Menu" data-scan-group="Menu">
     <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
-    <nav aria-label="Advanced navigation">
+    <nav aria-label="Advanced navigation" data-scan-group="Main navigation">
       @for (item of nav; track item.name) {
         <button
           type="button"
@@ -16,7 +16,7 @@
         </button>
       }
     </nav>
-    <div class="sidebar-help">
+    <div class="sidebar-help" data-scan-group="Help and support">
       <span>Help &amp; Support</span
       ><button type="button" (click)="openModal('shortcuts')">
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
@@ -33,8 +33,8 @@
     </div>
   </aside>
   <div class="pro-main">
-    <header class="pro-topbar">
-      <div class="pro-search">
+    <header class="pro-topbar" data-scan-group="Top bar">
+      <div class="pro-search" data-scan-group="Search">
         <app-dashboard-icon name="search" /><input
           aria-label="Search symbols or companies"
           placeholder="Search symbols, companies, or keywords (e.g. AAPL, earnings, AI)..."
@@ -58,6 +58,7 @@
       </div>
       <div class="header-actions">
         <span class="market-status" [class.closed]="!marketOpen()" role="status"><i aria-hidden="true"></i>{{ marketBadge() }}</span>
+        <app-briefing [source]="briefingSource" [marketOpen]="marketKnownOpen()" />
         <app-account-switcher />
         <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Advanced · Pro</span>
         <div class="notification-wrap">
@@ -88,7 +89,7 @@
         </button>
       </div>
     </header>
-    <main class="pro-content">
+    <main id="main-content" class="pro-content" tabindex="-1">
       @if (serviceDown()) {
         <div class="service-banner" role="alert">
           <strong>We can't reach NextTrade right now.</strong>
@@ -97,7 +98,7 @@
         </div>
       }
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
-        <section class="panel summary-panel">
+        <section class="panel summary-panel" data-scan-group="Portfolio summary">
           <h1>
             Portfolio Summary
             <button
@@ -115,22 +116,22 @@
             <div class="summary-metrics">
               <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '▲ ' : dayGain() < 0 ? '▼ ' : '' }}{{ dayGain() | currency }} ({{ dayGainPercent() | number: '1.2-2' }}%) <small>Today</small></span>
+                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
               </div>
               <div>
                 <span>Buying Power</span
                 ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
               </div>
               <div>
-                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
-                ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0">{{ dayGainPercent() > 0 ? '+' : '' }}{{ dayGainPercent() | number: '1.2-2' }}%</b>
+                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></strong
+                ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></b>
               </div>
               <div>
                 <span>Total Return</span
                 ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                  >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                  ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
                 ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                  >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</b
+                  ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></b
                 >
               </div>
               <div>
@@ -147,11 +148,11 @@
           }
         </section>
         @if (page() === 'Overview') {
-          <app-advanced-chart [desk]="this" />
-          <app-advanced-ticket [desk]="this" />
+          <app-advanced-chart data-scan-group="Price chart" [desk]="this" />
+          <app-advanced-ticket data-scan-group="Trade ticket" [desk]="this" />
         }
         @if (page() === 'Overview' || page() === 'Portfolio') {
-          <section class="panel positions-panel">
+          <section class="panel positions-panel" data-scan-group="Positions">
             <div class="panel-tabs">
               @for (tab of bottomTabs; track tab) {
                 <button
@@ -190,21 +191,20 @@
                           </button>
                           <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
                         </td>
-                        <td>@for (t of [tickOf(p.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</span>}</td>
+                        <td>@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</app-price-flash>}</td>
                         <td
                           [class.gain]="quote(p.symbol).change > 0"
                           [class.loss]="quote(p.symbol).change < 0"
                         >
-                          {{ quote(p.symbol).change > 0 ? '+' : ''
-                          }}{{ quote(p.symbol).change | number: '1.2-2' }}%
+                          <app-financial-change [value]="quote(p.symbol).change" unit="percent" />
                         </td>
                         <td>{{ p.quantity }}</td>
                         <td>{{ p.value | currency }}</td>
                         <td [class.gain]="p.day > 0" [class.loss]="p.day < 0">
-                          {{ p.day > 0 ? '+' : '' }}{{ p.day | currency }}
+                          <app-financial-change [value]="p.day" unit="currency" />
                         </td>
                         <td [class.gain]="p.total > 0" [class.loss]="p.total < 0">
-                          {{ p.total > 0 ? '+' : '' }}{{ p.total | currency }}
+                          <app-financial-change [value]="p.total" unit="currency" />
                         </td>
                         <td>
                           <span class="weight-cell">{{ p.weight | number: '1.1-1' }}%<span class="weight-bar" aria-hidden="true"><i [style.width.%]="p.weight"></i></span></span>
@@ -245,19 +245,19 @@
                   <div>
                     <span>Day P&amp;L</span
                     ><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"
-                      >{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</strong
+                      ><app-financial-change [value]="dayGain()" unit="currency" /></strong
                     >
                   </div>
                   <div>
                     <span>Total Return</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</strong
+                      ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
                     >
                   </div>
                   <div>
                     <span>Return %</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      >{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</strong
+                      ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></strong
                     >
                   </div>
                 </div>
@@ -266,13 +266,13 @@
           </section>
         }
         @if (page() === 'Activity') {
-          <section class="panel orders-history-panel">
+          <section class="panel orders-history-panel" data-scan-group="Activity">
             <div class="panel-heading"><h2>Activity</h2></div>
             <app-activity-feed />
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel watch-panel">
+          <section class="panel watch-panel" data-scan-group="Watchlist">
             @if (page() === 'Overview') {
               <div class="list-tabs" role="tablist" aria-label="Watchlist and market lists">
                 @for (tab of ['Watchlist', 'Movers', 'Sectors']; track tab) {
@@ -321,9 +321,9 @@
                           <b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ q.sector }}</small>
                         </button>
                       </td>
-                      <td>@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | number: '1.2-2' }}</span>}</td>
+                      <td>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | number: '1.2-2' }}</app-price-flash>}</td>
                       <td [class.gain]="q.change > 0" [class.loss]="q.change < 0">
-                        {{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%
+                        <app-financial-change [value]="q.change" unit="percent" />
                       </td>
                       <td class="muted">{{ q.sector }}</td>
                     </tr>
@@ -342,8 +342,8 @@
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
-                  >@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</span>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
-                    >{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</strong
+                  >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
+                    ><app-financial-change [value]="q.change" unit="percent" /></strong
                   >
                 </button>
               } @empty {
@@ -357,7 +357,7 @@
                     ><span class="sector-bar"
                       ><i [style.width.%]="s.width" [class.negative-bar]="s.change < 0"></i></span
                     ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
-                      >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
+                      ><app-financial-change [value]="s.change" unit="percent" /></b
                     >
                   </div>
                 } @empty {
@@ -369,7 +369,7 @@
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel market-panel">
+          <section class="panel market-panel" data-scan-group="Market overview">
             <div class="panel-heading"><h2>Market Overview</h2></div>
             @if (page() === 'Overview') {
               <div class="heat-map" aria-label="Today's move of each listed stock">
@@ -382,7 +382,7 @@
                     [style.--heat]="q.change < 0 ? -q.change : q.change"
                     (click)="choose(q)"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</span>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
@@ -409,7 +409,7 @@
                     ><span class="sector-bar"
                       ><i [style.width.%]="s.width" [class.negative-bar]="s.change < 0"></i></span
                     ><b [class.gain]="s.change > 0" [class.loss]="s.change < 0"
-                      >{{ s.change > 0 ? '+' : '' }}{{ s.change | number: '1.2-2' }}%</b
+                      ><app-financial-change [value]="s.change" unit="percent" /></b
                     >
                   </div>
                 } @empty {
@@ -421,8 +421,8 @@
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
-                  >@for (t of [tickOf(q.symbol)]; track t.key) {<span class="tick" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</span>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
-                    >{{ q.change > 0 ? '+' : '' }}{{ q.change | number: '1.2-2' }}%</strong
+                  >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
+                    ><app-financial-change [value]="q.change" unit="percent" /></strong
                   >
                 </button>
               }
@@ -431,13 +431,13 @@
         }
         @if (page() === 'Overview') {
           <div class="bottom-panels">
-            <section class="panel executions-panel">
+            <section class="panel executions-panel" data-scan-group="Recent activity">
               <div class="panel-heading">
                 <h2>Recent Activity</h2>
               </div>
               <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
-            <section class="panel exposure-panel">
+            <section class="panel exposure-panel" data-scan-group="Exposure">
               <div class="panel-heading">
                 <h2>Portfolio Summary</h2>
                 <button type="button" class="text-link" (click)="openModal('exposure')">
@@ -457,13 +457,13 @@
                   </div>
                   <div>
                     <span>Day P&amp;L</span
-                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">{{ dayGain() > 0 ? '+' : '' }}{{ dayGain() | currency }}</b
-                    ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0">{{ dayGainPercent() > 0 ? '+' : '' }}{{ dayGainPercent() | number: '1.2-2' }}%</small>
+                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></b
+                    ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></small>
                   </div>
                   <div>
                     <span>Total Return</span
-                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0">{{ totalReturn() > 0 ? '+' : '' }}{{ totalReturn() | currency }}</b
-                    ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0">{{ totalReturnPercent() > 0 ? '+' : '' }}{{ totalReturnPercent() | number: '1.2-2' }}%</small>
+                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" unit="currency" /></b
+                    ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
                   </div>
                 </div>
                 <div class="split-bar" role="img" [attr.aria-label]="'Equities ' + exposure().equitiesPercent + '%, Cash ' + exposure().cashPercent + '%'">
@@ -477,7 +477,7 @@
           </div>
         }
         @if (page() === 'Settings') {
-          <section class="panel settings-panel">
+          <section class="panel settings-panel" data-scan-group="Workspace settings">
             <h2>Workspace settings</h2>
             @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
             @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
@@ -508,6 +508,7 @@
               </button>
             </div>
             <app-price-protection-settings [symbols]="listedSymbols()" />
+            <app-accessibility-settings (openShortcuts)="openModal('shortcuts')" />
             <button type="button" class="secondary-button" (click)="signOut.emit()">
               Sign out ↗
             </button>
@@ -574,9 +575,7 @@
       <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
-    <p><kbd>Tab</kbd> Move between controls.</p>
-    <p><kbd>Enter</kbd> Activate the focused control or review an order.</p>
-    <p><kbd>Esc</kbd> Close a dialog or clear search.</p>
+    <app-keyboard-shortcuts />
   } @else {
     <p>
       Select a symbol from the watchlist to link its chart and order ticket. Configure the order,

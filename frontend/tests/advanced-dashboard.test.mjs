@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
+const { SwitchScanService } = await import('../src/app/switch-scan.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 
 const NAMES = { AAPL: 'Apple Inc.', MSFT: 'Microsoft Corporation', NVDA: 'NVIDIA Corporation', AMZN: 'Amazon.com, Inc.', GOOGL: 'Alphabet Inc.' };
@@ -68,6 +69,23 @@ function tradingDesk(t) {
   desk.applyPortfolio(samplePortfolio);
   return desk;
 }
+
+test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => {
+  const said = [];
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const desk = component(t, AdvancedDashboard, [
+    { provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith()),
+    { provide: SwitchScanService, useValue: scan },
+  ]);
+  desk.applyPortfolio(samplePortfolio);
+  desk.choose(desk.quote('MSFT'));
+  desk.quantity.set('2');
+  desk.reviewOrder();
+  assert.deepEqual(said, [["You're about to buy 2 shares of Microsoft for $849. Press Confirm buy to place the order.", true]]);
+  desk.quantity.set('0');
+  desk.reviewOrder();
+  assert.equal(said.length, 1, 'an invalid order is not read back');
+});
 
 test('screeners separate gainers and decliners and restore all quotes', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
@@ -401,6 +419,24 @@ test('search and chart periods update the displayed data', t => {
   assert.equal(desk.quote('unknown'), desk.quotes()[0]);
   desk.navigate('Portfolio');
   assert.equal(desk.bottomTab(), 'Positions');
+});
+
+test('the spoken briefing reads the summary panel, live moves and orders (PS-18)', async t => {
+  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
+  desk.applyPortfolio({ cash: 1000, holdings: [{ instrumentId: 'nvda-uuid', symbol: 'NVDA', instrumentName: 'NVIDIA', quantity: 2, averageCost: 800 }] });
+  const rows = [{ orderId: 'o1', symbol: 'NVDA', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: new Date().toISOString(), fillPrice: 800, filledQuantity: 2, filledAt: new Date().toISOString() }];
+  desk.orderHistoryClient = { list: async () => rows };
+  const snapshot = await desk.briefingSource();
+  assert.equal(snapshot.total, desk.portfolio());
+  assert.equal(snapshot.gainPercent, desk.totalReturnPercent());
+  assert.equal(snapshot.buyingPower, 1000);
+  assert.deepEqual(snapshot.holdings, [{ symbol: 'NVDA', name: 'NVIDIA Corporation', dayChangePercent: 2.36 }]);
+  assert.deepEqual(snapshot.orders, rows);
+  desk.privateBalance.set(true);
+  desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
+  const hidden = await desk.briefingSource();
+  assert.equal(hidden.balanceHidden, true);
+  assert.deepEqual(hidden.orders, []);
 });
 
 test('review creates a fresh order reference and backdrop closes only the dialog', t => {

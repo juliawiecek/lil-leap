@@ -13,7 +13,6 @@ services:
     - auth
     - holdings
     - orders
-    - quote-service
     - insights
   frontend:
     build:
@@ -50,6 +49,8 @@ services:
       DB_APP_USERNAME: app_user
       DB_APP_PASSWORD: e2e-app-password
       PORT: 8080
+      QUOTE_INTERVAL_SECONDS: '2'
+      QUOTE_SEED: '42'
     depends_on:
       db:
         condition: service_healthy
@@ -70,29 +71,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  quote-service:
-    build: ./data-pipeline
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: nexttrade
-      DB_APP_USERNAME: app_user
-      DB_APP_PASSWORD: e2e-app-password
-      PORT: 8083
-      QUOTE_PROVIDER: postgres
-      QUOTE_INTERVAL_SECONDS: '2'
-      QUOTE_PERIODS: '10'
-      QUOTE_SEED: '42'
-      QUOTE_RETENTION_DAYS: '0'
-      QUOTE_INGEST_CONTINUOUS: 'true'
-    command:
-    - python
-    - -m
-    - src.service_runner
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
   insights:
     build: ./insights
     environment:

@@ -10,7 +10,7 @@ export interface TradeAccount {
   traderLevel: 'NOVICE' | 'ADVANCED';
   status: string;
 }
-/** One recorded step of a trade (`reports/trade-events.csv`). */
+/** One recorded step of a trade, from the trading database's status, audit, fill, cash and holding records. */
 export interface TradeEvent {
   /** STATUS, AUDIT, FILL, CASH or HOLDING: which record it came from. */
   source: string;
@@ -19,7 +19,7 @@ export interface TradeEvent {
   occurredAt: string;
   details: Record<string, unknown> | null;
 }
-/** One trade as the reporting dataset (`reports/trades.csv`) records it; the dataset holds filled orders only. */
+/** One filled trade, read from the reporting replica. */
 export interface TradeRecord {
   orderId: string;
   filledAt: string;

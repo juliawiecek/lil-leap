@@ -1,7 +1,0 @@
-numpy
-pandas
-pytest
-pytest-cov
-python-dotenv
-psycopg[binary]==3.2.10
-flask

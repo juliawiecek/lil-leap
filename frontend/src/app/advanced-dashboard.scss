@@ -6,12 +6,12 @@
   overflow: auto;
   scrollbar-width: none;
   font: 12px/1.4 var(--font-ui);
-  color: #ededed;
-  background: #111111;
+  color: var(--text-tone-03);
+  background: var(--surface-tone-03);
   color-scheme: dark;
-  --line: #1e1e1e;
-  --muted: #a1a1a1;
-  --green: #94c973;
+  --line: var(--surface-tone-19);
+  --muted: var(--text-tone-02);
+  --green: var(--gain);
 }
 :host([hidden]) {
   display: none !important;
@@ -37,7 +37,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #94c973;
+  outline: 2px solid var(--gain);
   outline-offset: 2px;
 }
 h1,
@@ -59,7 +59,7 @@ h2 {
   color: var(--green);
 }
 .loss {
-  color: #ff7a6e;
+  color: var(--loss);
 }
 .muted {
   color: var(--muted);
@@ -68,17 +68,17 @@ h2 {
   display: grid;
   grid-template-columns: 165px minmax(0, 1fr);
   min-height: 100dvh;
-  background: radial-gradient(ellipse at 55% 20%, #16161644, transparent 70%);
+  background: radial-gradient(ellipse at 55% 20%, var(--surface-wash-43), transparent 70%);
 }
 .pro-sidebar {
   position: sticky;
   top: 0;
   height: 100dvh;
-  border-right: 1px solid #1e1e1e;
+  border-right: 1px solid var(--surface-tone-19);
   display: flex;
   flex-direction: column;
   padding: 16px 11px 23px;
-  background: linear-gradient(110deg, #111111, #111111);
+  background: linear-gradient(110deg, var(--surface-tone-03), var(--surface-tone-03));
 }
 .pro-logo {
   display: flex;
@@ -86,18 +86,18 @@ h2 {
   font-size: 22px;
   letter-spacing: -1px;
   font-weight: 650;
-  color: #ededed;
+  color: var(--text-tone-03);
   text-decoration: none;
   white-space: nowrap;
   margin: 0 9px;
 }
 .pro-logo > span {
-  color: #94c973;
+  color: var(--gain);
 }
 .pro-logo app-dashboard-icon {
   width: 18px;
   height: 18px;
-  color: #94c973;
+  color: var(--gain);
   margin-left: 5px;
 }
 .pro-sidebar nav {
@@ -112,13 +112,13 @@ h2 {
   height: 41px;
   padding: 0 15px;
   text-align: left;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   font-size: 12px;
   border-radius: 5px;
 }
 .pro-sidebar nav button.active {
-  color: #94c973;
-  background: #121a0f;
+  color: var(--gain);
+  background: var(--surface-tone-09);
   font-weight: 600;
 }
 .pro-sidebar nav app-dashboard-icon {
@@ -129,7 +129,7 @@ h2 {
   display: grid;
   margin: auto 15px 0;
   padding-top: 16px;
-  border-top: 1px solid #262626;
+  border-top: 1px solid var(--surface-tone-17);
   gap: 12px;
   color: var(--muted);
 }
@@ -157,21 +157,21 @@ h2 {
 .pro-topbar {
   height: 55px;
   padding: 0 17px 0 19px;
-  border-bottom: 1px solid #1e1e1e;
+  border-bottom: 1px solid var(--surface-tone-19);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  background: #11111190;
+  background: var(--surface-wash-42);
 }
 .pro-search {
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
-  border: 1px solid #262626;
+  border: 1px solid var(--surface-tone-17);
   border-radius: 6px;
-  background: #16161695;
+  background: var(--surface-wash-41);
   width: 733px;
   max-width: 65%;
   height: 35px;
@@ -188,11 +188,11 @@ h2 {
   border: 0;
   outline-offset: 0;
   background: none;
-  color: #ededed;
+  color: var(--text-tone-03);
   font-size: 12px;
 }
 .pro-search input::placeholder {
-  color: #a1a1a1;
+  color: var(--text-tone-02);
   opacity: 1;
 }
 .search-results {
@@ -200,11 +200,11 @@ h2 {
   top: 41px;
   left: 0;
   right: 0;
-  background: #1a1a1a;
-  border: 1px solid #303030;
+  background: var(--surface-tone-18);
+  border: 1px solid var(--surface-tone-28);
   border-radius: 6px;
   z-index: 10;
-  box-shadow: 0 10px 40px #0008;
+  box-shadow: 0 10px 40px var(--shadow-40);
 }
 .search-results button {
   display: flex;
@@ -233,10 +233,10 @@ h2 {
   width: 143px;
   height: 33px;
   padding: 0 11px;
-  border: 1px solid #262626;
+  border: 1px solid var(--surface-tone-17);
   border-radius: 6px;
-  background: #111111;
-  color: #ededed;
+  background: var(--surface-tone-03);
+  color: var(--text-tone-03);
   font-size: 12px;
 }
 .icon-button {
@@ -267,8 +267,8 @@ h2 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #94c973;
-  border: 1px solid #121a0f;
+  background: var(--gain);
+  border: 1px solid var(--surface-tone-09);
 }
 .notification-popover {
   position: absolute;
@@ -277,8 +277,8 @@ h2 {
   width: 220px;
   padding: 18px;
   z-index: 10;
-  border: 1px solid #303030;
-  background: #1a1a1a;
+  border: 1px solid var(--surface-tone-28);
+  background: var(--surface-tone-18);
   border-radius: 7px;
 }
 .notification-popover p {
@@ -290,11 +290,15 @@ h2 {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #303030;
+  background: var(--surface-tone-28);
   font-size: 12px;
 }
 .pro-content {
   padding: 0 14px 15px;
+}
+/* The skip link focuses <main> itself (PS-20); its controls keep their own focus rings. */
+.pro-content:focus {
+  outline: none;
 }
 .session-line {
   height: 22px;
@@ -302,7 +306,7 @@ h2 {
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   font-size: 12px;
 }
 .session-line > span {
@@ -318,19 +322,19 @@ h2 {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #94c973;
+  background: var(--gain);
 }
 .pro-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px 315px;
-  grid-template-rows: 104px 352px 219px 147px;
+  grid-template-rows: 104px minmax(352px, auto) 219px 147px;
   gap: 9px 10px;
 }
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: linear-gradient(130deg, #11111180, #111111a0);
+  background: linear-gradient(130deg, var(--surface-wash-26), var(--surface-wash-25));
 }
 .panel-heading {
   display: flex;
@@ -345,7 +349,7 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   font-size: 12px;
   padding: 0;
   white-space: nowrap;
@@ -374,7 +378,7 @@ h2 {
 }
 .summary-metrics > div {
   padding: 0 10px;
-  border-left: 1px solid #262626;
+  border-left: 1px solid var(--surface-tone-17);
   white-space: nowrap;
 }
 .summary-metrics > div:first-child {
@@ -388,7 +392,7 @@ h2 {
 .summary-metrics > div > span {
   display: block;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   margin-bottom: 2px;
 }
 .summary-metrics strong {
@@ -405,7 +409,7 @@ h2 {
 .summary-metrics small {
   display: block;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   margin-top: 3px;
 }
 .summary-metrics .main-value strong {
@@ -424,7 +428,7 @@ h2 {
   margin-left: 5px;
   font-size: 12px;
   font-weight: 400;
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .index-panel {
   grid-column: 3;
@@ -437,7 +441,7 @@ h2 {
 .index-panel button {
   padding: 0 8px;
   text-align: left;
-  border-right: 1px solid #262626;
+  border-right: 1px solid var(--surface-tone-17);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -447,7 +451,7 @@ h2 {
   border: 0;
 }
 .index-panel span {
-  color: #a1a1a1;
+  color: var(--text-tone-02);
   display: block;
   font-size: 12px;
   white-space: nowrap;
@@ -472,18 +476,18 @@ h2 {
   min-height: 32px;
   padding: 7px 14px;
   border-radius: 5px;
-  background: linear-gradient(#94c973, #94c973);
-  color: #121a0f;
+  background: linear-gradient(var(--gain), var(--gain));
+  color: var(--surface-tone-09);
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #94c973;
+  border: 1px solid var(--gain);
 }
 .secondary-button {
   padding: 8px 12px;
-  border: 1px solid #3a3a3a;
-  background: #1e1e1e;
+  border: 1px solid var(--surface-tone-23);
+  background: var(--surface-tone-19);
   border-radius: 5px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .positions-panel {
   grid-column: 1;
@@ -501,11 +505,11 @@ h2 {
   padding: 8px 2px;
   border-bottom: 2px solid transparent;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .panel-tabs .active {
-  border-color: #94c973;
-  color: #ededed;
+  border-color: var(--gain);
+  color: var(--text-tone-03);
   font-weight: 600;
 }
 .table-scroll {
@@ -521,14 +525,14 @@ table {
 th {
   font-size: 12px;
   font-weight: 400;
-  color: #a1a1a1;
+  color: var(--text-tone-02);
   text-align: left;
   height: 27px;
   white-space: nowrap;
 }
 td {
   font-size: 12px;
-  border-top: 1px solid #1e1e1e;
+  border-top: 1px solid var(--surface-tone-19);
   height: 22px;
   white-space: nowrap;
 }
@@ -629,15 +633,15 @@ td .icon-button app-dashboard-icon {
   display: block;
 }
 .watch-table tr.selected {
-  background: #16161635;
+  background: var(--surface-wash-39);
 }
 .watch-panel > select {
   margin: 12px;
   padding: 7px 12px;
-  background: #1a1a1a;
-  border: 1px solid #303030;
+  background: var(--surface-tone-18);
+  border: 1px solid var(--surface-tone-28);
   border-radius: 5px;
-  color: #ededed;
+  color: var(--text-tone-03);
 }
 .market-panel {
   grid-column: 3;
@@ -658,24 +662,24 @@ td .icon-button app-dashboard-icon {
 .market-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border: 1px solid #262626;
+  border: 1px solid var(--surface-tone-17);
   border-radius: 4px;
   height: 27px;
 }
 .market-tabs button {
   font-size: 12px;
   padding: 4px 0;
-  border-right: 1px solid #262626;
+  border-right: 1px solid var(--surface-tone-17);
   border-bottom: 2px solid transparent;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   white-space: nowrap;
 }
 .market-tabs button:last-child {
   border-right: 0;
 }
 .market-tabs .active {
-  color: #ededed;
-  border-bottom-color: #94c973;
+  color: var(--text-tone-03);
+  border-bottom-color: var(--gain);
 }
 .sector-list {
   margin-top: 7px;
@@ -685,7 +689,7 @@ td .icon-button app-dashboard-icon {
   grid-template-columns: minmax(0, 1fr) 86px 45px;
   align-items: center;
   gap: 6px;
-  border-bottom: 1px solid #262626;
+  border-bottom: 1px solid var(--surface-tone-17);
   height: 21px;
   font-size: 12px;
 }
@@ -699,18 +703,18 @@ td .icon-button app-dashboard-icon {
 .sector-bar {
   display: inline-block;
   height: 9px;
-  background: #262626;
+  background: var(--surface-tone-17);
   position: relative;
 }
 .sector-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #94c973, #94c973);
-  border-right: 2px solid #94c973;
+  background: linear-gradient(90deg, var(--gain), var(--gain));
+  border-right: 2px solid var(--gain);
 }
 .sector-bar i.negative-bar {
-  background: #ff7a6e;
-  border-right-color: #ff7a6e;
+  background: var(--loss);
+  border-right-color: var(--loss);
 }
 .mover-row {
   display: flex;
@@ -757,7 +761,7 @@ td .icon-button app-dashboard-icon {
   height: 26px;
   padding: 0 12px;
   width: 100%;
-  border-bottom: 1px solid #262626;
+  border-bottom: 1px solid var(--surface-tone-17);
   font-size: 12px;
 }
 .news-row > span:nth-child(3) {
@@ -768,7 +772,7 @@ td .icon-button app-dashboard-icon {
 }
 .news-row small {
   font-size: 12px;
-  color: #a1a1a1;
+  color: var(--text-tone-02);
   text-align: right;
 }
 .exposure-content {
@@ -795,12 +799,12 @@ td .icon-button app-dashboard-icon {
   height: 90px;
   padding: 11px;
   border-radius: 50%;
-  background: conic-gradient(#94c973 0deg 296deg, #94c973 296deg 316deg, #a1a1a1 316deg 360deg);
+  background: conic-gradient(var(--gain) 0deg 296deg, var(--gain) 296deg 316deg, var(--text-tone-02) 316deg 360deg);
 }
 .exposure-ring div {
   width: 100%;
   height: 100%;
-  background: #111111;
+  background: var(--surface-tone-03);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -866,11 +870,11 @@ td .icon-button app-dashboard-icon {
   padding: 8px 2px;
   border-bottom: 2px solid transparent;
   font-size: 12px;
-  color: #d4d4d4;
+  color: var(--text-tone-05);
 }
 .order-status-tabs button.active {
-  border-color: #94c973;
-  color: #ededed;
+  border-color: var(--gain);
+  color: var(--text-tone-03);
   font-weight: 600;
 }
 .order-actions {
@@ -879,14 +883,14 @@ td .icon-button app-dashboard-icon {
 }
 .order-action-btn {
   padding: 4px 8px;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--surface-tone-23);
   border-radius: 3px;
   font-size: 12px;
-  color: #d4d4d4;
-  background: #1e1e1e;
+  color: var(--text-tone-05);
+  background: var(--surface-tone-19);
 }
 .order-action-btn:hover {
-  background: #262626;
+  background: var(--surface-tone-17);
 }
 dialog {
   width: min(480px, calc(100% - 32px));
@@ -895,13 +899,13 @@ dialog {
   padding: 24px;
   margin: auto;
   border-radius: 9px;
-  border: 1px solid #303030;
-  background: #1a1a1a;
-  color: #ededed;
-  box-shadow: 0 25px 90px #0009;
+  border: 1px solid var(--surface-tone-28);
+  background: var(--surface-tone-18);
+  color: var(--text-tone-03);
+  box-shadow: 0 25px 90px var(--shadow-12);
 }
 dialog::backdrop {
-  background: #070707d0;
+  background: var(--surface-wash-11);
   backdrop-filter: blur(4px);
 }
 .dialog-heading {
@@ -915,7 +919,7 @@ dialog::backdrop {
   font-size: 20px;
 }
 dialog p {
-  color: #d4d4d4;
+  color: var(--text-tone-05);
   font-size: 12px;
   line-height: 1.7;
   margin: 15px 0;
@@ -931,7 +935,7 @@ dialog .primary-button {
   justify-content: space-between;
   gap: 15px;
   padding: 10px 0;
-  border-bottom: 1px solid #303030;
+  border-bottom: 1px solid var(--surface-tone-28);
   font-size: 12px;
 }
 .review-details span {
@@ -945,7 +949,7 @@ kbd {
   display: inline-block;
   padding: 2px 7px;
   margin-right: 8px;
-  background: #262626;
+  background: var(--surface-tone-17);
   border-radius: 4px;
 }
 .sr-only {
@@ -1058,7 +1062,7 @@ kbd {
   }
   .pro-grid {
     grid-template-columns: minmax(0, 1fr) 215px;
-    grid-template-rows: auto 352px 219px auto auto;
+    grid-template-rows: auto minmax(352px, auto) 219px auto auto;
   }
   .summary-panel {
     grid-column: 1 / -1;
@@ -1351,7 +1355,7 @@ kbd {
   }
 }
 .session-line .closed i {
-  background: #e2b65a;
+  background: var(--warning);
 }
 
 // Shown instead of a blank screen when balances cannot be read (PS-11).
@@ -1362,10 +1366,10 @@ kbd {
   align-items: center;
   margin: 0 0 10px;
   padding: 10px 14px;
-  border: 1px solid #ff7a6e;
+  border: 1px solid var(--loss);
   border-radius: 8px;
-  background: #2a1512;
-  color: #ffb4ab;
+  background: var(--loss-tone-07);
+  color: var(--loss-tone-06);
   font-size: 13px;
 }
 .service-banner button {

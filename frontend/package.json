@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "ng": "ng",
-    "prestart": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
+    "prestart": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs",
     "start": "ng serve --port 4300",
-    "prebuild": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
+    "prebuild": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
     "pretest": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
     "pretest:coverage": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
@@ -16,7 +16,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test:e2e": "playwright test --config=playwright.config.mjs",
-    "test:e2e:auth": "node ../e2e/run-stack.mjs --project=auth"
+    "test:a11y": "playwright test --config=playwright.a11y.config.mjs",
+    "test:e2e:auth":"node ../e2e/run-stack.mjs --project=auth"
   },
   "private": true,
   "packageManager": "npm@11.9.0",
@@ -26,17 +27,22 @@
     "@angular/core": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
-    "tslib": "^2.3.0",
-    "@lilleap/session-core": "file:../shared/session-core"
+    "@lilleap/session-core": "file:../shared/session-core",
+    "rxjs": "7.8.2",
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.1.5",
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
     "c8": "^12.0.0",
     "happy-dom": "^20.14.5",
+    "postcss": "8.5.31",
     "prettier": "^3.8.1",
+    "tailwindcss": "4.3.3",
     "typescript": "~6.0.2"
   },
   "allowScripts": {

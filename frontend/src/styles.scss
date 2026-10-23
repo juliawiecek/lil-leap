@@ -1,3 +1,5 @@
+@use './accessibility-visuals';
+
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/inter.woff2') format('woff2');
@@ -32,22 +34,22 @@
   --font-mono: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
 
   /* One palette for every screen: neutrals, one off-white accent, one green, one red, one warning. */
-  --nt-bg: #070707;
-  --nt-surface: #0c0c0c;
-  --nt-raised: #161616;
-  --nt-line: #1f231f;
-  --nt-line-strong: #2c312b;
-  --nt-text: #f2f0e9;
-  --nt-muted: #a4a79e;
-  --nt-subtle: #7e8279;
-  --nt-accent: #f2efe6;
-  --nt-on-accent: #0b0c0b;
-  --nt-green: #94c973;
-  --nt-red: #ff7a6e;
-  --nt-warn: #e2b65a;
+  --nt-bg: var(--background);
+  --nt-surface: var(--surface);
+  --nt-raised: var(--surface-raised);
+  --nt-line: var(--surface-tone-08);
+  --nt-line-strong: var(--surface-tone-10);
+  --nt-text: var(--text);
+  --nt-muted: var(--text-muted);
+  --nt-subtle: var(--text-subtle);
+  --nt-accent: var(--accent);
+  --nt-on-accent: var(--on-accent);
+  --nt-green: var(--gain);
+  --nt-red: var(--loss);
+  --nt-warn: var(--warning);
   --nt-radius: 20px;
-  --nt-grid: linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  --nt-grid: linear-gradient(to right, var(--text-wash-07) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--text-wash-07) 1px, transparent 1px);
 }
 body {
   font-family: var(--font-ui);
@@ -56,9 +58,9 @@ body {
 }
 @keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes nt-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.55); }
-  70% { box-shadow: 0 0 0 7px rgba(148, 201, 115, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+  0% { box-shadow: 0 0 0 0 var(--gain-wash-09); }
+  70% { box-shadow: 0 0 0 7px var(--gain-wash-01); }
+  100% { box-shadow: 0 0 0 0 var(--gain-wash-01); }
 }
 
 /*
@@ -68,16 +70,16 @@ body {
  */
 select option,
 select optgroup {
-  background-color: #0f1518;
-  color: #e9edf1;
+  background-color: var(--surface-tone-113);
+  color: var(--text-tone-69);
 }
 
 /* Order ticket notices shared by both dashboards (TS-14.7, PS-02, PS-15). */
 .price-delayed,
 .closed-warning {
   border-radius: 6px;
-  background: #241f12;
-  color: #f0c86a;
+  background: var(--surface-tone-112);
+  color: var(--warning-tone-06);
 }
 .price-delayed {
   margin-left: 8px;
@@ -87,14 +89,14 @@ select optgroup {
 }
 .closed-warning {
   padding: 9px 11px;
-  border: 1px solid #5a4a24;
+  border: 1px solid var(--warning-tone-05);
 }
 .review-summary {
   padding: 10px 12px;
-  border: 1px solid #2a4d3a;
+  border: 1px solid var(--gain-tone-33);
   border-radius: 6px;
-  background: #102019;
-  color: #e9f3ee;
+  background: var(--surface-tone-111);
+  color: var(--text-tone-68);
   font-weight: 600;
 }
 .review-actions {

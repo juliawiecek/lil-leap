@@ -20,7 +20,6 @@ That script creates the `main` and `app_user` roles if they do not already exist
 - `nextTrade-orders/LOCAL_DEV.md`
 - `nextTrade-holdings/LOCAL_DEV.md`
 - `insights/LOCAL_DEV.md`
-- `data-pipeline/LOCAL_DEV.md`
 - `frontend/LOCAL_DEV.md`
 - `insights-frontend/LOCAL_DEV.md`
 
@@ -59,15 +58,14 @@ When using the native Kafka broker, keep 3 terminals open for ZooKeeper, the Kaf
 | PostgreSQL | `5432` | Local database server |
 | `auth` | `8081` | NestJS auth and rules endpoints |
 | `nextTrade-orders` | `8082` | Spring Boot orders API |
-| `nextTrade-holdings` | `8080` | Spring Boot holdings API |
+| `nextTrade-holdings` | `8080` | Spring Boot holdings API; also generates live synthetic quotes |
 | `insights` | `8084` | Spring Boot insights API |
-| `data-pipeline` | `8083` | Python quote API and ingestor process |
 | `frontend` | `4300` | Trading Angular app |
 | `insights-frontend` | `4301` | Reporting Angular app |
 
 ## Notes
 
-- `auth` and `data-pipeline` use per-service `.env` files.
+- `auth` uses a per-service `.env` file.
 - `nextTrade-orders`, `nextTrade-holdings`, and `insights` use Spring Boot `application-local.yml` profiles.
 - Frontends do not need `.env` files for the current local setup.
 - No global shell scripts are required.
