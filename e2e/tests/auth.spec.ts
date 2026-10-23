@@ -49,9 +49,25 @@ test('NEXT-157 AC2: incomplete profile cannot advance or register', async ({ pag
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await page.getByRole('button', { name: /^Continue/ }).click();
   const birthDate = page.locator('#profile-date_of_birth');
-  await expect(birthDate).toBeVisible();
+  await expect(page.locator('#profile-date_of_birth-menu')).toBeVisible();
+  await expect(page.locator('#profile-date_of_birth-menu')).toHaveAttribute('aria-invalid', 'true');
   expect(await birthDate.evaluate((input: HTMLInputElement) => input.validationMessage)).not.toBe('');
   await expect(page.locator('#profile-initial_deposit')).toBeHidden();
+  expect(registrations).toEqual([]);
+});
+
+test('registration menus preserve answers through review before submitting', async ({ page }) => {
+  const registrations: string[] = [];
+  page.on('request', r => { if (r.url().endsWith('/auth/register')) registrations.push(r.url()); });
+  await prepareRegistration(page, uniqueCredentials('review'));
+  await expect(page.getByRole('heading', { name: 'Review your details', exact: true })).toBeVisible();
+  const review = page.locator('.review-section');
+  for (const answer of ['Illinois', 'United States', 'Citizen', 'Retired', 'Moderate', 'No / unsure']) {
+    await expect(review.getByText(answer, { exact: true })).toBeVisible();
+  }
+  await expect(page.locator('#profile-date_of_birth')).toHaveValue('1990-12-10');
+  await expect(page.locator('#profile-net_worth_bracket')).toHaveValue('$25k-100k');
+  await expect(page.getByRole('button', { name: /^Explore my workspace/ })).toBeEnabled();
   expect(registrations).toEqual([]);
 });
 
