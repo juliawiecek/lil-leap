@@ -1,7 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { accessibilityStore } from './accessibility';
 import { speakable } from './speech-text';
-import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff
@@ -325,14 +324,6 @@ export class ScanEngine {
     }
   }
 
-  /** Stops what the ring is saying right now (Stop speech); the next item is read as usual. */
-  hush(): void {
-    if (this.#utterance) {
-      speechCoordinator.stop('switch');
-      this.#utterance = null;
-    }
-  }
-
   stop(): void {
     if (!this.#running) {
       return;
@@ -345,7 +336,7 @@ export class ScanEngine {
     }
     this.#tracked = null;
     if (this.#utterance) {
-      speechCoordinator.stop('switch');
+      globalThis.speechSynthesis?.cancel();
       this.#utterance = null;
     }
     this.#doc.removeEventListener('keydown', this.#onKeyDown, true);
@@ -602,10 +593,8 @@ export class ScanEngine {
       this.#openTypingPad(el as HTMLInputElement, type === 'number' ? NUMBER_ROWS : LETTER_ROWS);
     } else {
       this.#resumeAt = el;
-      // Confirm first, then click: what the click says (an order read-back, which cuts in) must
-      // not be cut off by this confirmation (PS-23).
-      this.#announce(`${scanLabel(el)} selected.`);
       el.click();
+      this.#announce(`${scanLabel(el)} selected.`);
     }
   }
 
@@ -955,7 +944,7 @@ export class ScanEngine {
   }
 
   #say(raw: string, queue: boolean): void {
-    const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
+    const synth = globalThis.speechSynthesis;
     // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
     const text = this.#picker ? raw : speakable(raw);
     if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
@@ -1078,11 +1067,6 @@ export class SwitchScanService {
     this.#engine?.say(text, interrupt);
   }
 
-  /** Cuts off the sentence being read without changing any setting (Stop speech, Alt+Shift+X). */
-  hush(): void {
-    this.#engine?.hush();
-  }
-
   /**
    * Alt+S turns switch control on or off from any page, sign-in included, so someone who cannot
    * see the Settings page can start it. Turning it on this way also reads items aloud. Returns a
@@ -1120,7 +1104,7 @@ export class SwitchScanService {
 
 /** Speaks one sentence right away, for confirmations given after the ring has stopped. */
 function speakNow(text: string): void {
-  const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
+  const synth = globalThis.speechSynthesis;
   if (synth && typeof globalThis.SpeechSynthesisUtterance === 'function') {
     synth.cancel();
     synth.speak(new SpeechSynthesisUtterance(text));

@@ -14,7 +14,6 @@ import {
 } from './client-accounts';
 import { TRADE_RECORDS, type TradeRecord, type TradeRecords } from './trade-records';
 import { routes } from './app.routes';
-import { SiteAccessibility } from './site-accessibility';
 import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
@@ -69,7 +68,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAppInitializer(() => inject(AppSessionService).initialize()),
-    provideAppInitializer(() => inject(SiteAccessibility).start()),
     provideBrowserGlobalErrorListeners(),
   ],
 };

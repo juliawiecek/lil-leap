@@ -25,13 +25,8 @@ story is merged; skip them if it is not.
    Review > Confirm. The fill toast appears. "That trade used one button, and could be done
    without looking at the screen."
 5. **The briefing again (PS-18).** Press Alt+B: it now reports the order just placed.
-6. **A chart in words (PS-25).** In Accessibility, enable Read chart summaries aloud. Focus the
-   portfolio chart, choose Explain this chart, then Show as table. Check its dates, values and
-   headers; the toggle keeps focus. Change the period and repeat on allocation, the advanced
-   price/volume charts, sector bars and heat map, and both Insights graphics. Check that the
-   volume table can show every original observation and distinguishes missing volume from zero.
-   In Insights, use arrows/Home/End on the chart. Hide balances and confirm private amounts and
-   reference values are not read out.
+6. **A chart in words (PS-25).** Focus the portfolio chart and use the arrow keys to step through
+   prices, then open Explain this chart.
 7. **Colour-blind mode (PS-27, PS-28).** Turn on colour-blind colours. Gains turn blue and losses
    orange, and every change gets an arrow.
 8. **The score (PS-20).** Show the axe result: no serious or critical issues.

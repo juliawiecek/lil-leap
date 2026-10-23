@@ -49,13 +49,13 @@
   <h2 id="clients-title" class="sr-only">Trading accounts</h2>
   @if (result(); as page) {
     @if (page.content.length) {
-      <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
+      <div class="table-wrap">
         <table>
           <caption class="sr-only">Trading accounts; select a column heading to sort</caption>
           <thead>
             <tr>
               @for (column of columns; track column.key) {
-                <th scope="col" [class.numeric]="column.numeric" [attr.aria-sort]="sortState(column.key)">
+                <th [class.numeric]="column.numeric" [attr.aria-sort]="sortState(column.key)">
                   <button type="button" class="sort" (click)="sortBy(column.key, column.first)">
                     {{ column.label }}<span aria-hidden="true">{{ sortState(column.key) === 'ascending' ? ' ↑' : sortState(column.key) === 'descending' ? ' ↓' : '' }}</span>
                   </button>

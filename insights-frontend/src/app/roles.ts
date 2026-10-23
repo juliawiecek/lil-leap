@@ -9,7 +9,7 @@ export interface NavItem {
   label: string;
   path: string;
   icon: string;
-  group: 'Analytics' | 'Operations' | 'Preferences';
+  group: 'Analytics' | 'Operations';
 }
 
 const REPORTING: readonly NavItem[] = [
@@ -23,8 +23,8 @@ const REPORTING: readonly NavItem[] = [
  * get everything analysts see plus the trade lookup for audits and disputes (BR-15).
  */
 export const NAV_BY_ROLE: Record<InsightsRole, readonly NavItem[]> = {
-  ANALYST: [...REPORTING, { label: 'Settings', path: '/settings', icon: 'settings', group: 'Preferences' }],
-  OPERATIONS: [...REPORTING, { label: 'Trade lookup', path: '/trades', icon: 'search', group: 'Operations' }, { label: 'Settings', path: '/settings', icon: 'settings', group: 'Preferences' }],
+  ANALYST: REPORTING,
+  OPERATIONS: [...REPORTING, { label: 'Trade lookup', path: '/trades', icon: 'search', group: 'Operations' }],
 };
 
 /** The role a signed-in token carries; the server decides it, the page never chooses it. */

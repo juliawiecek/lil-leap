@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "ng": "ng",
-    "prestart": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs && node ../scripts/build-assistive-bootstrap.mjs nexttrade.accessibility",
+    "prestart": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs",
     "start": "ng serve --port 4300",
-    "prebuild": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs && node ../scripts/build-assistive-bootstrap.mjs nexttrade.accessibility",
+    "prebuild": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs && node scripts/build-colour-bootstrap.mjs",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
     "pretest": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",
     "pretest:coverage": "ngc -p ../shared/session-core/tsconfig.json && node ../scripts/sync-session-core-dist.mjs",

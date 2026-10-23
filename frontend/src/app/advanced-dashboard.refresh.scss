@@ -32,7 +32,7 @@ h2 { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
 .pro-sidebar nav button.active { background: var(--surface-tone-18); color: var(--text-tone-03); font-weight: 700; }
 .pro-sidebar nav app-dashboard-icon { width: 17px; height: 17px; }
 .sidebar-help { margin: auto 0 0; gap: 2px; border-top-color: var(--surface-tone-19); }
-.sidebar-help > span { padding: 0 12px 6px; color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+.sidebar-help > span { padding: 0 12px 6px; color: var(--text-tone-04); font-size: 12px; font-weight: 600; }
 .sidebar-help button { min-height: 38px; padding: 0 12px; border-radius: 10px; color: var(--text-tone-02); font-size: 13.5px; font-weight: 500; }
 .sidebar-help button:hover { background: var(--surface-tone-30); color: var(--text-tone-03); }
 .sidebar-help button:last-child { margin-top: 0; }
@@ -49,7 +49,7 @@ h2 { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
 }
 .pro-search { width: 560px; height: 40px; padding: 0 14px; border-color: var(--surface-tone-17); border-radius: 12px; background: var(--surface-wash-35); }
 .pro-search input { font-size: 14px; }
-.pro-search input::placeholder { color: var(--text-tone-02); }
+.pro-search input::placeholder { color: var(--text-tone-04); }
 .search-results { top: 46px; border-radius: 14px; background: var(--surface-tone-03); overflow: hidden; }
 .search-results button { transition: background-color 0.15s ease; }
 .search-results button:hover { background: var(--surface-tone-18); }
@@ -94,15 +94,15 @@ app-market-ticker { margin: 0 0 16px; padding: 0 14px; border: 1px solid var(--s
 .summary-panel h1 { gap: 6px; color: var(--text-tone-02); font-size: 12.5px; font-weight: 600; }
 .summary-metrics { margin-top: 6px; align-items: center; }
 .summary-metrics > div { padding: 0 18px; border-left-color: var(--text-wash-14); }
-.summary-metrics > div > span { margin-bottom: 4px; color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+.summary-metrics > div > span { margin-bottom: 4px; color: var(--text-tone-04); font-size: 12px; font-weight: 600; }
 .summary-metrics strong { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
 .summary-metrics b { font-size: 12.5px; font-weight: 700; }
-.summary-metrics small { color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+.summary-metrics small { color: var(--text-tone-04); font-size: 12px; font-weight: 600; }
 .summary-metrics .main-value strong { font-size: 36px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; }
 .summary-metrics .main-value > span { display: inline-block; margin-top: 8px; padding: 3px 9px; border-radius: 999px; background: var(--text-wash-11); color: var(--text-tone-02); font-size: 13px; font-weight: 700; }
 .summary-metrics .main-value > span.gain { background: var(--gain-wash-07); color: var(--gain); }
 .summary-metrics .main-value > span.loss { background: var(--loss-wash-01); color: var(--loss); }
-.main-value small { color: var(--text-tone-02); }
+.main-value small { color: var(--text-tone-04); }
 
 /* Buttons */
 .primary-button { min-height: 44px; border: 1px solid var(--text-tone-03); border-radius: 12px; background: var(--text-tone-03); color: var(--surface-tone-20); font-size: 14px; font-weight: 800; transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
@@ -114,7 +114,7 @@ app-market-ticker { margin: 0 0 16px; padding: 0 14px; border: 1px solid var(--s
 /* Watchlist (left of the chart) */
 .watch-panel { grid-column: 1; grid-row: 2; align-self: stretch; height: auto; margin: 0; }
 .watch-panel .panel-heading h2 { font-size: 16px; }
-th { color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+th { color: var(--text-tone-04); font-size: 12px; font-weight: 600; }
 td { border-top-color: var(--surface-tone-27); font-size: 13.5px; }
 tbody tr { transition: background-color 0.15s ease; }
 tbody tr:hover { background: var(--surface-tone-30); }
@@ -123,7 +123,7 @@ tbody tr:hover { background: var(--surface-tone-30); }
 .watch-table td:first-child, .watch-table th:first-child { padding-left: 18px; }
 .watch-table td:last-child { padding-right: 18px; }
 .watch-table td button b { font-weight: 800; }
-.watch-sector { display: block; margin-top: 2px; overflow: hidden; color: var(--text-tone-02); font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.watch-sector { display: block; margin-top: 2px; overflow: hidden; color: var(--text-tone-04); font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .pro-grid:not(.secondary-page) .watch-table th:nth-child(4), .pro-grid:not(.secondary-page) .watch-table td:nth-child(4) { display: none; }
 .secondary-page .watch-sector { display: none; }
 .watch-table tr.selected { background: var(--surface-tone-30); }
@@ -134,7 +134,7 @@ tbody tr:hover { background: var(--surface-tone-30); }
 .positions-panel { grid-column: 1 / -1; grid-row: 3; }
 .positions-panel .table-scroll { max-height: 420px; }
 .panel-tabs { gap: 6px; height: 50px; padding: 0 12px; border-bottom-color: var(--surface-tone-19); }
-.panel-tabs button { padding: 0 10px; color: var(--text-tone-02); font-size: 13.5px; font-weight: 700; }
+.panel-tabs button { padding: 0 10px; color: var(--text-tone-04); font-size: 13.5px; font-weight: 700; }
 .panel-tabs .active { border-color: var(--text-tone-03); color: var(--text-tone-03); }
 .positions-table th { height: 40px; padding: 2px 12px; }
 .positions-table td { height: 48px; padding: 4px 12px; }
@@ -162,14 +162,14 @@ tbody tr:hover { background: var(--surface-tone-30); }
 .positions-table tbody tr:hover .trade-label, .positions-table .icon-button:focus-visible .trade-label { opacity: 1; transform: none; }
 .positions-table tbody tr:hover .icon-button app-dashboard-icon, .positions-table .icon-button:focus-visible app-dashboard-icon { opacity: 0; }
 .balance-details { gap: 40px; padding: 28px 24px; }
-.balance-details span { color: var(--text-tone-02); font-size: 12.5px; font-weight: 600; }
+.balance-details span { color: var(--text-tone-04); font-size: 12.5px; font-weight: 600; }
 .balance-details strong { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 
 /* Market overview, activity, exposure */
 .market-panel { grid-column: 1; grid-row: 4; align-self: stretch; height: auto; margin: 0; padding: 0 18px 16px; }
 .market-panel .panel-heading { height: 52px; }
 .market-tabs { display: flex; width: max-content; height: auto; gap: 2px; padding: 3px; border-color: var(--surface-tone-17); border-radius: 10px; background: var(--surface-wash-21); }
-.market-tabs button { min-height: 28px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-tone-03); font-size: 12.5px; font-weight: 700; }
+.market-tabs button { min-height: 28px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-tone-02); font-size: 12.5px; font-weight: 700; }
 .market-tabs .active { background: var(--text-tone-03); color: var(--surface-tone-20); }
 .sector-list { margin-top: 12px; }
 .sector-list > div { grid-template-columns: minmax(0, 1fr) 90px 60px; gap: 10px; height: 42px; border-bottom-color: var(--surface-tone-27); font-size: 13px; }
@@ -177,11 +177,11 @@ tbody tr:hover { background: var(--surface-tone-30); }
 .sector-bar { height: 6px; border-radius: 999px; background: var(--surface-tone-22); overflow: hidden; }
 .sector-bar i { border-right: 0; border-radius: 999px; background: var(--gain); }
 .mover-row { padding: 13px 0; border-bottom-color: var(--surface-tone-27); font-size: 13.5px; }
-.empty-note { color: var(--text-tone-02); font-size: 12.5px; }
+.empty-note { color: var(--text-tone-04); font-size: 12.5px; }
 .bottom-panels { grid-column: 2 / -1; grid-row: 4; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
 .bottom-panels .panel-heading { height: 52px; }
 .exposure-content { grid-template-columns: minmax(0, 1fr) 104px; gap: 18px; padding: 18px; }
-.exposure-content > div > span { color: var(--text-tone-02); font-weight: 600; }
+.exposure-content > div > span { color: var(--text-tone-04); font-weight: 600; }
 .exposure-row { grid-template-columns: 70px 48px minmax(0, 1fr); gap: 8px; height: 34px; font-size: 13px; font-weight: 600; }
 .exposure-row .sector-bar i { background: var(--text-tone-03); }
 .exposure-ring { width: 104px; height: 104px; padding: 12px; background: conic-gradient(var(--text-tone-03) 0deg 296deg, var(--surface-tone-34) 296deg 360deg); }
@@ -241,11 +241,11 @@ dialog p { font-size: 13.5px; }
 .bottom-panels { grid-column: 5 / -1; grid-row: 4; grid-template-columns: minmax(0, 5fr) minmax(0, 3fr); }
 
 /* Positions */
-.panel-note { margin-left: auto; align-self: center; padding-right: 6px; color: var(--text-tone-02); font-size: 12.5px; white-space: nowrap; }
+.panel-note { margin-left: auto; align-self: center; padding-right: 6px; color: var(--text-tone-04); font-size: 12.5px; white-space: nowrap; }
 .positions-table th:first-child { width: 220px; }
 .positions-table th:nth-child(2) { width: auto; }
 .positions-table th:nth-child(2), .positions-table td:nth-child(2) { text-align: right; }
-.position-sub { display: block; margin-top: 2px; overflow: hidden; color: var(--text-tone-02); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.position-sub { display: block; margin-top: 2px; overflow: hidden; color: var(--text-tone-04); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .weight-cell { display: inline-flex; align-items: center; gap: 8px; }
 .weight-bar { display: inline-block; width: 52px; height: 5px; border-radius: 999px; background: var(--surface-tone-17); overflow: hidden; }
 .weight-bar i { display: block; height: 100%; border-radius: 999px; background: var(--text-tone-03); opacity: 0.75; }
@@ -294,7 +294,7 @@ dialog p { font-size: 13.5px; }
 .summary-total { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; }
 .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
 .summary-grid > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.summary-grid span, .summary-grid small { color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
+.summary-grid span, .summary-grid small { color: var(--text-tone-04); font-size: 12px; font-weight: 600; }
 .summary-grid b { font-size: 14px; font-weight: 800; }
 .summary-grid .gain { color: var(--gain); }
 .summary-grid .loss { color: var(--loss); }

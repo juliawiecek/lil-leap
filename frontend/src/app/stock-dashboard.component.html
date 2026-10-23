@@ -30,13 +30,13 @@
       <div class="asset-heading">
         <div class="asset-monogram" aria-hidden="true">{{ a.symbol.slice(0, 2) }}</div>
         <div class="asset-identity">
-          <h2>{{ a.symbol }}</h2>
+          <h1>{{ a.symbol }}</h1>
           <p>{{ a.name }} <span aria-hidden="true">·</span> {{ a.market }}</p>
         </div>
         <span class="currency-label">{{ a.currency }}</span>
       </div>
 
-      <div class="hero-metrics" aria-live="off" data-a11y-read data-a11y-label="Current stock price and performance">
+      <div class="hero-metrics" aria-live="off">
         <div>
           <span class="sr-only">Current price</span>
           <p
@@ -95,11 +95,11 @@
     <span class="chart-hint">Move over the chart to explore</span>
   </div>
   <app-stock-svg-chart
-    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()"
+    class="chart-canvas"
     [windowSeconds]="windowSeconds()"
-    [label]="(asset()?.symbol || selectedAsset()?.symbol || 'Stock') + (windowSeconds() === 86400 ? ' one-day stock price' : ' stock price over the last ' + windowSeconds() + ' seconds')"
+    [label]="(asset()?.symbol || 'Stock') + ' one-day stock price'"
     [emptyLabel]="
-      state().connection === 'connecting' ? 'Price history is loading.' : 'No price history available.'
+      state().connection === 'connecting' ? 'Loading price history?' : 'No price history available'
     "
   />
 

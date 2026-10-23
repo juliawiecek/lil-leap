@@ -12,7 +12,6 @@ import { provideAccessibility, provideAccessibilityStartup } from './accessibili
 import { provideColourMode } from './colour-mode';
 import { SwitchScanService } from './switch-scan';
 import { PageTitleStrategy } from './page-title';
-import { SiteAccessibility } from './site-accessibility';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -27,7 +26,6 @@ export const appConfig: ApplicationConfig = {
     // Switch control resumes straight after a reload when it was left on, and Alt+S starts it
     // from any page, sign-in included (PS-19).
     provideAccessibilityStartup(() => inject(SwitchScanService).listenForShortcut()),
-    provideAccessibilityStartup(() => inject(SiteAccessibility).start()),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },

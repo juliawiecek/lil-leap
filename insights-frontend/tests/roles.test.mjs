@@ -10,8 +10,8 @@ const { ClientsPage } = await import('../src/app/pages/clients/clients-page.ts')
 
 test('operations staff see every analyst page plus the trade lookup; both land on Insights', () => {
   const paths = (role) => NAV_BY_ROLE[role].map((item) => item.path);
-  assert.deepEqual(paths('ANALYST'), ['/insights', '/clients', '/reports', '/settings']);
-  assert.deepEqual(paths('OPERATIONS'), ['/insights', '/clients', '/reports', '/trades', '/settings']);
+  assert.deepEqual(paths('ANALYST'), ['/insights', '/clients', '/reports']);
+  assert.deepEqual(paths('OPERATIONS'), ['/insights', '/clients', '/reports', '/trades']);
   assert.equal(homePath('ANALYST'), '/insights');
   assert.equal(homePath('OPERATIONS'), '/insights');
   assert.equal(roleOf('OPERATIONS'), 'OPERATIONS');
@@ -39,7 +39,6 @@ test('a page guard admits its roles and sends anyone else to their own home page
 
 test('sign-in only returns to current pages; retired pages and record IDs elsewhere are dropped', () => {
   assert.equal(safeReturnUrl('/reports'), '/reports');
-  assert.equal(safeReturnUrl('/settings'), '/settings');
   assert.equal(safeReturnUrl('/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f'), '/trades/3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f');
   assert.equal(safeReturnUrl('/clients/e0000000-0000-4000-8000-000000000001?search=demo'),
     '/clients/e0000000-0000-4000-8000-000000000001?search=demo');

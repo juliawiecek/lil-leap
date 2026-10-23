@@ -5,10 +5,6 @@
  * reaches back before the account opened. Pure functions, so every period can be tested.
  */
 
-import { numericValue, orderedPoints, type ChartCoverage } from './chart-data';
-import type { Portfolio } from './portfolio-api';
-import type { OrderHistoryRow } from './order-history-api';
-import { APP_TIME_ZONE } from './app-time';
 export const CHART_PERIODS = ['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const;
 export type ChartPeriod = (typeof CHART_PERIODS)[number];
 
@@ -76,13 +72,13 @@ export interface ValuePoint {
 }
 
 /**
- * Account-day values start at midnight Central time, including weekends and holidays.
- * Other ranges are rolling days, clamped to first funding. An explicitly supplied session
- * remains supported for consumers that chart a trading session rather than an account day.
+ * The span a period covers, ending now. 1D is the latest trading session; 1W starts no earlier
+ * than the account's opening; 1M, 3M and 1Y always cover their full length; "ALL" starts at the
+ * opening. With no opening time known, a period falls back to its length alone.
  */
 export function chartRange(period: ChartPeriod, now: number, openedAt: number | null, session: Session | null = null): ChartRange {
-  const opened = openedAt !== null && Number.isFinite(openedAt) && openedAt <= now ? openedAt : null;
-  // An explicit session opts into session boundaries instead of the default account day.
+  const opened = openedAt !== null && Number.isFinite(openedAt) && openedAt < now ? openedAt : null;
+  // 1D is the latest trading session, as brokerage apps show it, from its open up to now (or its close).
   const sessionEnd = session ? Math.min(now, session.close) : 0;
   if (period === '1D' && session && (opened === null || opened < sessionEnd)) {
     const start = opened !== null && opened > session.open ? opened : session.open;
@@ -91,34 +87,17 @@ export function chartRange(period: ChartPeriod, now: number, openedAt: number | 
   if (period === 'ALL') {
     return { start: opened ?? now - DAY, end: now, fromOpening: opened !== null };
   }
-  const start = period === '1D' ? zonedTime(zonedDate(now, APP_TIME_ZONE), 0, APP_TIME_ZONE) : now - PERIOD_MS[period];
-  // No financial observations exist before the account opened.
+  const start = now - PERIOD_MS[period];
+  // A month or more keeps its full length; before the account existed it was worth $0.
+  if (period !== '1W' && period !== '1D') {
+    return { start, end: now, fromOpening: false };
+  }
   return opened !== null && opened > start ? { start: opened, end: now, fromOpening: true } : { start, end: now, fromOpening: false };
 }
 
-/** Coverage refers to the requested account range, not the width of the fitted SVG. */
-export function historyCoverage(range: ChartRange | null, points: readonly ValuePoint[]): ChartCoverage {
-  const first = points[0], last = points.at(-1);
-  const requested = { requestedStart: range?.start ?? null, requestedEnd: range?.end ?? null };
-  if (!first || !last) { return { status: 'empty', start: null, end: null, ...requested }; }
-  return { status: range && (first.at > range.start || last.at < range.end) ? 'partial' : 'complete',
-    start: first.at, end: last.at, ...requested };
-}
-
-export const PORTFOLIO_PERIOD_LABELS: Record<ChartPeriod, string> = {
-  '1D': 'Today', '1W': 'Past 7 days', '1M': 'Past 30 days', '3M': 'Past 90 days', '1Y': 'Past 365 days', ALL: 'Available history',
-};
-
-export function portfolioPeriodLabel(period: ChartPeriod, range: ChartRange | null, points: readonly ValuePoint[]): string {
-  const coverage = historyCoverage(range, points);
-  if (coverage.status === 'empty') { return 'Change unavailable'; }
-  if (coverage.status === 'partial') { return 'Available history'; }
-  return range?.fromOpening ? 'Since first record' : PORTFOLIO_PERIOD_LABELS[period];
-}
-
-/** Preserve a real zero opening value; the caller must not divide by that baseline. */
+/** The value a period's change is measured from: its first value once the account held money. */
 export function startValue(points: readonly ValuePoint[]): number {
-  return points[0]?.value ?? 0;
+  return (points.find((p) => p.value > 0) ?? points[0])?.value ?? 0;
 }
 
 /**
@@ -180,9 +159,8 @@ export function barStep(range: ChartRange): { interval: string; limit: number; m
 /**
  * The account's value at every recorded moment in the range: the range's start and end, each
  * price bar and each deposit, transfer or fill inside it. Activity before the range still counts
- * (it set the starting cash and shares). A stock is valued only at its last recorded price.
- * Missing prices limit the line to its continuously supported suffix. `liveValue`, when given,
- * is an observed snapshot, never an interpolated or estimated value.
+ * (it set the starting cash and shares). A stock is valued at its last recorded price, else the
+ * nearest one after, else its last fill price. `liveValue`, when given, ends the line.
  */
 export function portfolioSeries(
   range: ChartRange,
@@ -205,96 +183,31 @@ export function portfolioSeries(
   });
   const sortedCash = [...cash].sort((a, b) => a.at - b.at);
   const sortedShares = [...shares].sort((a, b) => a.at - b.at);
-  const recorded = new Map([...prices].map(([symbol, ps]) => [symbol,
-    orderedPoints(ps.filter(p => Number.isFinite(p.price) && p.price > 0).map(p => ({ time: p.at, value: p.price })))
-      .map(p => ({ at: p.time, price: p.value }))]));
-  const points: ValuePoint[] = [];
-  for (const at of [...times].sort((a, b) => a - b)) {
-    const value = valueAt(at, sortedCash, sortedShares, recorded);
-    // Keep only the continuous supported suffix. Connecting across an unknown valuation
-    // would imply performance that cannot be established from the observations.
-    if (value === null) { points.length = 0; }
-    else { points.push({ at, value }); }
-  }
+  const points = [...times].sort((a, b) => a - b).map((at) => ({ at, value: valueAt(at, sortedCash, sortedShares, prices) }));
   if (liveValue !== null && Number.isFinite(liveValue)) {
-    if (points.at(-1)?.at === range.end) { points.pop(); }
-    points.push({ at: range.end, value: liveValue });
+    points[points.length - 1] = { at: range.end, value: round(liveValue) };
   }
   return points;
 }
 
-function valueAt(at: number, cash: readonly CashEvent[], shares: readonly ShareEvent[], prices: ReadonlyMap<string, readonly PricePoint[]>): number | null {
+function valueAt(at: number, cash: readonly CashEvent[], shares: readonly ShareEvent[], prices: ReadonlyMap<string, readonly PricePoint[]>): number {
   let total = cash.filter((e) => e.at <= at).reduce((sum, e) => sum + e.amount, 0);
-  const held = new Map<string, number>();
+  const held = new Map<string, { quantity: number; lastFill: number }>();
   for (const e of shares) {
     if (e.at > at) {
       break;
     }
-    held.set(e.symbol, (held.get(e.symbol) ?? 0) + e.quantity);
+    const current = held.get(e.symbol) ?? { quantity: 0, lastFill: e.price };
+    held.set(e.symbol, { quantity: current.quantity + e.quantity, lastFill: e.price });
   }
-  for (const [symbol, quantity] of held) {
+  for (const [symbol, { quantity, lastFill }] of held) {
     if (quantity) {
       const series = prices.get(symbol) ?? [];
-      const price = priceAt(series, at);
-      if (price === null || quantity < -1e-8) { return null; }
-      total += quantity * price;
+      // At the very start of a range the first bar may not have closed yet; its price is the nearest record.
+      total += quantity * (priceAt(series, at) ?? series.find((p) => p.at >= at)?.price ?? lastFill);
     }
   }
-  return total;
-}
-
-/** Map each executed transaction once; unsettled cash and open orders do not change value. */
-export function portfolioEvents(movements: readonly { transactionId?: string; occurredAt: string; amount: unknown; settlementStatus?: string }[], orders: readonly OrderHistoryRow[]): { cash: CashEvent[]; shares: ShareEvent[] } {
-  const shares: ShareEvent[] = [];
-  const cash: CashEvent[] = [];
-  const seen = new Set<string>();
-  for (const row of orders) {
-    if (row.status !== 'FILLED' || seen.has(row.orderId)) { continue; }
-    seen.add(row.orderId);
-    const at = Date.parse(row.filledAt ?? ''), price = numericValue(row.fillPrice), quantity = numericValue(row.filledQuantity);
-    if (!Number.isFinite(at) || !['BUY', 'SELL'].includes(row.side) || !row.symbol) {
-      throw new Error('Executed transaction details are incomplete.');
-    }
-    if (price === null || price <= 0 || quantity === null || quantity <= 0) {
-      throw new Error('Executed transaction details are incomplete.');
-    }
-    const signed = row.side === 'SELL' ? -quantity : quantity;
-    shares.push({ at, symbol: row.symbol, price, quantity: signed });
-    // Orders settle each fill in whole cents (price x quantity, half up), and the cash balance is
-    // the sum of those settled amounts. Unrounded sub-cent fill prices drift a cent or two from it
-    // after a handful of trades and made ledgerMatches reject every demo account's history.
-    const settled = Math.round((quantity * price + Number.EPSILON) * 100) / 100;
-    cash.push({ at, amount: signed < 0 ? settled : -settled });
-  }
-  seen.clear();
-  for (const row of movements) {
-    if (row.settlementStatus && row.settlementStatus !== 'SETTLED') { continue; }
-    if (row.transactionId && seen.has(row.transactionId)) { continue; }
-    if (row.transactionId) { seen.add(row.transactionId); }
-    const at = Date.parse(row.occurredAt), amount = numericValue(row.amount);
-    if (!Number.isFinite(at) || amount === null) { throw new Error('Cash history is incomplete.'); }
-    cash.push({ at, amount });
-  }
-  return { cash, shares };
-}
-
-/** A capped/imported ledger must agree with the current snapshot before claiming history. */
-export function ledgerMatches(snapshot: Portfolio, cash: readonly CashEvent[], shares: readonly ShareEvent[]): boolean {
-  if (!cash.every(e => Number.isFinite(e.at) && Number.isFinite(e.amount))) {
-    return false;
-  }
-  const validShares = shares.every(e => {
-    const finite = Number.isFinite(e.at) && Number.isFinite(e.quantity) && Number.isFinite(e.price);
-    return finite && e.price > 0 && !!e.symbol;
-  });
-  if (!validShares || !snapshot.holdings.every(h => !!h.symbol && Number.isFinite(h.quantity) && h.quantity > 0)) {
-    return false;
-  }
-  if (Math.abs(snapshot.cash - cash.reduce((sum, e) => sum + e.amount, 0)) > .011) { return false; }
-  const quantities = new Map<string, number>();
-  for (const e of shares) { quantities.set(e.symbol, (quantities.get(e.symbol) ?? 0) + e.quantity); }
-  for (const h of snapshot.holdings) { quantities.set(h.symbol, (quantities.get(h.symbol) ?? 0) - h.quantity); }
-  return Number.isFinite(snapshot.cash) && [...quantities.values()].every(q => Number.isFinite(q) && Math.abs(q) < 1e-8);
+  return round(total);
 }
 
 /** The last recorded price at or before the moment, if any. */
@@ -309,52 +222,15 @@ export function priceAt(series: readonly PricePoint[], at: number): number | nul
   return found;
 }
 
-/**
- * Reduce display density using real observations, retaining first/last and each time bucket's
- * opening, closing, lowest and highest values. Never attach an average to an observation's time.
- * Inputs are normalized chronologically by the chart; calculations retain the full source.
- */
-export function plotSeries(points: readonly ValuePoint[], limit: number): ValuePoint[] {
-  if (!Number.isFinite(limit) || limit < 2 || points.length <= limit) { return [...points]; }
-  const count = Math.floor(limit);
-  if (count < 6) { return [points[0], points[points.length - 1]]; }
-  const buckets = Math.max(1, Math.floor((count - 2) / 4));
-  const first = points[0], last = points[points.length - 1];
-  const span = Math.max(1, last.at - first.at);
-  const grouped = new Map<number, ValuePoint[]>();
-  for (const point of points.slice(1, -1)) {
-    const key = Math.min(buckets - 1, Math.floor((point.at - first.at) / span * buckets));
-    const group = grouped.get(key) ?? [];
-    group.push(point);
-    grouped.set(key, group);
-  }
-  const output: ValuePoint[] = [points[0]];
-  for (const group of grouped.values()) {
-    const low = group.reduce((a, b) => b.value < a.value ? b : a);
-    const high = group.reduce((a, b) => b.value > a.value ? b : a);
-    output.push(...[...new Set([group[0], low, high, group[group.length - 1]])].sort((a, b) => a.at - b.at));
-  }
-  output.push(last);
-  return output;
-}
-
-/** A quiet period uses a wider scale without changing any observed values. */
+/** The value scale for a line: its lowest and highest values with a little room above and below. */
 export function valueScale(values: readonly number[]): { low: number; high: number } {
   const max = values.length ? Math.max(...values) : 0;
   const min = values.length ? Math.min(...values) : 0;
   // A flat line still gets a visible band around it: a hundredth of a percent of its value, at least a cent.
   const pad = Math.max((max - min) * 0.12, Math.abs(max) * 0.0001, 0.01);
-  let low = min - pad;
-  let high = max + pad;
-  // Fitting the axis to the values alone magnifies a quiet period: a portfolio that moved a
-  // quarter of a percent would fill the chart, so ordinary price noise reads as a dramatic line.
-  // Half a percent of the account's value is the narrowest band worth drawing; above that the
-  // scale still fits the values, so real moves keep their shape.
-  const minSpan = Math.max(Math.abs(max) * 0.005, 0.02);
-  if (high - low < minSpan) {
-    const middle = (high + low) / 2;
-    low = middle - minSpan / 2;
-    high = middle + minSpan / 2;
-  }
-  return { low, high };
+  return { low: min - pad, high: max + pad };
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
 }

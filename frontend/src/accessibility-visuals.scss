@@ -51,7 +51,3 @@ html .login-candles path { stroke-width: 1; }
   html .login-candles .falling rect { fill: CanvasText !important; }
   html .login-candles path { stroke: CanvasText !important; }
 }
-.chart-focus-target:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-}

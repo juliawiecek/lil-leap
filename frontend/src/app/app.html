@@ -69,8 +69,7 @@
     </div>
   </div>
   }
-  <app-skip-link [target]="profileOpen() ? 'profile-main' : 'auth-main'" />
-  <main id="auth-main" tabindex="-1" class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+  <main class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>
@@ -94,13 +93,12 @@
 
         @if (showTabs()) {
           <div class="auth-tabs" role="tablist" aria-label="Account access">
-            <button id="auth-signin-tab" class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-access-panel" (click)="setAuthMode('signin')">Sign in</button>
-            <button id="auth-signup-tab" class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-access-panel" (click)="setAuthMode('signup')">Create account</button>
+            <button class="auth-tab" [class.active]="authMode() === 'signin'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signin'" aria-controls="auth-form" (click)="setAuthMode('signin')">Sign in</button>
+            <button class="auth-tab" [class.active]="authMode() === 'signup'" type="button" role="tab" [attr.aria-selected]="authMode() === 'signup'" aria-controls="auth-form" (click)="setAuthMode('signup')">Create account</button>
           </div>
         }
 
-        <div id="auth-access-panel" [attr.role]="showTabs() ? 'tabpanel' : null" [attr.aria-labelledby]="showTabs() ? (authMode() === 'signup' ? 'auth-signup-tab' : 'auth-signin-tab') : null">
-        <form #authForm id="auth-form" aria-describedby="auth-form-status" method="post" novalidate (submit)="onSubmit($event, authForm)">
+        <form #authForm id="auth-form" method="post" novalidate (submit)="onSubmit($event, authForm)">
 
 <div class="auth-fields">
           <div class="field-group" [hidden]="authMode() !== 'signup'">
@@ -152,12 +150,11 @@
           <button class="primary-action" type="submit" [disabled]="signingIn()">{{ submitLabel() }}</button>
 
 
-          <p id="auth-form-status" class="form-status" aria-live="polite">{{ formStatus() }}</p>
+          <p class="form-status" aria-live="polite">{{ formStatus() }}</p>
           @if (!showTabs()) {
             <button type="button" class="text-link" (click)="backToSignIn()">Back to sign in</button>
           }
         </form>
-        </div>
       </section>
     </div>
 

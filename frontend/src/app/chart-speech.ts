@@ -8,22 +8,22 @@ import type { ChartPeriod } from './portfolio-history';
 
 /** What each period button is called aloud and by screen readers. */
 export const PERIOD_NAMES: Record<ChartPeriod, string> = {
-  '1D': 'Today, Central time',
-  '1W': 'Last 7 days',
-  '1M': 'Last 30 days',
-  '3M': 'Last 90 days',
-  '1Y': 'Last 365 days',
-  ALL: 'All available recorded history',
+  '1D': '1 day',
+  '1W': '1 week',
+  '1M': '1 month',
+  '3M': '3 months',
+  '1Y': '1 year',
+  ALL: 'All time',
 };
 
 /** Where each period starts, as said in "At the start of the day you had …". */
 const PERIOD_START: Record<ChartPeriod, string> = {
   '1D': 'At the start of the day',
   '1W': 'A week ago',
-  '1M': '30 days ago',
-  '3M': '90 days ago',
-  '1Y': '365 days ago',
-  ALL: 'At the first recorded value',
+  '1M': 'A month ago',
+  '3M': 'Three months ago',
+  '1Y': 'A year ago',
+  ALL: 'When you opened your account',
 };
 
 const DOLLARS = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -49,7 +49,6 @@ export interface ChartSummaryInput {
   balanceHidden: boolean;
   /** Enough points to describe a change. */
   hasHistory: boolean;
-  partial?: boolean;
 }
 
 /**
@@ -60,10 +59,10 @@ export function chartSummary(s: ChartSummaryInput): string {
   if (!s.hasHistory) {
     return `${name}. There is no history for this period yet.`;
   }
-  const percent = s.start > 0 ? ((s.end - s.start) / s.start) * 100 : null;
+  const percent = s.start > 0 ? ((s.end - s.start) / s.start) * 100 : 0;
   if (s.balanceHidden) {
-    return `${name}. Your balance is hidden, so amounts are not read out. ${percent === null ? 'Percentage change is unavailable for this range.' : 'Your portfolio is ' + spokenChange(percent) + '.'}${s.partial ? ' Only part of the requested period has recorded values.' : ''}`;
+    return `${name}. Your balance is hidden, so amounts are not read out. Your portfolio is ${spokenChange(percent)}.`;
   }
-  const opening = s.partial || s.fromOpening ? 'At the first available recorded value' : PERIOD_START[s.period];
-  return `${name}. ${opening} you had ${DOLLARS.format(s.start)}. Now you have ${DOLLARS.format(s.end)}, ${percent === null ? 'percentage change unavailable because the starting value is zero' : spokenChange(percent)}.${s.partial ? ' Earlier history for the requested period is unavailable.' : ''} Account value includes deposits and transfers.`;
+  const opening = s.fromOpening ? 'When you first added money' : PERIOD_START[s.period];
+  return `${name}. ${opening} you had ${DOLLARS.format(s.start)}. Now you have ${DOLLARS.format(s.end)}, ${spokenChange(percent)}.`;
 }

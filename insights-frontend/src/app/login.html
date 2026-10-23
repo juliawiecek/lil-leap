@@ -1,4 +1,3 @@
-<a class="assistive-login-skip" href="#insights-login-main" (click)="$event.preventDefault(); loginMain.focus()">Skip to sign in</a>
 <div class="login-screen">
   <div class="tape" aria-hidden="true">
     <div class="tape-track">
@@ -52,7 +51,7 @@
     <p class="legal">© 2026 NextTrade<span>Internal use only</span><span>Access is limited by role</span></p>
   </section>
 
-  <main #loginMain id="insights-login-main" tabindex="-1" class="auth" aria-labelledby="login-title">
+  <main class="auth" aria-labelledby="login-title">
     <div class="auth-top">
       <span class="secure">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
@@ -64,7 +63,7 @@
         <h2 id="login-title">Staff Sign In</h2>
         <p class="auth-subtitle">Welcome back. Use your analyst or operations account.</p>
       </div>
-      <form method="post" novalidate [attr.aria-describedby]="message() ? 'insights-login-error' : null" (submit)="$event.preventDefault(); signIn(email.value, password.value)">
+      <form method="post" novalidate (submit)="$event.preventDefault(); signIn(email.value, password.value)">
         <div class="field">
           <label for="email">Email address</label>
           <div class="input-shell" [class.invalid]="emailError()">
@@ -119,7 +118,7 @@
           }
         </div>
         @if (message()) {
-          <p id="insights-login-error" class="form-status" role="alert">{{ message() }}</p>
+          <p class="form-status" role="alert">{{ message() }}</p>
         }
         <button class="primary-action" type="submit" [disabled]="pending()" [attr.aria-busy]="pending()">
           @if (pending()) {

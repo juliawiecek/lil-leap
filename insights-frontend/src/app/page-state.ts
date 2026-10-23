@@ -5,7 +5,6 @@ export const PAGE_PATHS: Record<string, string> = {
   Insights: '/insights',
   Clients: '/clients',
   Reports: '/reports',
-  Settings: '/settings',
   'Trade lookup': '/trades',
 };
 export function safeReturnUrl(value: string): string | null {

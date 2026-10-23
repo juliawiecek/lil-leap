@@ -20,7 +20,7 @@ export class AccessTokenGuard implements CanActivate {
     }
     try {
       const session = this.jwtService.verifySessionToken(token);
-      if (!(await this.sessions.isActive(session.userId, session.sessionHash))) { throw new InvalidAccessTokenException(); }
+      if (!(await this.sessions.isActive(session.userId, session.sessionHash))) throw new InvalidAccessTokenException();
       request.userId = session.userId;
     } catch {
       // Fail closed: an unexpected verifier error denies access with 401, never a pass or a 500.

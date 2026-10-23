@@ -12,18 +12,6 @@ const LISTED = [['AAPL', 176.56, 1.85], ['NVDA', 893.12, 2.36], ['MSFT', 424.31,
 const feedWith = () => fakeFeed(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
 const { OrderSubmissionClient, OrderSubmissionError } = await import('../src/app/order-submission-api.ts');
 
-test('sector and heat-map alternatives update from the exact displayed quote subset and sector averages', t => {
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(fakeFeed([]))]);
-  desk.quotes.set(Array.from({ length: 10 }, (_, i) => ({ symbol: `STOCK${i}`, name: `Stock ${i}`, sector: i < 2 ? 'Technology' : 'Other', price: 100, change: i === 0 ? 4 : -2 })));
-  assert.match(desk.sectorDescription(), /Technology: up 1 percent/);
-  assert.deepEqual(desk.sectorTable().rows.find(row => row[0] === 'Technology'), ['Technology', '+1%']);
-  assert.equal(desk.heatTable().rows.length, 9);
-  assert.doesNotMatch(desk.heatDescription(), /STOCK9/);
-  desk.quotes.update(rows => rows.map(q => ({ ...q, change: 3 })));
-  assert.match(desk.sectorDescription(), /Technology: up 3 percent/);
-  assert.deepEqual(desk.heatTable().rows[0], ['STOCK0', '+3%']);
-});
-
 // Mock AuthService that provides an accessToken
 class MockAuthService {
   get accessToken() {
@@ -266,7 +254,7 @@ test('the summary shows real cash and invested shares, sectors come from listed 
   const now = Date.now();
   desk.currentTime.set(new Date(now));
   desk.priceHistory.set([{ at: now - 60000, price: 170 }, { at: now - 30000, price: 175 }]);
-  assert.match(desk.priceLine(), /^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/, 'only the two recorded observations; no invented price before the first');
+  assert.match(desk.priceLine(), /^M0\.0,([\d.]+) L[\d.]+,\1 L[\d.]+,[\d.]+$/, 'flat from the start of the day at the first price, then the recorded prices');
   assert.equal(desk.historyStart(), now - 60000);
   desk.priceHistory.set([]);
   assert.equal(desk.priceLine(), '', 'no invented candles while prices are still being collected');

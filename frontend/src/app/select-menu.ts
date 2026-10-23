@@ -147,8 +147,6 @@ export class SelectMenu {
           break;
         }
       }
-    } else {
-      // Other keys retain their native browser behavior.
     }
   }
 

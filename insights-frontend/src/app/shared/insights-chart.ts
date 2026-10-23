@@ -1,9 +1,5 @@
-import { describeSeries, seriesPoints, seriesTable, type SeriesPoint, type ChartTable } from '../../../../shared/chart-description';
-import { InsightsChartAccess } from './insights-chart-access';
-import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-
-let chartId = 0;
 
 /** One point on the chart. */
 export interface ChartPoint {
@@ -16,9 +12,9 @@ export interface ChartPoint {
 }
 @Component({
   selector: 'app-insights-chart',
-  imports: [DecimalPipe, InsightsChartAccess],
-  template: ` @if (plotPoints().length) {
-      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [style.height.px]="height()" role="img" [attr.aria-label]="label()" tabindex="0" [attr.aria-describedby]="id + '-summary'" (focus)="focusSummary()" (blur)="blurChart()" (keydown)="inspectKey($event)">
+  imports: [DecimalPipe],
+  template: ` @if (points().length) {
+      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [style.height.px]="height()" role="img" [attr.aria-label]="label()">
         @for (tick of yTicks(); track tick) {
           <line x1="54" [attr.x2]="right()" [attr.y1]="y(tick)" [attr.y2]="y(tick)" stroke="var(--line)" />
           <text x="44" [attr.y]="y(tick) + 4" text-anchor="end">
@@ -33,15 +29,18 @@ export interface ChartPoint {
           stroke-width="2.5"
           vector-effect="non-scaling-stroke"
         />
-        @for (p of plotPoints(); track $index) {
+        @for (p of points(); track $index) {
           <circle
             [attr.cx]="x($index)"
             [attr.cy]="y(p.value)"
             r="12"
             fill="transparent"
-            aria-hidden="true"
+            tabindex="0"
+            [attr.aria-label]="p.label + ': ' + prefix() + p.value + (p.note ? ', ' + p.note : '')"
             (mouseenter)="active.set($index)"
             (mouseleave)="active.set(null)"
+            (focus)="active.set($index)"
+            (blur)="active.set(null)"
           >
             <title>{{ p.label }}: {{ prefix() }}{{ p.value | number: '1.0-2' }}</title>
           </circle>
@@ -55,13 +54,13 @@ export interface ChartPoint {
             <text
               [attr.x]="x(i)"
               [attr.y]="height() - 9"
-              [attr.text-anchor]="i === 0 ? 'start' : i === plotPoints().length - 1 ? 'end' : 'middle'"
+              [attr.text-anchor]="i === 0 ? 'start' : i === points().length - 1 ? 'end' : 'middle'"
             >
-              {{ shortLabel(plotPoints()[i].label) }}
+              {{ shortLabel(points()[i].label) }}
             </text>
           }
         }
-        @if (active() !== null && plotPoints()[active()!]; as p) {
+        @if (active() !== null && points()[active()!]; as p) {
           <circle
             [attr.cx]="x(active()!)"
             [attr.cy]="y(p.value)"
@@ -72,7 +71,7 @@ export interface ChartPoint {
         }
       </svg>
       <div class="chart-readout" aria-live="polite">
-        @if (active() !== null && plotPoints()[active()!]; as p) {
+        @if (active() !== null && points()[active()!]; as p) {
           <span>{{ p.label }}</span>
           @if (p.note) {
             <span class="note">{{ p.note }}</span>
@@ -87,11 +86,9 @@ export interface ChartPoint {
       </div>
     } @else {
       <div class="empty">No observations in this period.</div>
-    }
-    <app-insights-chart-access #access [id]="id" [label]="label()" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="context() + label()" />`,
+    }`,
   styles: [
     `
-      svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
       :host {
         display: block;
         min-width: 0;
@@ -140,48 +137,6 @@ export interface ChartPoint {
   ],
 })
 export class InsightsChart {
-  readonly id = `insights-chart-${++chartId}`;
-  readonly context = input('');
-  readonly access = viewChild(InsightsChartAccess);
-  readonly validPoints = computed(() => this.points().filter(p => Number.isFinite(p.value) && (p.at === undefined || Number.isFinite(p.at))));
-  readonly sourceTimed = computed(() => this.validPoints().length > 1 && this.validPoints().every(p => p.at !== undefined));
-  readonly dated = computed(() => this.sourceTimed() || this.validPoints().every(p => /^\d{4}-\d{2}-\d{2}(?:T|$)/.test(p.label) && Number.isFinite(Date.parse(p.label))));
-  /** Normalize once so timestamps, order details, paths and alternatives stay together. */
-  readonly dataPoints = computed(() => seriesPoints(this.validPoints().map((p, index) => ({
-    ...p,
-    at: this.sourceTimed() ? p.at! : this.dated() ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(p.label) ? p.label + 'T12:00:00Z' : p.label) : index,
-  }))) as (SeriesPoint & { note?: string })[]);
-  readonly plotPoints = computed(() => this.dataPoints().map(p => ({
-    label: p.label!, value: p.value,
-    ...(this.sourceTimed() ? { at: p.at } : {}),
-    ...(p.note ? { note: p.note } : {}),
-  })));
-  readonly valueOptions = computed(() => ({ name: this.label(), currency: this.prefix() === '$' ? 'USD' : undefined,
-    unit: this.prefix() === '' ? this.valueLabel().toLowerCase().includes('order') ? 'orders' : 'trades' : undefined,
-    categorical: !this.dated() }));
-  readonly description = computed(() => describeSeries(this.dataPoints(), this.valueOptions())
-    + this.plotPoints().filter(p => p.note).map(p => ` ${p.label}: ${p.note}.`).join(''));
-  readonly dataTable = computed(() => this.withOrderDetails(seriesTable(this.dataPoints(), this.valueOptions(), !this.sourceTimed(), this.valueOptions().unit === 'trades')));
-  readonly allData = computed(() => this.withOrderDetails(seriesTable(this.dataPoints(), this.valueOptions(), false)));
-  private withOrderDetails(table: ChartTable): ChartTable {
-    if (this.sourceTimed()) { table = { ...table, columns: ['Time (Central)', ...table.columns.slice(1)] }; }
-    if (table.grouped || !this.plotPoints().some(p => p.note)) { return table; }
-    return { ...table, columns: [...table.columns, 'Order details'],
-      rows: table.rows.map((row, index) => [...row, this.plotPoints()[index]?.note ?? '']) };
-  }
-  focusSummary(): void { this.access()?.focusSummary(); }
-  blurChart(): void { this.active.set(null); this.access()?.focused.set(false); }
-  inspectKey(event: KeyboardEvent): void {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) { return; }
-    event.preventDefault();
-    if (event.key === 'Escape') { this.active.set(null); return; }
-    const last = this.plotPoints().length - 1;
-    if (last < 0) { return; }
-    const current = this.active() ?? (event.key === 'ArrowLeft' ? last + 1 : -1);
-    this.active.set(event.key === 'Home' ? 0 : event.key === 'End' ? last : Math.max(0, Math.min(last, current + (event.key === 'ArrowLeft' ? -1 : 1))));
-  }
-
-
   readonly active = signal<number | null>(null);
   /** Drawing width in pixels, kept equal to the element's width so lines and labels are never stretched. */
   readonly width = signal(640);
@@ -211,7 +166,7 @@ export class InsightsChart {
     });
   }
   readonly tickIndices = computed(() => {
-    const last = this.plotPoints().length - 1;
+    const last = this.points().length - 1;
     return [...new Set([0, Math.round(last / 3), Math.round((last * 2) / 3), last])].filter(
       (i) => i >= 0,
     );
@@ -234,11 +189,11 @@ export class InsightsChart {
   readonly valueLabel = input('');
   readonly label = input('Trading volume over time');
   /** Text under the chart until a point is hovered or focused. */
-  readonly hint = input('Hover a point or use the arrow keys on the chart to explore values');
+  readonly hint = input('Hover or focus a point to explore values');
   readonly prefix = input('$');
   /** Gap between y-axis lines: a round number (1, 2, 2.5 or 5 times a power of ten), at least 1 for whole counts. */
   readonly step = computed(() => {
-    const values = this.plotPoints().map((p) => p.value);
+    const values = this.points().map((p) => p.value);
     const top = Math.max(1, ...values);
     const raw = top / 4;
     const power = 10 ** Math.floor(Math.log10(raw));
@@ -247,7 +202,7 @@ export class InsightsChart {
   });
   /** Top of the scale: one step above the largest value, so the line never touches the top edge. */
   readonly max = computed(() => {
-    const top = Math.max(0, ...this.plotPoints().map((p) => p.value));
+    const top = Math.max(0, ...this.points().map((p) => p.value));
     return (Math.floor(top / this.step()) + 1) * this.step();
   });
   /** Y-axis values from zero to the top of the scale, one per step, with no repeats. */
@@ -271,16 +226,16 @@ export class InsightsChart {
     return this.divisor() === 1000 ? 'K' : '';
   });
   /** True when every point has a time, so points sit at their real times instead of evenly apart. */
-  readonly timed = computed(() => this.plotPoints().length > 1 && this.plotPoints().every((p) => p.at !== undefined));
+  readonly timed = computed(() => this.points().length > 1 && this.points().every((p) => p.at !== undefined));
   x(i: number) {
     if (this.timed()) {
-      return this.xAt(this.plotPoints()[i].at!);
+      return this.xAt(this.points()[i].at!);
     }
-    return 54 + (i / Math.max(1, this.plotPoints().length - 1)) * (this.right() - 54);
+    return 54 + (i / Math.max(1, this.points().length - 1)) * (this.right() - 54);
   }
   /** Horizontal position of a time, between the first and last timed points. */
   xAt(at: number) {
-    const points = this.plotPoints();
+    const points = this.points();
     const first = points[0]?.at ?? 0;
     const span = (points.at(-1)?.at ?? first) - first || 1;
     return 54 + ((at - first) / span) * (this.right() - 54);
@@ -297,13 +252,13 @@ export class InsightsChart {
   }
   /** A stepped line: a running total holds level, then rises at the point where it changed. */
   readonly path = computed(() =>
-    this.plotPoints()
+    this.points()
       .map((p, i, all) =>
         i ? `L${this.x(i)},${this.y(all[i - 1].value)} L${this.x(i)},${this.y(p.value)}` : `M${this.x(i)},${this.y(p.value)}`,
       )
       .join(' '),
   );
   readonly area = computed(
-    () => this.path() + ` L${this.x(this.plotPoints().length - 1)},${this.bottom()} L54,${this.bottom()} Z`,
+    () => this.path() + ` L${this.x(this.points().length - 1)},${this.bottom()} L54,${this.bottom()} Z`,
   );
 }

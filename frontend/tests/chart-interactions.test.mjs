@@ -43,9 +43,6 @@ test('SVG touch inspection, keyboard navigation, resize and reduced motion retai
   const svg = fixture.nativeElement.querySelector('svg');
   const tooltip = fixture.nativeElement.querySelector('.tooltip');
   const line = svg.querySelector('[data-line]');
-  fixture.componentRef.setInput('windowSeconds', 3600);
-  fixture.detectChanges();
-  assert.match(chart.description(), /last 3600 seconds/);
   const capture = t.mock.method(svg, 'setPointerCapture', (id) => id);
   svg.dispatchEvent(
     new browser.PointerEvent('pointerdown', { clientX: 16, pointerType: 'touch', pointerId: 7 }),
@@ -82,12 +79,8 @@ test('SVG touch inspection, keyboard navigation, resize and reduced motion retai
   svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: 400 }));
   assert.equal(tooltip.hidden, false);
   svg.dispatchEvent(new browser.PointerEvent('pointerleave'));
-  chart.setPerformance(120, 100);
-  assert.deepEqual(chart.dataTable().references, [{ label: 'Session open', value: '$100.00' }]);
   chart.setHistory([]);
   fixture.detectChanges();
-  assert.deepEqual(chart.dataTable().references, [], 'clearing a security must remove its opening-price reference');
-  assert.equal(chart.performance(), 'neutral');
   svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: 16 }));
   svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));
   assert.equal(line.getAttribute('d'), '');
@@ -112,58 +105,6 @@ test('stock chart skips browser observers during server rendering', async (t) =>
   ]);
   assert.equal(env.observers.length, 0);
   assert.equal(fixture.nativeElement.querySelector('[data-line]').getAttribute('d'), null);
-});
-
-test('portfolio loading hides the old plot and values until its new period is ready', async t => {
-  environment(t);
-  const at = Date.parse('2026-10-21T14:00:00Z');
-  const fixture = await render(t, PortfolioChart, { points: [{ at, value: 100 }, { at: at + 1000, value: 110 }] });
-  assert.ok(fixture.nativeElement.querySelector('svg'));
-  fixture.componentRef.setInput('loading', true);
-  fixture.componentRef.setInput('period', '1W'); fixture.detectChanges();
-  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]'), null);
-  assert.match(fixture.componentInstance.description(), /loading/);
-  assert.deepEqual(fixture.componentInstance.dataTable().rows, []);
-  fixture.componentRef.setInput('points', [{ at, value: 200 }, { at: at + 1000, value: 220 }]);
-  fixture.componentRef.setInput('loading', false); fixture.detectChanges();
-  assert.ok(fixture.nativeElement.querySelector('svg'));
-  assert.match(fixture.componentInstance.description(), /\$200\.00.*\$220\.00/);
-  assert.deepEqual(fixture.componentInstance.dataTable().rows.map(row => row[1]), ['$200.00', '$220.00']);
-});
-
-test('trade charts name the selected stock in their image, summary and table', async t => {
-  environment(t);
-  const at = Date.parse('2026-10-21T14:00:00Z');
-  const fixture = await render(t, PortfolioChart, {
-    subject: 'AAPL price', points: [{ at, value: 100 }, { at: at + 1000, value: 110 }],
-  });
-  const chart = fixture.componentInstance;
-  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]').getAttribute('aria-label'), 'AAPL price chart');
-  assert.match(chart.description(), /AAPL price/);
-  assert.equal(chart.chartSeries().label, 'AAPL price');
-  const toggle = [...fixture.nativeElement.querySelectorAll('button')].find(b => b.textContent.includes('Show as table'));
-  toggle.click(); fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('caption').textContent, /AAPL price/);
-  fixture.componentRef.setInput('subject', 'MSFT price'); fixture.detectChanges();
-  assert.match(chart.description(), /MSFT price/);
-  assert.match(fixture.nativeElement.querySelector('caption').textContent, /MSFT price/);
-});
-
-test('recent-hour alternatives retain the drawn full-period baseline and redact it with hidden balances', async t => {
-  environment(t);
-  const at = Date.parse('2026-10-21T14:00:00Z');
-  const fixture = await render(t, PortfolioChart, { points: [{ at, value: 100 }, { at: at + 5400000, value: 110 }, { at: at + 7200000, value: 120 }] });
-  const chart = fixture.componentInstance;
-  assert.equal(chart.dataTable().rows.length, 2, 'only the recent hour is displayed');
-  assert.deepEqual(chart.placed().map(p => p.x), [0, 800], 'the available half hour fills the plot');
-  assert.equal(fixture.nativeElement.querySelector('.line').getAttribute('d'), chart.path());
-  assert.equal(fixture.nativeElement.querySelector('.recorded-range'), null);
-  assert.equal(fixture.nativeElement.querySelector('.performance-label'), null);
-  assert.deepEqual(chart.dataTable().references, [{ label: 'Period starting value reference', value: '$100.00' }]);
-  assert.match(chart.description(), /from \$110\.00.*\$120\.00.*reference line.*\$100\.00/);
-  fixture.componentRef.setInput('balanceHidden', true); fixture.detectChanges();
-  assert.deepEqual(chart.dataTable().references, []);
-  assert.doesNotMatch(chart.description(), /100|110|120/);
 });
 
 test('realtime wrapper seeds history, changes its sample clock and rejects older live observations', async (t) => {
@@ -270,7 +211,7 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   assert.equal(chart.baselineY(), 100);
   assert.equal(chart.end().value, 0);
   assert.equal(chart.labelLeft(), 0);
-  assert.equal(fixture.nativeElement.querySelector('svg[role="img"]'), null);
+  assert.equal(fixture.nativeElement.querySelector('svg'), null);
   const scrubbed = [];
   chart.scrub.subscribe((point) => scrubbed.push(point));
   chart.scrubKey(new browser.KeyboardEvent('keydown', { key: 'Home' }));
