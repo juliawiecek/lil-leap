@@ -4,6 +4,7 @@ import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
 import { ColourModeStore } from './colour-mode';
 import { AssistiveSettings } from './assistive-tools';
+import { LivePricesSettingsCard } from './live-prices-settings';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds
@@ -13,7 +14,7 @@ import { AssistiveSettings } from './assistive-tools';
  */
 @Component({
   selector: 'app-accessibility-settings',
-  imports: [BriefingSettingsCard, SwitchScanSettings, AssistiveSettings],
+  imports: [BriefingSettingsCard, SwitchScanSettings, AssistiveSettings, LivePricesSettingsCard],
   template: `
     <section class="a11y" aria-labelledby="accessibility-settings-title" data-scan-group="Accessibility">
       <div class="a11y-intro">
@@ -46,6 +47,7 @@ import { AssistiveSettings } from './assistive-tools';
         </fieldset>
         <app-briefing-settings />
         <app-switch-scan-settings />
+        <app-live-prices-settings />
         <div class="a11y-card">
           <span class="a11y-text"
             ><b>Keyboard shortcuts</b><small>Every shortcut NextTrade understands. Press <kbd>?</kbd> anywhere to open the list.</small></span

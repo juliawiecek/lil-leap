@@ -14,6 +14,11 @@ export interface AssistiveOptions {
 const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="tab"], [role="img"], [data-a11y-read]';
 const INFORMATION = 'h1, h2, h3, p, dt, dd, td, th, output, [data-a11y-read]';
 const editable = (element: Element | null) => !!element?.matches('input, textarea, select, [contenteditable="true"]');
+/**
+ * A novalidate form marked data-a11y-app-validation checks itself and links its own messages to
+ * its fields (aria-invalid, aria-describedby), so the browser's wording never replaces the app's.
+ */
+const appValidated = (form: HTMLFormElement | null | undefined) => !!form?.noValidate && form.hasAttribute('data-a11y-app-validation');
 const visible = (element: Element) => !element.closest('[hidden], [inert], [aria-hidden="true"]') &&
   element.ownerDocument.defaultView?.getComputedStyle(element).display !== 'none';
 
@@ -257,7 +262,7 @@ export class AssistiveController {
   }
   private invalid(event: Event): void {
     const field = event.target as HTMLInputElement;
-    if (!field.setAttribute || !field.validationMessage) return;
+    if (!field.setAttribute || !field.validationMessage || appValidated(field.form)) return;
     event.preventDefault();
     let id = field.getAttribute('data-a11y-error');
     if (!id) { id = `a11y-field-error-${++this.errorId}`; field.setAttribute('data-a11y-error', id); }
@@ -289,7 +294,7 @@ export class AssistiveController {
   }
   private submit(event: Event): void {
     const form = event.target as HTMLFormElement;
-    if (form.tagName !== 'FORM') return;
+    if (form.tagName !== 'FORM' || appValidated(form)) return;
     if (!form.checkValidity()) {
       event.preventDefault(); event.stopImmediatePropagation();
       form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); return;

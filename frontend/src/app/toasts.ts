@@ -41,9 +41,10 @@ export class ToastService {
   selector: 'app-toasts',
   imports: [StatusBadge],
   template: `
-    <section class="toasts" aria-live="polite" aria-label="Order updates">
+    <!-- Not a live region (PS-21): the dashboards announce each order step once through the live announcer. -->
+    <section class="toasts" aria-label="Order updates">
       @for (toast of service.toasts(); track toast.id) {
-        <div class="toast" [class.rejected]="toast.kind === 'rejected'" [attr.role]="toast.kind === 'rejected' ? 'alert' : 'status'">
+        <div class="toast" [class.rejected]="toast.kind === 'rejected'">
           <div>
             <strong><app-status-badge [value]="toast.kind" /> · {{ toast.title }}</strong>
             @if (toast.detail) {
@@ -52,7 +53,7 @@ export class ToastService {
           </div>
           <div class="actions">
             <button type="button" class="view" (click)="view.emit(); service.dismiss(toast.id)">View</button>
-            <button type="button" class="close" aria-label="Dismiss" (click)="service.dismiss(toast.id)">×</button>
+            <button type="button" class="close" [attr.aria-label]="'Dismiss ' + toast.title" (click)="service.dismiss(toast.id)">×</button>
           </div>
         </div>
       }
