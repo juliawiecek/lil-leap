@@ -30,7 +30,9 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   const fixture = await render(t, InsightsPage, {}, [{ provide: LIVE_REPORTS, useValue: service() }]);
   await settle(); fixture.detectChanges();
   const host = fixture.nativeElement;
+  // The Jenkins smoke and e2e tests read these four by test id.
   assert.equal(host.querySelector('[data-testid="summary-accounts"]').textContent.trim(), '7');
+  assert.equal(host.querySelector('[data-testid="summary-fills"]').textContent.trim(), '9');
   assert.equal(host.querySelector('[data-testid="summary-orders"]').textContent.trim(), '12');
   assert.equal(host.querySelector('[data-testid="summary-value"]').textContent.trim(), '$1,234.50');
   assert.match(host.textContent, /Placed an order today/);

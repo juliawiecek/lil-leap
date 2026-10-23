@@ -10,7 +10,7 @@
     @if (summary(); as s) {
       <p class="sentence">
         <span class="lead-in">So far today</span>
-        <span><b class="mono">{{ count(s.fills) }}</b> {{ plural(s.fills, 'fill') }} from <b class="mono">{{ count(s.orders) }}</b> {{ plural(s.orders, 'order') }}@if (ranked()[0]; as leader) {<span class="sep" aria-hidden="true">·</span><b>{{ leader.instrument }}</b> most traded}</span>
+        <span><b class="mono" data-testid="summary-fills">{{ count(s.fills) }}</b> {{ plural(s.fills, 'fill') }} from <b class="mono">{{ count(s.orders) }}</b> {{ plural(s.orders, 'order') }}@if (ranked()[0]; as leader) {<span class="sep" aria-hidden="true">·</span><b>{{ leader.instrument }}</b> most traded}</span>
       </p>
     }
   </div>
