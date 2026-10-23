@@ -45,6 +45,8 @@ const MESSAGES: Record<string, string> = {
     'An account with this email already exists. Go back to sign up with a different email, or sign in.',
   INSUFFICIENT_INVESTABLE_ASSETS:
     'A minimum of $5,000 in investable assets is required to open an account. Please review your net worth and income.',
+  INITIAL_DEPOSIT_ABOVE_LIQUIDITY:
+    'Your initial deposit cannot be more than your liquidity position. Go back and lower the deposit or update your liquidity position.',
   INVALID_REQUEST: 'Some details were not accepted. Please review your information and try again.',
   INVALID_RESET_TOKEN: 'This reset link is invalid, expired or already used. Please request a new one.',
   PROFILE_ACCESS_DENIED: 'You can only view your own profile.',

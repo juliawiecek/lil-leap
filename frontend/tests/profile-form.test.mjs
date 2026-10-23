@@ -112,6 +112,29 @@ test('validation rejects malformed money and phones with too few digits', async 
   assert.match(salary.validationMessage, /up to two decimal places/);
 });
 
+test('the initial deposit cannot be more than the liquidity position', async t => {
+  const fixture = await render(t, InvestorProfile);
+  const profile = fixture.componentInstance;
+  profile.goTo(1); fixture.detectChanges();
+  const deposit = fixture.nativeElement.querySelector('#profile-initial_deposit');
+  input(fixture, '#profile-liquidity_position', '10000');
+  input(fixture, '#profile-initial_deposit', '5000000');
+  submit(fixture);
+  assert.equal(profile.step(), 1, 'the step does not advance');
+  assert.equal(deposit.validationMessage, "Your initial deposit can't be more than your liquidity position ($10,000.00).");
+  assert.equal(profile.errors().initial_deposit, deposit.validationMessage, 'the message shows under the field');
+  // Compared in whole cents, so one cent over is caught and an equal amount is allowed.
+  input(fixture, '#profile-initial_deposit', '10000.01'); submit(fixture);
+  assert.match(deposit.validationMessage, /can't be more than your liquidity position/);
+  input(fixture, '#profile-initial_deposit', '10,000.00'); submit(fixture);
+  assert.doesNotMatch(deposit.validationMessage, /liquidity position/);
+  input(fixture, '#profile-initial_deposit', '8000'); submit(fixture);
+  assert.doesNotMatch(deposit.validationMessage, /liquidity position/);
+  // A malformed deposit keeps its own message rather than this one.
+  deposit.value = '12.345'; submit(fixture);
+  assert.match(deposit.validationMessage, /up to two decimal places/);
+});
+
 test('formatting falls back to the end when a control has no caret position', async t => {
   const fixture = await render(t, InvestorProfile);
   const profile = fixture.componentInstance;
