@@ -56,23 +56,6 @@
   </div>
 </section>
 
-@if (ranked().length) {
-  <div class="tape" aria-label="Most traded today">
-    <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
-    <div class="tape-window" [class.still]="ranked().length < 4">
-      <div class="tape-track" [class.still]="ranked().length < 4">
-        @for (copy of ranked().length < 4 ? [0] : [0, 1]; track copy) {
-          <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
-            @for (row of ranked(); track row.instrument) {
-              <li><b>{{ row.instrument }}</b><span class="mono">{{ count(row.tradeCount) }}</span> {{ plural(row.tradeCount, 'trade') }}<span class="share mono">{{ row.share.toFixed(0) }}%</span></li>
-            }
-          </ul>
-        }
-      </div>
-    </div>
-  </div>
-}
-
 <div class="sections">
   <section class="area" aria-labelledby="trend-title">
     <div class="area-heading">

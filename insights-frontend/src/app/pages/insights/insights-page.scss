@@ -215,108 +215,6 @@
   transition: width 0.6s ease;
 }
 
-/* Most traded tape */
-:host .tape {
-  display: flex;
-  align-items: center;
-  height: 38px;
-  margin: 0 -32px;
-  border-bottom: 1px solid #1a1d1a;
-  background: #070807;
-  overflow: hidden;
-}
-:host .tape-live {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px 0 32px;
-  color: #94c973;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-:host .tape-live i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #94c973;
-  animation: insights-pulse 2.2s ease-out infinite;
-}
-:host .tape-window {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-}
-/* A short list sits still, so it does not need the fade that scrolling names slide in through. */
-:host .tape-window.still {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-:host .tape-track {
-  display: flex;
-  width: max-content;
-  animation: insights-tape 40s linear infinite;
-}
-:host .tape:hover .tape-track {
-  animation-play-state: paused;
-}
-:host .tape ul {
-  display: flex;
-  gap: 28px;
-  margin: 0;
-  padding: 0 14px;
-  list-style: none;
-}
-:host .tape li {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  color: #7e8279;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-:host .tape li b {
-  color: #f2f0e9;
-  font-weight: 800;
-}
-:host .tape li .mono {
-  color: #d6d4cc;
-}
-:host .tape li .share {
-  margin-left: 4px;
-  color: #858980;
-  font-size: 11.5px;
-}
-:host .tape-track.still {
-  animation: none;
-}
-/* Fewer than four stocks: no ticker, just the stocks laid out evenly with a hairline between them. */
-:host .tape-track.still ul {
-  gap: 0;
-  padding: 0;
-}
-:host .tape-track.still li {
-  padding: 0 28px;
-  border-left: 1px solid #1f231f;
-}
-:host .tape-track.still li:first-child {
-  padding-left: 12px;
-  border-left: 0;
-}
-@keyframes insights-tape {
-  to {
-    transform: translateX(-50%);
-  }
-}
-@keyframes insights-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.5); }
-  70% { box-shadow: 0 0 0 5px rgba(148, 201, 115, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
-}
 
 /* Two sections, each on its own lighter surface, with the page showing between them */
 :host .sections {
@@ -507,9 +405,6 @@
     --band-inset: 16px;
     padding: 20px 16px;
   }
-  :host .tape {
-    margin: 0 -16px;
-  }
   :host .hero-figure b {
     font-size: 40px;
   }
@@ -518,14 +413,5 @@
   }
   :host .ring {
     display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  :host .tape-track,
-  :host .tape-live i {
-    animation: none;
-  }
-  :host .tape-window {
-    overflow-x: auto;
   }
 }

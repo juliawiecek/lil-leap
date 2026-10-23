@@ -57,40 +57,6 @@
   background: var(--nt-green);
 }
 
-/* Most traded: price-style chips, like the trading app's ticker */
-:host .tape {
-  height: 44px;
-  margin: 0 0 16px;
-  border: 0;
-  background: none;
-}
-:host .tape-live {
-  @include nv.chip;
-  margin-right: 10px;
-  padding: 5px 12px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-:host .tape ul {
-  gap: 8px;
-}
-:host .tape li,
-:host .tape-track.still li,
-:host .tape-track.still li:first-child {
-  align-items: center;
-  padding: 6px 12px;
-  border: 1px solid var(--nv-border);
-  border-radius: 999px;
-  background: var(--nv-surface-raised);
-}
-:host .tape li .mono {
-  font-family: var(--font-ui);
-  font-weight: 700;
-}
-:host .tape-track.still ul {
-  gap: 8px;
-}
-
 /* The two sections as cards */
 :host .sections {
   margin-top: 0;
@@ -175,9 +141,6 @@
   :host .glance {
     margin: 0 0 16px;
     padding: 22px 18px;
-  }
-  :host .tape {
-    margin: 0 0 16px;
   }
   :host .hero-figure b {
     font-size: 44px;
