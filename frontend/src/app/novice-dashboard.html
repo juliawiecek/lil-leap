@@ -150,7 +150,7 @@
               @if (showBalance()) {
                 <app-portfolio-chart
                   data-scan-group="Portfolio chart"
-                  [points]="chartPoints()"
+                  [points]="chartPoints()" [fills]="chartFills()"
                   [range]="chartSpan()"
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"

@@ -22,11 +22,13 @@ import {
   CHART_PERIODS,
   ChartPeriod,
   ChartRange,
+  ShareEvent,
   ValuePoint,
   startValue,
   valueScale,
 } from './portfolio-history';
-import { centralTime } from './app-time';
+import { APP_TIME_ZONE, centralTime } from './app-time';
+import { chartSound, pointAnnouncement, stepIndex, type ChartSound, type SpokenTrade } from './chart-keyboard';
 import { PERIOD_NAMES } from './chart-speech';
 import {
   EMERALD_AREA,
@@ -95,7 +97,7 @@ let nextPortfolioChartId = 0;
           role="img"
           [attr.data-performance]="tone() === 'flat' ? 'neutral' : tone() === 'down' ? 'loss' : 'gain'"
           tabindex="0"
-          aria-label="Portfolio value chart" [appChartFocus]="access"
+          aria-label="Portfolio value chart" [appChartFocus]="access" [chartSound]="sound"
           (pointermove)="scrubAt($event)"
           (pointerdown)="scrubAt($event)"
           (pointerleave)="endScrub()"
@@ -365,6 +367,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly gradientId = `portfolio-gradient-${++nextPortfolioChartId}`;
   readonly clipId = `portfolio-clip-${nextPortfolioChartId}`;
   private readonly svg = viewChild<ElementRef<SVGSVGElement>>('svg');
+  private readonly access = viewChild<ChartAccess>('access');
   readonly #injector = inject(Injector);
   readonly #zone = inject(NgZone, { optional: true });
   #animation: SvgRangeAnimation | undefined;
@@ -474,6 +477,13 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly delayed = input(false);
   readonly balanceHidden = input(false);
   readonly accountKey = input('');
+  /** The account's fills (PS-26): said when the cursor reaches them and clicked when the chart is played. */
+  readonly fills = input<readonly ShareEvent[]>([]);
+  readonly trades = computed<SpokenTrade[]>(() => this.fills().map(f => ({
+    side: f.quantity < 0 ? 'SELL' : 'BUY', quantity: Math.abs(f.quantity), price: f.price, at: f.at, symbol: f.symbol,
+  })));
+  /** What Space plays: the line shown, with each fill as a click. */
+  readonly sound = (): ChartSound => chartSound(this.displayPoints(), this.trades());
   readonly accessiblePoints = computed(() => this.loading() || this.error() ? [] : this.displayPoints());
   readonly description = computed(() => describeSeries(this.accessiblePoints(), {
     name: 'Portfolio value', period: this.focused() ? 'most recent hour' : PERIOD_WORDS[this.period()], currency: 'USD', hidden: this.balanceHidden(),
@@ -631,25 +641,29 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     this.#select(nearest(this.placed(), x));
   }
 
-  /** Left and right arrows step along the line; Home and End jump to its ends. */
+  /**
+   * Left and right arrows step along the line; Home and End jump to its ends; PageUp and PageDown
+   * move a tenth of it. Each step is announced with its date, value, change and any fill (PS-26).
+   */
   scrubKey(event: KeyboardEvent): void {
     this.#animation?.finish();
-    const last = this.placed().length - 1;
-    const current = this.#active() < 0 ? last : this.#active();
-    const moves: Record<string, number> = {
-      ArrowLeft: current - 1,
-      ArrowRight: current + 1,
-      Home: 0,
-      End: last,
-    };
-    if (event.key in moves) {
+    const next = stepIndex(event.key, this.#active(), this.placed().length);
+    if (next !== null) {
       event.preventDefault();
-      this.#select(Math.max(0, Math.min(last, moves[event.key])));
+      this.#select(next);
+      this.access()?.announce(this.pointText(next));
       return;
     }
     if (event.key === 'Escape') {
       this.endScrub();
     }
+  }
+
+  /** "Oct 14, 2:05 PM, $25,450.09, up 0.12 percent." in Central time, as the cursor label shows. */
+  pointText(index: number): string {
+    return pointAnnouncement(this.placed(), index, {
+      currency: 'USD', timeZone: APP_TIME_ZONE, hidden: this.balanceHidden(), trades: this.trades(),
+    });
   }
 
   endScrub(): void {
