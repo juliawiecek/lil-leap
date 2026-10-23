@@ -2,7 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { LIVE_REPORTS, type ActivityPoint, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
 import { InsightsChart } from '../../shared/insights-chart';
-import { centralTime, twelveHour } from '../../shared/app-time';
+import { centralHour, centralTime, twelveHour } from '../../shared/app-time';
 
 const COUNT = new Intl.NumberFormat('en-US');
 /** How often the page re-reads today's figures, in milliseconds. */
@@ -47,8 +47,8 @@ export class InsightsPage implements OnDestroy {
   });
   /** The busiest stock's trade count, so each row's bar is drawn relative to it. */
   readonly topMax = computed(() => Math.max(1, ...this.top().map((row) => row.tradeCount)));
-  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the analyst's own clock. */
-  readonly greeting = signal(greetingFor(new Date().getHours()));
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock shown in the top bar. */
+  readonly greeting = signal(greetingFor(centralHour()));
   /** Running total of today's trades, hour by hour, for the line under the traded value. */
   readonly cumulativePoints = computed(() => {
     // Running total up to the current hour; later hours have not happened yet, so they are left off.
@@ -129,6 +129,8 @@ export class InsightsPage implements OnDestroy {
     if (this.destroyed) {
       return;
     }
+    // A page left open keeps its greeting in step with the clock.
+    this.greeting.set(greetingFor(centralHour()));
     if (summary.status === 'fulfilled') {
       this.summary.set(summary.value);
     }
@@ -164,6 +166,7 @@ export class InsightsPage implements OnDestroy {
   }
 }
 
-function greetingFor(hour: number): string {
+/** The greeting for an hour on the Central clock, 0 to 23. */
+export function greetingFor(hour: number): string {
   return hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 }

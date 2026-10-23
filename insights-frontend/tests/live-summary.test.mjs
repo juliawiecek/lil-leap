@@ -36,6 +36,21 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   assert.deepEqual(page.trendPoints()[14], { label: '14:00', value: 5 });
 });
 
+test('the greeting follows the Central clock, not the computer\'s time zone', async (t) => {
+  const { greetingFor } = await import('../src/app/pages/insights/insights-page.ts');
+  const { centralHour } = await import('../src/app/shared/app-time.ts');
+  assert.deepEqual([0, 11, 12, 17, 18, 23].map(greetingFor),
+    ['Good Morning', 'Good Morning', 'Good Afternoon', 'Good Afternoon', 'Good Evening', 'Good Evening']);
+  // 03:00 UTC on October 23 is still 10 PM on the 22nd in Chicago; 18:28 UTC is 1:28 PM.
+  assert.equal(centralHour(new Date('2026-10-23T03:00:00Z')), 22);
+  assert.equal(centralHour(new Date('2026-10-22T18:28:00Z')), 13);
+  // In standard time Chicago is six hours behind UTC, and midnight is hour 0.
+  assert.equal(centralHour(new Date('2026-01-15T06:00:00Z')), 0);
+  const fixture = await render(t, InsightsPage, {}, [{ provide: LIVE_REPORTS, useValue: service() }]);
+  await settle(); fixture.detectChanges();
+  assert.equal(fixture.componentInstance.greeting(), greetingFor(centralHour()));
+});
+
 test('a day with no trades shows empty states instead of an empty chart', async (t) => {
   const quiet = trend.map((point) => ({ ...point, tradeCount: 0 }));
   const fixture = await render(t, InsightsPage, {}, [

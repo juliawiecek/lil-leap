@@ -178,6 +178,19 @@ test('the client detail shows the summary, traded value and holdings, with a bac
   assert.equal(host.querySelector('.back-link').getAttribute('href'), '/clients');
 });
 
+test('the allocation ring names the largest single holding, even when "Other" is bigger', async (t) => {
+  // One $30 holding and eleven $10 ones: the ring shows six, and the other six ($60) become "Other".
+  const symbols = ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF', 'GGG', 'HHH', 'III', 'JJJ', 'KKK', 'LLL'];
+  const holdings = symbols.map((symbol, i) => ({ symbol, instrumentName: symbol, quantity: 1, averageCost: i ? 10 : 30, costBasis: i ? 10 : 30 }));
+  const { fixture } = await detailPage(t, { detail: async () => ({ ...detail, holdings }) });
+  await settle(); await settle(); fixture.detectChanges();
+  const host = fixture.nativeElement;
+  const legend = [...host.querySelectorAll('.legend li')].map((item) => item.textContent.trim());
+  assert.equal(legend.at(-1), 'Other42.9%', 'the six smallest holdings are grouped');
+  assert.equal(host.querySelector('.ring-value').textContent.trim(), '21%', 'AAA is 30 of 140, not the 60 grouped as Other');
+  assert.match(host.querySelector('.allocation svg').getAttribute('aria-label'), /largest holding 21\.4%/);
+});
+
 test('the orders tab loads once, searches by symbol or order ID, and pages', async (t) => {
   const calls = [];
   const { fixture } = await detailPage(t, { orders: async (id, filters) => { calls.push([id, filters]); return { ...orders, totalPages: 2, totalElements: 30 }; } });

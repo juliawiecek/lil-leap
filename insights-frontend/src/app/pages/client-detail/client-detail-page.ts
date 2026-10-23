@@ -81,7 +81,8 @@ export class ClientDetailPage {
       return arc;
     });
   });
-  readonly largestShare = computed(() => Math.max(0, ...this.allocation().map((slice) => slice.share)));
+  /** The largest single holding's share; slices are largest first, and "Other" groups several holdings, so it never counts. */
+  readonly largestShare = computed(() => this.allocation()[0]?.share ?? 0);
   /** Value bought and sold per stock from the loaded fills, busiest stocks first. */
   readonly flows = computed(() => {
     const perStock = new Map<string, { symbol: string; bought: number; sold: number }>();
