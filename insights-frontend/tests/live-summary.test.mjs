@@ -62,6 +62,19 @@ test('a day with no trades shows empty states instead of an empty chart', async 
   assert.equal(fixture.componentInstance.topMax(), 1, 'bars never divide by zero');
 });
 
+test('one trade reads "1 trade", not "1 trades"', async (t) => {
+  const single = trend.map((point) => ({ ...point, tradeCount: point.hour === '08:00' ? 1 : 0 }));
+  const fixture = await render(t, InsightsPage, {}, [
+    { provide: LIVE_REPORTS, useValue: service({ activityTrend: async () => single }) },
+  ]);
+  await settle(); fixture.detectChanges();
+  const text = fixture.nativeElement.textContent;
+  assert.match(text, /1 trade · Central time/);
+  assert.match(text, /Busiest so far: 8 AM, 1 trade\. /);
+  assert.equal(/1 trades/.test(text), false);
+  assert.match(fixture.nativeElement.querySelector('.bars').getAttribute('aria-label'), /8 AM, 1 trade\.$/);
+});
+
 test('one failed call keeps the other figures and shows only a fixed safe message', async (t) => {
   const fixture = await render(t, InsightsPage, {}, [
     { provide: LIVE_REPORTS, useValue: service({ topInstruments: async () => { throw new Error('password=do-not-display'); } }) },

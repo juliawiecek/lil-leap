@@ -60,10 +60,10 @@
   <section class="area" aria-labelledby="trend-title">
     <div class="area-heading">
       <h2 id="trend-title">Trades by hour</h2>
-      <span class="muted">{{ count(tradesToday()) }} trades · Central time</span>
+      <span class="muted">{{ count(tradesToday()) }} {{ plural(tradesToday(), 'trade') }} · Central time</span>
     </div>
     @if (tradesToday()) {
-      <div class="bars" role="img" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' trades.'">
+      <div class="bars" role="img" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' ' + plural(busiest()?.tradeCount, 'trade') + '.'">
         @for (bar of bars(); track bar.hour) {
           <div class="bar-col" [class.now]="bar.now" [title]="bar.label + ' · ' + bar.count + ' ' + plural(bar.count, 'trade')">
             <span class="bar-count">{{ bar.count || '' }}</span>
@@ -72,7 +72,7 @@
           </div>
         }
       </div>
-      <p class="area-note">Busiest so far: <span class="mono">{{ busiestHour() }}</span>, {{ count(busiest()?.tradeCount) }} trades. The current hour is shown in green.</p>
+      <p class="area-note">Busiest so far: <span class="mono">{{ busiestHour() }}</span>, {{ count(busiest()?.tradeCount) }} {{ plural(busiest()?.tradeCount, 'trade') }}. The current hour is shown in green.</p>
     } @else {
       <div class="empty">
         <app-dashboard-icon name="chart" />
