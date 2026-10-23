@@ -267,15 +267,15 @@ th { color: var(--text-subtle); font-weight: 600; }
 
 /* Buy uses the allocation's periwinkle, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
    and on its Review / Confirm button. Sell on the card is outlined so it doesn't shout. */
-/* Keep an opaque base beneath gradients so switching to the solid hover fill never fades through black. */
+/* Keep an opaque base and the same gradient on hover in every palette. */
 .trade-actions .green-button { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: var(--category-tone-07); }
-.trade-actions .green-button:hover { border-color: var(--periwinkle-light); background: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
+.trade-actions .green-button:hover { border-color: var(--periwinkle-light); background-color: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
 .trade-actions > button:last-child { border: 1px solid var(--loss); background: transparent; color: var(--loss); }
 .trade-actions > button:last-child:hover { border-color: var(--loss); background: var(--loss-wash-01); color: var(--loss-tone-14); }
 .side-picker button:first-child.selected { background: linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: var(--category-tone-07); }
 .side-picker button:last-child.selected { background: linear-gradient(135deg, var(--loss-tone-13), var(--loss-tone-12)); color: var(--loss-tone-11); }
 .green-button.submit-trade { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: var(--category-tone-07); }
-.green-button.submit-trade:hover { border-color: var(--periwinkle-light); background: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
+.green-button.submit-trade:hover { border-color: var(--periwinkle-light); background-color: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
 .green-button.submit-trade.sell { border-color: var(--loss); background: linear-gradient(135deg, var(--loss-tone-13), var(--loss-tone-12)); color: var(--loss-tone-11); }
 .green-button.submit-trade.sell:hover { border-color: var(--loss-tone-09); background: linear-gradient(135deg, var(--loss-tone-10), var(--loss-tone-09)); box-shadow: 0 10px 30px var(--loss-wash-08); }
 

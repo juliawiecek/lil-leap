@@ -6,7 +6,7 @@ import { DashboardIcon } from './dashboard-icon';
   selector: 'app-kpi-tile',
   imports: [DashboardIcon],
   // The value's length lets the stylesheet shrink long figures to fit while short ones stay large.
-  host: { class: 'kpi', '[style.--kpi-chars]': 'value().length' },
+  host: { class: 'kpi', 'data-a11y-read': '', '[attr.data-a11y-label]': 'label()', '[attr.data-a11y-description]': 'value() + ". " + note()', '[style.--kpi-chars]': 'value().length' },
   template: `<span class="kpi-icon"><app-dashboard-icon [name]="icon()" /></span>
     <div>
       <p>{{ label() }}</p>

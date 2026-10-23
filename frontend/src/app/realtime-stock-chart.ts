@@ -33,7 +33,7 @@ import { samplePrices, samplingInterval, type ChartSampleMs } from './stock-char
         min-width: 0;
       }
       app-stock-svg-chart {
-        height: 280px;
+        --stock-chart-height: 280px;
       }
       p {
         color: var(--text-tone-06);

@@ -42,7 +42,7 @@
         <dd>{{ dateTime(trade.filledAt) }}</dd>
       </dl>
     </section>
-    <section class="panel" aria-labelledby="client-title">
+    <section class="panel" aria-labelledby="client-title" data-a11y-sensitive>
       <div class="panel-heading">
         <h2 id="client-title">Client</h2>
         <span class="badge" [class.rejected]="trade.account.status === 'BLOCKED' || trade.account.status === 'CLOSED'">{{ label(trade.account.status) }}</span>
@@ -81,15 +81,15 @@
       <h2 id="trail-title">Recorded steps</h2>
       <span class="badge neutral">{{ trade.events.length }} steps, oldest first</span>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
       <table>
         <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
         <thead>
           <tr>
-            <th>Recorded</th>
-            <th>Record</th>
-            <th>Step</th>
-            <th>Details</th>
+            <th scope="col">Recorded</th>
+            <th scope="col">Record</th>
+            <th scope="col">Step</th>
+            <th scope="col">Details</th>
           </tr>
         </thead>
         <tbody>

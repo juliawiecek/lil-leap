@@ -101,8 +101,8 @@ test('EMA uses the real SMA seed, actual timestamps and full input without mutat
 
 test('VWAP requires reported volume, resets per exchange day and handles zero volume', () => {
   const points = bars(2);
-  points[0].candle.high = points[0].candle.low = points[0].candle.close = 10;
-  points[1].candle.high = points[1].candle.low = points[1].candle.close = 20;
+  points[0].price = points[0].candle.open = points[0].candle.high = points[0].candle.low = points[0].candle.close = 10;
+  points[1].price = points[1].candle.open = points[1].candle.high = points[1].candle.low = points[1].candle.close = 20;
   points[1].candle.volume = 30;
   assert.equal(vwap(points).at(-1).price, 17.5);
   assert.deepEqual(vwap(bars(2, null)), []);

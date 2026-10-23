@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { AppSessionService } from '../app-session.service';
@@ -17,6 +17,8 @@ export class Shell {
   private readonly session = inject(AppSessionService, { optional: true });
   private readonly router = inject(Router, { optional: true });
   readonly mobileNav = signal(false);
+  readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
+  closeNavigation(): void { this.mobileNav.set(false); this.menuButton()?.nativeElement.focus(); }
 
   role() {
     return roleOf(this.auth?.userRole);

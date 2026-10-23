@@ -11,7 +11,7 @@ const HOUR = 3600000;
 const DAY = 24 * HOUR;
 const NOW = Date.parse('2026-10-19T15:00:00Z');
 
-test('every period ends now and starts its own length back; 1W and ALL never before the account opened', () => {
+test('every period ends now and never reaches before account opening', () => {
   const longAgo = NOW - 400 * DAY;
   assert.deepEqual(chartRange('1D', NOW, longAgo), { start: NOW - DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1W', NOW, longAgo), { start: NOW - 7 * DAY, end: NOW, fromOpening: false });
@@ -19,16 +19,15 @@ test('every period ends now and starts its own length back; 1W and ALL never bef
   assert.deepEqual(chartRange('3M', NOW, longAgo), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1Y', NOW, longAgo), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('ALL', NOW, longAgo), { start: longAgo, end: NOW, fromOpening: true });
-  // An account opened three days ago: 1W and ALL start at the opening; a month or more keeps its
-  // full length, at $0 before the account existed.
+  // No period asserts a valuation before the account existed.
   const opened = NOW - 3 * DAY;
   assert.deepEqual(chartRange('1D', NOW, opened), { start: NOW - DAY, end: NOW, fromOpening: false });
   for (const period of ['1W', 'ALL']) {
     assert.deepEqual(chartRange(period, NOW, opened), { start: opened, end: NOW, fromOpening: true }, period);
   }
-  assert.deepEqual(chartRange('1M', NOW, opened), { start: NOW - 30 * DAY, end: NOW, fromOpening: false });
-  assert.deepEqual(chartRange('3M', NOW, opened), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
-  assert.deepEqual(chartRange('1Y', NOW, opened), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('1M', NOW, opened), { start: opened, end: NOW, fromOpening: true });
+  assert.deepEqual(chartRange('3M', NOW, opened), { start: opened, end: NOW, fromOpening: true });
+  assert.deepEqual(chartRange('1Y', NOW, opened), { start: opened, end: NOW, fromOpening: true });
   assert.deepEqual(chartRange('ALL', NOW, null), { start: NOW - DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1W', NOW, NOW + HOUR), { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, 'a future opening is ignored');
   assert.deepEqual([...CHART_PERIODS], ['1D', '1W', '1M', '3M', '1Y', 'ALL']);
@@ -85,9 +84,6 @@ test('the value at each moment is cash then plus each holding at its price then'
   // A moment (1 ms) before each fill as well, so the line steps at it.
   const before = (hours) => hours - 1 / HOUR;
   assert.deepEqual(series.map((p) => [(p.at - opened) / HOUR, p.value]), [
-    [0, 1000],          // only the deposit
-    [before(2), 1000],  // just before the buy
-    [2, 1020],          // 500 cash + 5 shares, no bar closed yet: the next recorded price, 104
     [3, 1020],          // 500 + 5 × 104
     [5, 1040],          // 500 + 5 × 108
     [before(6), 1040],  // just before the sell
@@ -96,7 +92,7 @@ test('the value at each moment is cash then plus each holding at its price then'
     [10, 990],
   ]);
   const live = portfolioSeries(range, cash, shares, prices, 1001.236);
-  assert.equal(live.at(-1).value, 1001.24, 'the line ends at the live value shown above it');
+  assert.equal(live.at(-1).value, 1001.236, 'calculation precision is preserved until formatting');
 });
 
 test('a period that starts after earlier activity still counts it, and only draws inside the period', () => {
@@ -109,14 +105,14 @@ test('a period that starts after earlier activity still counts it, and only draw
   assert.deepEqual(series.map((p) => p.value), [1010, 1020, 1020], 'starts from the price recorded before the period');
   assert.ok(series.every((p) => p.at >= range.start && p.at <= range.end));
   assert.equal(priceAt([], NOW), null);
-  assert.equal(portfolioSeries(range, cash, shares, new Map())[0].value, 1000, 'with no prices at all, the fill price');
+  assert.deepEqual(portfolioSeries(range, cash, shares, new Map()), [], 'a fill is not a substitute for a market price');
 });
 
-test('a month view of a three-day-old account is $0 until the first deposit, then steps up', () => {
+test('a month view of a three-day-old account starts at its actual opening', () => {
   const opened = NOW - 3 * DAY;
   const range = chartRange('1M', NOW, opened);
   const series = portfolioSeries(range, [{ at: opened, amount: 25000 }], [], new Map());
-  assert.deepEqual(series.map((p) => [p.at, p.value]), [[range.start, 0], [opened - 1, 0], [opened, 25000], [NOW, 25000]]);
+  assert.deepEqual(series.map((p) => [p.at, p.value]), [[opened, 25000], [NOW, 25000]]);
   assert.equal(startValue(series), 25000, 'its change is measured from when it held money');
   assert.equal(startValue([{ at: 0, value: 0 }, { at: 1, value: 0 }]), 0);
   assert.equal(startValue([]), 0);

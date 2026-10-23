@@ -1,0 +1,38 @@
+<div class="assistive-settings">
+  <fieldset data-scan-group="Voice assistance">
+    <legend>Voice assistance</legend>
+    <p [id]="prefix + '-voice-help'">Optional browser speech complements your screen reader. Automatic reading starts off. Only installed local voices are offered.</p>
+    @if (!access.supported) { <p role="status">This browser does not support reading aloud. Keyboard and screen-reader access still work.</p> }
+    <label class="check"><input type="checkbox" [checked]="access.settings().enabled" [disabled]="!access.supported" [attr.aria-describedby]="prefix + '-voice-help'" (change)="access.update({ enabled: $any($event.target).checked })" />Enable built-in voice assistance</label>
+    <label class="check"><input type="checkbox" [checked]="access.settings().focus" (change)="access.update({ focus: $any($event.target).checked })" />Speak on keyboard focus</label>
+    <label class="check"><input type="checkbox" [checked]="access.settings().hover" (change)="access.update({ hover: $any($event.target).checked })" />Speak on mouse hover</label>
+    <p>Focus and hover reading require voice assistance. Hover waits for your pointer and skips sensitive account/profile details. Prices are read once, never on every tick.</p>
+    <div class="fields">
+      <div><label [attr.for]="prefix + '-rate'">Speech speed</label><select [id]="prefix + '-rate'" [value]="access.settings().rate" (change)="access.update({ rate: +$any($event.target).value })"><option value="0.75">Slow</option><option value="1">Normal</option><option value="1.25">Fast</option><option value="1.5">Faster</option><option value="2">Fastest</option></select></div>
+      <div><label [attr.for]="prefix + '-voice'">Voice</label><select [id]="prefix + '-voice'" [value]="access.settings().voiceURI" (change)="access.update({ voiceURI: $any($event.target).value })"><option value="">Default local voice</option>@for (voice of access.voices(); track voice.voiceURI) { <option [value]="voice.voiceURI">{{ voice.name }} ({{ voice.lang }})</option> }</select></div>
+      <div><label [attr.for]="prefix + '-volume'">Volume</label><select [id]="prefix + '-volume'" [value]="access.settings().volume" (change)="access.update({ volume: +$any($event.target).value })"><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></div>
+      <div><label [attr.for]="prefix + '-delay'">Hover delay</label><select [id]="prefix + '-delay'" [value]="access.settings().hoverDelay" (change)="access.update({ hoverDelay: +$any($event.target).value })"><option value="400">Short (400 ms)</option><option value="550">Normal (550 ms)</option><option value="700">Long (700 ms)</option></select></div>
+    </div>
+  </fieldset>
+  <fieldset data-scan-group="Read on demand">
+    <legend>Read on demand</legend>
+    <p>Read without continuous focus or hover speech. Use Alt + Shift + R to read an item while focused on it, or Alt + Shift + P for the current page summary. Selecting text also lets Read section read your selection.</p>
+    <div class="reading-actions" data-a11y-reading-action>
+      <button type="button" (click)="access.controller.readFocused()">Read focused element</button>
+      <button type="button" (click)="access.controller.readSection()">Read section</button>
+      <button type="button" (click)="access.controller.readPage()">Read page summary</button>
+      <button type="button" (click)="access.controller.pause()">{{ access.paused() ? 'Resume speech' : 'Pause speech' }}</button>
+      <button type="button" (click)="access.controller.stop()">Stop speech</button>
+    </div>
+    <p>Alt + Shift + R: read focused item. Alt + Shift + P: page summary. Alt + Shift + X: stop. Alt + Shift + Space: pause/resume. Alt + Shift + A: Accessibility in Settings, or these tools before sign-in. Reading shortcuts leave typing fields alone; Stop works everywhere.</p>
+  </fieldset>
+  <fieldset data-scan-group="Visual assistance">
+    <legend>Visual assistance</legend>
+    <label class="check"><input type="checkbox" [checked]="access.settings().enhancedFocus" (change)="access.update({ enhancedFocus: $any($event.target).checked })" />Enhanced focus highlighting</label>
+    <label [attr.for]="prefix + '-size'">Minimum text size</label><select [id]="prefix + '-size'" [value]="access.settings().textSize" (change)="access.update({ textSize: $any($event.target).value })"><option value="standard">Standard</option><option value="large">Large (18 px minimum)</option><option value="extra-large">Extra large (20 px minimum)</option></select>
+    <label class="check"><input type="checkbox" [checked]="access.settings().textSpacing" (change)="access.update({ textSpacing: $any($event.target).checked })" />Increased text spacing</label>
+    <label class="check"><input type="checkbox" [checked]="access.settings().contrast" (change)="access.update({ contrast: $any($event.target).checked })" />Increased interface contrast</label>
+    <label class="check"><input type="checkbox" [checked]="access.settings().highlightSpeech" (change)="access.update({ highlightSpeech: $any($event.target).checked })" />Highlight the element being read</label>
+    <p>Browser zoom and operating-system high contrast also work. Trading palette, chart voice, briefing, and switch-control preferences remain available in Settings.</p>
+  </fieldset>
+</div>

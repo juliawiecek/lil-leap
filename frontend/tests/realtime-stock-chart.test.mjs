@@ -3,11 +3,12 @@ import { test } from 'node:test';
 import { TestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { Subject } from 'rxjs';
-import { browser, animateFrame } from './dom-helper.mjs';
+import { browser, animateFrame, resolveTemplates } from './dom-helper.mjs';
 const { RealtimeStockChart } = await import('../src/app/realtime-stock-chart.ts');
 const { STOCK_PRICE_TICKS } = await import('../src/app/stock-price-ticks.ts');
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
-test('reusable SVG wrapper samples updates, keeps the emerald area style, handles errors and tears down', (t) => {
+test('reusable SVG wrapper samples updates, keeps the emerald area style, handles errors and tears down', async (t) => {
+  await resolveTemplates();
   t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
   globalThis.ResizeObserver = browser.ResizeObserver;
   t.mock.method(browser.SVGElement.prototype, 'getBoundingClientRect', () => ({

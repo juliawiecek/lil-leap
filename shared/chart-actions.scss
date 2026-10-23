@@ -1,0 +1,58 @@
+/* Chart alternatives use each workspace's existing surface and accent tokens. */
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 6px;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid var(--chart-action-border);
+  border-radius: 9px;
+  background: var(--chart-action-surface);
+  color: var(--text);
+  font: 600 12px/1.3 var(--font-ui, system-ui);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.actions button { border-radius: 999px; }
+button svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .8;
+}
+button:hover {
+  background: color-mix(in srgb, var(--chart-action-accent) 10%, var(--chart-action-surface));
+  border-color: var(--chart-action-muted);
+}
+button[aria-expanded='true'], button[aria-pressed='true'] {
+  background: var(--chart-action-accent);
+  border-color: var(--chart-action-accent);
+  color: var(--chart-action-on-accent);
+}
+button[aria-expanded='true'] svg { opacity: 1; }
+button:focus-visible, .table-scroll:focus-visible {
+  outline: 2px solid var(--chart-action-focus);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
+@media (prefers-contrast: more) { button { border-color: var(--chart-action-muted); } }
+@media (forced-colors: active) {
+  button { border-color: ButtonText; background: ButtonFace; color: ButtonText; }
+  button[aria-expanded='true'], button[aria-pressed='true'] {
+    border-color: Highlight; background: Highlight; color: HighlightText;
+  }
+  button:focus-visible, .table-scroll:focus-visible { outline-color: Highlight; }
+}

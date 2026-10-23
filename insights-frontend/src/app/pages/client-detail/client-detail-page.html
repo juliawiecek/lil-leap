@@ -1,6 +1,6 @@
 <a class="back-link" routerLink="/clients" queryParamsHandling="preserve">← All clients</a>
 @if (detail(); as d) {
-  <header class="page-heading">
+  <header class="page-heading" data-a11y-sensitive>
     <div>
       <p class="eyebrow">NEXTTRADE / CLIENTS</p>
       <h1>{{ d.account.accountNumber }}</h1>
@@ -31,15 +31,15 @@
           <h2 id="holdings-title">Holdings</h2>
           <span class="muted">{{ d.holdings.length ? money(costBasis()) + ' at cost' : '' }}</span>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
           <table>
             <caption class="sr-only">Stocks this account holds</caption>
             <thead>
               <tr>
-                <th>Stock</th>
-                <th class="numeric">Shares</th>
-                <th class="numeric">Average cost</th>
-                <th class="numeric">Cost basis</th>
+                <th scope="col">Stock</th>
+                <th scope="col" class="numeric">Shares</th>
+                <th scope="col" class="numeric">Average cost</th>
+                <th scope="col" class="numeric">Cost basis</th>
               </tr>
             </thead>
             <tbody>
@@ -86,17 +86,17 @@
           <h2 id="orders-title">Filled orders</h2>
           <span class="muted" aria-live="polite">{{ ordersLoading() ? 'Loading…' : orders() ? count(orders()!.totalElements) + ' filled orders, newest first' : '' }}</span>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
           <table>
             <caption class="sr-only">Orders for account {{ d.account.accountNumber }}, newest first</caption>
             <thead>
               <tr>
-                <th>Filled</th>
-                <th>Order ID</th>
-                <th>Stock</th>
-                <th>Side</th>
-                <th class="numeric">Shares</th>
-                <th class="numeric">Fill price</th>
+                <th scope="col">Filled</th>
+                <th scope="col">Order ID</th>
+                <th scope="col">Stock</th>
+                <th scope="col">Side</th>
+                <th scope="col" class="numeric">Shares</th>
+                <th scope="col" class="numeric">Fill price</th>
               </tr>
             </thead>
             <tbody>
@@ -136,10 +136,11 @@
     </div>
   }
 } @else if (error()) {
+  <h1>Client account</h1>
   <p class="error" role="alert">{{ error() }}</p>
 } @else {
   <section class="panel empty" aria-busy="true">
     <app-dashboard-icon name="user" />
-    <h2>Loading account…</h2>
+    <h1>Loading account…</h1>
   </section>
 }

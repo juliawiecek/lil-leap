@@ -36,7 +36,7 @@ const templates = new Map(readdirSync(appDir, { recursive: true })
 
 export async function resolveTemplates() {
   await ɵresolveComponentResources(url => Promise.resolve(
-    url.endsWith('.html') ? readFileSync(templates.get(basename(url)), 'utf8') : '',
+    url.endsWith('.html') ? readFileSync(templates.get(basename(url)) ?? new URL('../src/app/' + url, import.meta.url), 'utf8') : '',
   ));
 }
 

@@ -139,12 +139,14 @@ public class JdbcQuoteRepository implements QuoteRepository {
     // Buckets align to a fixed origin so the same quote always lands in the same candle.
     private static final String CANDLES = """
             SELECT date_bin(CAST(? AS interval), q.quoted_at, TIMESTAMPTZ '2000-01-01 00:00:00+00') AS bucket,
-                   (array_agg(q.mid ORDER BY q.quoted_at, q.quote_id))[1] AS open,
+                   (array_agg(q.mid ORDER BY q.quoted_at, q.created_at, q.quote_id))[1] AS open,
                    MAX(q.mid) AS high,
                    MIN(q.mid) AS low,
-                   (array_agg(q.mid ORDER BY q.quoted_at DESC, q.quote_id DESC))[1] AS close
+                   (array_agg(q.mid ORDER BY q.quoted_at DESC, q.created_at DESC, q.quote_id DESC))[1] AS close,
+                   (array_agg(q.bid ORDER BY q.quoted_at DESC, q.created_at DESC, q.quote_id DESC))[1] AS bid_close,
+                   MAX(q.quoted_at) AS observed_at
             FROM (
-                SELECT quote_id, quoted_at, ROUND((bid + ask) / 2, 8) AS mid
+                SELECT quote_id, quoted_at, created_at, bid, ROUND((bid + ask) / 2, 8) AS mid
                 FROM quotes
                 WHERE instrument_id = ?
                   AND quoted_at <= CURRENT_TIMESTAMP
@@ -171,7 +173,9 @@ public class JdbcQuoteRepository implements QuoteRepository {
                         rs.getBigDecimal("open"),
                         rs.getBigDecimal("high"),
                         rs.getBigDecimal("low"),
-                        rs.getBigDecimal("close")),
+                        rs.getBigDecimal("close"),
+                        rs.getBigDecimal("bid_close"),
+                        rs.getObject("observed_at", java.time.OffsetDateTime.class)),
                 interval.sqlInterval(), instrumentId, interval.sqlInterval(), clampedLimit);
     }
 }

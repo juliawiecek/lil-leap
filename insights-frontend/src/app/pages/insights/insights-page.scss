@@ -1,6 +1,7 @@
 :host {
   display: block;
 }
+.ranking-graphic:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .bar-cell {
   width: 40%;
 }

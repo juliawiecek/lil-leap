@@ -85,7 +85,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
 test('palette changes recolour existing SVG paths, gradients and financial values without changing geometry', async ({ page }) => {
   await colourFixture(page);
   await page.goto('/dashboard');
-  const chart = page.locator('app-portfolio-chart svg');
+  const chart = page.locator('app-portfolio-chart svg[role="img"]');
   const line = chart.locator('.line');
   await expect(line).toHaveAttribute('d', /^M/);
   const original = await line.getAttribute('d');
@@ -130,7 +130,7 @@ for (const marketOpen of [true, false]) {
     await page.goto('/dashboard');
     const dashboard = page.locator('app-retail-stock-dashboard');
     await expect(dashboard.locator('.current-price')).toHaveText('$200.00', { timeout: 12000 });
-    const chart = dashboard.locator('app-stock-svg-chart svg');
+    const chart = dashboard.locator('app-stock-svg-chart svg[role="img"]');
     const line = chart.locator('[data-line]');
     // AAPL opens at 195 and trades at 200, so the loaded history is a gain: green and solid.
     await expect(chart).toHaveAttribute('data-performance', 'gain');
@@ -190,12 +190,17 @@ test('both safe modes retain contrast on the guided dashboard and order controls
     await nav.getByRole('button', { name: 'Overview', exact: true }).click();
     const buy = page.locator('.trade-actions').getByRole('button', { name: 'Buy', exact: true });
     await expect(buy).toBeVisible();
+    await expect(buy).toHaveCSS('background-image', /linear-gradient\(135deg/);
     await buy.hover();
+    await expect(buy).toHaveCSS('background-image', /linear-gradient\(135deg/);
     await expect(buy).toHaveCSS('background-color', mode === 'Red-green safe' ? 'rgb(191, 174, 253)' : 'rgb(211, 193, 250)');
     await buy.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.locator('#novice-shares').fill('1');
     await expect(page.getByRole('dialog')).toContainText('Buy');
+    const review = page.getByRole('dialog').getByRole('button', { name: 'Review buy', exact: true });
+    await review.hover();
+    await expect(review).toHaveCSS('background-image', /linear-gradient\(135deg/);
     const audit = await auditTextContrast(page);
     expect(audit.failures).toEqual([]);
     await page.getByRole('dialog').getByRole('button', { name: 'Close dialog' }).click();

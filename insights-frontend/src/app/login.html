@@ -1,3 +1,4 @@
+<a class="assistive-login-skip" href="#insights-login-main" (click)="$event.preventDefault(); loginMain.focus()">Skip to sign in</a>
 <div class="login-screen">
   <div class="market-tape" aria-hidden="true">
     <div class="tape-track">
@@ -52,10 +53,10 @@
         <p>Trading activity, client accounts and the full record of every trade, for NextTrade analysts and operations staff.</p>
       </section>
 
-      <main class="auth-panel" aria-labelledby="login-title">
+      <main #loginMain id="insights-login-main" tabindex="-1" class="auth-panel" aria-labelledby="login-title">
         <h2 id="login-title">Welcome back</h2>
         <p class="auth-subtitle">Sign in with your analyst or operations account.</p>
-        <form method="post" novalidate (submit)="$event.preventDefault(); signIn(email.value, password.value)">
+        <form method="post" novalidate [attr.aria-describedby]="message() ? 'insights-login-error' : null" (submit)="$event.preventDefault(); signIn(email.value, password.value)">
           <div class="field-group">
             <label for="email">Email address</label>
             <input #email id="email" name="email" type="email" autocomplete="username" placeholder="you@nexttrade.local" required />
@@ -83,7 +84,7 @@
             </div>
           </div>
           @if (message()) {
-            <p class="form-status" role="alert">{{ message() }}</p>
+            <p id="insights-login-error" class="form-status" role="alert">{{ message() }}</p>
           }
           <button class="primary-action" type="submit" [disabled]="pending()">
             {{ pending() ? 'Signing in…' : 'Continue securely' }}

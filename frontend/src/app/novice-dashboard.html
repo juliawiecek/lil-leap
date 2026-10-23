@@ -12,6 +12,7 @@
         <button
           type="button"
           [class.active]="activeTab() === item.label"
+          [attr.aria-label]="item.label"
           [attr.aria-current]="activeTab() === item.label ? 'page' : null"
           (click)="navigate(item.label)"
         >
@@ -25,7 +26,7 @@
   </aside>
   <div class="novice-main">
     <header class="novice-topbar" data-scan-group="Top bar">
-      <div class="company-search" data-scan-group="Search">
+      <div class="company-search" data-scan-group="Search" data-a11y-search>
         <app-dashboard-icon name="search" />
         <input
           aria-label="Search for a company or symbol"
@@ -35,7 +36,7 @@
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
-          <div class="company-results">
+          <div class="company-results" data-a11y-results role="group" aria-label="Stock search results">
             @for (quote of results(); track quote.symbol) {
               <button type="button" (click)="openTrade('Buy', quote.symbol)">
                 <strong>{{ quote.symbol }}</strong
@@ -58,14 +59,14 @@
           <button
             type="button"
             class="notification-button"
-            aria-label="Notifications"
+            aria-label="Notifications" aria-controls="novice-notifications"
             [attr.aria-expanded]="notifications()"
             (click)="notifications.set(!notifications())"
           >
             <app-dashboard-icon name="bell" /><i></i>
           </button>
           @if (notifications()) {
-            <div class="notification-popover">
+            <div class="notification-popover" id="novice-notifications" data-a11y-popover role="region" aria-label="Notifications">
               <strong>Notifications</strong>
               <p>You’re all caught up.</p>
             </div>
@@ -133,7 +134,7 @@
                       <app-dashboard-icon name="eye" />
                     </button>
                   </div>
-                  <div class="portfolio-value">
+                  <div class="portfolio-value" data-a11y-read data-a11y-label="Total portfolio value" [attr.data-a11y-description]="showBalance() ? null : 'Balance hidden'">
                     @if (!portfolioLoaded()) {
                       <span aria-live="polite">Loading…</span>
                     } @else {
@@ -154,12 +155,14 @@
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"
                   [error]="chartError()"
-                  [delayed]="chartDelayed()"
+                  [notice]="chartNotice()"
+                  [delayed]="chartDelayed()" [balanceHidden]="!showBalance()" [accountKey]="selectedAccount()?.account_id ?? ''"
                   (periodChange)="setChartPeriod($event)"
                   (scrub)="chartScrub.set($event)"
                 />
               }
-              <p class="sr-only" aria-live="polite">{{ chartAnnouncement() }}</p>
+              <!-- PS-25 owns the chart live region; keep the existing switch-control announcement. -->
+              <p class="sr-only" aria-hidden="true">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
                 <div>
                   <span>Buying power</span
@@ -201,17 +204,17 @@
                 }
               </div>
               @if (investmentTab() === 'Holdings') {
-                <div class="table-scroll">
+                <div class="table-scroll" tabindex="0" role="region" aria-label="Holdings table" data-scan-group="Holdings table">
                   <table class="holdings-table">
                     <caption class="sr-only">Holdings</caption>
                     <thead>
                       <tr>
-                        <th>Symbol · Name</th>
-                        <th>Value · Shares</th>
-                        <th>Avg. price</th>
-                        <th>Today</th>
-                        <th>Total return</th>
-                        <th><span class="sr-only">Actions</span></th>
+                        <th scope="col">Symbol · Name</th>
+                        <th scope="col">Value · Shares</th>
+                        <th scope="col">Avg. price</th>
+                        <th scope="col">Today</th>
+                        <th scope="col">Total return</th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -282,12 +285,12 @@
               } @else {
                 <div class="asset-class-list">
                   <div>
-                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong
-                    ><span>{{ assetAllocation().stocksValue | currency }}</span>
+                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong
+                    ><span>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</span>
                   </div>
                   <div>
-                    <span><i class="asset-dot cash"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong
-                    ><span>{{ assetAllocation().cashValue | currency }}</span>
+                    <span><i class="asset-dot cash"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong
+                    ><span>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</span>
                   </div>
                 </div>
               }
@@ -305,12 +308,15 @@
               <app-activity-feed />
             </section>
           }
+          @if (activeTab() === 'Learn') {
+            <app-novice-learn data-scan-group="Learn" />
+          }
           @if (activeTab() === 'Settings') {
             <section class="settings-page" aria-label="Account settings" data-scan-group="Account settings">
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
-                <header class="settings-profile">
+                <header class="settings-profile" data-a11y-sensitive>
                   <span class="settings-avatar" aria-hidden="true">{{ (userProfile.firstName || 'A').slice(0, 1).toUpperCase() }}{{ (userProfile.lastName || '').slice(0, 1).toUpperCase() }}</span>
                   <div class="settings-identity">
                     <span class="settings-eyebrow">Your profile</span>
@@ -320,7 +326,7 @@
                 </header>
                 <div class="settings-section">
                   <div class="settings-intro"><h2>Personal details</h2><p>Your contact information.</p></div>
-                  <dl class="settings-list">
+                  <dl class="settings-list" data-a11y-sensitive>
                     <div><dt>Phone</dt><dd>{{ userProfile.phone || 'Not provided' }}</dd></div>
                     <div><dt>Address</dt><dd>{{ userProfile.address || 'Not provided' }}</dd></div>
                   </dl>
@@ -378,7 +384,7 @@
                 </button>
               </div>
               <div class="allocation-content">
-                <div class="allocation-donut" role="img" [attr.aria-label]="'Asset allocation: Stocks ' + assetAllocation().stocksPercent + ' percent, Cash ' + assetAllocation().cashPercent + ' percent'">
+                <div class="allocation-donut" tabindex="0" [appChartFocus]="allocationAccess" role="img" aria-label="Asset allocation">
                   <!-- A rounded progress arc follows the actual stock share over a full cash track. -->
                   <svg viewBox="0 0 42 42" aria-hidden="true">
                     <defs>
@@ -399,21 +405,22 @@
                       [attr.visibility]="stocksShare() > 0 ? 'visible' : 'hidden'"
                     />
                   </svg>
-                  <div class="donut-center"><strong>{{ assetAllocation().total | currency }}</strong><span>Total</span></div>
+                  <div class="donut-center"><strong>{{ allocationReady() ? (assetAllocation().total | currency) : '—' }}</strong><span>Total</span></div>
                 </div>
                 <div class="allocation-legend">
                   <div class="allocation-item">
-                    <i class="asset-dot stocks" aria-hidden="true"></i><span class="allocation-label">Stocks<small>{{ assetAllocation().stocksValue | currency }}</small></span
-                    ><b>{{ assetAllocation().stocksPercent }}%</b>
+                    <i class="asset-dot stocks" aria-hidden="true"></i><span class="allocation-label">Stocks<small>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</small></span
+                    ><b>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</b>
                     <span class="allocation-meter stocks-meter" aria-hidden="true"><span [style.width.%]="stocksShare()"></span></span>
                   </div>
                   <div class="allocation-item">
-                    <i class="asset-dot cash" aria-hidden="true"></i><span class="allocation-label">Cash<small>{{ assetAllocation().cashValue | currency }}</small></span
-                    ><b>{{ assetAllocation().cashPercent }}%</b>
-                    <span class="allocation-meter cash-meter" aria-hidden="true"><span [style.width.%]="100 - stocksShare()"></span></span>
+                    <i class="asset-dot cash" aria-hidden="true"></i><span class="allocation-label">Cash<small>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</small></span
+                    ><b>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</b>
+                    <span class="allocation-meter cash-meter" aria-hidden="true"><span [style.width.%]="allocationReady() ? assetAllocation().cashPercent : 0"></span></span>
                   </div>
                 </div>
               </div>
+              <app-chart-access #allocationAccess id="novice-allocation" label="Asset allocation" [summary]="allocationDescription()" [table]="allocationTable()" [context]="selectedAccount()?.account_id ?? ''" />
               <button type="button" class="diversification" (click)="openModal('allocation')">
                 <span class="shield-icon"><app-dashboard-icon name="shield" /></span
                 ><span
@@ -436,13 +443,14 @@
                 <h2>Watchlist</h2>
                 <span class="muted-note">Open a stock to add or remove it</span>
               </div>
+              <div class="table-scroll" tabindex="0" role="region" aria-label="Watchlist table" data-scan-group="Watchlist table">
               <table class="watch-table">
                 <caption class="sr-only">Watchlist</caption>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Price</th>
-                    <th>Today</th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Today</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -463,6 +471,7 @@
                   }
                 </tbody>
               </table>
+              </div>
             </section>
           </div>
         }
@@ -527,7 +536,7 @@
       </div>
       <label for="novice-shares">Number of shares</label
       ><input
-        id="novice-shares"
+        id="novice-shares" aria-describedby="novice-trade-message"
         type="number"
         min="1"
         step="1"
@@ -570,7 +579,7 @@
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
       @if (reviewing()) {
-        <p class="review-confirmation review-summary" role="status">{{ reviewSummary() }}</p>
+        <p class="review-confirmation review-summary" role="status" appFocusAfterChange>{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
           <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
@@ -578,12 +587,12 @@
       } @else {
         <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
       }
-      <output>{{ tradeMessage() }}</output>
+      <output id="novice-trade-message">{{ tradeMessage() }}</output>
     </form>
   } @else if (modal() === 'allocation') {
     <div class="asset-class-list">
-      <div><span>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ assetAllocation().stocksValue | currency }}</span></div>
-      <div><span>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ assetAllocation().cashValue | currency }}</span></div>
+      <div><span>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</span></div>
+      <div><span>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

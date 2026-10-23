@@ -9,6 +9,7 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "rewriteRelativeImportExtensions": true,
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",

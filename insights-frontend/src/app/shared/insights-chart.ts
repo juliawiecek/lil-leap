@@ -1,10 +1,14 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { describeSeries, seriesPoints, seriesTable } from '../../../../shared/chart-description';
+import { InsightsChartAccess } from './insights-chart-access';
+
+import { Component, computed, input, signal, viewChild } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+let chartId = 0;
 @Component({
   selector: 'app-insights-chart',
-  imports: [DecimalPipe],
-  template: ` @if (points().length) {
-      <svg viewBox="0 0 640 220" role="img" [attr.aria-label]="label()" preserveAspectRatio="none">
+  imports: [DecimalPipe, InsightsChartAccess],
+  template: ` @if (plotPoints().length) {
+      <svg viewBox="0 0 640 220" role="img" tabindex="0" [attr.aria-label]="label()" [attr.aria-describedby]="id + '-summary'" (focus)="focusSummary()" (blur)="blurChart()" (keydown)="inspectKey($event)" preserveAspectRatio="none">
         @for (tick of [0, 1, 2, 3, 4]; track tick) {
           <line
             x1="54"
@@ -25,18 +29,15 @@ import { DecimalPipe } from '@angular/common';
           stroke-width="2.5"
           vector-effect="non-scaling-stroke"
         />
-        @for (p of points(); track $index) {
+        @for (p of plotPoints(); track $index) {
           <circle
             [attr.cx]="x($index)"
             [attr.cy]="y(p.value)"
             r="12"
             fill="transparent"
-            tabindex="0"
-            [attr.aria-label]="p.label + ': ' + prefix() + p.value"
+            aria-hidden="true"
             (mouseenter)="active.set($index)"
             (mouseleave)="active.set(null)"
-            (focus)="active.set($index)"
-            (blur)="active.set(null)"
           >
             <title>{{ p.label }}: {{ prefix() }}{{ p.value | number: '1.0-2' }}</title>
           </circle>
@@ -45,12 +46,12 @@ import { DecimalPipe } from '@angular/common';
           <text
             [attr.x]="x(i)"
             y="211"
-            [attr.text-anchor]="i === 0 ? 'start' : i === points().length - 1 ? 'end' : 'middle'"
+            [attr.text-anchor]="i === 0 ? 'start' : i === plotPoints().length - 1 ? 'end' : 'middle'"
           >
-            {{ shortLabel(points()[i].label) }}
+            {{ shortLabel(plotPoints()[i].label) }}
           </text>
         }
-        @if (active() !== null && points()[active()!]; as p) {
+        @if (active() !== null && plotPoints()[active()!]; as p) {
           <circle
             [attr.cx]="x(active()!)"
             [attr.cy]="y(p.value)"
@@ -61,18 +62,20 @@ import { DecimalPipe } from '@angular/common';
         }
       </svg>
       <div class="chart-readout" aria-live="polite">
-        @if (active() !== null && points()[active()!]; as p) {
+        @if (active() !== null && plotPoints()[active()!]; as p) {
           <span>{{ p.label }}</span
           ><strong>{{ prefix() }}{{ p.value | number: '1.0-2' }}</strong>
         } @else {
-          <span>Hover or focus a point to explore values</span>
+          <span>Hover a point or use the arrow keys on the chart to explore values</span>
         }
       </div>
     } @else {
       <div class="empty">No observations in this period.</div>
-    }`,
+    }
+    <app-insights-chart-access #access [id]="id" [label]="label()" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="context() + label()" />`,
   styles: [
     `
+      svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
       :host {
         display: block;
         min-width: 0;
@@ -90,11 +93,6 @@ import { DecimalPipe } from '@angular/common';
       }
       line {
         opacity: 0.65;
-      }
-      circle:focus-visible {
-        outline: none;
-        stroke: var(--accent);
-        stroke-width: 2px;
       }
       .chart-readout {
         min-height: 28px;
@@ -117,9 +115,39 @@ import { DecimalPipe } from '@angular/common';
   ],
 })
 export class InsightsChart {
+  readonly id = `insights-chart-${++chartId}`;
+  readonly context = input('');
+  readonly access = viewChild(InsightsChartAccess);
+  readonly dated = computed(() => this.points().filter(p => Number.isFinite(p.value)).every(p => /^\d{4}-\d{2}-\d{2}(?:T|$)/.test(p.label) && Number.isFinite(Date.parse(p.label))));
+  /** Normalize once: the renderer, explanation and table consume exactly these observations. */
+  readonly dataPoints = computed(() => {
+    const points = this.points().filter(p => Number.isFinite(p.value));
+    const dated = this.dated();
+    return seriesPoints(points.map((p, index) => ({
+      at: dated ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(p.label) ? p.label + 'T12:00:00Z' : p.label) : index,
+      label: p.label, value: p.value,
+    })));
+  });
+  readonly plotPoints = computed(() => this.dataPoints().map(p => ({ label: p.label!, value: p.value })));
+  readonly valueOptions = computed(() => ({ name: this.label(), currency: this.prefix() === '$' ? 'USD' : undefined, unit: this.prefix() === '' ? 'trades' : undefined, categorical: !this.dated() }));
+  readonly description = computed(() => describeSeries(this.dataPoints(), this.valueOptions()));
+  readonly dataTable = computed(() => seriesTable(this.dataPoints(), this.valueOptions(), true, this.prefix() === ''));
+  readonly allData = computed(() => seriesTable(this.dataPoints(), this.valueOptions(), false));
+  focusSummary(): void { this.access()?.focusSummary(); }
+  blurChart(): void { this.active.set(null); this.access()?.focused.set(false); }
+  inspectKey(event: KeyboardEvent): void {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === 'Escape') { this.active.set(null); return; }
+    const last = this.plotPoints().length - 1;
+    if (last < 0) return;
+    const current = this.active() ?? (event.key === 'ArrowLeft' ? last + 1 : -1);
+    this.active.set(event.key === 'Home' ? 0 : event.key === 'End' ? last : Math.max(0, Math.min(last, current + (event.key === 'ArrowLeft' ? -1 : 1))));
+  }
+
   readonly active = signal<number | null>(null);
   readonly tickIndices = computed(() => {
-    const last = this.points().length - 1;
+    const last = this.plotPoints().length - 1;
     return [...new Set([0, Math.round(last / 3), Math.round((last * 2) / 3), last])].filter(
       (i) => i >= 0,
     );
@@ -137,7 +165,7 @@ export class InsightsChart {
   readonly points = input<{ label: string; value: number }[]>([]);
   readonly label = input('Trading volume over time');
   readonly prefix = input('$');
-  readonly max = computed(() => Math.max(1, ...this.points().map((p) => p.value)) * 1.15);
+  readonly max = computed(() => Math.max(1, ...this.plotPoints().map((p) => p.value)) * 1.15);
   readonly divisor = computed(() => {
     if (this.max() >= 1000000) {
       return 1000000;
@@ -151,17 +179,17 @@ export class InsightsChart {
     return this.divisor() === 1000 ? 'K' : '';
   });
   x(i: number) {
-    return 54 + (i / Math.max(1, this.points().length - 1)) * 572;
+    return 54 + (i / Math.max(1, this.plotPoints().length - 1)) * 572;
   }
   y(v: number) {
     return 186 - (v / this.max()) * 168;
   }
   readonly path = computed(() =>
-    this.points()
+    this.plotPoints()
       .map((p, i) => `${i ? 'L' : 'M'}${this.x(i)},${this.y(p.value)}`)
       .join(' '),
   );
   readonly area = computed(
-    () => this.path() + ` L${this.x(this.points().length - 1)},186 L54,186 Z`,
+    () => this.path() + ` L${this.x(this.plotPoints().length - 1)},186 L54,186 Z`,
   );
 }

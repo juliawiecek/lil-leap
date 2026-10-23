@@ -1,6 +1,6 @@
-<a class="skip-link" href="#workspace">Skip to content</a>
+<a class="skip-link" href="#workspace" (click)="$event.preventDefault(); workspace.focus()">Skip to content</a>
 <div class="shell">
-  <aside class="sidebar" [class.open]="mobileNav()">
+  <aside id="insights-navigation" class="sidebar" aria-label="Insights navigation" [class.open]="mobileNav()" (keydown.escape)="closeNavigation()">
     <a class="brand" [routerLink]="home()" (click)="mobileNav.set(false)"
       ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
@@ -33,6 +33,7 @@
       <button
         class="menu icon-button"
         aria-label="Toggle navigation"
+        #menuButton aria-controls="insights-navigation"
         [attr.aria-expanded]="mobileNav()"
         (click)="mobileNav.set(!mobileNav())"
       >
@@ -46,7 +47,7 @@
         </div>
       </div>
     </header>
-    <main id="workspace" tabindex="-1" class="content">
+    <main #workspace id="workspace" tabindex="-1" class="content">
       <router-outlet />
       <footer>
         <span>© 2026 NextTrade. Internal workspace.</span><span>Internal use only</span>
