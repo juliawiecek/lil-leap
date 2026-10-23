@@ -31,3 +31,30 @@ nav a.active {
   border-radius: 12px;
   font-weight: 700;
 }
+
+/* The Novice dashboard's page background: near black, a graph-paper grid every 52px, soft light at the
+   top right, and a vignette that fades the grid out behind the cards. */
+.shell {
+  background-color: #070707;
+  background-image: radial-gradient(ellipse at center, rgba(7, 7, 7, 0.65), transparent 75%),
+    radial-gradient(60% 40% at 70% 0%, rgba(242, 239, 230, 0.045), transparent 70%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+  background-attachment: fixed;
+}
+/* The grid shows faintly through the sidebar, as on the Novice dashboard. */
+.sidebar {
+  border-right-color: var(--nv-border);
+  background: rgba(7, 7, 7, 0.94);
+}
+/* A frosted header that stays at the top while the page scrolls under it. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  background: rgba(7, 7, 7, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
