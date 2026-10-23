@@ -1,4 +1,5 @@
-import { AfterViewInit, OnInit, Component, ElementRef, input, output, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, OnInit, Component, ElementRef, computed, input, output, signal, ViewChild } from '@angular/core';
+import { MenuOption, SelectMenu } from './select-menu';
 
 interface ProfileField {
   id: string;
@@ -18,6 +19,7 @@ interface ProfileField {
 
 @Component({
   selector: 'app-investor-profile',
+  imports: [SelectMenu],
   templateUrl: './investor-profile.html',
   styleUrl: './investor-profile.scss',
 })
@@ -31,6 +33,8 @@ export class InvestorProfile implements OnInit, AfterViewInit {
   readonly submitError = input('');
   readonly step = signal(0);
   readonly values = signal<Record<string, string>>({});
+  /** Each field's problem, shown under it in the page's own style instead of the browser's warning bubble. */
+  readonly errors = signal<Record<string, string>>({});
   readonly status = signal('');
   readonly states = ('Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|American Samoa|Guam|Northern Mariana Islands|Puerto Rico|U.S. Virgin Islands').split('|').sort((a, b) => a.localeCompare(b, 'en'));
   // ISO 3166-1 countries and territories, displayed in English.
@@ -418,13 +422,78 @@ export class InvestorProfile implements OnInit, AfterViewInit {
       last_name: names.join(' '),
       account_name: 'My trading account',
       account_type: 'INDIVIDUAL_CASH',
+      country: 'United States',
     });
   }
 
   ngAfterViewInit(): void { this.focusHeading(); }
 
+  readonly stateOptions: readonly MenuOption[] = this.states.map((state) => ({ value: state, label: state }));
+  readonly months: readonly MenuOption[] = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+    'September', 'October', 'November', 'December'].map((label, i) => ({ value: String(i + 1).padStart(2, '0'), label }));
+  /** Newest first, from the youngest allowed age (21) back 100 years. */
+  readonly birthYears: readonly MenuOption[] = Array.from({ length: 100 }, (_, i) => {
+    const year = String(Number(this.latestBirthDate.slice(0, 4)) - i);
+    return { value: year, label: year };
+  });
+  /** Month, day and year as picked so far; the date is only set once all three are chosen. */
+  private readonly birthDraft = signal<{ year: string; month: string; day: string }>({ year: '', month: '', day: '' });
+  readonly birthDays = computed(() => {
+    const { year, month } = this.birthDraft();
+    const days = month ? new Date(Number(year) || 2000, Number(month), 0).getDate() : 31;
+    return Array.from({ length: days }, (_, i) => ({ value: String(i + 1).padStart(2, '0'), label: String(i + 1) }));
+  });
+
+  birthPart(part: 'year' | 'month' | 'day'): string {
+    return this.birthDraft()[part];
+  }
+
+  setBirthPart(part: 'year' | 'month' | 'day', value: string): void {
+    const next = { ...this.birthDraft(), [part]: value };
+    const lastDay = next.month ? new Date(Number(next.year) || 2000, Number(next.month), 0).getDate() : 31;
+    if (Number(next.day) > lastDay) {
+      next.day = '';
+    }
+    this.birthDraft.set(next);
+    const date = next.year && next.month && next.day ? `${next.year}-${next.month}-${next.day}` : '';
+    this.setValue('date_of_birth', date);
+  }
+
+  /** The choices for a dropdown field; the state list comes from the U.S. states and territories. */
+  optionsFor(field: ProfileField): readonly MenuOption[] {
+    return field.id === 'state_province' ? this.stateOptions : field.options ?? [];
+  }
+
+  /** A choice made in one of the page's dropdown menus. */
+  choose(field: ProfileField, value: string): void {
+    this.setValue(field.id, value);
+  }
+
+  /** The label points at whatever the person actually uses: the menu button, or the field itself. */
+  labelTarget(field: ProfileField): string {
+    if (field.id === 'date_of_birth' || ((field.options || field.id === 'state_province') && field.id !== 'account_type')) {
+      return 'profile-' + field.id + '-menu';
+    }
+    return 'profile-' + field.id;
+  }
+
+  private setValue(fieldId: string, value: string): void {
+    this.updateValues(fieldId, value);
+    this.status.set('');
+    if (this.errors()[fieldId]) {
+      const { [fieldId]: _cleared, ...rest } = this.errors();
+      this.errors.set(rest);
+    }
+  }
+
   visible(field: ProfileField): boolean {
     return !field.when || !!field.matches?.includes(this.values()[field.when] ?? '');
+  }
+
+  /** The error (when there is one) and the hint, for screen readers. */
+  describedBy(field: ProfileField): string | null {
+    const ids = [this.errors()[field.id] ? field.id + '-error' : '', field.hint ? field.id + '-hint' : ''].filter(Boolean);
+    return ids.length ? ids.join(' ') : null;
   }
 
   update(field: ProfileField, event: Event): void {
@@ -434,6 +503,10 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     }
     this.updateValues(field.id, input.value);
     this.status.set('');
+    if (this.errors()[field.id]) {
+      const { [field.id]: _cleared, ...rest } = this.errors();
+      this.errors.set(rest);
+    }
   }
 
 
@@ -580,7 +653,18 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     const fields = this.sections[this.step()].fields;
     fields.forEach((field) => this.applyRequiredValidation(field, form));
     fields.forEach((field) => this.applyBusinessValidation(field, form));
-    if (!form.reportValidity()) {
+    // The same checks the browser runs, but the messages appear under each field (see errors) rather than
+    // in the browser's own warning bubble. Fields in other steps' disabled sections are skipped.
+    const invalid = [...form.elements].filter(
+      (el): el is HTMLInputElement | HTMLSelectElement =>
+        (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) &&
+        !el.disabled && !el.closest('fieldset[disabled]') && !el.checkValidity(),
+    );
+    this.errors.set(Object.fromEntries(invalid.map((el) => [el.name || el.id, el.validationMessage])));
+    if (invalid.length) {
+      // A hidden native control stands in for a menu; focus the menu's button instead.
+      const first = invalid[0];
+      (globalThis.document?.getElementById(first.id + '-menu') ?? first).focus();
       return;
     }
     this.goTo(this.step() + 1);

@@ -73,6 +73,11 @@
     transition: stroke-dasharray 400ms ease;
   }
 
+  /* Sector arcs meet end to end, so they use square ends with a small gap between them. */
+  .allocation-donut .ring.sector {
+    stroke-linecap: butt;
+  }
+
   .allocation-donut .ring.stocks {
     stroke: url(#allocation-stocks-gradient);
     filter: drop-shadow(0 0.6px 0.9px var(--category-wash-05));
@@ -253,4 +258,59 @@
       transition: none;
     }
   }
+}
+
+/* Sector card: legend sized for several sectors, and cash reported on its own line under the ring. */
+.allocation-panel .allocation-legend {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.allocation-panel .allocation-legend > .allocation-item {
+  padding: 11px 0;
+}
+.allocation-panel .allocation-label {
+  font-size: clamp(13px, 3.6cqw, 16px);
+}
+.allocation-panel .allocation-legend b {
+  font-size: clamp(15px, 4.4cqw, 20px);
+}
+.allocation-panel .allocation-empty {
+  margin: 0;
+  color: var(--text-tone-54);
+  font-size: 14px;
+}
+.allocation-panel .allocation-cash {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: -12px 0 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-tone-78);
+  color: var(--text-tone-54);
+  font-size: 14px;
+}
+.allocation-panel .allocation-cash b {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.modal-subhead {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Sector ring, slimmer: a thin rounded arc per sector with a clear gap between them over a faint track,
+   so the card reads as a light gauge rather than a heavy band. */
+.allocation-panel .allocation-track {
+  stroke: var(--surface-tone-78);
+  stroke-width: 3.8;
+  filter: none;
+}
+.allocation-panel .allocation-donut .ring.sector {
+  stroke-width: 3.8;
+  stroke-linecap: round;
 }

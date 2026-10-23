@@ -136,7 +136,11 @@ test('canvas startup transitions directly to login without a centered logo phase
   assert.equal(document.body.classList.contains('brand-phase'), false);
   assert.ok(fixture.nativeElement.querySelector('#brand-lockup'));
   assert.ok(calls.some(([name]) => name === 'fillRect'));
-  assert.ok(calls.some(([name]) => name === 'strokeRect'), 'up candles have hollow outlined bodies');
+  // On laptops the opening candles are drawn like the sign-in chart: solid bodies, never hollow outlines.
+  const landed = calls.length;
+  app.chartMorph = 0; app.drawChart();
+  const building = calls.slice(landed);
+  assert.ok(app.width <= 900 || (building.some(([name]) => name === 'fillRect') && !building.some(([name]) => name === 'strokeRect')), 'candles match the sign-in chart while building');
   assert.ok(calls.every(call => call.slice(1).every(Number.isFinite)));
   assert.ok(app.volumeBars().length >= 34 && app.volumeBars().length <= 72);
   app.onResize(); assert.ok(calls.filter(([name]) => name === 'setTransform').length >= 2);
@@ -257,4 +261,16 @@ test('a token on any other route is ignored', async t => {
   const { app } = await setup(t, {}, { path: 'login', query: { token: 'link-value' } });
 
   assert.equal(app.authMode(), 'signin');
+});
+
+test('a Caps Lock hint shows under the password while Caps Lock is on, and clears on blur', async t => {
+  const { fixture, app } = await setup(t);
+  app.pageReady.set(true); fixture.detectChanges();
+  const input = fixture.nativeElement.querySelector('#password');
+  app.checkCapsLock({ getModifierState: key => key === 'CapsLock' }); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('#caps-hint')?.textContent.trim(), 'Caps Lock is on');
+  assert.equal(input.getAttribute('aria-describedby'), 'caps-hint');
+  input.dispatchEvent(new browser.Event('blur')); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('#caps-hint'), null);
+  app.checkCapsLock({}); assert.equal(app.capsLock(), false);
 });

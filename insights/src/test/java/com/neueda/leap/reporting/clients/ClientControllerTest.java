@@ -36,6 +36,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ClientController.class)
 @Import({SecurityConfig.class, JwtServiceImpl.class, GlobalExceptionHandler.class})
 class ClientControllerTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
 
     /** Internal user ids, which no response returns; the owner's name and email are shown instead. */
     private static final Set<String> USER_ID_FIELDS = Set.of("userid", "user_id");

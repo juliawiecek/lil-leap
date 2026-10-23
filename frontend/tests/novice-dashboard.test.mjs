@@ -263,7 +263,7 @@ test('greeting, diversification and loading states come from the real data (PS-0
   const fresh = component(t, NoviceDashboard, [feedProvider(feedWith())]);
   assert.equal(fresh.portfolioLoaded(), false);
   assert.equal(fresh.diversification().title, 'No investments yet');
-  for (const [hour, greeting] of [[9, 'Good morning'], [14, 'Good afternoon'], [20, 'Good evening']]) {
+  for (const [hour, greeting] of [[9, 'Good Morning'], [14, 'Good Afternoon'], [20, 'Good Evening']]) {
     fresh.marketClock.set(new Date(2026, 9, 16, hour));
     assert.equal(fresh.greeting(), greeting);
   }
@@ -466,11 +466,10 @@ test('the spoken briefing reads the portfolio as shown, live moves and this acco
   assert.equal(snapshot.balanceHidden, false);
   assert.equal(snapshot.pricesDelayed, false);
 
-  desk.showBalance.set(false);
   desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
-  const hidden = await desk.briefingSource();
-  assert.equal(hidden.balanceHidden, true);
-  assert.deepEqual(hidden.orders, [], 'a failed order load leaves orders out');
+  const failed = await desk.briefingSource();
+  assert.equal(failed.balanceHidden, false, 'the novice dashboard always shows the balance');
+  assert.deepEqual(failed.orders, [], 'a failed order load leaves orders out');
 });
 
 test('choosing a chart period says where the portfolio started and where it is now', async t => {
@@ -479,11 +478,9 @@ test('choosing a chart period says where the portfolio started and where it is n
   desk.setChartPeriod('1W');
   for (let i = 0; i < 5; i++) await flush();
   assert.match(desk.chartAnnouncement(), /^1 week\. /);
-  desk.showBalance.set(false);
   desk.setChartPeriod('1M');
   for (let i = 0; i < 5; i++) await flush();
-  assert.match(desk.chartAnnouncement(), /^1 month\. (Your balance is hidden|There is no history)/);
-  assert.ok(!desk.chartAnnouncement().includes('$'), 'no amounts while the balance is hidden');
+  assert.match(desk.chartAnnouncement(), /^1 month\. /);
 });
 
 test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
@@ -557,4 +554,67 @@ test('the header counts down to the market close from the shared market status',
   feed.status.set({ open: false, exchangeTimeZone: 'America/New_York', nextOpen: '2026-10-20T13:30:00Z', nextClose: '2026-10-14T20:00:00Z' });
   assert.match(desk.marketStatusLine(), /^Market closed · Opens /);
   assert.equal(desk.marketStatusLine().match(/closed/gi).length, 1);
+});
+
+test('the sidebar resizes from the keyboard and a double-click on its edge, within its limits, and snaps open to the last width', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  const key = (k) => desk.resizeSidebarWithKeys({ key: k, preventDefault() {} });
+  desk.sidebarWidth.set(224);
+  key('ArrowRight');
+  assert.equal(desk.sidebarWidth(), 240);
+  key('End');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMax, 'never wider than the maximum');
+  key('ArrowRight');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMax);
+  desk.sidebarWidth.set(280);
+  desk.toggleSidebar();
+  assert.equal(desk.sidebarWidth(), desk.sidebarMin);
+  assert.equal(desk.sidebarCollapsed(), true, 'the icon strip hides labels');
+  key('ArrowLeft');
+  assert.equal(desk.sidebarWidth(), desk.sidebarMin, 'never narrower than the icon strip');
+  desk.toggleSidebar();
+  assert.equal(desk.sidebarWidth(), 280, 'a double-click re-opens at the last open width');
+  assert.equal(desk.sidebarCollapsed(), false);
+});
+
+test('the Overview allocation groups what the account holds by sector, largest first, with cash kept out of the ring', t => {
+  const feed = fakeFeed([
+    { symbol: 'AAPL', price: 100, sector: 'Technology' }, { symbol: 'MSFT', price: 100, sector: 'Technology' },
+    { symbol: 'LLY', price: 100, sector: 'Health Care' }, { symbol: 'JPM', price: 100, sector: '' },
+  ]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  const held = (symbol, value) => ({ symbol, name: symbol, value, shares: 1, average: value, today: 0, change: 0, total: 0, totalPercent: 0, logo: '' });
+  desk.holdings.set([held('AAPL', 300), held('LLY', 500), held('MSFT', 100), held('JPM', 100)]);
+  desk.buyingPower.set(250);
+  const { invested, cash, sectors } = desk.sectorAllocation();
+  assert.equal(invested, 1000);
+  assert.equal(cash, 250, 'cash is reported beside the ring, not in it');
+  assert.deepEqual(sectors.map((s) => [s.name, s.percent, s.symbols.join(',')]),
+    [['Health Care', 50, 'LLY'], ['Technology', 40, 'AAPL,MSFT'], ['Other', 10, 'JPM']]);
+  assert.equal(sectors[0].offset, '22.65', 'the first arc starts just past the top of the ring, after half a gap');
+  assert.equal(sectors[0].dash, '45.30 54.70', 'each arc is its share less the gap that keeps the round ends apart');
+  assert.match(desk.sectorSummary(), /Health Care 50 percent, Technology 40 percent, Other 10 percent/);
+  desk.holdings.set([]);
+  assert.deepEqual(desk.sectorAllocation().sectors, []);
+});
+
+test('the ticket stock menu opens downwards, moves with the arrow keys and picks with Enter', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(fakeFeed([
+    { symbol: 'AAPL', price: 100, sector: 'Technology' }, { symbol: 'MSFT', price: 200, sector: 'Technology' },
+  ]))]);
+  const key = (k) => ({ key: k, preventDefault() {}, stopPropagation() {} });
+  desk.chooseTradeSymbol('AAPL');
+  desk.stockMenuKey(key('ArrowDown'));
+  assert.equal(desk.stockMenuOpen(), true, 'an arrow key opens the menu on the current stock');
+  const start = desk.stockMenuIndex();
+  desk.stockMenuKey(key('ArrowDown'));
+  assert.equal(desk.stockMenuIndex(), Math.min(start + 1, desk.tradableQuotes().length - 1));
+  desk.stockMenuKey(key('End'));
+  const last = desk.tradableQuotes().at(-1).symbol;
+  desk.stockMenuKey(key('Enter'));
+  assert.equal(desk.tradeQuote().symbol, last);
+  assert.equal(desk.stockMenuOpen(), false, 'picking closes the menu');
+  desk.toggleStockMenu();
+  desk.stockMenuKey(key('Escape'));
+  assert.equal(desk.stockMenuOpen(), false, 'Escape closes just the menu');
 });

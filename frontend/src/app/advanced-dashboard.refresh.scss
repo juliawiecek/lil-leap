@@ -383,3 +383,11 @@ dialog p { font-size: 13.5px; }
   .market-bar app-market-ticker { flex-basis: 100%; }
   .session-clock { padding-left: 0; border-left: 0; }
 }
+
+/* Personal details and sign-in (PS-07): a small heading over the editable rows, matching the panel's row spacing. */
+.account-settings-block { padding: 22px 0; border-bottom: 1px solid var(--surface-tone-19); }
+.account-settings-block h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.account-settings-block > p { margin: 4px 0 16px; color: var(--muted, var(--text-muted)); font-size: 12.5px; }
+
+/* Keep the per-stock override menu above the rows that follow it. */
+.settings-panel app-price-protection-settings:has(.stock-menu) { position: relative; z-index: 2; }

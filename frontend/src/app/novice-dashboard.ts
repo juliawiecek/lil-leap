@@ -25,6 +25,7 @@ import { closedMarketWarning, localOpeningTime, marketStatusLabel, marketStatusT
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
 import { PriceProtectionSettings } from './price-protection-settings';
+import { AccountSettings } from './account-settings';
 import { ToastService, Toasts } from './toasts';
 import { MarketFeed } from './market-feed.service';
 import { isDelayed } from './market-feed-api';
@@ -47,8 +48,30 @@ import { SwitchScanService } from './switch-scan';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
-/** Live values kept for the chart: a day of five-second updates. */
-const LIVE_POINTS = 17280;
+/** Sidebar sizes in pixels: icon strip, below which labels hide, default, and widest. */
+const SIDEBAR_MIN = 64;
+const SIDEBAR_COMPACT = 150;
+const SIDEBAR_DEFAULT = 224;
+const SIDEBAR_MAX = 360;
+const SIDEBAR_KEY = 'nexttrade.novice.sidebarWidth';
+function clampSidebar(width: number): number {
+  return Math.round(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width)));
+}
+function storedSidebarWidth(): number {
+  try {
+    const saved = Number(globalThis.localStorage?.getItem(SIDEBAR_KEY));
+    return saved ? clampSidebar(saved) : SIDEBAR_DEFAULT;
+  } catch {
+    return SIDEBAR_DEFAULT;
+  }
+}
+/** Sector colours on the Overview allocation ring, largest sector first: NextTrade green, then muted hues. */
+/** Theme tokens (public/theme-tokens.css), so the colours follow the red-green and blue-yellow modes. */
+const SECTOR_COLORS = Array.from({ length: 7 }, (_, i) => `var(--sector-${i + 1})`);
+/** How often prices, and so the overview chart's live line, refresh on the novice dashboard. */
+export const NOVICE_REFRESH_MS = 3000;
+/** Live values kept for the chart: a day of three-second updates. */
+const LIVE_POINTS = 28800;
 const PERIOD_LABELS: Record<ChartPeriod, string> = {
   '1D': 'Today', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', '1Y': 'Past year', ALL: 'Since opening',
 };
@@ -101,7 +124,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, AccountSettings,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -155,6 +178,75 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #portfolio: Portfolio = { cash: 0, holdings: [] };
   /** Live values are added to the chart only once the shown account's balances have loaded. */
   #liveRecording = false;
+  /** Sidebar width in pixels; drag its edge to resize, from an icon strip up to a wide panel. Remembered per browser. */
+  readonly sidebarWidth = signal(storedSidebarWidth());
+  /** Narrow enough that only icons fit, so labels are hidden. */
+  readonly sidebarCollapsed = computed(() => this.sidebarWidth() < SIDEBAR_COMPACT);
+  /** True while the edge is being dragged, so the width follows the pointer without easing. */
+  readonly resizingSidebar = signal(false);
+  readonly sidebarMin = SIDEBAR_MIN;
+  readonly sidebarMax = SIDEBAR_MAX;
+  /** The width to return to when a double-click on the edge re-opens the sidebar. */
+  #openSidebarWidth = SIDEBAR_DEFAULT;
+
+  /** Double-click on the edge: shrink to icons, or re-open at the last open width. */
+  toggleSidebar(): void {
+    if (this.sidebarCollapsed()) {
+      this.#setSidebarWidth(this.#openSidebarWidth);
+    } else {
+      this.#openSidebarWidth = this.sidebarWidth();
+      this.#setSidebarWidth(SIDEBAR_MIN);
+    }
+  }
+
+  /** Drags the sidebar's edge; letting go in the icon-only range snaps to the icon strip. */
+  startSidebarResize(event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    const shell = (event.currentTarget as HTMLElement).closest('.novice-shell') as HTMLElement | null;
+    const left = shell?.getBoundingClientRect().left ?? 0;
+    this.resizingSidebar.set(true);
+    const move = (moved: PointerEvent): void => this.sidebarWidth.set(clampSidebar(moved.clientX - left));
+    const up = (): void => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      this.resizingSidebar.set(false);
+      if (this.sidebarCollapsed()) {
+        this.#setSidebarWidth(SIDEBAR_MIN);
+      } else {
+        this.#openSidebarWidth = this.sidebarWidth();
+        this.#setSidebarWidth(this.sidebarWidth());
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  /** Keyboard resizing on the edge: arrows step 16px, Home collapses, End opens fully. */
+  resizeSidebarWithKeys(event: KeyboardEvent): void {
+    const steps: Record<string, number> = { ArrowLeft: -16, ArrowRight: 16 };
+    if (event.key in steps) {
+      event.preventDefault();
+      this.#setSidebarWidth(this.sidebarWidth() + steps[event.key]);
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      this.#setSidebarWidth(event.key === 'Home' ? SIDEBAR_MIN : SIDEBAR_MAX);
+    }
+  }
+
+  #setSidebarWidth(width: number): void {
+    const next = clampSidebar(width);
+    this.sidebarWidth.set(next);
+    try {
+      globalThis.localStorage?.setItem(SIDEBAR_KEY, String(next));
+    } catch {
+      // Storage can be unavailable (private windows); the width just isn't remembered.
+    }
+  }
   /** Latest bid and today's % change per instrument, both from the shared feed (PS-10). */
   readonly #bids = new Map<string, number>();
   readonly #dayChanges = new Map<string, number>();
@@ -181,14 +273,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   /** Balances could not be read: the service is down or unreachable (PS-11). */
   readonly serviceDown = signal(false);
   readonly query = signal('');
-  readonly showBalance = signal(true);
-  /** "Good morning" / "Good afternoon" / "Good evening" by the client's own clock (PS-06). */
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the client's own clock (PS-06). */
   readonly greeting = computed(() => {
     const hour = this.marketClock().getHours();
     if (hour < 12) {
-      return 'Good morning';
+      return 'Good Morning';
     }
-    return hour < 18 ? 'Good afternoon' : 'Good evening';
+    return hour < 18 ? 'Good Afternoon' : 'Good Evening';
   });
   /** First name from the investor profile, for the greeting; empty when it is not known. */
   readonly firstName = computed(() => this.profile()?.firstName?.trim() ?? '');
@@ -382,6 +473,63 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     return { title: 'Spread across companies', detail: `${holdings.length} companies, none above ${Math.round(largest * 100)}% of your stocks.` };
   });
+  /**
+   * The Overview's allocation card: invested money split by industry sector, built from whatever the
+   * account holds right now (each stock's sector comes with its live price). Largest sector first; past
+   * the sixth, the rest are grouped as "Other sectors". Cash is reported beside it, not in the ring.
+   */
+  readonly sectorAllocation = computed(() => {
+    const sectorOf = new Map(this.feed.quotes().map((q) => [q.symbol, q.sector?.trim() || 'Other']));
+    const bySector = new Map<string, { value: number; symbols: string[] }>();
+    for (const holding of this.holdings()) {
+      if (holding.value <= 0) {
+        continue;
+      }
+      const sector = sectorOf.get(holding.symbol) ?? 'Other';
+      const entry = bySector.get(sector) ?? { value: 0, symbols: [] };
+      entry.value += holding.value;
+      entry.symbols.push(holding.symbol);
+      bySector.set(sector, entry);
+    }
+    const invested = [...bySector.values()].reduce((sum, s) => sum + s.value, 0);
+    let rows = [...bySector.entries()]
+      .map(([name, s]) => ({ name, value: s.value, symbols: s.symbols }))
+      .sort((a, b) => b.value - a.value);
+    if (rows.length > SECTOR_COLORS.length) {
+      const rest = rows.slice(SECTOR_COLORS.length - 1);
+      rows = [...rows.slice(0, SECTOR_COLORS.length - 1), {
+        name: 'Other sectors',
+        value: rest.reduce((sum, r) => sum + r.value, 0),
+        symbols: rest.flatMap((r) => r.symbols),
+      }];
+    }
+    let start = 0;
+    const sectors = rows.map((row, i) => {
+      const share = invested > 0 ? (row.value / invested) * 100 : 0;
+      // Round caps reach half the 3.8 stroke past each end of an arc, so the gap covers both caps
+      // plus about 0.9 of clear space between neighbours (the circle is 100 units around).
+      const gap = rows.length > 1 ? 4.7 : 0;
+      const length = Math.max(share - gap, 0.01);
+      const segment = {
+        ...row,
+        color: SECTOR_COLORS[i],
+        share,
+        percent: Math.round(share),
+        dash: `${length.toFixed(2)} ${(100 - length).toFixed(2)}`,
+        offset: (25 - start - gap / 2).toFixed(2),
+      };
+      start += share;
+      return segment;
+    });
+    return { invested, cash: this.buyingPower(), sectors };
+  });
+  /** Screen-reader summary of the sector ring. */
+  readonly sectorSummary = computed(() => {
+    const { sectors } = this.sectorAllocation();
+    return sectors.length
+      ? 'Investments by sector: ' + sectors.map((s) => `${s.name} ${s.percent} percent`).join(', ')
+      : 'No investments yet';
+  });
   readonly assetAllocation = computed(() => {
     const stocksValue = this.holdings().reduce((sum, h) => sum + h.value, 0);
     const cashValue = this.buyingPower();
@@ -407,6 +555,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.dialog()?.nativeElement.showModal();
   }
   closeModal(): void {
+    this.stockMenuOpen.set(false);
     this.dialog()?.nativeElement.close();
   }
   /** "?" opens Keyboard Shortcuts from anywhere, unless another dialog is already open (PS-17). */
@@ -463,6 +612,59 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     return this.tradableQuotes()[0]?.symbol;
   }
   /** Switches the open trade to another stock and drops any review of the previous one. */
+  /** The ticket's stock list: a menu that always opens downwards, unlike a native select near the screen's bottom. */
+  readonly stockMenuOpen = signal(false);
+  /** The highlighted row while the menu is open (arrow keys move it, Enter picks it). */
+  readonly stockMenuIndex = signal(0);
+
+  toggleStockMenu(): void {
+    if (this.stockMenuOpen()) {
+      this.stockMenuOpen.set(false);
+      return;
+    }
+    const index = this.tradableQuotes().findIndex((q) => q.symbol === this.tradeQuote().symbol);
+    this.stockMenuIndex.set(Math.max(index, 0));
+    this.stockMenuOpen.set(true);
+  }
+
+  pickStock(symbol: string): void {
+    this.chooseTradeSymbol(symbol);
+    this.stockMenuOpen.set(false);
+  }
+
+  stockMenuKey(event: KeyboardEvent): void {
+    const options = this.tradableQuotes();
+    if (!this.stockMenuOpen()) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.toggleStockMenu();
+      }
+      return;
+    }
+    const last = options.length - 1;
+    const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, PageDown: 5, PageUp: -5 };
+    if (event.key in moves) {
+      event.preventDefault();
+      this.stockMenuIndex.set(Math.min(last, Math.max(0, this.stockMenuIndex() + moves[event.key])));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      this.stockMenuIndex.set(event.key === 'Home' ? 0 : last);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const option = options[this.stockMenuIndex()];
+      if (option) {
+        this.pickStock(option.symbol);
+      }
+    } else if (event.key === 'Escape') {
+      // Close just the menu, not the whole dialog.
+      event.preventDefault();
+      event.stopPropagation();
+      this.stockMenuOpen.set(false);
+    } else if (event.key === 'Tab') {
+      this.stockMenuOpen.set(false);
+    }
+  }
+
   chooseTradeSymbol(symbol: string): void {
     const quote = this.quotes().find((q) => q.symbol === symbol);
     if (!quote) {
@@ -623,7 +825,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
-    this.#stopFeed = this.feed.start();
+    // The overview chart takes a new point at every price refresh; novice asks for one every 3 seconds.
+    this.#stopFeed = this.feed.start(NOVICE_REFRESH_MS);
     this.#applyFeed();
   }
   ngOnDestroy(): void {
@@ -703,7 +906,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       end: points.at(-1)?.value ?? this.portfolioValue(),
       // A period reaching back before the account had money starts from its first deposit.
       fromOpening: !!this.chartSpan()?.fromOpening || (points[0]?.value ?? 0) === 0,
-      balanceHidden: !this.showBalance(),
+      balanceHidden: false,
       hasHistory: points.length >= 2 && !this.chartError(),
     });
     this.chartAnnouncement.set(text);
@@ -886,7 +1089,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       accountId,
       now,
       market: this.marketStatus(),
-      balanceHidden: !this.showBalance(),
+      balanceHidden: false,
       total: this.portfolioValue(),
       gain: this.totalReturn(),
       gainPercent: this.totalReturnPercent(),

@@ -62,3 +62,24 @@ test('a session loss restyles the price series in every palette, Off included', 
     assert.notEqual(tokens['chart-gain'], tokens['chart-loss'], `${mode}: gain and loss differ`);
   }
 });
+
+test('sector allocation colours are readable on dark surfaces and stay apart in each palette', () => {
+  const sectors = (tokens) => Array.from({ length: 7 }, (_, i) => tokens[`sector-${i + 1}`]);
+  const views = { off: ['protanopia', 'deuteranopia', 'tritanopia'].slice(0, 0), 'red-green': ['protanopia', 'deuteranopia'], 'blue-yellow': ['tritanopia'] };
+  for (const [mode, deficiencies] of Object.entries(views)) {
+    const colours = sectors(modes[mode]);
+    assert.ok(colours.every(Boolean), `${mode}: all seven sector tokens are defined`);
+    for (const colour of colours) {
+      assert.ok(contrast(colour, modes[mode].surface) >= 3, `${mode}: ${colour} graphical contrast`);
+    }
+    for (const deficiency of deficiencies) {
+      for (let i = 0; i < colours.length; i++) {
+        for (let j = i + 1; j < colours.length; j++) {
+          const delta = separation(colours[i], colours[j], deficiency);
+          assert.ok(delta >= 12, `${mode} / ${deficiency}: sectors ${i + 1} and ${j + 1} ΔE76 ${delta.toFixed(1)}`);
+        }
+      }
+    }
+  }
+  assert.ok(!sectors(modes.off).includes(modes.off.loss), 'Off never paints a sector in the loss red');
+});

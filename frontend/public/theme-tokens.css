@@ -317,6 +317,16 @@
   --series-dash: none;
   --allocation-pattern-ink: var(--category-tone-07);
   --allocation-outline: var(--text-muted);
+  /* Allocation by sector uses the site's own colours: green, the Buy blue, amber, the off-white accent and the
+   * chart grey, plus a deeper green and the cash grey for "Other sectors". Never the loss red. Referencing the
+   * tokens means the red-green and blue-yellow modes translate them too; they only override what would clash. */
+  --sector-1: var(--gain);
+  --sector-2: var(--buy);
+  --sector-3: var(--warning);
+  --sector-4: var(--accent);
+  --sector-5: var(--chart-neutral);
+  --sector-6: #5f8f45;
+  --sector-7: var(--chart-cash);
 }
 
 /* SVG interpolates stop RGB even at zero alpha. Preserve the palette hue at the transparent
@@ -423,6 +433,9 @@
   --chart-2: var(--warning);
   --chart-3: #96d8c3;
   --chart-4: #ffb9d1;
+  /* Sectors: the safe blue gain and lilac Buy look alike without red/green vision, so Buy's slot takes a deeper violet. */
+  --sector-2: #6a5acd;
+  --sector-6: #4f8fd1;
 }
 
 :root[data-colour-mode="blue-yellow"] {
@@ -526,6 +539,9 @@
   --chart-2: #8cdbbd;
   --chart-3: var(--loss);
   --chart-4: #dce4e2;
+  /* Sectors: the lilac Buy and grey look alike without blue/yellow vision, so Buy's slot takes a stronger violet. */
+  --sector-2: #b48ce0;
+  --sector-6: #3e9c78;
 }
 
 /*

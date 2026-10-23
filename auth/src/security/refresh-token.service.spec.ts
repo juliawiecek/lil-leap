@@ -5,11 +5,12 @@ import { Session } from './entities/session.entity';
 import { InvalidRefreshTokenException } from '../user/exceptions/invalid-refresh-token.exception';
 
 describe('RefreshTokenService', () => {
-  const user = { userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com' } as any;
+  const user = { passwordHash: 'hash-v1', userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com' } as any;
   const hashOf = (raw: string) => createHash('sha256').update(raw, 'utf8').digest('base64');
 
   let repository: Record<'create' | 'save' | 'findOne' | 'update', jest.Mock>;
   let service: RefreshTokenService;
+  let manager: any;
 
   beforeEach(() => {
     delete process.env.SESSION_INACTIVITY_MINUTES;
@@ -19,6 +20,8 @@ describe('RefreshTokenService', () => {
       findOne: jest.fn(),
       update: jest.fn(),
     };
+    manager = { findOne: jest.fn().mockResolvedValue(user), getRepository: () => repository, update: repository.update };
+    Object.assign(repository, { manager: { transaction: async (work: any) => work(manager) } });
     service = new RefreshTokenService(repository as unknown as Repository<Session>);
   });
 
@@ -89,7 +92,7 @@ describe('RefreshTokenService', () => {
   });
 
   it('revokeAllForUser ends every open session for the user inside the given transaction', async () => {
-    const manager = { update: jest.fn() };
+    const manager = { update: jest.fn(), findOne: jest.fn().mockResolvedValue(user) };
 
     await service.revokeAllForUser(user.userId, manager as any);
 
@@ -101,8 +104,8 @@ describe('RefreshTokenService', () => {
   });
 
   it('revokeAllForUser uses the repository manager when no transaction is given', async () => {
-    const manager = { update: jest.fn() };
-    service = new RefreshTokenService({ ...repository, manager } as unknown as Repository<Session>);
+    const manager = { update: jest.fn(), findOne: jest.fn().mockResolvedValue(user) };
+    service = new RefreshTokenService({ ...repository, manager: { transaction: async (work: any) => work(manager) } } as unknown as Repository<Session>);
 
     await service.revokeAllForUser(user.userId);
 

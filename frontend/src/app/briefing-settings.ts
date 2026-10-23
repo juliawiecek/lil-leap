@@ -35,7 +35,8 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-bu
   `,
   styles: [
     `
-      .card { display: grid; gap: 14px; padding: 14px 20px; border: 1px solid var(--surface-tone-04); border-radius: 8px; background: var(--surface-tone-03); }
+      .card { display: grid; gap: 14px; padding: var(--setting-card-padding, 14px 20px); border: var(--setting-card-border, 1px solid var(--surface-tone-04));
+        border-bottom: var(--setting-card-divider, 1px solid var(--surface-tone-04)); border-radius: var(--setting-card-radius, 8px); background: var(--setting-card-bg, var(--surface-tone-03)); }
       .card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .card-text b { font-size: 14px; font-weight: 600; }
       .card-text small { max-width: 56ch; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }

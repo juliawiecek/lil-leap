@@ -50,6 +50,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtServiceImpl.class, AccountService.class, ClientFinancialQueryService.class,
         AccountTransferPostgresTest.DatabaseConfiguration.class})
 class AccountTransferPostgresTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     private static final String SCHEMA = "accounts_test_" + UUID.randomUUID().toString().replace("-", "");
 
     @TestConfiguration

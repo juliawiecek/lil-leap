@@ -42,6 +42,7 @@ services:
   holdings:
     build: ./nextTrade-holdings
     environment:
+      AUTH_SESSION_URL: http://auth:8081/auth/me/session
       APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
       DB_HOST: db
       DB_PORT: 5432
@@ -57,6 +58,7 @@ services:
   orders:
     build: ./nextTrade-orders
     environment:
+      AUTH_SESSION_URL: http://auth:8081/auth/me/session
       APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
       DB_HOST: db
       DB_PORT: 5432
@@ -74,6 +76,7 @@ services:
   insights:
     build: ./insights
     environment:
+      AUTH_SESSION_URL: http://auth:8081/auth/me/session
       APP_JWT_SECRET: e2e-shared-jwt-secret-32-bytes-minimum
       PORT: 8084
       REPORTING_DB_HOST: reporting-db

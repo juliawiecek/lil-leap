@@ -1,0 +1,301 @@
+// Sign-in page in the same look as NextTrade Insights' sign-in: a 60/40 split with the moving strip on top,
+// the candle chart and headline on the left, and a darker right-hand panel holding the form with no card
+// around it. Laptop and larger only; phones keep the stacked layout from app.scss / app.refresh.scss.
+
+/* The moving strip: a still snapshot of sample quotes (symbol and price), styled like the Insights strip. */
+.login-screen .tape-track {
+  font: 300 11px/1 var(--font-mono, monospace);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.login-screen .tape-group { justify-content: flex-start; gap: 44px; min-width: 0; padding-right: 44px; }
+.login-screen .tape-track .divider { color: var(--surface-tone-58); }
+.login-screen .tape-track .quote { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.login-screen .tape-track .quote b { color: var(--text); font-weight: 400; }
+
+@media (min-width: 901px) {
+  .login-screen.auth-visible {
+    --signin-panel: color-mix(in srgb, var(--surface) 45%, var(--background));
+    --signin-line: #1c1c1c;
+
+    /* Left: page background; right 40%: a darker panel, split by a hairline. */
+    &::before {
+      background-image: none;
+      background: linear-gradient(90deg, var(--background) 0 60%, var(--signin-line) 60% calc(60% + 1px), var(--signin-panel) calc(60% + 1px) 100%);
+    }
+    .market-tape { height: 32px; background: var(--background); border-bottom: 1px solid #1c1c1c; -webkit-mask-image: none; mask-image: none; }
+    /* No green glow line under the strip or down the middle: plain neutral hairlines only. */
+    .market-tape::after { display: none; }
+
+    /* Candle chart behind the headline: same placement, blur wash and candle colours as the Insights sign-in. */
+    .signin-stock-background {
+      inset: 32px auto 0 0;
+      width: 60%;
+      opacity: 1;
+      border-right: 0;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .signin-stock-background svg { width: 100%; height: 100%; }
+    .signin-stock-background::after {
+      display: block;
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 9, 7, 0.62);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      -webkit-mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
+      mask-image: linear-gradient(90deg, #000 30%, #000000b3 55%, transparent 85%), linear-gradient(to bottom, transparent 25%, #000 65%);
+      -webkit-mask-composite: source-in;
+      mask-composite: intersect;
+    }
+    .login-candles { opacity: 1; fill: #7fa459; stroke: #7fa459; stroke-width: 0.4; }
+    .login-candles .falling { fill: #4b5b42; stroke: #647653; }
+    .login-candles rect { stroke: none; }
+    /* The global candle style (accessibility-visuals.scss) draws hollow rising bodies and light falling ones; the Insights chart uses filled bodies, so match it here. */
+    @media (forced-colors: none) {
+      .login-candles rect { fill: #7fa459 !important; stroke: none !important; }
+      .login-candles .falling rect { fill: #4b5b42 !important; stroke: none !important; }
+      .login-candles path { stroke-width: 0.4 !important; }
+    }
+    .volume-field { display: none; }
+
+    .brand-lockup { top: 56px; left: 40px; }
+    .brand-mark, .brand-mark svg { width: 26px; height: 26px; }
+    .brand-name { font-size: 19px; }
+
+    /* One grid for the whole page: copy on the left; secure tag, form and links on the right. */
+    .auth-shell {
+      inset: 32px 0 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: 60% 40%;
+      grid-template-rows: 1fr auto;
+      gap: 0;
+      overflow: hidden;
+    }
+    .auth-content { display: contents; }
+    .auth-header { grid-column: 2; grid-row: 1; align-self: start; justify-self: end; min-height: 0; padding: 30px 48px 0; }
+    .auth-copy { grid-column: 1; grid-row: 1; align-self: center; padding: 120px 4% 40px 56px; }
+    .auth-panel {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+      justify-self: center;
+      left: 0;
+      width: min(460px, calc(100% - 96px));
+      max-width: none;
+      margin: 64px 0 56px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .auth-panel::before { display: none; }
+    .auth-panel .form-status:empty { display: none; }
+    /* Sign-up has more fields: tighter spacing so it still fits a laptop screen without scrolling. */
+    .signup-layout .auth-panel { margin: 72px 0 48px; padding-block: 0; }
+    .signup-layout .auth-panel h2 { font-size: clamp(26px, 2.1vw, 32px); }
+    .signup-layout .auth-panel .auth-subtitle { margin-bottom: 22px; padding-bottom: 18px; }
+    .signup-layout .auth-tabs { margin-bottom: 20px; }
+    .signup-layout .auth-fields { gap: 18px; }
+    .signup-layout .auth-fields .field-group input { height: 50px; }
+    .signup-layout .primary-action { min-height: 50px; margin-top: 22px; }
+    /* Create account has more to fill in (and a password checklist that appears as you type), so on a short
+       screen it may scroll rather than squeeze. Sign in stays fixed. */
+    .auth-shell.signup-layout { overflow-y: auto; }
+    /* A clear gap between the last field and the password checklist under it. */
+    .password-checklist { margin-top: 16px; }
+    .signup-layout .auth-divider { margin: 14px 0 12px; }
+    .signup-layout .secondary-action { min-height: 44px; }
+
+    /* The page never scrolls, so on shorter laptop screens tighten the form a little more to keep everything on screen. */
+    @media (max-height: 820px) {
+      .auth-panel { margin: 72px 0 24px; }
+      .auth-copy { padding-top: 96px; }
+      .signup-layout .auth-panel { margin: 56px 0 32px; }
+      .signup-layout .auth-panel h2 { margin-bottom: 6px; }
+      .signup-layout .auth-panel .auth-subtitle { margin-bottom: 18px; padding-bottom: 14px; }
+      .signup-layout .auth-tabs { margin-bottom: 16px; }
+      .signup-layout .auth-fields { gap: 14px; }
+      .signup-layout .auth-fields .field-group input { height: 46px; }
+      .signup-layout .primary-action { min-height: 48px; margin-top: 18px; }
+      .signup-layout .auth-divider { margin: 10px 0 8px; }
+      .signup-layout .secondary-action { min-height: 40px; }
+    }
+
+    /* Secure connection: a small outlined tag in the panel's top-right corner. */
+    .secure-status {
+      padding: 6px 12px;
+      border: 1px solid var(--signin-line);
+      border-radius: 999px;
+      background: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    /* Left copy: green uppercase label, bold headline with "next." in green, muted description. */
+    .auth-eyebrow {
+      margin-bottom: 22px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      color: var(--gain);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .auth-eyebrow::before { display: none; }
+    .auth-copy h1 { font-size: clamp(48px, 5vw, 76px); font-weight: 800; line-height: 1.02; letter-spacing: -0.05em; }
+    .auth-copy h1 em { display: block; color: var(--gain); font-style: normal; }
+    .auth-copy > p { max-width: 460px; margin-top: 24px; color: var(--text-muted); font-size: 17px; line-height: 1.6; }
+
+    /* Form heading: title, subtitle, then a hairline with a short green segment, like the app's page headers. */
+    .auth-panel h2 { margin: 0 0 8px; font-size: clamp(30px, 2.5vw, 38px); font-weight: 700; letter-spacing: -0.03em; }
+    .auth-panel .auth-subtitle {
+      position: relative;
+      margin: 0 0 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--signin-line);
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .auth-panel .auth-subtitle::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 72px;
+      height: 2px;
+      background: var(--gain);
+    }
+
+    /* Sign in / Create account: quiet underlined tabs instead of a pill switch. */
+    .auth-tabs { display: flex; justify-content: flex-start; gap: 22px; margin: 0 0 22px; padding: 0; border: 0; border-radius: 0; background: none; }
+    .auth-tab {
+      flex: none;
+      min-height: 32px;
+      padding: 0;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      background: none;
+      color: var(--text-subtle);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .auth-tab:hover { color: var(--text); background: none; }
+    .auth-tab.active { border-bottom-color: var(--gain); background: none; color: var(--text); box-shadow: none; }
+
+    /* Fields and buttons as on Insights: near-black boxes, green focus, one solid green button. */
+    .auth-fields { gap: 18px; }
+    .field-group label { color: var(--text-tone-19); font-size: 13px; font-weight: 600; }
+    .field-row .text-link { color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+    .auth-fields .field-group input {
+      height: 52px;
+      padding-left: 16px;
+      border: 1px solid var(--surface-tone-08);
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--background) 70%, black);
+      color: var(--text);
+      font-size: 15px;
+    }
+    .field-group input:hover { border-color: var(--surface-tone-10); }
+    .field-group input:focus { border-color: var(--gain); background: color-mix(in srgb, var(--background) 70%, black); box-shadow: none; }
+    .field-group input:-webkit-autofill,
+    .field-group input:-webkit-autofill:hover,
+    .field-group input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px color-mix(in srgb, var(--background) 70%, black) inset;
+      -webkit-text-fill-color: var(--text);
+      caret-color: var(--text);
+      transition: background-color 9999s ease-out 0s;
+    }
+    .password-toggle { padding: 6px 8px; border-radius: 6px; background: none; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+    .password-toggle:hover { color: var(--text); }
+    .primary-action {
+      min-height: 52px;
+      margin-top: 20px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--gain);
+      color: #0b130a;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+    .primary-action:hover { background: color-mix(in srgb, var(--gain) 85%, white); box-shadow: none; }
+    .auth-divider { margin: 20px 0 16px; }
+    .secondary-action {
+      min-height: 48px;
+      border: 1px solid var(--surface-tone-10);
+      border-radius: 6px;
+      background: none;
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+    .secondary-action:hover { border-color: var(--text-subtle); background: none; }
+
+    /* Bottom row: legal line under the left side; links under the panel above a hairline. */
+    .auth-footer {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      display: grid;
+      grid-template-columns: 60% 40%;
+      align-items: end;
+      gap: 0;
+      padding: 0;
+      font-size: 12px;
+    }
+    .auth-footer > span { padding: 0 56px 26px; }
+    .auth-footer nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 48px 26px;
+      padding-top: 16px;
+      border-top: 1px solid var(--signin-line);
+      font-weight: 500;
+    }
+  }
+}
+
+/* The opening animation on laptops and up uses the sign-in page's own backdrop: the same near-black
+   background, the same faint grid (cells sized like the sign-in chart's 52x26 grid in its 60%-wide box),
+   and the same strip on top, so the hand-off to the form changes nothing but the content. */
+@media (min-width: 901px) {
+  /* Applies during the hand-off too: otherwise the old dotted grid and green glow come back while they fade out. */
+  .login-screen {
+    .ambient-light, .edge-shade, .market-scan, .volume-field { display: none; }
+    .market-grid {
+      inset: 0;
+      z-index: 0;
+      opacity: 1;
+      background-color: var(--background);
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: calc(60vw * 52 / 420) calc((100vh - 32px) * 26 / 500);
+      background-position: 0 32px;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+  .login-screen.auth-visible .market-grid { opacity: 0; }
+  .login-screen:not(.auth-visible) {
+    .market-tape { height: 32px; background: var(--background); border-bottom: 1px solid #1c1c1c; -webkit-mask-image: none; mask-image: none; }
+    .market-tape::after { display: none; }
+  }
+}
+
+/* Caps Lock hint under the password field, in the same amber as the Insights sign-in. */
+.login-screen .field-hint { margin: 6px 0 0; color: #e2b65a; font-size: 12.5px; line-height: 1.3; }

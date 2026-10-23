@@ -42,6 +42,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         com.neueda.leap.portfolio.repository.OrderHistoryRepository.class,
         HoldingsSettlementPostgresTest.DatabaseConfiguration.class})
 class HoldingsSettlementPostgresTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     private static final String SCHEMA = "holdings_test_" + UUID.randomUUID().toString().replace("-", "");
 
     @TestConfiguration

@@ -24,6 +24,8 @@ export class MarketFeed {
   readonly now = signal(Date.now());
 
   #users = 0;
+  /** Refresh intervals the views using the feed asked for; prices refresh at the fastest of them. */
+  readonly #rates: number[] = [];
   #quoteTimer: ReturnType<typeof setTimeout> | undefined;
   #statusTimer: ReturnType<typeof setTimeout> | undefined;
   readonly #listeners = new Set<() => void>();
@@ -34,9 +36,17 @@ export class MarketFeed {
     }
   };
 
-  /** Starts the feed for a view; call the returned function when the view goes away. */
-  start(): () => void {
+  /**
+   * Starts the feed for a view; call the returned function when the view goes away. A view can ask
+   * for faster prices (e.g. the novice overview chart every 3 seconds); the feed uses the fastest asked for.
+   */
+  start(refreshMs: number = QUOTE_REFRESH_MS): () => void {
+    const fasterThanBefore = this.#users > 0 && refreshMs < this.#refreshMs();
+    this.#rates.push(refreshMs);
     this.#users += 1;
+    if (fasterThanBefore) {
+      this.#scheduleQuotes();
+    }
     if (this.#users === 1) {
       globalThis.document?.addEventListener('visibilitychange', this.#onVisibility);
       void this.refreshQuotes();
@@ -48,6 +58,7 @@ export class MarketFeed {
     return () => {
       if (!released) {
         released = true;
+        this.#rates.splice(this.#rates.indexOf(refreshMs), 1);
         this.#release();
       }
     };
@@ -168,7 +179,7 @@ export class MarketFeed {
     this.#quoteTimer = setTimeout(async () => {
       await this.refreshQuotes();
       this.#scheduleQuotes();
-    }, QUOTE_REFRESH_MS);
+    }, this.#refreshMs());
   }
 
   #scheduleStatus(): void {
@@ -180,6 +191,11 @@ export class MarketFeed {
       await this.refreshStatus();
       this.#scheduleStatus();
     }, MARKET_STATUS_REFRESH_MS);
+  }
+
+  /** The fastest refresh any current view asked for. */
+  #refreshMs(): number {
+    return this.#rates.length ? Math.min(...this.#rates) : QUOTE_REFRESH_MS;
   }
 
   #release(): void {

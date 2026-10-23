@@ -5,12 +5,9 @@
     <div class="tape-track">
       @for (copy of [0, 1]; track copy) {
       <div class="tape-group">
-      <span>AAPL</span><span class="divider">/</span>
-      <span>AMZN</span><span class="divider">/</span>
-      <span>GOOGL</span><span class="divider">/</span>
-      <span>MSFT</span><span class="divider">/</span>
-      <span>NVDA</span><span class="divider">/</span>
-      <span>US equities <span class="up">· live prices after you sign in</span></span><span class="divider">/</span>
+      @for (quote of tapeQuotes; track quote.symbol) {
+        <span class="quote"><b>{{ quote.symbol }}</b><span>{{ quote.price }}</span></span><span class="divider">/</span>
+      }
       </div>
       }
     </div>
@@ -117,16 +114,22 @@
               <button type="button" class="text-link" [style.visibility]="authMode() === 'signin' ? 'visible' : 'hidden'" (click)="showPasswordRecovery($event)">Forgot password?</button>
             </div>
             <div class="input-wrap">
-              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="choosingPassword() ? 'new-password' : 'current-password'" [attr.minlength]="choosingPassword() ? 12 : null" [attr.aria-describedby]="choosingPassword() && passwordStarted() ? 'password-requirements' : null" placeholder="Enter your password" [required]="authMode() !== 'forgot'" (input)="updatePassword($any($event.target).value)" />
+              <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="choosingPassword() ? 'new-password' : 'current-password'" [attr.minlength]="choosingPassword() ? 12 : null" [attr.aria-describedby]="choosingPassword() && passwordStarted() ? 'password-requirements' : capsLock() ? 'caps-hint' : null" placeholder="Enter your password" [required]="authMode() !== 'forgot'" (input)="updatePassword($any($event.target).value)" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" />
               <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
             </div>
+            @if (capsLock() && !choosingPassword()) {
+              <p id="caps-hint" class="field-hint" aria-live="polite">Caps Lock is on</p>
+            }
           </div>
 
           @if (choosingPassword()) {
             <div class="field-group">
               <div class="field-row"><label for="verify-password">Verify password</label></div>
-              <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" />
+              <input id="verify-password" name="verifyPassword" [type]="passwordVisible() ? 'text' : 'password'" autocomplete="new-password" placeholder="Enter your password again" required (input)="confirmationDraft.set($any($event.target).value); formStatus.set('')" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" />
             </div>
+            @if (capsLock()) {
+              <p id="caps-hint" class="field-hint" aria-live="polite">Caps Lock is on</p>
+            }
           }
 
           </div>
@@ -149,10 +152,6 @@
             <button type="button" class="text-link" (click)="backToSignIn()">Back to sign in</button>
           }
         </form>
-        <div class="auth-alternative">
-          <div class="auth-divider"><span>or</span></div>
-          <button class="secondary-action" type="button" (click)="setAuthMode(authMode() === 'signin' ? 'signup' : 'signin')">{{ authMode() === 'signin' ? 'Create account' : 'Back to sign in' }}</button>
-        </div>
       </section>
     </div>
 

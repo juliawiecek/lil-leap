@@ -284,7 +284,7 @@ th { color: var(--text-subtle); font-weight: 600; }
 .asset-dot.cash, .cash { background: var(--allocation-cash); }
 
 /* Overview greeting with today's summary sentence. */
-.greeting-title { margin: 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; }
+.greeting-title { margin: 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; word-spacing: 0.12em; }
 .day-summary { margin: 4px 0 0; color: var(--text-muted); font-size: 15px; font-weight: 500; }
 .day-summary b { color: var(--text); font-weight: 700; }
 .day-summary .positive { color: var(--gain); }
@@ -293,3 +293,210 @@ th { color: var(--text-subtle); font-weight: 600; }
   .greeting-title { font-size: 24px; }
   .day-summary { font-size: 14px; }
 }
+
+/* Collapsible sidebar, as on the advanced dashboard: icons only, labels kept for screen readers. */
+.novice-shell { transition: grid-template-columns 0.2s ease; }
+/* Width comes from the drag handle; no easing while dragging so the edge follows the pointer. */
+.novice-shell.resizable { grid-template-columns: var(--sidebar-width, 224px) minmax(0, 1fr); }
+.novice-shell.resizing { transition: none; cursor: col-resize; user-select: none; }
+.novice-sidebar { position: sticky; }
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 5;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.resizing .sidebar-resizer::after { background: var(--gain); }
+.sidebar-resizer:focus-visible { outline: none; }
+/* Mid widths: long labels and the wordmark trim instead of spilling past the edge. */
+.novice-sidebar .wordmark { overflow: hidden; }
+.novice-sidebar nav button span,
+.sidebar-account button span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sidebar-account button { display: flex; align-items: center; gap: 12px; }
+.sidebar-account app-dashboard-icon { width: 17px; height: 17px; flex: none; }
+.sidebar-account .sign-out:hover { color: var(--loss); }
+.collapsed .novice-sidebar { padding-inline: 8px; }
+.collapsed .wordmark { margin: 0; font-size: 0; justify-content: center; }
+.collapsed .wordmark-trend { margin: 0; width: 22px; height: 17px; }
+.collapsed .novice-sidebar nav button,
+.collapsed .sidebar-account button { justify-content: center; padding: 0; }
+.collapsed .novice-sidebar nav button span,
+.collapsed .sidebar-account button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .novice-shell { transition: none; }
+}
+/* Small screens keep the fixed icon strip; there is no room to drag. */
+@media (max-width: 900px) {
+  .novice-shell.resizable { grid-template-columns: 64px minmax(0, 1fr); }
+  .sidebar-resizer { display: none; }
+}
+
+/* Fit any laptop or monitor (about 1024px and up). */
+/* Small laptops: keep short labels on one line and let the search box give way first. */
+.market-status > span,
+.novice-topbar .tier-badge { white-space: nowrap; }
+.novice-topbar .company-search { flex: 0 1 480px; width: auto; min-width: 200px; }
+.novice-topbar .company-search input { min-width: 0; text-overflow: ellipsis; }
+.novice-topbar .topbar-actions { flex: none; }
+/* However far the sidebar is dragged, the page keeps at least two thirds of the screen. */
+.novice-shell.resizable { grid-template-columns: min(var(--sidebar-width, 224px), 33vw) minmax(0, 1fr); }
+/* Large monitors: content stops at 1600px and sits centered; top bar and ticker line up with it. */
+.novice-content { max-width: 1600px; margin-inline: auto; }
+@media (min-width: 1351px) {
+  .novice-topbar,
+  app-market-ticker { padding-inline: max(32px, calc((100% - 1600px) / 2 + 32px)); }
+}
+@media (max-width: 900px) {
+  .novice-shell.resizable { grid-template-columns: 64px minmax(0, 1fr); }
+}
+
+/* Asset classes: line the rows up with the card's title and the "View all holdings" link; compact rows. */
+.asset-class-list { padding: 0 0 4px; }
+.asset-class-list > div { align-items: center; gap: 24px; padding: 13px 32px; grid-template-columns: 1fr 80px 140px; }
+.asset-class-list > div > :not(:first-child) { text-align: right; }
+.asset-class-list > div:last-child { border-bottom: 0; }
+@media (max-width: 900px) {
+  .asset-class-list > div { padding-inline: 16px; grid-template-columns: 1fr auto auto; }
+  .asset-class-list > div > :last-child { grid-column: auto; }
+}
+
+/* Asset allocation dialog: names on one line with their colour dot, numbers in tidy right-hand columns,
+   rows flush with the dialog's own edges (the card's 32px inset is for the dashboard, not here). */
+.modal-allocation-list { padding: 0; }
+.modal-allocation-list > div { grid-template-columns: minmax(0, 1fr) 52px 104px; gap: 16px; padding: 12px 0; }
+.modal-allocation-list > div > span:first-child {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.modal-allocation-list .asset-dot { flex: none; margin: 0; }
+
+/* Buy/Sell dialog, in the dashboard's own look: a flat panel, the same segmented control as the chart's
+   period picker, plain hairline rows instead of tinted boxes, and solid buttons with no gradient or glow.
+   The stock list runs full width so names are never cut off; shares and the estimated total share a row
+   so the whole ticket fits a laptop screen without scrolling. */
+.detail-dialog:has(.trade-form) { padding: 24px; border-color: var(--surface-tone-08); border-radius: 20px; background: var(--surface); box-shadow: 0 30px 80px var(--shadow-92); }
+.detail-dialog:has(.trade-form) .dialog-heading { margin-bottom: 12px; }
+.detail-dialog:has(.trade-form) .trade-quote strong { margin-top: 4px; font-size: 26px; }
+.trade-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'side side' 'stock-label stock-label' 'stock stock' 'shares-label total' 'shares total';
+  column-gap: 20px;
+}
+.trade-form > * { grid-column: 1 / -1; }
+.trade-form > .side-picker { grid-area: side; }
+.trade-form > label[for='novice-stock'] { grid-area: stock-label; }
+.trade-form > .stock-picker { grid-area: stock; }
+.trade-form > label[for='novice-shares'] { grid-area: shares-label; }
+.trade-form > #novice-shares { grid-area: shares; }
+.trade-form > .trade-total { grid-area: total; }
+
+.trade-form > .side-picker {
+  display: flex; gap: 2px; margin: 16px 0 4px; padding: 4px;
+  border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-16);
+}
+.trade-form .side-picker button {
+  flex: 1; min-height: 36px; padding: 0 12px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--text-subtle); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.trade-form .side-picker button:hover { color: var(--text); }
+.trade-form .side-picker button:first-child.selected { background: var(--buy); color: var(--category-tone-07); }
+.trade-form .side-picker button:last-child.selected { background: var(--loss); color: var(--loss-tone-11); }
+
+.trade-form > label { margin: 14px 0 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.trade-form input, .trade-form select {
+  min-height: 46px; padding: 10px 14px; border: 1px solid var(--surface-tone-08); border-radius: 10px;
+  background: var(--background); color: var(--text); font-size: 15px; box-shadow: none;
+}
+.trade-form input:focus, .trade-form select:focus { border-color: var(--text-muted); box-shadow: none; outline: none; }
+.trade-form select option { background: var(--surface); color: var(--text); }
+
+.trade-form > .trade-total {
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 4px;
+  align-self: end; min-height: 46px; margin: 0; padding: 0; border-radius: 0; background: none;
+  color: var(--text-muted); font-size: 13px;
+}
+.trade-form > .trade-total strong { color: var(--text); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.trade-form > p { margin: 10px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+
+.trade-form .protection-row {
+  margin: 14px 0 0; padding: 12px 0; border: 0; border-top: 1px solid var(--surface-tone-08); border-bottom: 1px solid var(--surface-tone-08);
+  border-radius: 0; background: none;
+}
+.trade-form .closed-warning { margin: 12px 0 0; }
+.trade-form .submit-trade { min-height: 48px; margin-top: 16px; }
+.trade-form .review-actions { margin-top: 16px; }
+.trade-form .review-actions .submit-trade { margin-top: 0; }
+.trade-form > output { margin: 10px 0 0; line-height: 1.5; }
+.trade-form > output:empty { display: none; }
+
+/* Solid action colours: the site's Buy blue for buying, the loss red for selling. */
+.trade-form .green-button.submit-trade { border: 0; border-radius: 10px; background: var(--buy); color: var(--category-tone-07); box-shadow: none; }
+.trade-form .green-button.submit-trade:hover { background: var(--buy-light); box-shadow: none; }
+.trade-form .green-button.submit-trade.sell { background: var(--loss); color: var(--loss-tone-11); }
+.trade-form .green-button.submit-trade.sell:hover { background: var(--loss-tone-04); }
+
+@media (max-width: 480px) {
+  .trade-form { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'side' 'stock-label' 'stock' 'shares-label' 'shares' 'total'; }
+  .trade-form > .trade-total { align-items: flex-start; margin-top: 12px; }
+}
+
+/* Stock menu: opens below the field, scrolls inside itself, and shows each stock's symbol, name and price. */
+.detail-dialog:has(.stock-menu) { overflow: visible; }
+.stock-picker { position: relative; }
+.trade-form .stock-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  min-height: 46px; padding: 10px 14px; border: 1px solid var(--surface-tone-08); border-radius: 10px;
+  background: var(--background); color: var(--text); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+}
+.trade-form .stock-trigger:hover, .trade-form .stock-trigger[aria-expanded='true'] { border-color: var(--text-muted); }
+.trade-form .stock-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stock-choice { display: flex; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.stock-choice b { font-weight: 800; }
+.stock-trigger app-dashboard-icon { flex: none; width: 16px; height: 16px; color: var(--text-muted); transform: rotate(90deg); transition: transform 0.15s; }
+.stock-trigger[aria-expanded='true'] app-dashboard-icon { transform: rotate(-90deg); }
+.stock-menu {
+  position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; right: 0;
+  max-height: min(280px, 45vh); margin: 0; padding: 6px; overflow-y: auto; list-style: none;
+  border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface);
+  box-shadow: 0 18px 40px var(--shadow-92);
+}
+.stock-menu li {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 9px 10px; border-radius: 8px; color: var(--text-muted); font-size: 14px; cursor: pointer;
+}
+.stock-menu li b { color: var(--text); font-weight: 800; }
+.stock-menu li span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.stock-menu li em { font-style: normal; font-variant-numeric: tabular-nums; }
+.stock-menu li.active { background: var(--text-wash-07); color: var(--text); }
+
+/* Per-order price protection field: the dialog's generic label rule made it a block with margins, which
+   pushed the number to the top corner. Keep it an inline box with its value centred. */
+.trade-form .tolerance-field {
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  height: 38px; margin: 0; padding: 0 12px; color: var(--text-muted); line-height: 1;
+}
+.trade-form .tolerance-field input { width: 3.2ch; min-height: 0; height: auto; padding: 0; line-height: 1; text-align: right; }
