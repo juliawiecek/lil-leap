@@ -224,7 +224,7 @@
                             <button
                               class="holding-symbol"
                               type="button"
-                              [attr.data-speak]="spokenStock(holding.name, holding.symbol)"
+                              [attr.data-speak]="spokenRow(holding.name, holding.symbol, holding.shares ? holding.value / holding.shares : 0, holding.change)"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
                               <span class="company-logo" [class]="'company-logo ' + holding.logo">
@@ -457,7 +457,7 @@
                   @for (quote of watchlist(); track quote.symbol) {
                     <tr>
                       <td>
-                        <button type="button" (click)="openTrade('Buy', quote.symbol)">
+                        <button type="button" [attr.data-speak]="spokenRow(quote.name, quote.symbol, quote.price, quote.change)" (click)="openTrade('Buy', quote.symbol)">
                           {{ quote.symbol }}
                         </button>
                       </td>

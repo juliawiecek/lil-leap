@@ -43,7 +43,8 @@ test('preferences default off, reject corrupt values and preserve independent ex
 test('descriptions include names, native roles, values and relevant states but never password values', () => {
   browser.document.body.innerHTML = '<label>Quantity<input type="number" required value="2" aria-invalid="true" aria-describedby="error"></label><p id="error">Enter a whole number.</p><label>Password<input type="text" autocomplete="current-password" value="secret-value"></label><button disabled aria-expanded="false">Review order</button>';
   const [quantity, password] = browser.document.querySelectorAll('input');
-  assert.match(describeElement(quantity), /Quantity.*Required number field.*Value 2.*Invalid entry.*whole number/);
+  // Fields are said as label and value first (PS-22); Detailed then adds the role and states.
+  assert.match(describeElement(quantity), /^Quantity, 2\. number field\. Required\. Invalid entry\. Enter a whole number\.$/);
   assert.doesNotMatch(describeElement(password, true), /secret-value/);
   assert.match(describeElement(browser.document.querySelector('button')), /Review order.*button.*Unavailable.*Collapsed/);
   const metric = browser.document.createElement('div');
@@ -63,7 +64,8 @@ test('focus speech debounces, replaces stale reading, does not activate controls
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const [first, second] = doc.querySelectorAll('button'); let clicks = 0; second.onclick = () => clicks++;
   key(doc, 'Tab'); first.focus(); t.mock.timers.tick(100); second.focus(); t.mock.timers.tick(180);
-  assert.equal(spoken.length, 1); assert.match(spoken[0].text, /Buy Apple.*button/); assert.equal(clicks, 0);
+  // Brief is the default level: the name alone, no role (PS-22).
+  assert.equal(spoken.length, 1); assert.equal(spoken[0].text, 'Buy Apple.'); assert.equal(clicks, 0);
   first.focus(); t.mock.timers.tick(180);
   assert.equal(spoken.length, 2); assert.ok(synth.cancelCount > 0);
 });

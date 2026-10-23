@@ -26,6 +26,8 @@ export class SiteAccessibility {
   readonly paused = signal(false);
   readonly voices = signal<SpeechSynthesisVoice[]>([]);
   readonly supported = speechCoordinator.supported;
+  /** Insights plays no sound cues, so the shared settings leave out the Sound cues switch (PS-22). */
+  readonly soundCuesOffered = false;
   readonly controller = new AssistiveController(this.document, {
     settings: () => this.settings(), status: text => this.status.set(text),
     state: (active, paused) => { this.speaking.set(active); this.paused.set(paused); },
