@@ -67,7 +67,8 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
   `,
   styles: [
     `
-      .card { display: grid; gap: 14px; padding: 14px 20px; border: 1px solid var(--surface-tone-04); border-radius: 8px; background: var(--surface-tone-03); }
+      .card { display: grid; gap: 14px; padding: var(--setting-card-padding, 14px 20px); border: var(--setting-card-border, 1px solid var(--surface-tone-04));
+        border-bottom: var(--setting-card-divider, 1px solid var(--surface-tone-04)); border-radius: var(--setting-card-radius, 8px); background: var(--setting-card-bg, var(--surface-tone-03)); }
       .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
       .card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .card-text b { font-size: 14px; font-weight: 600; }
@@ -75,7 +76,9 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
       kbd { padding: 0 5px; border: 1px solid var(--surface-tone-02); border-radius: 4px; font: inherit; font-weight: 700; }
       .scan-toggle { flex: none; min-width: 64px; min-height: 34px; border: 1px solid var(--surface-tone-02); border-radius: 999px; background: transparent;
         color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-      .scan-toggle[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+      /* Subtle state colours: a soft red tint when off, a soft green tint when on (the palette's loss and gain, so colour-blind modes follow). */
+      .scan-toggle[aria-pressed='false'] { border-color: color-mix(in srgb, var(--loss) 40%, transparent); background: color-mix(in srgb, var(--loss) 10%, transparent); color: var(--loss); }
+      .scan-toggle[aria-pressed='true'] { border-color: color-mix(in srgb, var(--gain) 45%, transparent); background: color-mix(in srgb, var(--gain) 14%, transparent); color: var(--gain); }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
       label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
       select { min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);

@@ -1085,7 +1085,8 @@ th {
     height: 28px;
   }
   .holdings-table {
-    min-width: 710px;
+    /* Fits the Overview column on 1100-1350px screens without scrolling sideways. */
+    min-width: 600px;
   }
 }
 @media (max-width: 1100px) {

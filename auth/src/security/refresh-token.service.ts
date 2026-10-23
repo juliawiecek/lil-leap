@@ -34,36 +34,48 @@ export class RefreshTokenService {
     this.inactivityMinutes = sessionInactivityMinutes();
   }
 
+  /** Serialize issuance with password changes so an old login cannot create a fresh session afterwards. */
   async issue(user: User): Promise<string> {
-    const rawToken = this.generateRawToken();
-
-    const session = this.sessionRepository.create({
-      user,
-      tokenHash: this.hash(rawToken),
-      expiresAt: new Date(Date.now() + this.inactivityMinutes * 60 * 1000),
+    return this.sessionRepository.manager.transaction(async manager => {
+      const current = await this.lockUser(manager, user.userId);
+      if (!current || current.passwordHash !== user.passwordHash) throw new InvalidRefreshTokenException();
+      return this.createSession(current, manager.getRepository(Session));
     });
-    await this.sessionRepository.save(session);
+  }
 
+  private async createSession(user: User, repository: Repository<Session>): Promise<string> {
+    const rawToken = this.generateRawToken();
+    await repository.save(repository.create({ user, tokenHash: this.hash(rawToken),
+      expiresAt: new Date(Date.now() + this.inactivityMinutes * 60 * 1000) }));
     return rawToken;
   }
 
-  /** An expired, revoked, or unrecognized token is rejected identically -- a reused token looks like a fresh forgery. */
+  /** No cache: revocation and expiry take effect on the next authenticated request. */
+  async isActive(userId: string, sessionHash: string): Promise<boolean> {
+    return this.sessionRepository.existsBy({ user: { userId }, tokenHash: sessionHash,
+      revokedAt: IsNull(), expiresAt: MoreThan(new Date()) });
+  }
+
   async rotate(rawRefreshToken: string): Promise<RotationResult> {
     const tokenHash = this.hash(rawRefreshToken);
     const session = await this.sessionRepository.findOne({ where: { tokenHash }, relations: ['user'] });
+    if (!session) throw new InvalidRefreshTokenException();
+    const result = await this.sessionRepository.manager.transaction(async manager => {
+      const user = await this.lockUser(manager, session.user.userId);
+      const repository = manager.getRepository(Session);
+      if (!user || !(await this.revokeActive(tokenHash, repository))) {
+        throw new InvalidRefreshTokenException();
+      }
+      // Commit revocation for an inactive account before rejecting the refresh.
+      if (user.userStatus !== 'ACTIVE') return null;
+      return { user, newRawRefreshToken: await this.createSession(user, repository) };
+    });
+    if (!result) throw new InvalidRefreshTokenException();
+    return result;
+  }
 
-    // Revoking is the validity check, so two concurrent rotations of one token can't both succeed.
-    if (!session || !(await this.revokeActive(tokenHash))) {
-      throw new InvalidRefreshTokenException();
-    }
-    // A user disabled or deleted while signed in loses the session at its next refresh (BR-03).
-    if (session.user.userStatus !== 'ACTIVE') {
-      throw new InvalidRefreshTokenException();
-    }
-
-    const newRawRefreshToken = await this.issue(session.user);
-
-    return { user: session.user, newRawRefreshToken };
+  private lockUser(manager: EntityManager, userId: string): Promise<User | null> {
+    return manager.findOne(User, { where: { userId }, lock: { mode: 'pessimistic_write' } });
   }
 
   /** Ends the session behind a refresh token. Idempotent: an unknown, expired, or already-revoked token is a no-op. */
@@ -75,15 +87,17 @@ export class RefreshTokenService {
    * Ends every still-open session for a user, e.g. after a password reset, so a stolen
    * refresh token stops working. Pass the caller's transaction manager to make it atomic with the change.
    */
-  async revokeAllForUser(userId: string, manager: EntityManager = this.sessionRepository.manager): Promise<void> {
+  async revokeAllForUser(userId: string, manager?: EntityManager): Promise<void> {
+    if (!manager) return this.sessionRepository.manager.transaction(tx => this.revokeAllForUser(userId, tx));
+    await this.lockUser(manager, userId);
     const now = new Date();
     await manager.update(Session, { user: { userId }, revokedAt: IsNull() }, { revokedAt: now, lastActiveAt: now });
   }
 
   /** Revokes the session only if it is still active; returns whether it was. */
-  private async revokeActive(tokenHash: string): Promise<boolean> {
+  private async revokeActive(tokenHash: string, repository = this.sessionRepository): Promise<boolean> {
     const now = new Date();
-    const result = await this.sessionRepository.update(
+    const result = await repository.update(
       { tokenHash, revokedAt: IsNull(), expiresAt: MoreThan(now) },
       { revokedAt: now, lastActiveAt: now },
     );

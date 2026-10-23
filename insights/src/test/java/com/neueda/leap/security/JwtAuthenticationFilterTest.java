@@ -22,7 +22,7 @@ class JwtAuthenticationFilterTest {
     private static final String SECRET = "test-only-jwt-secret-at-least-32-bytes-long!!";
 
     private final JwtService jwtService = new JwtServiceImpl(SECRET, 60, "nexttrade-web");
-    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
+    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, tokenValue -> true);
 
     @BeforeEach
     @AfterEach
@@ -76,4 +76,27 @@ class JwtAuthenticationFilterTest {
         assertEquals(401, response.getStatus());
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
+    @Test
+    void revokedSessionRejectsAnOtherwiseValidSignedToken() throws Exception {
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + jwtService.issueToken(UUID.randomUUID(), "test@example.com"));
+        var response = new MockHttpServletResponse();
+        var chain = mock(FilterChain.class);
+        new JwtAuthenticationFilter(jwtService, token -> false).doFilter(request, response, chain);
+        assertEquals(401, response.getStatus());
+        verifyNoInteractions(chain);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void sessionAuthorityFailureNeverAllowsTheRequest() throws Exception {
+        var request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + jwtService.issueToken(UUID.randomUUID(), "test@example.com"));
+        var response = new MockHttpServletResponse();
+        var chain = mock(FilterChain.class);
+        new JwtAuthenticationFilter(jwtService, token -> { throw new IllegalStateException(); }).doFilter(request, response, chain);
+        assertEquals(401, response.getStatus());
+        verifyNoInteractions(chain);
+    }
+
 }

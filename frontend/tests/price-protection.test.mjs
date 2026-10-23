@@ -89,7 +89,11 @@ test('settings set the default with a quick choice or a custom value, and manage
   assert.match(fixture.nativeElement.textContent, /Choose a value from 0\.1% to 10%/);
   assert.equal(settings.store.settings().default, 0.5);
 
-  fixture.nativeElement.querySelector('select').value = 'MSFT';
+  fixture.nativeElement.querySelector('.stock-trigger').click();
+  fixture.detectChanges();
+  [...fixture.nativeElement.querySelectorAll('.stock-menu li')].find((li) => li.textContent.trim() === 'MSFT').click();
+  fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('.stock-menu'), null, 'picking closes the menu');
   input(fixture, 'input[aria-label="Override percentage"]', '3');
   button(fixture, 'Add');
   assert.deepEqual(settings.overrides(), [{ symbol: 'MSFT', percent: 3 }]);

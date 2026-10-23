@@ -185,7 +185,10 @@ test('portfolio SVG renders and animates history, changes periods, scrubs and cl
   fixture.detectChanges();
   assert.equal(chart.active().value, 100);
   assert.match(chart.cursorTime(), /CT$/);
-  assert.ok(chart.labelLeft() > 0);
+  assert.equal(chart.labelLeft(), 0, 'Home aligns the first point label to the left edge');
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'End' }));
+  fixture.detectChanges();
+  assert.equal(chart.labelLeft(), 100, 'End aligns the last point label to the right edge');
   svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: 300 }));
   fixture.detectChanges();
   assert.ok(chart.active());

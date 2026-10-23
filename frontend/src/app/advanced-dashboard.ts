@@ -28,6 +28,7 @@ import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
 import { PriceProtectionSettings } from './price-protection-settings';
+import { AccountSettings } from './account-settings';
 import { ToastService, Toasts } from './toasts';
 import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
@@ -105,7 +106,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, AccountSettings,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { sessionInactivityMinutes } from './session-policy';
@@ -15,8 +16,8 @@ const RISK_PROFILE_CLAIM = 'risk_profile';
 
 /**
  * Issues JWT access tokens. NextTrade backend and Insights backend verify
- * them locally with the same shared secret and claim shape. This service
- * verifies them only for its own read endpoints (e.g. /rules/tier-eligibility).
+ * their signatures locally, then check the bound session through Identity.
+ * Auth's guarded endpoints check the same session directly in the database.
  */
 @Injectable()
 export class JwtService {
@@ -30,16 +31,16 @@ export class JwtService {
       throw new Error('APP_JWT_SECRET must be set before signing or verifying tokens.');
     }
     this.secret = secret;
-    // Never outlive the inactivity window: downstream services verify access tokens
-    // statelessly, so an idle user's token must expire no later than their session.
+    // Never outlive the inactivity window, even though sessions are also checked live.
     const inactivityMinutes = sessionInactivityMinutes();
     this.expirationMinutes = Math.min(Number(process.env.APP_JWT_EXPIRATION_MINUTES ?? inactivityMinutes), inactivityMinutes);
     this.clientId = process.env.APP_JWT_CLIENT_ID ?? 'nexttrade-web';
   }
 
   /** Issues a new signed access token for the given user. Users without an account (analysts) get no trader_level claim. */
-  issueToken(userId: string, email: string, traderLevel?: TraderLevel | null, role = 'TRADER', riskProfile?: RiskProfile | null): string {
+  issueToken(userId: string, email: string, traderLevel?: TraderLevel | null, role = 'TRADER', riskProfile?: RiskProfile | null, refreshToken?: string): string {
     const claims: Record<string, string> = { [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId, [ROLE_CLAIM]: role };
+    if (refreshToken) claims['sid'] = createHash('sha256').update(refreshToken, 'utf8').digest('base64');
     if (traderLevel) {
       claims[TRADER_LEVEL_CLAIM] = traderLevel;
     }
@@ -51,6 +52,16 @@ export class JwtService {
       expiresIn: `${this.expirationMinutes}m`,
       algorithm: 'HS256',
     });
+  }
+
+  /** Signature verification plus the mandatory binding to a revocable session. */
+  verifySessionToken(token: string): { userId: string; sessionHash: string } {
+    const userId = this.verifyToken(token);
+    const payload = jwt.decode(token) as jwt.JwtPayload;
+    if (typeof payload.sid !== 'string' || !/^[A-Za-z0-9+/]{43}=$/.test(payload.sid)) {
+      throw new InvalidAccessTokenException();
+    }
+    return { userId, sessionHash: payload.sid };
   }
 
   /**

@@ -58,9 +58,9 @@ test('profile blocks missing or invalid personal information and advances valid 
   input(fixture, '#profile-date_of_birth', '2020-01-01'); submit(fixture);
   assert.equal(profile.step(), 0); assert.match(fixture.nativeElement.querySelector('#profile-date_of_birth').validationMessage, /at least 21/);
   input(fixture, '#profile-date_of_birth', '1990-01-01');
-  input(fixture, '#profile-country', 'Atlantis'); submit(fixture);
-  assert.equal(profile.step(), 0); assert.match(fixture.nativeElement.querySelector('#profile-country').validationMessage, /country or territory/);
-  input(fixture, '#profile-country', 'united states');
+  const country = fixture.nativeElement.querySelector('#profile-country');
+  assert.equal(country.value, 'United States', 'the country is fixed to the United States');
+  assert.ok(country.readOnly);
   input(fixture, '#profile-phone', '123'); submit(fixture);
   assert.equal(profile.step(), 0); assert.match(fixture.nativeElement.querySelector('#profile-phone').validationMessage, /valid phone number/);
   input(fixture, '#profile-phone', '3125550123');

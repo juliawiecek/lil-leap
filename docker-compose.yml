@@ -8,6 +8,7 @@ x-primary-database: &primary-database
   DB_APP_PASSWORD: ${DB_APP_PASSWORD:-my_app_password}
 x-jwt: &jwt
   APP_JWT_SECRET: ${APP_JWT_SECRET:-nexttrade-shared-dev-secret-32bytes-min}
+  AUTH_SESSION_URL: http://auth:8081/auth/me/session
 
 services:
   gateway:

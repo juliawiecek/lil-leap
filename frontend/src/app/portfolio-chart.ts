@@ -58,9 +58,7 @@ let nextPortfolioChartId = 0;
     } @else if (history().length < 2) {
       <div class="chart-empty" aria-live="polite">
         {{
-          loading()
-            ? 'Loading your portfolio history…'
-            : 'Your portfolio history will appear here as prices are recorded.'
+          loading() ? 'Loading ' + historyName() + '…' : emptyText()
         }}
       </div>
     } @else {
@@ -142,7 +140,7 @@ let nextPortfolioChartId = 0;
           }
         </svg>
         @if (active(); as point) {
-          <span class="cursor-time" [style.left.%]="labelLeft()"
+          <span class="cursor-time" [style.left.%]="labelLeft()" [style.transform]="'translateX(-' + labelLeft() + '%)'"
             >{{ cursorTime() }} · {{ point.value | currency }}</span
           >
         }
@@ -270,10 +268,13 @@ let nextPortfolioChartId = 0;
       .chart-note.delayed {
         color: var(--warning);
       }
+      /* Inside the plot, so it never covers the value and buttons above. It is shifted left by as much
+         of its own width as the cursor is across the chart: left-aligned at the start, centred in the
+         middle, right-aligned at the end, so it never runs off either side. */
       .cursor-time {
         position: absolute;
-        top: -26px;
-        transform: translateX(-50%);
+        top: 6px;
+        z-index: 1;
         padding: 4px 10px;
         border: 1px solid var(--surface-tone-10);
         border-radius: 8px;
@@ -460,6 +461,13 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   }
 
   readonly points = input<readonly ValuePoint[]>([]);
+  /** What the line shows, for screen readers and the empty state: the portfolio by default, or e.g. "AAPL price". */
+  readonly subject = input('Portfolio value');
+  readonly historyName = computed(() => (this.subject() === 'Portfolio value' ? 'your portfolio history' : `${this.subject()} history`));
+  readonly emptyText = computed(() =>
+    this.subject() === 'Portfolio value'
+      ? 'Your portfolio history will appear here as prices are recorded.'
+      : `${this.subject()} history will appear here as prices are recorded.`);
   readonly range = input<ChartRange | null>(null);
   readonly period = input<ChartPeriod>('1D');
   readonly loading = input(false);
@@ -545,7 +553,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   /** Where the cursor's time label sits, kept far enough from the edges to stay readable. */
   readonly labelLeft = computed(() => {
     const point = this.active();
-    return point ? Math.min(92, Math.max(8, (point.x / WIDTH) * 100)) : 0;
+    return point ? Math.min(100, Math.max(0, (point.x / WIDTH) * 100)) : 0;
   });
   readonly path = computed(() => smoothPricePath(this.placed()));
   readonly areaPath = computed(() => {
@@ -589,7 +597,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
   readonly summary = computed(() => {
     const points = this.history();
     if (points.length < 2) {
-      return 'Portfolio value chart';
+      return `${this.subject()} chart`;
     }
     const first = startValue(points);
     const last = points.at(-1)!.value;
@@ -602,7 +610,7 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     } else {
       word = 'unchanged';
     }
-    return `Portfolio value ${PERIOD_WORDS[this.period()]}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${word} ${percent.toFixed(2)}%. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
+    return `${this.subject()} ${PERIOD_WORDS[this.period()]}: from $${first.toFixed(2)} to $${last.toFixed(2)}, ${word} ${percent.toFixed(2)}%. Use the left and right arrow keys to move along the line.${this.focused() ? ' Showing the most recent hour.' : ''}`;
   });
 
   /** Moves the cursor to the point nearest the pointer: mouse, pen, or a finger dragged across. */

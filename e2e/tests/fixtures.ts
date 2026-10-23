@@ -62,30 +62,48 @@ export async function fillCredentials(page: Page, credentials: Credentials) {
   await page.locator('#verify-password').fill(credentials.password);
 }
 
+/** Use the visible combobox, just as a person does, rather than its hidden validation control. */
+export async function chooseMenuOption(page: Page, triggerId: string, label: string | RegExp) {
+  const trigger = page.locator(`#${triggerId}`);
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const listId = await trigger.getAttribute('aria-controls');
+  expect(listId).toBeTruthy();
+  await page.locator(`#${listId}`).getByRole('option', { name: label, exact: typeof label === 'string' }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+}
+
 export async function prepareRegistration(page: Page, credentials: Credentials) {
   await openRegistration(page);
   await fillCredentials(page, credentials);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   const fields = {
-    first_name: 'Golden', last_name: 'Trader', date_of_birth: '1990-12-10', phone: '3125550123',
-    street_address: '1 Main Street', city: 'Springfield', state_province: 'Illinois', postal_code: '62701',
-    country: 'United States', ssn: credentials.ssn,
+    first_name: 'Golden', last_name: 'Trader', phone: '3125550123',
+    street_address: '1 Main Street', city: 'Springfield', postal_code: '62701',
+    ssn: credentials.ssn,
   };
   for (const [id, value] of Object.entries(fields)) await page.locator(`#profile-${id}`).fill(value);
-  await page.locator('#profile-citizenship_status').selectOption('CITIZEN');
+  await expect(page.locator('#profile-country')).toHaveValue('United States');
+  await expect(page.locator('#profile-country')).toHaveAttribute('readonly', '');
+  await chooseMenuOption(page, 'profile-date_of_birth-menu', 'December');
+  await chooseMenuOption(page, 'profile-date_of_birth-day', '10');
+  await chooseMenuOption(page, 'profile-date_of_birth-year', '1990');
+  await expect(page.locator('#profile-date_of_birth')).toHaveValue('1990-12-10');
+  await chooseMenuOption(page, 'profile-state_province-menu', 'Illinois');
+  await chooseMenuOption(page, 'profile-citizenship_status-menu', 'Citizen');
   await page.getByRole('button', { name: /^Continue/ }).click();
-  await page.locator('#profile-employment_status').selectOption('RETIRED');
+  await chooseMenuOption(page, 'profile-employment_status-menu', 'Retired');
   await page.locator('#profile-annual_income').fill('50000');
-  await page.locator('#profile-net_worth_bracket').selectOption('$25k-100k');
-  await page.locator('#profile-risk_profile').selectOption('MODERATE');
+  await chooseMenuOption(page, 'profile-net_worth_bracket-menu', '$25,000–$100,000');
+  await chooseMenuOption(page, 'profile-risk_profile-menu', 'Moderate');
   await page.locator('#profile-liquidity_position').fill('25000');
   await page.locator('#profile-initial_deposit').fill('25000');
-  await page.locator('#profile-accredited_investor').selectOption('false');
+  await chooseMenuOption(page, 'profile-accredited_investor-menu', 'No / unsure');
   await page.getByRole('button', { name: /^Continue/ }).click();
   await page.locator('#profile-account_name').fill('Golden path account');
   await expect(page.locator('#profile-account_type')).toHaveValue('Individual cash');
   for (const id of ['is_politically_exposed_person', 'broker_affiliation', 'control_person', 'other_beneficial_owner']) {
-    await page.locator(`#profile-${id}`).selectOption('false');
+    await chooseMenuOption(page, `profile-${id}-menu`, 'No');
   }
   await page.getByRole('button', { name: /^Review details/ }).click();
 }

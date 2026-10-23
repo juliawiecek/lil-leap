@@ -10,6 +10,8 @@ import { TierService } from '../onboarding/tier.service';
 import { AccessTokenGuard } from '../security/access-token.guard';
 import { PasswordResetController } from '../password-reset/password-reset.controller';
 import { PasswordResetService } from '../password-reset/password-reset.service';
+import { AccountSettingsController } from '../account-settings/account-settings.controller';
+import { AccountSettingsService } from '../account-settings/account-settings.service';
 
 /**
  * The real controllers with their services stubbed out: enough to generate the
@@ -17,10 +19,10 @@ import { PasswordResetService } from '../password-reset/password-reset.service';
  * never served. Add new controllers here too, or they won't appear in openapi.json.
  */
 @Module({
-  controllers: [AuthController, PasswordResetController, RulesController, HealthController],
+  controllers: [AuthController, PasswordResetController, AccountSettingsController, RulesController, HealthController],
   providers: [
     AccessTokenGuard,
-    ...[RegistrationService, UserService, JwtService, RefreshTokenService, TierService, PasswordResetService].map((provide) => ({
+    ...[RegistrationService, UserService, JwtService, RefreshTokenService, TierService, PasswordResetService, AccountSettingsService].map((provide) => ({
       provide,
       useValue: {},
     })),

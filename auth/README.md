@@ -61,12 +61,17 @@ After changing an endpoint or DTO, run `npm run docs:openapi` to regenerate
 | POST | `/auth/logout` | `refreshToken` | `204` | `400` missing token |
 | POST | `/auth/forgot-password` | `email` | `202` always | `400` missing or malformed email |
 | POST | `/auth/reset-password` | `token`, `newPassword` | `204` | `400` `INVALID_RESET_TOKEN`, `400` password breaks the 8-128 rule |
+| PATCH | `/auth/me/profile` | `address` and/or `phone` (Bearer token) | `200` profile | `400`, `401`, `404` no profile |
+| POST | `/auth/me/email` | `newEmail`, `currentPassword` (Bearer token) | `200` user | `400`, `401` `INCORRECT_PASSWORD`, `409` `EMAIL_IN_USE` |
+| POST | `/auth/me/password` | `currentPassword`, `newPassword` (Bearer token) | `200` new token pair | `400`, `401` `INCORRECT_PASSWORD` |
 | GET | `/rules/tier-eligibility` | — (Bearer token) | `200` tier, balance, gap to next tier | `401`, `404` no account |
 | GET | `/health` | — | `200` | — |
 
 **Trader tier (NEXT-152):** the server assigns `trader_level` at registration
 from declared finances -- capacity = net-worth bracket lower bound + 10% of
 annual income; `ADVANCED` at $100,000, `NOVICE` at $5,000, otherwise `422`.
+
+**Account settings (PS-07):** the `/auth/me/*` routes act only on the caller named by the access token (BR-02). Changing email or password needs the current password; a wrong one returns `401 INCORRECT_PASSWORD`, changes nothing and counts toward the three-failure lockout. A new email must not belong to another account (`409 EMAIL_IN_USE`). A password change revokes every session and returns a fresh token pair for the caller, so only the other devices are signed out. Each change writes `PROFILE_UPDATED`, `EMAIL_CHANGED` or `PASSWORD_CHANGED` to `audit_log` with the changed field names only (never passwords, SSNs or contact values), and email and password changes send a notice (PS-08): to the old and new address for email, to the account for password.
 
 **Logout** revokes only the session behind that refresh token; other devices
 stay signed in. It returns `204` even for an unknown or already-revoked token,
@@ -116,6 +121,9 @@ Entities map one-to-one to tables in `db/finalized-schema.sql`; the service
 never creates or changes tables. Unit tests (`*.spec.ts`) sit next to the code.
 
 ## Configuration
+
+Access tokens are bound to live sessions. See [immediate session revocation](../docs/immediate-session-revocation.md)
+for the password-change behavior, service configuration and rollout requirements.
 
 See the root [env.example](../env.example) for Compose settings. For a native process, supply these settings in its environment:
 

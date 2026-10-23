@@ -46,6 +46,14 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("file-logging")
 @ExtendWith(OutputCaptureExtension.class)
 class HttpSecurityTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.neueda.leap.security.AuthSessionClient activeSessions;
+
+    @org.junit.jupiter.api.BeforeEach
+    void allowTestSessions() {
+        org.mockito.Mockito.when(activeSessions.test(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration(exclude = {HibernateJpaAutoConfiguration.class, JpaRepositoriesAutoConfiguration.class,
             DataSourceAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})

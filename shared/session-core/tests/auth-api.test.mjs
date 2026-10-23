@@ -245,3 +245,88 @@ test('an invalid, expired or used reset link gets a plain message asking for a n
     return true;
   });
 });
+
+/** Like fakeFetch, but also keeps each request's headers. */
+function recordingFetch(...responses) {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, method: init.method, headers: init.headers, body: init.body === undefined ? undefined : JSON.parse(init.body) });
+    const next = responses.shift();
+    return new Response(next.body === undefined ? null : JSON.stringify(next.body), { status: next.status });
+  };
+  return { calls, fetchImpl };
+}
+
+const signedIn = (token = tokenWith({ sub: 'u1', email: 'a@example.com' })) => ({
+  ...loginResponse,
+  body: { ...loginResponse.body, accessToken: token },
+});
+
+test('settings: saving contact details sends only the changes, with the bearer token, and returns the profile (PS-07)', async () => {
+  const token = tokenWith({ sub: 'u1' });
+  const profile = { id: 'u1', firstName: 'Ada', lastName: 'Lovelace', address: '2 New Rd', email: 'a@example.com', phone: '312-555-0199' };
+  const { calls, fetchImpl } = recordingFetch(signedIn(token), { status: 200, body: profile });
+  const client = new AuthClient(fetchImpl, '/auth', { storage: null });
+  await client.login('a@example.com', 'pw');
+
+  assert.deepEqual(await client.updateProfile({ address: '2 New Rd' }), profile);
+  assert.equal(calls[1].url, '/auth/me/profile');
+  assert.equal(calls[1].method, 'PATCH');
+  assert.deepEqual(calls[1].body, { address: '2 New Rd' });
+  assert.equal(calls[1].headers.Authorization, `Bearer ${token}`);
+  assert.equal(calls[1].headers['Content-Type'], 'application/json');
+});
+
+test('settings: changing email posts the current password, then refreshes so the new email is in the token', async () => {
+  const { calls, fetchImpl } = recordingFetch(
+    signedIn(),
+    { status: 200, body: { id: 'u1', email: 'new@example.com', userRole: 'TRADER' } },
+    { status: 200, body: { accessToken: tokenWith({ sub: 'u1', email: 'new@example.com' }), refreshToken: 'refresh-2' } },
+  );
+  const client = new AuthClient(fetchImpl, '/auth', { storage: null });
+  await client.login('a@example.com', 'pw');
+
+  await client.changeEmail('new@example.com', 'current-pw');
+
+  assert.equal(calls[1].url, '/auth/me/email');
+  assert.deepEqual(calls[1].body, { newEmail: 'new@example.com', currentPassword: 'current-pw' });
+  assert.equal(calls[2].url, '/auth/refresh');
+  assert.equal(client.email, 'new@example.com');
+});
+
+test('settings: changing password swaps in the fresh token pair the server returns', async () => {
+  const fresh = tokenWith({ sub: 'u1', email: 'a@example.com', trader_level: 'NOVICE' });
+  const { calls, fetchImpl } = recordingFetch(signedIn(), { status: 200, body: { accessToken: fresh, refreshToken: 'refresh-after-change' } }, { status: 204 });
+  const client = new AuthClient(fetchImpl, '/auth', { storage: null });
+  await client.login('a@example.com', 'pw');
+
+  await client.changePassword('old-pw', 'new-password-123');
+
+  assert.equal(calls[1].url, '/auth/me/password');
+  assert.deepEqual(calls[1].body, { currentPassword: 'old-pw', newPassword: 'new-password-123' });
+  assert.equal(client.accessToken, fresh);
+  await client.logout();
+  assert.deepEqual(calls[2].body, { refreshToken: 'refresh-after-change' }, 'the new refresh token replaced the old one');
+});
+
+test('settings: a wrong current password or a taken email gets a fixed message and keeps the user signed in', async () => {
+  const { fetchImpl } = recordingFetch(
+    signedIn(),
+    { status: 401, body: { error: 'INCORRECT_PASSWORD', message: 'server text' } },
+    { status: 409, body: { error: 'EMAIL_IN_USE', message: 'server text' } },
+  );
+  const client = new AuthClient(fetchImpl, '/auth', { storage: null });
+  await client.login('a@example.com', 'pw');
+
+  await assert.rejects(client.changePassword('wrong', 'new-password-123'), (error) => error instanceof AuthApiError && /current password is incorrect/.test(error.userMessage));
+  await assert.rejects(client.changeEmail('taken@example.com', 'pw'), (error) => error instanceof AuthApiError && /already used by another account/.test(error.userMessage));
+  assert.ok(client.accessToken, 'still signed in');
+});
+
+test('settings: calls made while signed out fail without a request', async () => {
+  const { calls, fetchImpl } = recordingFetch();
+  const client = new AuthClient(fetchImpl, '/auth', { storage: null });
+  await assert.rejects(client.updateProfile({ phone: '312-555-0100' }), AuthApiError);
+  await assert.rejects(client.changePassword('a', 'b'), AuthApiError);
+  assert.equal(calls.length, 0);
+});

@@ -75,8 +75,7 @@ select optgroup {
 }
 
 /* Order ticket notices shared by both dashboards (TS-14.7, PS-02, PS-15). */
-.price-delayed,
-.closed-warning {
+.price-delayed {
   border-radius: 6px;
   background: var(--surface-tone-112);
   color: var(--warning-tone-06);
@@ -87,9 +86,27 @@ select optgroup {
   font-size: 11px;
   font-style: normal;
 }
+/* Market closed: a plain muted line led by a small amber dot -- the same marker as the market-status pill --
+   rather than a tinted, outlined box. */
 .closed-warning {
-  padding: 9px 11px;
-  border: 1px solid var(--warning-tone-05);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.closed-warning::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  transform: translateY(-1px);
 }
 .review-summary {
   padding: 10px 12px;

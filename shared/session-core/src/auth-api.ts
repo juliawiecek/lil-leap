@@ -49,9 +49,21 @@ const MESSAGES: Record<string, string> = {
   INVALID_RESET_TOKEN: 'This reset link is invalid, expired or already used. Please request a new one.',
   PROFILE_ACCESS_DENIED: 'You can only view your own profile.',
   PROFILE_NOT_FOUND: 'Your profile could not be found. Please try again.',
+  INVALID_ACCESS_TOKEN: SIGNED_OUT_MESSAGE,
+  INCORRECT_PASSWORD:
+    'Your current password is incorrect, or the account is locked. After 3 failed attempts, wait 15 minutes and try again.',
+  EMAIL_IN_USE: 'That email address is already used by another account. Try a different one.',
 };
 const FALLBACK_MESSAGE = 'Something went wrong. Please try again.';
 const NETWORK_MESSAGE = 'We could not reach NextTrade. Check your connection and try again.';
+
+/** Contact details a user can change from Settings (PS-07). Send only what changes. */
+export interface ProfileChanges {
+  address?: string;
+  phone?: string;
+}
+
+type Method = 'GET' | 'POST' | 'PATCH';
 
 export interface AuthClientOptions {
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
@@ -326,6 +338,40 @@ export class AuthClient {
     await this.#post('/reset-password', { token, newPassword });
   }
 
+  /** Saves a new address and/or phone for the signed-in user and returns the updated profile. */
+  async updateProfile(changes: ProfileChanges): Promise<UserProfile> {
+    return (await this.#authorized('PATCH', '/me/profile', changes)) as UserProfile;
+  }
+
+  /**
+   * Moves sign-in to a new email; the current password is required. The session is then refreshed
+   * so the access token, and `email` here, carry the new address.
+   */
+  async changeEmail(newEmail: string, currentPassword: string): Promise<void> {
+    await this.#authorized('POST', '/me/email', { newEmail, currentPassword });
+    await this.refresh();
+  }
+
+  /**
+   * Sets a new password; the current one is required. The server signs out every other session and
+   * hands this one a fresh token pair, which replaces the old one here.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const generation = this.#generation;
+    const body = (await this.#authorized('POST', '/me/password', { currentPassword, newPassword })) as {
+      accessToken: string;
+      refreshToken: string;
+    };
+    if (generation !== this.#generation) {
+      // Signed out (or in as someone else) while the request was in flight: don't resurrect this session.
+      void this.#post('/logout', { refreshToken: body.refreshToken }).catch(() => {
+        /* The request failure is already handled locally. */
+      });
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
+    this.#setTokens(body.accessToken, body.refreshToken);
+  }
+
   /** Always signs out locally; revoking the session server-side is best effort and never throws. */
   async logout(): Promise<void> {
     const refreshToken = this.#refreshToken;
@@ -388,7 +434,18 @@ export class AuthClient {
     }
   }
 
-  async #post(path: string, body: object): Promise<unknown> {
+  async #authorized(method: Method, path: string, body: object): Promise<unknown> {
+    if (!this.#accessToken) {
+      throw new AuthApiError(SIGNED_OUT_MESSAGE);
+    }
+    return this.#send(method, path, body, true);
+  }
+
+  #post(path: string, body: object): Promise<unknown> {
+    return this.#send('POST', path, body, false);
+  }
+
+  async #send(method: Method, path: string, body: object, authorized: boolean): Promise<unknown> {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const timeout = new Promise<never>((_, reject) => {
@@ -398,7 +455,7 @@ export class AuthClient {
       }, this.#timeoutMs);
     });
     try {
-      return await Promise.race([this.#request(path, body, controller.signal, 'POST'), timeout]);
+      return await Promise.race([this.#request(path, body, controller.signal, method, authorized), timeout]);
     } finally {
       clearTimeout(timer!);
     }
@@ -414,19 +471,32 @@ export class AuthClient {
       }, this.#timeoutMs);
     });
     try {
-      return await Promise.race([this.#request(path, undefined, controller.signal, 'GET'), timeout]);
+      return await Promise.race([this.#request(path, undefined, controller.signal, 'GET', true), timeout]);
     } finally {
       clearTimeout(timer!);
     }
   }
 
-  async #request(path: string, body: object | undefined, signal: AbortSignal, method: 'GET' | 'POST'): Promise<unknown> {
+  async #request(
+    path: string,
+    body: object | undefined,
+    signal: AbortSignal,
+    method: Method,
+    authorized: boolean,
+  ): Promise<unknown> {
+    const headers: Record<string, string> = {};
+    if (authorized) {
+      headers['Authorization'] = `Bearer ${this.#accessToken}`;
+    }
+    if (body) {
+      headers['Content-Type'] = 'application/json';
+    }
     let response: Response;
     try {
       response = await this.#fetch(this.#baseUrl + path, {
         method,
         signal,
-        headers: method === 'GET' ? { Authorization: `Bearer ${this.#accessToken}` } : { 'Content-Type': 'application/json' },
+        headers,
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
     } catch {
