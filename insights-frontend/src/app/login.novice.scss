@@ -1,5 +1,5 @@
-// The trading app's sign-in background (app.refresh.scss), layered over login.scss: the same graph-paper grid as
-// every page inside the app, showing behind the chart panel and softly through the form panel.
+// The trading app's sign-in look (app.refresh.scss), layered over login.scss: one graph-paper grid across the
+// whole page, the candles fading in from the bottom, and the form in a raised card with an off-white button.
 .login-screen {
   background-color: #070707;
   background-image: radial-gradient(ellipse at center, rgba(7, 7, 7, 0.65), transparent 75%),
@@ -10,12 +10,179 @@
   background-size: 100% 100%, 100% 100%, 100% 100%, 52px 52px, 52px 52px;
   background-attachment: fixed;
 }
+
+/* Top tape: frosted, like the app's top bar */
+.tape {
+  height: 38px;
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  background: rgba(7, 7, 7, 0.72);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.tape-group {
+  color: #d6d4cc;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.tape-group .sep {
+  color: #3a4038;
+}
+
+/* Left: no panel of its own, the page grid shows straight through */
 .showcase {
+  min-height: calc(100dvh - 39px);
+  padding: 22px 40px 24px;
+  border-right: 0;
   background: transparent;
 }
-.tape,
+.backdrop-chart {
+  opacity: 0.55;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 45%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 45%, transparent 100%);
+}
+// The page grid replaces the chart's own grid and its left-hand shade.
+.backdrop-chart svg > rect,
+.backdrop-chart::after {
+  display: none;
+}
+.brand-mark {
+  width: 34px;
+  height: 34px;
+}
+.brand-lockup b,
+.brand-lockup em {
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: 22px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(148, 201, 115, 0.09);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.copy h1 {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+.lede {
+  max-width: 470px;
+  margin-top: 22px;
+  font-size: 17px;
+}
+.legal {
+  color: #7e8279;
+  font-size: 12.5px;
+}
+
+/* Right: the form sits in a raised card on the grid */
 .auth {
-  background: rgba(7, 7, 7, 0.72);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
+  padding: 22px 40px 24px;
+  background: transparent;
+}
+.secure {
+  border-color: #1f231f;
+  background: rgba(12, 12, 12, 0.8);
+}
+.auth-body {
+  box-sizing: border-box;
+  padding: 32px;
+  border: 1px solid #2c312b;
+  border-radius: 25px;
+  background: radial-gradient(80% 50% at 100% 0%, rgba(242, 239, 230, 0.05), transparent 70%), #0c0c0c;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(242, 239, 230, 0.08);
+}
+.auth h2 {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+.auth-subtitle {
+  margin-top: 6px;
+  font-size: 14.5px;
+}
+.auth-heading {
+  margin-bottom: 24px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.auth-heading::after {
+  display: none;
+}
+form {
+  gap: 16px;
+}
+.input-shell {
+  min-height: 50px;
+  padding-left: 14px;
+  border-color: #1f231f;
+  border-radius: 12px;
+  background: #0b0b0b;
+}
+.input-shell:hover {
+  border-color: #2c312b;
+}
+.input-shell:focus-within {
+  border-color: #4a5048;
+  background: #0f0f0f;
+  box-shadow: 0 0 0 4px rgba(242, 239, 230, 0.06);
+}
+.input-shell input:-webkit-autofill,
+.input-shell input:-webkit-autofill:hover,
+.input-shell input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0b0b0b inset;
+}
+.password-toggle {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d6d4cc;
+  font-weight: 700;
+}
+.form-status {
+  border-radius: 12px;
+}
+.primary-action {
+  margin-top: 4px;
+  border: 1px solid #f2efe6;
+  border-radius: 13px;
+  background: #f2efe6;
+  color: #0b0c0b;
+  font-weight: 800;
+}
+.primary-action:hover:not(:disabled) {
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(242, 239, 230, 0.14);
+}
+.spinner {
+  border-color: rgba(11, 12, 11, 0.3);
+  border-top-color: #0b0c0b;
+}
+.auth-bottom {
+  border-top: 0;
+  color: #7e8279;
+  font-size: 12.5px;
+}
+
+@media (max-width: 960px) {
+  .showcase {
+    min-height: 0;
+    padding: 20px 18px 24px;
+    border-bottom: 0;
+  }
+  .auth {
+    padding: 0 18px 24px;
+  }
+  .auth-body {
+    padding: 24px;
+    border-radius: 22px;
+  }
+  .auth h2 {
+    font-size: 26px;
+  }
 }
