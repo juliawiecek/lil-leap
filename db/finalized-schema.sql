@@ -42,6 +42,10 @@ CREATE TABLE users (
     -- OPERATIONS: trading operations staff who investigate trades, seeded rather than self-registered)
     user_role VARCHAR(20) NOT NULL DEFAULT 'TRADER' CHECK (user_role IN ('TRADER', 'ANALYST', 'OPERATIONS')),
 
+    -- BR-03: only ACTIVE users may sign in or refresh a session (DISABLED: expired or compromised;
+    -- DELETED: closed, row kept for the audit trail)
+    user_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
     -- BR-03: LOGIN SECURITY (lock after 3 failed attempts)
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
@@ -51,7 +55,8 @@ CREATE TABLE users (
 
     CONSTRAINT chk_user_email CHECK (length(trim(email)) > 0),
     CONSTRAINT chk_user_password CHECK (length(trim(password_hash)) > 0),
-    CONSTRAINT chk_failed_login_attempts CHECK (failed_login_attempts >= 0)
+    CONSTRAINT chk_failed_login_attempts CHECK (failed_login_attempts >= 0),
+    CONSTRAINT chk_user_status CHECK (user_status IN ('ACTIVE', 'DISABLED', 'DELETED'))
 );
 
 -- Case-insensitive, whitespace-insensitive unique emails

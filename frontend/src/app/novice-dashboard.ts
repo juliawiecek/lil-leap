@@ -425,6 +425,49 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   );
   readonly modal = signal('trade');
   readonly tradeQuote = signal<Quote>(NO_QUOTE);
+  /**
+   * The trade window's price chart for the stock being bought or sold: the same chart, periods, hover
+   * readout and day detail as the Overview's portfolio chart, but drawn from that stock's recorded
+   * prices and then every live price while the window is open.
+   */
+  readonly stockChartPeriod = signal<ChartPeriod>('1D');
+  readonly stockChartSpan = signal<ChartRange | null>(null);
+  readonly stockChartHistory = signal<ValuePoint[]>([]);
+  readonly stockChartLive = signal<ValuePoint[]>([]);
+  readonly stockChartLoading = signal(false);
+  readonly stockChartError = signal('');
+  readonly stockChartScrub = signal<ValuePoint | null>(null);
+  #stockChartRequest = 0;
+  #stockChartTimer: ReturnType<typeof setTimeout> | undefined;
+  readonly stockChartPoints = computed(() => {
+    const history = this.stockChartHistory();
+    if (history.length < 2) {
+      return history;
+    }
+    const range = this.stockChartSpan();
+    let live = this.stockChartLive().filter((p) => p.at >= history[0].at);
+    if (range && !range.session) {
+      live = lastPerBar(live, barStep(range).ms);
+    }
+    return live.length ? [...history.filter((p) => p.at < live[0].at), ...live] : history;
+  });
+  /** The price above the chart: the hovered point's, otherwise the live price. */
+  readonly stockChartPrice = computed(() => this.stockChartScrub()?.value ?? this.tradeQuote().price);
+  /** How the stock moved over the chosen period, or up to the hovered point. */
+  readonly stockChartChange = computed(() => {
+    const points = this.stockChartPoints();
+    const scrub = this.stockChartScrub();
+    if (points.length < 2) {
+      return { amount: 0, percent: 0, label: PERIOD_LABELS[this.stockChartPeriod()] };
+    }
+    // Measured from the same starting value the chart draws its dotted baseline at, as on Overview.
+    const start = startValue(points);
+    const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
+    const label = scrub
+      ? `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`
+      : PERIOD_LABELS[this.stockChartPeriod()];
+    return { amount, percent: start > 0 ? (amount / start) * 100 : 0, label };
+  });
   readonly side = signal('Buy');
   readonly quantity = signal('');
   readonly reviewing = signal(false);
@@ -556,6 +599,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   }
   closeModal(): void {
     this.stockMenuOpen.set(false);
+    clearTimeout(this.#stockChartTimer);
     this.dialog()?.nativeElement.close();
   }
   /** "?" opens Keyboard Shortcuts from anywhere, unless another dialog is already open (PS-17). */
@@ -591,6 +635,69 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     this.orderTolerance.set(null);
     this.editingTolerance.set(false);
     this.openModal('trade');
+    this.#resetStockChart();
+  }
+
+  /** Shows another period of the trade window's stock chart. */
+  setStockChartPeriod(period: ChartPeriod): void {
+    this.stockChartPeriod.set(period);
+    this.stockChartScrub.set(null);
+    void this.loadStockChart();
+  }
+
+  /** A new stock (or a fresh window): clear the old line and load this one's history. */
+  #resetStockChart(): void {
+    this.stockChartScrub.set(null);
+    this.stockChartLive.set([]);
+    this.stockChartHistory.set([]);
+    this.stockChartSpan.set(null);
+    void this.loadStockChart();
+  }
+
+  /**
+   * Loads the trade stock's recorded prices for the chosen period, at the same bar sizes as the
+   * portfolio chart, and re-reads them every minute while the window stays open.
+   */
+  async loadStockChart(): Promise<void> {
+    const request = ++this.#stockChartRequest;
+    clearTimeout(this.#stockChartTimer);
+    const quote = this.tradeQuote();
+    const id =
+      this.instruments().find((i) => i.symbol === quote.symbol)?.instrumentId ??
+      this.feed.quotes().find((q) => q.symbol === quote.symbol)?.instrumentId;
+    if (!quote.symbol || !id) {
+      this.stockChartHistory.set([]);
+      return;
+    }
+    this.stockChartLoading.set(true);
+    try {
+      const now = Date.now();
+      const session = tradingSession(now, this.feed.status()?.exchangeTimeZone);
+      // A stock has no "opening" date like an account; ALL reaches back five years.
+      const range = chartRange(this.stockChartPeriod(), now, now - 5 * 365 * 24 * 60 * 60 * 1000, session);
+      if (this.stockChartPeriod() === '1D') {
+        range.end = now;
+      }
+      const { interval, limit } = barStep(range);
+      const closes = await this.feed.client.closes(id, interval, limit, now);
+      if (request !== this.#stockChartRequest || this.destroyed) {
+        return;
+      }
+      this.stockChartSpan.set(range);
+      this.stockChartHistory.set(closes.filter((p) => p.at >= range.start && p.at <= range.end).map((p) => ({ at: p.at, value: p.price })));
+      this.stockChartError.set('');
+    } catch {
+      if (request === this.#stockChartRequest) {
+        this.stockChartError.set(`${quote.symbol}'s price history could not be loaded right now. It will try again shortly.`);
+      }
+    } finally {
+      if (request === this.#stockChartRequest) {
+        this.stockChartLoading.set(false);
+        if (!this.destroyed && this.dialog()?.nativeElement.open && this.modal() === 'trade') {
+          this.#stockChartTimer = setTimeout(() => void this.loadStockChart(), CHART_REFRESH_MS);
+        }
+      }
+    }
   }
 
   /** Sets price protection for this order only; an out-of-range value leaves it unchanged. */
@@ -670,9 +777,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     if (!quote) {
       return;
     }
+    const changed = quote.symbol !== this.tradeQuote().symbol;
     this.tradeQuote.set(quote);
     this.reviewing.set(false);
     this.tradeMessage.set('');
+    if (changed) {
+      this.#resetStockChart();
+    }
   }
   toggleWatch(): void {
     const symbol = this.tradeQuote().symbol;
@@ -838,6 +949,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#ordersTimer);
     clearTimeout(this.#chartTimer);
+    clearTimeout(this.#stockChartTimer);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -1121,7 +1233,14 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     }
     const symbol = this.tradeQuote().symbol || this.symbol();
     const current = this.quotes().find((q) => q.symbol === symbol);
-    if (current) { this.tradeQuote.set(current); }
+    if (current) {
+      this.tradeQuote.set(current);
+      // Every live price while the trade window is open joins its stock chart.
+      if (current.price > 0 && this.modal() === 'trade' && this.dialog()?.nativeElement.open) {
+        const at = Math.max(Date.now(), (this.stockChartLive().at(-1)?.at ?? 0) + 1);
+        this.stockChartLive.update((points) => [...points.slice(-(LIVE_POINTS - 1)), { at, value: current.price }]);
+      }
+    }
   }
 
   private async loadTradingData(): Promise<void> {

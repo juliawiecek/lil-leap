@@ -2,6 +2,9 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateCol
 
 export type UserRole = 'TRADER' | 'ANALYST' | 'OPERATIONS';
 
+/** BR-03: only ACTIVE users may sign in or refresh a session. DISABLED covers expired and compromised users. */
+export type UserStatus = 'ACTIVE' | 'DISABLED' | 'DELETED';
+
 /** Auth-only user record -- identity/financial detail lives in the onboarding entities. */
 @Entity({ name: 'users' })
 export class User {
@@ -16,6 +19,9 @@ export class User {
 
   @Column({ name: 'user_role', length: 20, default: 'TRADER' })
   userRole: UserRole;
+
+  @Column({ name: 'user_status', length: 20, default: 'ACTIVE' })
+  userStatus: UserStatus;
 
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts: number;

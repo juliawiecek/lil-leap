@@ -63,7 +63,9 @@ export class RefreshTokenService {
     return this.sessionRepository.manager.transaction(async manager => {
       const user = await this.lockUser(manager, session.user.userId);
       const repository = manager.getRepository(Session);
-      if (!user || !(await this.revokeActive(tokenHash, repository))) throw new InvalidRefreshTokenException();
+      if (!user || user.userStatus !== 'ACTIVE' || !(await this.revokeActive(tokenHash, repository))) {
+        throw new InvalidRefreshTokenException();
+      }
       return { user, newRawRefreshToken: await this.createSession(user, repository) };
     });
   }

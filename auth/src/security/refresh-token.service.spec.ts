@@ -5,7 +5,7 @@ import { Session } from './entities/session.entity';
 import { InvalidRefreshTokenException } from '../user/exceptions/invalid-refresh-token.exception';
 
 describe('RefreshTokenService', () => {
-  const user = { passwordHash: 'hash-v1', userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com' } as any;
+  const user = { userStatus: 'ACTIVE', passwordHash: 'hash-v1', userId: '11111111-1111-1111-1111-111111111111', email: 'trader@example.com' } as any;
   const hashOf = (raw: string) => createHash('sha256').update(raw, 'utf8').digest('base64');
 
   let repository: Record<'create' | 'save' | 'findOne' | 'update', jest.Mock>;
@@ -64,6 +64,18 @@ describe('RefreshTokenService', () => {
     );
     expect(result.user).toBe(user);
     expect(result.newRawRefreshToken).not.toBe('old-raw-token');
+  });
+
+  it.each(['DISABLED', 'DELETED'])('rotate rejects a currently %s user even if the session loaded an active user', async userStatus => {
+    repository.findOne.mockResolvedValue({ user } as Session);
+    manager.findOne.mockResolvedValue({ ...user, userStatus });
+    repository.update.mockResolvedValue({ affected: 1 });
+
+    await expect(service.rotate('old-raw-token')).rejects.toThrow(InvalidRefreshTokenException);
+    expect(manager.findOne).toHaveBeenCalledWith(expect.anything(), {
+      where: { userId: user.userId }, lock: { mode: 'pessimistic_write' },
+    });
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('rotate rejects an unknown token', async () => {

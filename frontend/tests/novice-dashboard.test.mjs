@@ -618,3 +618,35 @@ test('the ticket stock menu opens downwards, moves with the arrow keys and picks
   desk.stockMenuKey(key('Escape'));
   assert.equal(desk.stockMenuOpen(), false, 'Escape closes just the menu');
 });
+
+test('the Buy/Sell window charts the chosen stock from its recorded prices, follows a switch and changes period', async t => {
+  const feed = fakeFeed([{ symbol: 'AAPL', price: 110 }, { symbol: 'MSFT', price: 400 }]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  desk.quotes.set(feed.quotes());
+  const asked = [];
+  feed.client = {
+    closes: async (id, interval, limit, now) => {
+      asked.push([id, interval]);
+      return id === 'aapl-uuid'
+        ? [{ at: now - 3 * 60_000, price: 100 }, { at: now - 60_000, price: 110 }]
+        : [{ at: now - 3 * 60_000, price: 400 }, { at: now - 60_000, price: 380 }];
+    },
+  };
+  desk.openTrade('Buy', 'AAPL');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.deepEqual(desk.stockChartPoints().map((p) => p.value), [100, 110]);
+  assert.equal(desk.stockChartChange().amount, 10, 'the change is measured over the period shown');
+  desk.stockChartScrub.set(desk.stockChartPoints()[0]);
+  assert.equal(desk.stockChartPrice(), 100, 'hovering shows that point’s price');
+
+  desk.chooseTradeSymbol('MSFT');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.deepEqual(desk.stockChartPoints().map((p) => p.value), [400, 380], 'switching the stock redraws its chart');
+  assert.equal(desk.stockChartScrub(), null);
+
+  desk.setStockChartPeriod('1M');
+  for (let i = 0; i < 4; i++) await flush();
+  assert.equal(desk.stockChartPeriod(), '1M');
+  assert.equal(asked.at(-1)[0], 'msft-uuid');
+  desk.closeModal();
+});

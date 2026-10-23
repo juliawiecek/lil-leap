@@ -481,6 +481,29 @@
     </button>
   </div>
   @if (modal() === 'trade') {
+    <div class="trade-layout">
+    <!-- The stock's own chart, built like the Overview portfolio chart: periods, hover readout and live updates. -->
+    <section class="trade-chart" [attr.aria-label]="tradeQuote().symbol + ' price chart'" data-scan-group="Price chart">
+      <div class="trade-chart-price">
+        <div class="trade-chart-value">{{ stockChartPrice() | currency }}</div>
+        <div class="portfolio-gain" [class.up]="stockChartChange().amount > 0" [class.down]="stockChartChange().amount < 0">
+          <strong><app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /></strong
+          ><span>{{ stockChartChange().label }}</span>
+        </div>
+      </div>
+      <app-portfolio-chart
+        [subject]="tradeQuote().symbol + ' price'"
+        [points]="stockChartPoints()"
+        [range]="stockChartSpan()"
+        [period]="stockChartPeriod()"
+        [loading]="stockChartLoading()"
+        [error]="stockChartError()"
+        [delayed]="tradePriceDelayed()"
+        (periodChange)="setStockChartPeriod($event)"
+        (scrub)="stockChartScrub.set($event)"
+      />
+    </section>
+    <div class="trade-side">
     <div class="trade-quote">
       <span
         >{{ tradeQuote().name }}<strong>{{ tradeQuote().price | currency }}</strong
@@ -594,6 +617,8 @@
       }
       <output>{{ tradeMessage() }}</output>
     </form>
+    </div>
+    </div>
   } @else if (modal() === 'allocation') {
     <h3 class="modal-subhead">By sector</h3>
     <div class="asset-class-list modal-allocation-list">

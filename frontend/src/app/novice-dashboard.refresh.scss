@@ -500,3 +500,19 @@ th { color: var(--text-subtle); font-weight: 600; }
   height: 38px; margin: 0; padding: 0 12px; color: var(--text-muted); line-height: 1;
 }
 .trade-form .tolerance-field input { width: 3.2ch; min-height: 0; height: auto; padding: 0; line-height: 1; text-align: right; }
+
+/* Buy/Sell window with the stock's chart: wider, the chart on the left and the ticket on the right,
+   so neither needs scrolling. The chart header mirrors the Overview's big value and change pill. */
+.detail-dialog:has(.trade-layout) { width: min(1080px, calc(100% - 32px)); }
+.trade-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr); gap: 32px; align-items: start; }
+.trade-chart { min-width: 0; padding-right: 32px; border-right: 1px solid var(--surface-tone-08); }
+.trade-chart-value { font-size: 40px; font-weight: 800; line-height: 1.05; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.trade-chart .portfolio-gain { display: flex; align-items: center; margin: 10px 0 8px; }
+.trade-chart .portfolio-gain > span { color: var(--text-muted); }
+.trade-side { min-width: 0; }
+/* The price now sits above the chart, so the ticket's own heading just names the company. */
+.trade-layout .trade-quote strong { display: none; }
+@media (max-width: 860px) {
+  .trade-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .trade-chart { padding-right: 0; padding-bottom: 20px; border-right: 0; border-bottom: 1px solid var(--surface-tone-08); }
+}
