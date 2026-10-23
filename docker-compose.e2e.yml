@@ -37,6 +37,8 @@ services:
       SESSION_INACTIVITY_MINUTES: ${E2E_SESSION_MINUTES:-10}
       APP_JWT_EXPIRATION_MINUTES: ${E2E_SESSION_MINUTES:-10}
     depends_on:
+      db-migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
   holdings:
@@ -53,6 +55,8 @@ services:
       QUOTE_INTERVAL_SECONDS: '2'
       QUOTE_SEED: '42'
     depends_on:
+      db-migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
   orders:
@@ -71,6 +75,8 @@ services:
       # Kafka reporting is optional; this stack exercises database settlement.
       ORDERS_KAFKA_ENABLED: 'false'
     depends_on:
+      db-migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
   insights:
@@ -88,8 +94,24 @@ services:
       SPRING_DATASOURCE_HIKARI_READ_ONLY: 'true'
       SPRING_KAFKA_LISTENER_AUTO_STARTUP: 'false'
     depends_on:
+      db-migrate:
+        condition: service_completed_successfully
       reporting-db:
         condition: service_healthy
+  db-migrate:
+    image: postgres:16-alpine
+    entrypoint: ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-f", "/migrations/startup-migrations.sql"]
+    environment:
+      PGHOST: db
+      PGUSER: main
+      PGDATABASE: nexttrade
+      PGPASSWORD: e2e-owner-password
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+    - ./db/startup-migrations.sql:/migrations/startup-migrations.sql:ro
+    - ./db/migrations:/migrations/migrations:ro
   db:
     image: postgres:16-alpine
     command:
