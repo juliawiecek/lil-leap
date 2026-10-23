@@ -27,6 +27,7 @@ export async function identity(page, info, options = {}) {
     if (url.pathname.endsWith('/cash')) json = [{ balance: 5000 }];
     if (url.pathname.includes('/quotes/')) json = { bid: 99, ask: 100, midpoint: 99.5, instrumentId: uuid, symbol: 'AAPL', quotedAt: new Date().toISOString() };
     if (url.pathname.endsWith('/orders')) json = [{ orderId: uuid, symbol: 'AAPL', side: 'BUY', quantity: 1, status: 'FILLED', submittedAt: new Date().toISOString(), fillPrice: 100, filledQuantity: 1 }];
+    if (url.pathname.endsWith('/orders-today')) json = { date: '2026-10-22', dayStart: '2026-10-22T05:00:00Z', orders: [] };
     return route.fulfill({ json });
   });
   if (options.seed !== false) await page.addInitScript(({ key, age }) => {

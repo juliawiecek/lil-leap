@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource } from './order-history-api';
+import { numericValue, orderedPrices, quoteHistoryPoints } from './chart-data';
 
 /** A quote older than this is shown as "Price delayed", matching the orders service's freshness rule. */
 export const QUOTE_STALE_MS = 60000;
@@ -82,11 +83,17 @@ export interface PriceCandle {
 }
 
 export function candleMetadata(row: { time: string; open?: unknown; high?: unknown; low?: unknown; close: unknown; volume?: unknown }): PriceCandle | undefined {
-  const time = Date.parse(row.time), open = Number(row.open), high = Number(row.high), low = Number(row.low), close = Number(row.close);
-  if (![time, open, high, low, close].every(Number.isFinite) || Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
+  const time = Date.parse(row.time), open = numericValue(row.open), high = numericValue(row.high), low = numericValue(row.low), close = numericValue(row.close);
+  if (!Number.isFinite(time)) {
     return undefined;
   }
-  const volume = row.volume === null || row.volume === undefined ? null : Number(row.volume);
+  if (open === null || high === null || low === null || close === null) {
+    return undefined;
+  }
+  if (Math.min(open, high, low, close) <= 0 || high < Math.max(open, close) || low > Math.min(open, close)) {
+    return undefined;
+  }
+  const volume = numericValue(row.volume);
   return { time, open, high, low, close, volume: volume !== null && Number.isFinite(volume) && volume >= 0 ? volume : null };
 }
 
@@ -98,6 +105,8 @@ export interface PriceTick {
 }
 
 export class MarketFeedClient {
+  readonly #historyCache = new Map<string, { expires: number; response: Promise<unknown> }>();
+  #cacheToken: string | null = null;
   readonly #tokens: AccessTokenSource;
   readonly #http: ApiHttpClient;
   readonly #baseUrl: string;
@@ -148,8 +157,8 @@ export class MarketFeedClient {
    * One stock's closing price per bar over the last `limit` bars of `interval` (1m, 5m, 15m, 1h,
    * 1d), oldest first, for the portfolio-value chart. A bar is dated by when it ends.
    */
-  async closes(instrumentId: string, interval: string, limit: number, now = Date.now()): Promise<PricePoint[]> {
-    const rows = await this.#get<{ time: string; close: number | string; open?: unknown; high?: unknown; low?: unknown; volume?: unknown }[]>(
+  async closes(instrumentId: string, interval: string, limit: number, now = Date.now(), basis: 'midpoint' | 'bid' = 'midpoint'): Promise<PricePoint[]> {
+    const rows = await this.#historyGet<{ time: string; observedAt?: string; bidClose?: unknown; close: number | string; open?: unknown; high?: unknown; low?: unknown; volume?: unknown }[]>(
       `/quotes/candles/${encodeURIComponent(instrumentId)}?interval=${encodeURIComponent(interval)}&limit=${limit}`,
     );
     if (!Array.isArray(rows)) {
@@ -157,24 +166,40 @@ export class MarketFeedClient {
       throw new Error('Could not load prices.');
     }
     const width = BAR_MS[interval] ?? 0;
-    return rows
+    return orderedPrices(rows
       // The service dates a bar by its start; its close was taken at its end (or now, for the open bar).
       .map((row) => {
-        const point: PricePoint = { at: Math.min(Date.parse(row.time) + width, now), price: Number(row.close) };
+        const value = numericValue(basis === 'bid' ? row.bidClose : row.close);
+        // Legacy candle responses have no exact close time. They remain usable as midpoint
+        // bars, but must not be passed off as historical bid observations.
+        const at = row.observedAt ? Date.parse(row.observedAt) : basis === 'bid' ? NaN : Math.min(Date.parse(row.time) + width, now);
+        const point: PricePoint = { at, price: value ?? NaN };
         const candle = candleMetadata(row);
-        return candle ? { ...point, candle } : point;
+        return candle && basis === 'midpoint' ? { ...point, candle } : point;
       })
-      .filter((point) => Number.isFinite(point.at) && point.price > 0)
-      .sort((a, b) => a.at - b.at);
+      .filter((point) => point.at <= now && Number.isFinite(point.price)));
   }
 
   /** Recent quotes of one stock, oldest first, for the price chart (PS-06). */
-  async history(instrumentId: string, limit = HISTORY_ROWS): Promise<PricePoint[]> {
-    const rows = await this.#get<QuoteRow[]>(`/quotes/history/${encodeURIComponent(instrumentId)}?limit=${limit}`);
-    return rows
-      .map((row) => ({ at: Date.parse(row.quotedAt), price: Number(row.midpoint) }))
-      .filter((point) => Number.isFinite(point.at) && point.price > 0)
-      .sort((a, b) => a.at - b.at);
+  async history(instrumentId: string, limit = HISTORY_ROWS, basis: 'midpoint' | 'bid' = 'midpoint'): Promise<PricePoint[]> {
+    const rows = await this.#historyGet<QuoteRow[]>(`/quotes/history/${encodeURIComponent(instrumentId)}?limit=${limit}`);
+    if (!Array.isArray(rows)) { throw new Error('Could not load prices.'); }
+    return quoteHistoryPoints(rows, basis).filter(p => p.time <= Date.now()).map(p => ({ at: p.time, price: p.value }));
+  }
+
+  /** Coalesce concurrent chart reads and reuse them for one feed interval. Failures retry. */
+  #historyGet<T>(path: string): Promise<T> {
+    if (this.#cacheToken !== this.#tokens.accessToken) {
+      this.#historyCache.clear();
+      this.#cacheToken = this.#tokens.accessToken;
+    }
+    const saved = this.#historyCache.get(path);
+    if (saved && saved.expires > Date.now()) { return saved.response as Promise<T>; }
+    if (this.#historyCache.size >= 64) { this.#historyCache.delete(this.#historyCache.keys().next().value!); }
+    const entry = { expires: Date.now() + 5000, response: this.#get<T>(path) };
+    this.#historyCache.set(path, entry);
+    entry.response.catch(() => { if (this.#historyCache.get(path) === entry) { this.#historyCache.delete(path); } });
+    return entry.response;
   }
 
   /**

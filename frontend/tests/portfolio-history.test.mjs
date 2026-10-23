@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 import { signal } from '@angular/core';
 const {
-  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt, valueScale, tradingSession, startValue,
+  CHART_PERIODS, chartRange, barStep, portfolioSeries, priceAt, valueScale, tradingSession, startValue, plotSeries, historyCoverage, portfolioPeriodLabel,
 } = await import('../src/app/portfolio-history.ts');
 const { PortfolioChart } = await import('../src/app/portfolio-chart.ts');
 
@@ -11,25 +11,47 @@ const HOUR = 3600000;
 const DAY = 24 * HOUR;
 const NOW = Date.parse('2026-10-19T15:00:00Z');
 
-test('every period ends now and starts its own length back; 1W and ALL never before the account opened', () => {
+test('display reduction preserves recorded values, timestamps and extremes without averages', () => {
+  const points = Array.from({ length: 1000 }, (_, i) => Object.freeze({ at: NOW + i * 1000, value: 10000 + i % 17 }));
+  points[151] = Object.freeze({ at: NOW + 151000, value: 9800 });
+  points[793] = Object.freeze({ at: NOW + 793000, value: 10300 });
+  const reduced = plotSeries(Object.freeze(points), 134);
+  assert.ok(reduced.length <= 134 && reduced.length < points.length);
+  assert.equal(reduced[0], points[0]);
+  assert.equal(reduced.at(-1), points.at(-1));
+  assert.ok(reduced.includes(points[151]) && reduced.includes(points[793]), 'real extremes stay visible');
+  assert.ok(reduced.every(point => points.includes(point)), 'every displayed value is an original observation');
+  assert.ok(reduced.every((point, i) => i === 0 || point.at > reduced[i - 1].at));
+  assert.deepEqual(plotSeries([], 134), []);
+  assert.deepEqual(plotSeries(points.slice(0, 3), 134), points.slice(0, 3));
+});
+
+test('quiet-period scale adds breathing room without clipping real price moves', () => {
+  const quiet = valueScale([10000, 10001]);
+  assert.ok(quiet.high - quiet.low >= 50);
+  const large = valueScale([9500, 10500]);
+  assert.ok(large.low < 9500 && large.high > 10500);
+});
+
+test('every period ends now and never reaches before account opening', () => {
   const longAgo = NOW - 400 * DAY;
-  assert.deepEqual(chartRange('1D', NOW, longAgo), { start: NOW - DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('1D', NOW, longAgo), { start: Date.parse('2026-10-19T05:00:00Z'), end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1W', NOW, longAgo), { start: NOW - 7 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1M', NOW, longAgo), { start: NOW - 30 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('3M', NOW, longAgo), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('1Y', NOW, longAgo), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
   assert.deepEqual(chartRange('ALL', NOW, longAgo), { start: longAgo, end: NOW, fromOpening: true });
-  // An account opened three days ago: 1W and ALL start at the opening; a month or more keeps its
-  // full length, at $0 before the account existed.
+  // No period asserts a valuation before the account existed.
   const opened = NOW - 3 * DAY;
-  assert.deepEqual(chartRange('1D', NOW, opened), { start: NOW - DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('1D', NOW, opened), { start: Date.parse('2026-10-19T05:00:00Z'), end: NOW, fromOpening: false });
   for (const period of ['1W', 'ALL']) {
     assert.deepEqual(chartRange(period, NOW, opened), { start: opened, end: NOW, fromOpening: true }, period);
   }
-  assert.deepEqual(chartRange('1M', NOW, opened), { start: NOW - 30 * DAY, end: NOW, fromOpening: false });
-  assert.deepEqual(chartRange('3M', NOW, opened), { start: NOW - 90 * DAY, end: NOW, fromOpening: false });
-  assert.deepEqual(chartRange('1Y', NOW, opened), { start: NOW - 365 * DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('1M', NOW, opened), { start: opened, end: NOW, fromOpening: true });
+  assert.deepEqual(chartRange('3M', NOW, opened), { start: opened, end: NOW, fromOpening: true });
+  assert.deepEqual(chartRange('1Y', NOW, opened), { start: opened, end: NOW, fromOpening: true });
   assert.deepEqual(chartRange('ALL', NOW, null), { start: NOW - DAY, end: NOW, fromOpening: false });
+  assert.deepEqual(chartRange('ALL', NOW, NOW), { start: NOW, end: NOW, fromOpening: true }, 'an account just opened has no earlier history');
   assert.deepEqual(chartRange('1W', NOW, NOW + HOUR), { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, 'a future opening is ignored');
   assert.deepEqual([...CHART_PERIODS], ['1D', '1W', '1M', '3M', '1Y', 'ALL']);
 });
@@ -85,9 +107,6 @@ test('the value at each moment is cash then plus each holding at its price then'
   // A moment (1 ms) before each fill as well, so the line steps at it.
   const before = (hours) => hours - 1 / HOUR;
   assert.deepEqual(series.map((p) => [(p.at - opened) / HOUR, p.value]), [
-    [0, 1000],          // only the deposit
-    [before(2), 1000],  // just before the buy
-    [2, 1020],          // 500 cash + 5 shares, no bar closed yet: the next recorded price, 104
     [3, 1020],          // 500 + 5 × 104
     [5, 1040],          // 500 + 5 × 108
     [before(6), 1040],  // just before the sell
@@ -96,7 +115,7 @@ test('the value at each moment is cash then plus each holding at its price then'
     [10, 990],
   ]);
   const live = portfolioSeries(range, cash, shares, prices, 1001.236);
-  assert.equal(live.at(-1).value, 1001.24, 'the line ends at the live value shown above it');
+  assert.equal(live.at(-1).value, 1001.236, 'calculation precision is preserved until formatting');
 });
 
 test('a period that starts after earlier activity still counts it, and only draws inside the period', () => {
@@ -109,14 +128,14 @@ test('a period that starts after earlier activity still counts it, and only draw
   assert.deepEqual(series.map((p) => p.value), [1010, 1020, 1020], 'starts from the price recorded before the period');
   assert.ok(series.every((p) => p.at >= range.start && p.at <= range.end));
   assert.equal(priceAt([], NOW), null);
-  assert.equal(portfolioSeries(range, cash, shares, new Map())[0].value, 1000, 'with no prices at all, the fill price');
+  assert.deepEqual(portfolioSeries(range, cash, shares, new Map()), [], 'a fill is not a substitute for a market price');
 });
 
-test('a month view of a three-day-old account is $0 until the first deposit, then steps up', () => {
+test('a month view of a three-day-old account starts at its actual opening', () => {
   const opened = NOW - 3 * DAY;
   const range = chartRange('1M', NOW, opened);
   const series = portfolioSeries(range, [{ at: opened, amount: 25000 }], [], new Map());
-  assert.deepEqual(series.map((p) => [p.at, p.value]), [[range.start, 0], [opened - 1, 0], [opened, 25000], [NOW, 25000]]);
+  assert.deepEqual(series.map((p) => [p.at, p.value]), [[opened, 25000], [NOW, 25000]]);
   assert.equal(startValue(series), 25000, 'its change is measured from when it held money');
   assert.equal(startValue([{ at: 0, value: 0 }, { at: 1, value: 0 }]), 0);
   assert.equal(startValue([]), 0);
@@ -141,14 +160,14 @@ test('the line is green when the period is up and red when it is down, with a sp
   assert.equal(chart.baselineY(), chart.placed()[0].y, 'the dotted baseline sits at the starting value');
   const { chart: falling } = chartWith(t, [{ at: NOW - DAY, value: 1000 }, { at: NOW, value: 990 }], { ...day, fromOpening: true }, 'ALL');
   assert.equal(falling.tone(), 'down');
-  assert.match(falling.summary(), /since opening.*down 1\.00%/);
+  assert.match(falling.summary(), /since first record.*down 1\.00%/);
   const { chart: empty } = chartWith(t, [], null);
   assert.equal(empty.summary(), 'Portfolio value chart');
   assert.equal(empty.path(), '');
   assert.equal(empty.active(), null);
 });
 
-test('1D fills the chart from the open to now: each value sits at its time, with no axes', t => {
+test('1D fills the chart from the open to now: each value sits at its time on round-value gridlines', t => {
   const session = { open: Date.parse('2026-10-19T13:30:00Z'), close: Date.parse('2026-10-19T20:00:00Z') };
   const range = { start: session.open, end: NOW, fromOpening: false, session };
   const { chart, inputs } = chartWith(t, [{ at: session.open, value: 20000 }, { at: NOW - HOUR, value: 19000 }], range);
@@ -161,21 +180,25 @@ test('1D fills the chart from the open to now: each value sits at its time, with
   assert.equal(placed[0].x, 0, 'the open is the left edge');
   assert.equal(placed.at(-1).x, 800, 'now is the right edge: no room for hours still to come');
   assert.equal(Math.round(placed[1].x), 267, 'placed by its time: 10:00 is a third of the way from 9:30 to 11:00');
-  assert.equal(chart.times, undefined, 'no times along the bottom');
-  assert.equal(chart.valueTicks, undefined, 'no values down the side');
+  assert.deepEqual(chart.valueTicks().map((tick) => tick.label), ['$19,000', '$19,500', '$20,000'], 'round values down the side');
+  assert.deepEqual(chart.timeTicks().map((tick) => tick.label), ['8:30 AM', '9:15 AM', '10:00 AM'], 'open, middle and now along the bottom, in Central time');
 });
 
-test('1M, 3M and 1Y place points by time, so the $0 before the account shows; 1W and ALL space them evenly', t => {
+test('all periods place observations by elapsed time, including nights and weekends', t => {
   const points = [{ at: NOW - 30 * DAY, value: 0 }, { at: NOW - 3 * DAY - 1, value: 0 }, { at: NOW - 3 * DAY, value: 25000 }, { at: NOW, value: 25010 }];
   const { chart } = chartWith(t, points, { start: NOW - 30 * DAY, end: NOW, fromOpening: false }, '1M');
   assert.ok(chart.placed()[2].x > 700, 'the deposit three days ago is near the right edge');
   assert.equal(chart.tone(), 'up', 'measured from the first deposit, not from $0');
-  assert.equal(chart.baselineY(), chart.placed()[2].y, 'the dotted line at the first funded value');
-  assert.ok(chart.summary().includes('from $25000.00 to $25010.00'));
+  assert.equal(chart.baselineY(), chart.placed()[0].y, 'the reference retains a recorded zero opening balance');
+  assert.ok(chart.summary().includes('from $0.00 to $25010.00'));
+  assert.match(chart.summary(), /percentage change unavailable/);
   // A week of three sessions' values, with nights in between.
   const week = [0, 1, 2, 24, 25, 26, 48, 49, 50].map((h, i) => ({ at: NOW - 50 * HOUR + h * HOUR, value: 1000 + i }));
-  const { chart: even } = chartWith(t, week, { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, '1W');
-  assert.deepEqual(even.placed().map((p) => p.x), [0, 100, 200, 300, 400, 500, 600, 700, 800]);
+  for (const period of CHART_PERIODS) {
+    const { chart: timed } = chartWith(t, week, { start: NOW - 7 * DAY, end: NOW, fromOpening: false }, period);
+    timed.setDayView('full');
+    assert.deepEqual(timed.placed().map(p => Math.round(p.x)), [0, 16, 32, 384, 400, 416, 768, 784, 800], period);
+  }
 });
 
 test('the value scale leaves a little room around the line, and a band around a flat one', () => {
@@ -273,13 +296,60 @@ test('invalid observations cannot break the path before its endpoint; duplicate 
 });
 
 
-test('recent-hour updates shift existing timestamps left at a fixed scale',t=>{
+test('recent-hour updates fit the available observations to both edges',t=>{
   const points=Array.from({length:241},(_,i)=>({at:NOW-4*HOUR+i*60000,value:5000+i/10}));
   const {chart,inputs}=chartWith(t,points,day);
   const before=chart.placed().find(point=>point.at===NOW-HOUR/2).x;
   inputs.points.set([...points,{at:NOW+5000,value:5025}]);
   const after=chart.placed().find(point=>point.at===NOW-HOUR/2).x;
-  assert.ok(Math.abs(before-after-800*5000/HOUR)<1e-9);
+  assert.ok(after < before, 'existing observations move left as newer prices arrive');
+  assert.equal(chart.placed()[0].x, 0);
   assert.equal(chart.end().x,800);
   assert.equal(chart.history().length,242);
+});
+
+test('account days follow Central midnight on weekends, holidays and both DST boundaries', () => {
+  for (const [now, midnight] of [
+    ['2026-10-18T17:00:00Z', '2026-10-18T05:00:00Z'],
+    ['2026-12-25T17:00:00Z', '2026-12-25T06:00:00Z'],
+    ['2026-03-08T20:00:00Z', '2026-03-08T06:00:00Z'],
+    ['2026-11-01T20:00:00Z', '2026-11-01T05:00:00Z'],
+    ['2026-10-23T02:00:00Z', '2026-10-22T05:00:00Z'],
+  ]) {
+    const range = chartRange('1D', Date.parse(now), NOW - 365 * DAY);
+    assert.equal(range.start, Date.parse(midnight), now);
+    assert.equal(range.end, Date.parse(now));
+    assert.equal(range.session, undefined);
+  }
+  const sunday = Date.parse('2026-10-18T17:00:00Z'), deposit = sunday - HOUR;
+  const range = chartRange('1D', sunday, sunday - 7 * DAY);
+  const values = portfolioSeries(range, [{ at: deposit, amount: 100 }], [], new Map());
+  assert.equal(values.find(p => p.at === deposit).value, 100, 'weekend cash activity belongs to its calendar day');
+});
+
+test('coverage and labels identify truncated all-time history and incomplete selected periods', () => {
+  const range = { start: NOW - 900 * DAY, end: NOW, fromOpening: true };
+  const cash = [{ at: range.start, amount: 1000 }, { at: range.start + HOUR, amount: -100 }];
+  const shares = [{ at: range.start + HOUR, symbol: 'AAPL', quantity: 1, price: 100 }];
+  const values = portfolioSeries(range, cash, shares, new Map([['AAPL', [{ at: NOW - 499 * DAY, price: 110 }, { at: NOW, price: 120 }]]]));
+  assert.equal(values[0].at, NOW - 499 * DAY);
+  const coverage = historyCoverage(range, values);
+  assert.equal(coverage.status, 'partial');
+  assert.equal(coverage.requestedStart, range.start);
+  assert.equal(coverage.start, values[0].at);
+  for (const period of CHART_PERIODS) assert.equal(portfolioPeriodLabel(period, range, values), 'Available history');
+  assert.equal(portfolioPeriodLabel('ALL', range, []), 'Change unavailable');
+  const complete = [{ at: range.start, value: 1000 }, { at: NOW, value: 1100 }];
+  assert.equal(historyCoverage(range, complete).status, 'complete');
+  assert.equal(portfolioPeriodLabel('ALL', range, complete), 'Since first record');
+  assert.equal(portfolioPeriodLabel('1M', { ...range, fromOpening: false }, complete), 'Past 30 days');
+});
+
+test('partial recent-hour history fills the width without inventing earlier values', t => {
+  const points = [{ at: NOW - 2 * HOUR, value: 1000 },
+    { at: NOW - 18 * 60000, value: 1010 }, { at: NOW - 9 * 60000, value: 1005 }, { at: NOW, value: 1015 }];
+  const { chart } = chartWith(t, points, day);
+  assert.equal(chart.focused(), true);
+  assert.deepEqual(chart.placed().map(p => p.x), [0, 400, 800]);
+  assert.deepEqual(chart.chartSeries().points, points.slice(1).map(p => ({ time: p.at, value: p.value })));
 });

@@ -38,7 +38,8 @@ test('the Insights page renders today\'s totals, trades by hour and the top stoc
   assert.match(host.textContent, /Placed an order today/);
   assert.match(host.textContent, /Today's trading across every account, Monday, October 19, 2026 \(Central time\)\./);
   assert.match(host.textContent, /9 trades · Central time/);
-  assert.equal(host.querySelectorAll('app-insights-chart circle[tabindex]').length, 4, 'midnight, one step per order, and now');
+  assert.equal(host.querySelectorAll('app-insights-chart circle[aria-hidden=\"true\"]').length, 4, 'midnight, one step per order, and now');
+  assert.equal(host.querySelectorAll('app-insights-chart svg[tabindex=\"0\"]').length, 1);
   assert.match(host.querySelector('app-insights-chart svg').getAttribute('aria-label'), /exact time it was placed/);
   const rows = [...host.querySelectorAll('tbody tr')]
     .map((row) => [...row.querySelectorAll('td')].slice(0, 3).map((cell) => cell.textContent.trim()));

@@ -1,11 +1,11 @@
-<a class="skip-link" href="#workspace">Skip to content</a>
+<a class="skip-link" href="#workspace" (click)="$event.preventDefault(); workspace.focus()">Skip to content</a>
 <div class="shell">
-  <aside class="sidebar" [class.open]="mobileNav()">
-    <a class="brand" [routerLink]="home()" (click)="mobileNav.set(false)" aria-label="NextTrade Insights, home"
+  <aside id="insights-navigation" aria-label="Insights navigation" (keydown.escape)="closeNavigation()" class="sidebar" [class.open]="mobileNav()">
+    <a class="brand" [routerLink]="home()" (click)="mobileNav.set(false)" title="NextTrade Insights, home"
       ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#f2f0e9" />
         <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#94c973" /></svg
-      ><b>Next<span>Trade</span></b><em>Insights</em></a
+      ><b>Next<span>Trade</span></b> <em>Insights</em></a
     >
     <nav aria-label="Main navigation">
       @for (item of nav(); track item.path; let i = $index) {
@@ -36,7 +36,7 @@
     <header class="topbar">
       <button
         class="menu icon-button"
-        aria-label="Toggle navigation"
+        aria-label="Toggle navigation" #menuButton aria-controls="insights-navigation"
         [attr.aria-expanded]="mobileNav()"
         (click)="mobileNav.set(!mobileNav())"
       >
@@ -48,7 +48,7 @@
         <span class="role-tag">{{ roleLabel().toUpperCase() }}</span>
       </div>
     </header>
-    <main id="workspace" tabindex="-1" class="content">
+    <main #workspace id="workspace" tabindex="-1" class="content">
       <router-outlet />
       <footer>
         <span>© 2026 NextTrade. Internal workspace.</span><span>Internal use only</span>

@@ -1,5 +1,5 @@
 <div class="live-stock-panel">
-<app-retail-stock-dashboard [selectedAsset]="asset()" />
+<app-retail-stock-dashboard [selectedAsset]="asset()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [privateValues]="desk().privateBalance()" />
 <details class="historical-chart">
 <summary>Trade history and long-range chart</summary>
 <section class="panel chart-panel" aria-label="Stock price chart">
@@ -34,7 +34,9 @@
       }
     </div>
   </div>
-  <app-technical-chart [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
+  @if (desk().historyLoading()) { <p class="chart-note" role="status">Loading recorded prices...</p> }
+  @if (desk().historyError()) { <p class="chart-note" role="status">{{ desk().historyError() }}</p> }
+  <app-technical-chart [privateValues]="desk().privateBalance()" [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
   @if (!desk().priceLine()) { <p class="chart-note">Collecting recorded prices for {{ desk().selected().symbol }}.</p> }
 
 </section>

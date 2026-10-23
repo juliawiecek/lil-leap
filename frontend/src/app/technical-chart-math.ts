@@ -1,4 +1,5 @@
 import type { PricePoint } from './market-feed-api';
+import { orderedPrices } from './chart-data';
 export interface Indicator {
   name: 'EMA 50' | 'EMA 200' | 'VWAP';
   dash: string;
@@ -9,6 +10,7 @@ export interface Indicator {
 
 /** Seed with the actual period's SMA; no invented warm-up values or displaced timestamps. */
 export function ema(points: readonly PricePoint[], period: number): PricePoint[] {
+  points = orderedPrices(points);
   if (!Number.isInteger(period) || period < 1 || points.length < period) {
     return [];
   }
@@ -23,13 +25,19 @@ export function ema(points: readonly PricePoint[], period: number): PricePoint[]
 
 /** Bar VWAP uses reported traded volume and typical OHLC price, reset each exchange day. */
 export function vwap(points: readonly PricePoint[]): PricePoint[] {
+  points = orderedPrices(points);
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
   let session = '', weighted = 0, volume = 0;
   const output: PricePoint[] = [];
   for (const p of points) {
     const bar = p.candle;
     // A missing bar/volume makes a cumulative VWAP unknowable, including subsequent points.
-    if (!bar || bar.volume === null) {
+    if (!bar || bar.volume === null || !Number.isFinite(bar.volume) || bar.volume < 0) {
+      return [];
+    }
+    if (![bar.time, bar.open, bar.high, bar.low, bar.close].every(Number.isFinite) ||
+        Math.min(bar.open, bar.high, bar.low, bar.close) <= 0 ||
+        bar.high < Math.max(bar.open, bar.close) || bar.low > Math.min(bar.open, bar.close)) {
       return [];
     }
     const next = day.format(bar.time);
@@ -39,6 +47,23 @@ export function vwap(points: readonly PricePoint[]): PricePoint[] {
     if (volume > 0) {
       output.push({ at: p.at, price: weighted / volume });
     }
+  }
+  return output;
+}
+
+/** Wilder RSI: SMA of the first N gains/losses, then Wilder's recursive smoothing.
+ * N changes need N+1 prices. Flat prices are neutral (50); zero loss alone is 100.
+ */
+export function rsi(points: readonly PricePoint[], period = 14): PricePoint[] {
+  points = orderedPrices(points);
+  if (!Number.isInteger(period) || period < 1 || points.length <= period) { return []; }
+  let gain = 0, loss = 0;
+  const output: PricePoint[] = [];
+  for (let i = 1; i < points.length; i++) {
+    const delta = points[i].price - points[i - 1].price;
+    if (i <= period) { gain += Math.max(0, delta) / period; loss += Math.max(0, -delta) / period; }
+    else { gain = (gain * (period - 1) + Math.max(0, delta)) / period; loss = (loss * (period - 1) + Math.max(0, -delta)) / period; }
+    if (i >= period) { output.push({ at: points[i].at, price: loss === 0 ? gain === 0 ? 50 : 100 : Math.max(0, Math.min(100, 100 - 100 / (1 + gain / loss))) }); }
   }
   return output;
 }

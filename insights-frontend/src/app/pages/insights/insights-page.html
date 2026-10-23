@@ -18,7 +18,7 @@
     <p class="error" role="alert">{{ error() }}</p>
   }
   <div class="glance-body">
-    <div class="hero">
+    <div class="hero" data-a11y-read data-a11y-label="Trades today">
       <span class="hero-label">Trades today</span>
       <div class="hero-figure">
         <b data-testid="summary-trades">{{ count(tradesToday()) }}</b>
@@ -29,20 +29,20 @@
       @if (orderPoints().length) {
         <div class="hero-chart">
           <app-insights-chart
-            [points]="orderPoints()"
+            [points]="orderPoints()" [context]="summary()?.date ?? ''"
             [ticks]="orderTicks()"
             [height]="210"
             label="Orders placed today, each at the exact time it was placed, Central time"
             prefix=""
             valueLabel="Orders so far"
-            hint="Each step is one order, at the second it was placed. Hover or focus a step to see it."
+            hint="Each step is one order, at the second it was placed. Hover a step or use the arrow keys on the chart to see it."
           />
         </div>
       } @else {
         <p class="hero-empty">No orders yet today. The line steps up at the exact time each order is placed.</p>
       }
     </div>
-    <dl class="stats">
+    <dl class="stats" data-a11y-read data-a11y-label="Today at a glance">
       <div class="value">
         <dt>Traded value</dt>
         <dd class="figure money" data-testid="summary-value">{{ valueParts().whole }}<span class="cents">{{ valueParts().cents }}</span></dd>
@@ -70,7 +70,7 @@
 @if (ranked().length) {
   <div class="tape" aria-label="Most traded today">
     <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
-    <div class="tape-window" [class.still]="ranked().length < 4">
+    <div class="tape-window" tabindex="0" role="region" aria-label="Most traded stocks ticker" [class.still]="ranked().length < 4">
       <div class="tape-track" [class.still]="ranked().length < 4">
         @for (copy of ranked().length < 4 ? [0] : [0, 1]; track copy) {
           <ul [attr.aria-hidden]="copy === 1 ? 'true' : null">
@@ -91,7 +91,7 @@
       <span class="muted">{{ count(tradesToday()) }} {{ plural(tradesToday(), 'trade') }} · Central time</span>
     </div>
     @if (tradesToday()) {
-      <div class="bars" role="img" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' ' + plural(busiest()?.tradeCount, 'trade') + '.'">
+      <div class="bars" role="img" tabindex="0" aria-describedby="insights-hourly-summary" (focus)="hourlyAccess.focusSummary()" (blur)="hourlyAccess.focused.set(false)" [attr.aria-label]="'Trades per hour today, Central time. Busiest: ' + busiestHour() + ', ' + busiest()?.tradeCount + ' ' + plural(busiest()?.tradeCount, 'trade') + '.'">
         @for (bar of bars(); track bar.hour) {
           <div class="bar-col" [class.now]="bar.now" [title]="bar.label + ' · ' + bar.count + ' ' + plural(bar.count, 'trade')">
             <span class="bar-count">{{ bar.count || '' }}</span>
@@ -108,6 +108,7 @@
         <p>Executed trades will appear here hour by hour.</p>
       </div>
     }
+    <app-insights-chart-access #hourlyAccess id="insights-hourly" label="Trades per hour today, Central time" [summary]="hourlyDescription()" [table]="hourlyTable()" [context]="summary()?.date ?? ''" />
   </section>
 
   <section class="area" aria-labelledby="top-title">
@@ -115,7 +116,7 @@
       <h2 id="top-title">Top traded today</h2>
       <span class="muted">Share of today’s trades</span>
     </div>
-    <div class="top-body">
+    <div class="top-body ranking-graphic" role="img" tabindex="0" aria-label="Most traded stocks today" aria-describedby="insights-top-summary" (focus)="rankingAccess.focusSummary()" (blur)="rankingAccess.focused.set(false)">
       @if (ranked().length) {
         <div class="ring" aria-hidden="true">
           <svg viewBox="0 0 42 42">
@@ -127,16 +128,16 @@
           <span><b class="mono">{{ topShare() }}%</b><small>top {{ arcs().length }}</small></span>
         </div>
       }
-      <div class="table-wrap">
-        <table>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Most traded stocks table">
+        <table aria-hidden="true">
           <caption class="sr-only">Most traded stocks today</caption>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Stock</th>
-              <th class="numeric">Trades</th>
-              <th class="share-cell"><span class="sr-only">Share of today's trades</span></th>
-              <th class="numeric">Share</th>
+              <th scope="col">#</th>
+              <th scope="col">Stock</th>
+              <th scope="col" class="numeric">Trades</th>
+              <th scope="col" class="share-cell"><span class="sr-only">Share of today's trades</span></th>
+              <th scope="col" class="numeric">Share</th>
             </tr>
           </thead>
           <tbody>
@@ -157,5 +158,6 @@
         </table>
       </div>
     </div>
+    <app-insights-chart-access #rankingAccess id="insights-top" label="Most traded stocks today" [summary]="topDescription()" [table]="topTable()" [context]="summary()?.date ?? ''" />
   </section>
 </div>

@@ -664,9 +664,12 @@ export class InvestorProfile implements OnInit, AfterViewInit {
     // The same checks the browser runs, but the messages appear under each field (see errors) rather than
     // in the browser's own warning bubble. Fields in other steps' disabled sections are skipped.
     const invalid = [...form.elements].filter(
-      (el): el is HTMLInputElement | HTMLSelectElement =>
-        (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) &&
-        !el.disabled && !el.closest('fieldset[disabled]') && !el.checkValidity(),
+      (el): el is HTMLInputElement | HTMLSelectElement => {
+        if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement)) {
+          return false;
+        }
+        return !el.disabled && !el.closest('fieldset[disabled]') && !el.checkValidity();
+      },
     );
     this.errors.set(Object.fromEntries(invalid.map((el) => [el.name || el.id, el.validationMessage])));
     if (invalid.length) {

@@ -8,6 +8,7 @@
         <button
           type="button"
           [class.active]="page() === item.name"
+          [attr.aria-label]="item.name"
           [attr.aria-current]="page() === item.name ? 'page' : null"
           [attr.title]="collapsed() ? item.name : null"
           (click)="navigate(item.name)"
@@ -18,7 +19,7 @@
     </nav>
     <div class="sidebar-help" data-scan-group="Help and support">
       <span>Help &amp; Support</span
-      ><button type="button" (click)="openModal('shortcuts')">
+      ><button type="button" aria-label="Keyboard shortcuts" (click)="openModal('shortcuts')">
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
       ><button
         type="button"
@@ -27,14 +28,14 @@
       >
         <app-dashboard-icon name="collapse" /><span>Collapse</span>
       </button
-      ><button type="button" class="sign-out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
+      ><button type="button" class="sign-out" aria-label="Sign out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
         <app-dashboard-icon name="signout" /><span>Sign out</span>
       </button>
     </div>
   </aside>
   <div class="pro-main">
     <header class="pro-topbar" data-scan-group="Top bar">
-      <div class="pro-search" data-scan-group="Search">
+      <div class="pro-search" data-scan-group="Search" data-a11y-search>
         <app-dashboard-icon name="search" /><input
           aria-label="Search symbols or companies"
           placeholder="Search symbols, companies, or keywords (e.g. AAPL, earnings, AI)..."
@@ -43,7 +44,7 @@
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
-          <div class="search-results">
+          <div class="search-results" data-a11y-results role="group" aria-label="Stock search results">
             @for (q of results(); track q.symbol) {
               <button type="button" (click)="choose(q)">
                 <b>{{ q.symbol }}</b
@@ -65,14 +66,14 @@
           <button
             class="notification-button icon-button"
             type="button"
-            aria-label="Notifications"
+            aria-label="Notifications" aria-controls="advanced-notifications"
             [attr.aria-expanded]="notifications()"
             (click)="notifications.set(!notifications())"
           >
             <app-dashboard-icon name="bell" /><i></i>
           </button>
           @if (notifications()) {
-            <div class="notification-popover">
+            <div class="notification-popover" id="advanced-notifications" data-a11y-popover role="region" aria-label="Notifications">
               <b>Notifications</b>
               <p>You’re all caught up. Fills and rejections appear as messages in the corner.</p>
             </div>
@@ -100,7 +101,7 @@
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
         <section class="panel summary-panel" data-scan-group="Portfolio summary">
           <h1>
-            Portfolio Summary
+            {{ page() === 'Overview' ? 'Portfolio Summary' : page() }}
             <button
               type="button"
               class="icon-button"
@@ -113,7 +114,7 @@
           @if (!portfolioLoaded()) {
             <p class="empty-note" aria-live="polite">Loading your balances…</p>
           } @else {
-            <div class="summary-metrics">
+            <div class="summary-metrics" data-a11y-read data-a11y-label="Portfolio summary">
               <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
                 ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
@@ -137,12 +138,12 @@
               <div>
                 <span>Cash</span
                 ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong
-                ><small>{{ exposure().cashPercent | number: '1.1-1' }}% of total</small>
+                ><small>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} of total</small>
               </div>
               <div>
                 <span>Invested</span
                 ><strong>{{ privateBalance() ? '••••••' : (exposure().equities | currency) }}</strong
-                ><small>{{ exposure().equitiesPercent | number: '1.1-1' }}% of total</small>
+                ><small>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} of total</small>
               </div>
             </div>
           }
@@ -158,6 +159,7 @@
                 <button
                   type="button"
                   [class.active]="bottomTab() === tab"
+                  [attr.aria-pressed]="bottomTab() === tab"
                   (click)="bottomTab.set(tab)"
                 >
                   {{ tab }}
@@ -165,21 +167,21 @@
               }
               <span class="panel-note">{{ positions().length }} positions · {{ privateBalance() ? '••••••' : (exposure().equities | currency) }} invested</span>
             </div>
-            <div class="table-scroll">
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
               @if (bottomTab() === 'Positions') {
                 <table class="positions-table">
                   <caption class="sr-only">Positions</caption>
                   <thead>
                     <tr>
-                      <th>Symbol</th>
-                      <th>Last</th>
-                      <th>Change %</th>
-                      <th>Quantity</th>
-                      <th>Market Value</th>
-                      <th>Day P&amp;L</th>
-                      <th>Total P&amp;L</th>
-                      <th>Weight</th>
-                      <th>Actions</th>
+                      <th scope="col">Symbol</th>
+                      <th scope="col">Last</th>
+                      <th scope="col">Change %</th>
+                      <th scope="col">Quantity</th>
+                      <th scope="col">Market Value</th>
+                      <th scope="col">Day P&amp;L</th>
+                      <th scope="col">Total P&amp;L</th>
+                      <th scope="col">Weight</th>
+                      <th scope="col">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -279,6 +281,7 @@
                   <button
                     type="button"
                     role="tab"
+                    [id]="'watch-tab-' + tab" aria-controls="watch-list-panel"
                     [class.active]="overviewList() === tab"
                     [attr.aria-selected]="overviewList() === tab"
                     (click)="overviewList.set($any(tab))"
@@ -290,6 +293,7 @@
             } @else {
               <div class="panel-heading"><h2>Stocks</h2></div>
             }
+            <div id="watch-list-panel" [attr.role]="page() === 'Overview' ? 'tabpanel' : null" [attr.aria-labelledby]="page() === 'Overview' ? 'watch-tab-' + overviewList() : null">
             @if (page() === 'Markets' || overviewList() === 'Watchlist') {
             @if (page() === 'Markets') {
               <select
@@ -302,15 +306,15 @@
                 <option>Decliners</option>
               </select>
             }
-            <div class="table-scroll">
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
               <table class="watch-table">
                 <caption class="sr-only">{{ page() === 'Markets' ? 'Stocks' : 'Watchlist' }}</caption>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Last</th>
-                    <th>Change</th>
-                    <th>Sector</th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Last</th>
+                    <th scope="col">Change</th>
+                    <th scope="col">Sector</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -350,7 +354,7 @@
                 <p class="empty-note">Loading prices…</p>
               }
             } @else {
-              <div class="sector-list">
+              <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="watchSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
@@ -365,15 +369,17 @@
                 }
               </div>
               <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
+              <app-chart-access #watchSectorAccess id="advanced-watch-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             }
+            </div>
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
           <section class="panel market-panel" data-scan-group="Market overview">
             <div class="panel-heading"><h2>Market Overview</h2></div>
             @if (page() === 'Overview') {
-              <div class="heat-map" aria-label="Today's move of each listed stock">
-                @for (q of quotes().slice(0, 9); track q.symbol) {
+              <div class="heat-map" role="group" tabindex="0" aria-label="Listed stock performance heat map" data-scan-group="Stock performance" [appChartFocus]="heatAccess" [chartScanChildren]="true">
+                @for (q of heatMapQuotes(); track q.symbol) {
                   <button
                     type="button"
                     class="heat-tile"
@@ -381,13 +387,15 @@
                     [class.loss]="q.change < 0"
                     [style.--heat]="q.change < 0 ? -q.change : q.change"
                     (click)="choose(q)"
+                    aria-describedby="advanced-heatmap-summary"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + q.change + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
                 }
               </div>
+              <app-chart-access #heatAccess id="advanced-heatmap" label="Listed stock performance today" [summary]="heatDescription()" [table]="heatTable()" />
             } @else {
             <div class="market-tabs">
               @for (tab of ['Sectors', 'Top Movers']; track tab) {
@@ -402,7 +410,7 @@
             </div>
             }
             @if (page() === 'Overview' || marketTab() === 'Sectors') {
-              <div class="sector-list">
+              <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
                     <span>{{ s.name }}</span
@@ -417,6 +425,7 @@
                 }
               </div>
               <p class="empty-note">Average move today of the stocks NextTrade lists in each sector.</p>
+              <app-chart-access #marketSectorAccess id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             } @else {
               @for (q of topMovers(); track q.symbol) {
                 <button class="mover-row" type="button" (click)="choose(q)">
@@ -449,11 +458,11 @@
                 <div class="summary-grid">
                   <div>
                     <span>Buying Power</span><b>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</b
-                    ><small>Cash {{ exposure().cashPercent | number: '1.1-1' }}%</small>
+                    ><small>Cash {{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</small>
                   </div>
                   <div>
                     <span>Invested</span><b>{{ privateBalance() ? '••••••' : (exposure().equities | currency) }}</b
-                    ><small>{{ exposure().equitiesPercent | number: '1.1-1' }}% of total</small>
+                    ><small>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} of total</small>
                   </div>
                   <div>
                     <span>Day P&amp;L</span
@@ -466,11 +475,12 @@
                     ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
                   </div>
                 </div>
-                <div class="split-bar" role="img" [attr.aria-label]="'Equities ' + exposure().equitiesPercent + '%, Cash ' + exposure().cashPercent + '%'">
-                  <i class="equities" [style.width.%]="exposure().equitiesPercent"></i><i class="cash" [style.width.%]="exposure().cashPercent"></i>
+                <div class="split-bar" tabindex="0" [appChartFocus]="exposureAccess" role="img" aria-label="Portfolio exposure">
+                  <i class="equities" [style.width.%]="allocationReady() ? exposure().equitiesPercent : 0"></i><i class="cash" [style.width.%]="allocationReady() ? exposure().cashPercent : 0"></i>
                 </div>
+                <app-chart-access #exposureAccess id="advanced-exposure" label="Portfolio exposure" [summary]="exposureDescription()" [table]="exposureTable()" [context]="selectedAccount()?.account_id ?? ''" />
                 <div class="split-legend">
-                  <span>Equities {{ exposure().equitiesPercent | number: '1.1-1' }}%</span><span>Cash {{ exposure().cashPercent | number: '1.1-1' }}%</span>
+                  <span>Equities {{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }}</span><span>Cash {{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</span>
                 </div>
               </div>
             </section>
@@ -482,7 +492,7 @@
             @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
             @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
             @if (profile(); as userProfile) {
-              <div>
+              <div data-a11y-sensitive>
                 <span>Full name</span><strong>{{ userProfile.firstName }} {{ userProfile.lastName }}</strong>
               </div>
             }
@@ -566,8 +576,8 @@
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>{{ exposure().equitiesPercent | number: '1.1-1' }}% · {{ exposure().equities | currency }}</strong></div>
-      <div><span>Cash</span><strong>{{ exposure().cashPercent | number: '1.1-1' }}% · {{ exposure().cash | currency }}</strong></div>
+      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().equities | currency }}</strong></div>
+      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().cash | currency }}</strong></div>
       <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {

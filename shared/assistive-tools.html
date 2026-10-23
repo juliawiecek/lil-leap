@@ -1,0 +1,14 @@
+@if (access.loginPage()) {
+<aside class="assistive-launcher" aria-label="Reading and accessibility tools" data-scan-group="Reading and accessibility tools">
+  @if (access.settings().enabled || access.speaking()) {
+    <button type="button" class="stop" (click)="access.controller.stop()" data-a11y-reading-action>Stop speech</button>
+  }
+  <button type="button" (click)="open()" data-a11y-reading-action [attr.aria-controls]="id" aria-haspopup="dialog">Accessibility</button>
+</aside>
+<dialog #panel [id]="id" [attr.aria-labelledby]="id + '-title'" data-scan-group="Accessibility tools" (click)="backdrop($event)" (close)="closed()">
+  <header><h2 [id]="id + '-title'">Accessibility tools</h2><button type="button" (click)="close()" aria-label="Close accessibility tools">Close</button></header>
+  <p>These preferences apply across this app and are saved in this browser. Optional speech stays independent of your screen reader.</p>
+  <app-assistive-settings />
+</dialog>
+}
+<p class="assistive-status" role="status" aria-live="polite" aria-atomic="true">{{ access.status() }}</p>

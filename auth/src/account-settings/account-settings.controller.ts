@@ -49,7 +49,9 @@ export class AccountSettingsController {
   @ApiOperation({ summary: 'Check whether the bearer token belongs to an active session' })
   @ApiNoContentResponse({ description: 'The token is valid and its session is active.' })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: TOKEN_401 })
-  session(): void {}
+  session(): void {
+    // AccessTokenGuard validates the active session before this 204 response.
+  }
 
   @Patch('profile')
   @HttpCode(HttpStatus.OK)

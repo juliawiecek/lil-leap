@@ -26,7 +26,7 @@ const FAILED = 'Something went wrong. Please try again.';
         <div class="row" [class.open]="editing() === 'phone'">
           <div class="summary">
             <span class="label" id="phone-label">Phone</span>
-            <span class="value">{{ profile.phone || 'Not provided' }}</span>
+            <span class="value" data-a11y-sensitive>{{ profile.phone || 'Not provided' }}</span>
             <button type="button" class="change" aria-describedby="phone-label" [attr.aria-expanded]="editing() === 'phone'" (click)="toggle('phone')">
               {{ editing() === 'phone' ? 'Cancel' : 'Change' }}
             </button>
@@ -44,7 +44,7 @@ const FAILED = 'Something went wrong. Please try again.';
         <div class="row" [class.open]="editing() === 'address'">
           <div class="summary">
             <span class="label" id="address-label">Address</span>
-            <span class="value">{{ profile.address || 'Not provided' }}</span>
+            <span class="value" data-a11y-sensitive>{{ profile.address || 'Not provided' }}</span>
             <button type="button" class="change" aria-describedby="address-label" [attr.aria-expanded]="editing() === 'address'" (click)="toggle('address')">
               {{ editing() === 'address' ? 'Cancel' : 'Change' }}
             </button>
@@ -63,7 +63,7 @@ const FAILED = 'Something went wrong. Please try again.';
       <div class="row" [class.open]="editing() === 'email'">
         <div class="summary">
           <span class="label" id="email-label">Email</span>
-          <span class="value">{{ currentEmail() || 'Not available' }}</span>
+          <span class="value" data-a11y-sensitive>{{ currentEmail() || 'Not available' }}</span>
           <button type="button" class="change" aria-describedby="email-label" [attr.aria-expanded]="editing() === 'email'" (click)="toggle('email')">
             {{ editing() === 'email' ? 'Cancel' : 'Change' }}
           </button>

@@ -82,7 +82,13 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "proxyConfig": "proxy.conf.json", "port": 4301 },
+          "options": {
+            "proxyConfig": "proxy.conf.json",
+            "port": 4301,
+            "prebundle": {
+              "exclude": ["@lilleap/session-core"]
+            }
+          },
           "configurations": {
             "production": {
               "buildTarget": "insights-frontend:build:production"

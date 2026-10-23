@@ -23,9 +23,10 @@ test('merged pages redirect, and an unknown address gets a friendly 404 instead 
   assert.equal(fallback.path, '**');
   assert.equal(fallback.component.name, 'NotFound');
   assert.ok(routes.some((route) => route.path === 'activity' && route.loadComponent));
+  assert.equal(routes.some((route) => route.path === 'learn'), false);
 });
 
-test('tier guards restrict guided and advanced pages after session readiness', async (t) => {
+test('tier guards restrict Markets to advanced traders after session readiness', async (t) => {
   let tier = 'NOVICE';
   const injector = createEnvironmentInjector(
     [
@@ -47,20 +48,18 @@ test('tier guards restrict guided and advanced pages after session readiness', a
     const route = routes.find((route) => route.path === path);
     return runInInjectionContext(injector, () => route.canActivate[1]({ routeConfig: route }));
   };
-  assert.equal(await check('learn'), true);
   assert.equal(await check('markets'), 'dashboard');
   tier = 'ADVANCED';
-  assert.equal(await check('learn'), 'dashboard');
   assert.equal(await check('markets'), true);
 });
 
-for (const level of ['NOVICE', 'ADVANCED']) {
+for (const level of ['NOVICE', 'ADVANCED', null]) {
   test('workspace renders the authenticated ' + level + ' tier and delegates logout', async (t) => {
     let logouts = 0;
     const fixture = await render(t, TradingWorkspace, {}, [
       {
         provide: AuthService,
-        useValue: { accessToken: null, email: 'trader@example.test', traderLevel: level },
+        useValue: { accessToken: null, email: level ? 'trader@example.test' : null, traderLevel: level },
       },
       {
         provide: AppSessionService,
@@ -71,10 +70,10 @@ for (const level of ['NOVICE', 'ADVANCED']) {
         },
       },
     ]);
-    const selected = level === 'NOVICE' ? 'app-novice-dashboard' : 'app-advanced-dashboard';
+    const selected = level === 'ADVANCED' ? 'app-advanced-dashboard' : 'app-novice-dashboard';
     assert.ok(fixture.nativeElement.querySelector(selected));
     const dashboard = fixture.debugElement.children[0].componentInstance;
-    assert.equal(dashboard.name(), 'trader@example.test');
+    assert.equal(dashboard.name(), level ? 'trader@example.test' : '');
     dashboard.signOut.emit();
     assert.equal(logouts, 1);
   });

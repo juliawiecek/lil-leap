@@ -31,6 +31,7 @@
         <button
           type="button"
           [class.active]="activeTab() === item.label"
+          [attr.aria-label]="item.label"
           [attr.aria-current]="activeTab() === item.label ? 'page' : null"
           [attr.title]="sidebarCollapsed() ? item.label : null"
           (click)="navigate(item.label)"
@@ -47,7 +48,7 @@
   </aside>
   <div class="novice-main">
     <header class="novice-topbar" data-scan-group="Top bar">
-      <div class="company-search" data-scan-group="Search">
+      <div class="company-search" data-scan-group="Search" data-a11y-search>
         <app-dashboard-icon name="search" />
         <input
           aria-label="Search for a company or symbol"
@@ -57,7 +58,7 @@
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
-          <div class="company-results">
+          <div class="company-results" data-a11y-results role="group" aria-label="Stock search results">
             @for (quote of results(); track quote.symbol) {
               <button type="button" (click)="openTrade('Buy', quote.symbol)">
                 <strong>{{ quote.symbol }}</strong
@@ -80,14 +81,14 @@
           <button
             type="button"
             class="notification-button"
-            aria-label="Notifications"
+            aria-label="Notifications" aria-controls="novice-notifications"
             [attr.aria-expanded]="notifications()"
             (click)="notifications.set(!notifications())"
           >
             <app-dashboard-icon name="bell" /><i></i>
           </button>
           @if (notifications()) {
-            <div class="notification-popover">
+            <div class="notification-popover" id="novice-notifications" data-a11y-popover role="region" aria-label="Notifications">
               <strong>Notifications</strong>
               <p>You’re all caught up.</p>
             </div>
@@ -119,10 +120,12 @@
           @if (activeTab() === 'Overview') {
             <h1 class="greeting-title">{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
             @if (daySummary(); as day) {
-              @if (day.symbol) {
+              @if (showBalance() && day.symbol) {
                 <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today, and <b>{{ day.symbol }}</b> is your best mover <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">(<app-financial-change [value]="day.change" />)</span>.</p>
-              } @else {
+              } @else if (showBalance()) {
                 <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today.</p>
+              } @else if (day.symbol) {
+                <p class="day-summary"><b>{{ day.symbol }}</b> is your best mover today <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">(<app-financial-change [value]="day.change" />)</span>.</p>
               }
             }
           } @else {
@@ -140,48 +143,54 @@
             <section class="panel portfolio-panel" aria-label="Portfolio performance" data-scan-group="Portfolio">
               <div class="portfolio-top">
                 <div>
-                  <div class="value-label">Total portfolio value</div>
-                  <div class="portfolio-value">
+                  <div class="value-label">
+                    Total portfolio value
+                  </div>
+                  <div class="portfolio-value" data-a11y-read data-a11y-label="Total portfolio value" [attr.data-a11y-description]="showBalance() ? null : 'Balance hidden'">
                     @if (!portfolioLoaded()) {
                       <span aria-live="polite">Loading…</span>
                     } @else {
-                      {{ headerValue() | currency }}
+                      {{ showBalance() ? (headerValue() | currency) : '••••••••' }}
                     }
                   </div>
-                  <div class="portfolio-gain" [class.up]="headerChange().amount > 0" [class.down]="headerChange().amount < 0">
-                    <strong><app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /></strong
-                    ><span>{{ headerChange().label }}</span>
+                  <div class="portfolio-gain" [class.up]="chartChangeAvailable() && headerChange().amount > 0" [class.down]="chartChangeAvailable() && headerChange().amount < 0">
+                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Change unavailable } } @else { •••••• }</strong
+                    ><span>{{ chartChangeAvailable() ? headerChange().label : (chartLoading() ? 'Loading history' : '') }}</span>
                   </div>
                 </div>
               </div>
-              <app-portfolio-chart
-                data-scan-group="Portfolio chart"
-                [points]="chartPoints()"
-                [range]="chartSpan()"
-                [period]="chartPeriod()"
-                [loading]="chartLoading()"
-                [error]="chartError()"
-                [delayed]="chartDelayed()"
-                (periodChange)="setChartPeriod($event)"
-                (scrub)="chartScrub.set($event)"
-              />
-              <p class="sr-only" aria-live="polite">{{ chartAnnouncement() }}</p>
+              @if (showBalance()) {
+                <app-portfolio-chart
+                  data-scan-group="Portfolio chart"
+                  [points]="chartPoints()"
+                  [range]="chartSpan()"
+                  [period]="chartPeriod()"
+                  [loading]="chartLoading()"
+                  [error]="chartError()"
+                  [notice]="chartNotice()"
+                  [delayed]="chartDelayed()" [balanceHidden]="!showBalance()" [accountKey]="selectedAccount()?.account_id ?? ''"
+                  (periodChange)="setChartPeriod($event)"
+                  (scrub)="chartScrub.set($event)"
+                />
+              }
+              <!-- PS-25 owns the chart live region; keep the existing switch-control announcement. -->
+              <p class="sr-only" aria-hidden="true">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
                 <div>
                   <span>Buying power</span
-                  ><strong>{{ buyingPower() | currency }}</strong>
+                  ><strong>{{ showBalance() ? (buyingPower() | currency) : '••••••' }}</strong>
                 </div>
                 <div>
                   <span>Invested</span
-                  ><strong>{{ invested() | currency }}</strong>
+                  ><strong>{{ showBalance() ? (invested() | currency) : '••••••' }}</strong>
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0"><app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /></strong>
+                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
                 <div>
                   <span>Total return</span
-                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /></strong>
+                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
               </div>
             </section>
@@ -207,17 +216,17 @@
                 }
               </div>
               @if (investmentTab() === 'Holdings') {
-                <div class="table-scroll">
+                <div class="table-scroll" tabindex="0" role="region" aria-label="Holdings table" data-scan-group="Holdings table">
                   <table class="holdings-table">
                     <caption class="sr-only">Holdings</caption>
                     <thead>
                       <tr>
-                        <th>Symbol · Name</th>
-                        <th>Value · Shares</th>
-                        <th>Avg. price</th>
-                        <th>Today</th>
-                        <th>Total return</th>
-                        <th><span class="sr-only">Actions</span></th>
+                        <th scope="col">Symbol · Name</th>
+                        <th scope="col">Value · Shares</th>
+                        <th scope="col">Avg. price</th>
+                        <th scope="col">Today</th>
+                        <th scope="col">Total return</th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -288,12 +297,12 @@
               } @else {
                 <div class="asset-class-list">
                   <div>
-                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong
-                    ><span>{{ assetAllocation().stocksValue | currency }}</span>
+                    <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong
+                    ><span>{{ allocationReady() ? (assetAllocation().stocksValue | currency) : '—' }}</span>
                   </div>
                   <div>
-                    <span><i class="asset-dot cash"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong
-                    ><span>{{ assetAllocation().cashValue | currency }}</span>
+                    <span><i class="asset-dot cash"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong
+                    ><span>{{ allocationReady() ? (assetAllocation().cashValue | currency) : '—' }}</span>
                   </div>
                 </div>
               }
@@ -316,7 +325,7 @@
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
-                <header class="settings-profile">
+                <header class="settings-profile" data-a11y-sensitive>
                   <span class="settings-avatar" aria-hidden="true">{{ (userProfile.firstName || 'A').slice(0, 1).toUpperCase() }}{{ (userProfile.lastName || '').slice(0, 1).toUpperCase() }}</span>
                   <div class="settings-identity">
                     <span class="settings-eyebrow">Your profile</span>
@@ -335,6 +344,23 @@
                   <div><dt>Account name</dt><dd>{{ name() || 'Your account' }}</dd></div>
                   <div><dt>Trader tier</dt><dd><span class="tier-tag" title="Assigned from the net worth and income you declared">Novice · Guided</span></dd></div>
                 </dl>
+              </div>
+              <div class="settings-section">
+                <div class="settings-intro"><h2>Display</h2><p>How NextTrade shows your money.</p></div>
+                <div class="settings-list">
+                  <div>
+                    <span class="setting-text"><b>Show portfolio balance</b><small>Turn off to hide your totals on screen.</small></span>
+                    <button
+                      type="button"
+                      role="switch"
+                      class="switch"
+                      [class.on]="showBalance()"
+                      [attr.aria-checked]="showBalance()"
+                      aria-label="Show portfolio balance"
+                      (click)="showBalance.set(!showBalance())"
+                    ><i></i></button>
+                  </div>
+                </div>
               </div>
               <div class="settings-section">
                 <div class="settings-intro"><h2>Trading safeguards</h2><p>Limits that protect you when prices move quickly.</p></div>
@@ -365,11 +391,11 @@
               </div>
               @if (sectorAllocation(); as alloc) {
                 <div class="allocation-content">
-                  <div class="allocation-donut" role="img" [attr.aria-label]="sectorSummary()">
+                  <div class="allocation-donut" tabindex="0" [appChartFocus]="allocationAccess" role="img" aria-label="Allocation by sector">
                     <!-- One arc per sector, in proportion to the money invested in it, starting at the top. -->
                     <svg viewBox="0 0 42 42" aria-hidden="true">
                       <circle class="allocation-track" cx="21" cy="21" r="15.9155" />
-                      @for (sector of alloc.sectors; track sector.name) {
+                      @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
                         <circle
                           class="ring sector"
                           cx="21"
@@ -382,23 +408,24 @@
                         />
                       }
                     </svg>
-                    <div class="donut-center"><strong>{{ alloc.invested | currency }}</strong><span>Invested</span></div>
+                    <div class="donut-center"><strong>{{ allocationReady() ? (showBalance() ? (alloc.invested | currency) : '••••••') : '—' }}</strong><span>Invested</span></div>
                   </div>
                   <div class="allocation-legend">
-                    @for (sector of alloc.sectors; track sector.name) {
+                    @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
                       <div class="allocation-item">
                         <i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i><span class="allocation-label"
-                          >{{ sector.name }}<small>{{ sector.symbols.join(', ') }} · {{ sector.value | currency }}</small></span
+                          >{{ sector.name }}<small>{{ sector.symbols.join(', ') }} · {{ showBalance() ? (sector.value | currency) : '••••••' }}</small></span
                         ><b>{{ sector.percent }}%</b>
                         <span class="allocation-meter" aria-hidden="true"><span [style.width.%]="sector.share" [style.background]="sector.color"></span></span>
                       </div>
                     } @empty {
-                      <p class="allocation-empty">Buy a stock to see how your money is spread across sectors.</p>
+                      <p class="allocation-empty">{{ !portfolioLoaded() ? 'Loading allocation...' : !allocationReady() ? 'Allocation is unavailable until market quotes arrive.' : 'Buy a stock to see how your money is spread across sectors.' }}</p>
                     }
                   </div>
                 </div>
-                <p class="allocation-cash"><span>Cash, not invested</span><b>{{ alloc.cash | currency }}</b></p>
+                <p class="allocation-cash"><span>Cash, not invested</span><b>{{ portfolioLoaded() ? (showBalance() ? (alloc.cash | currency) : '••••••') : '—' }}</b></p>
               }
+              <app-chart-access #allocationAccess id="novice-allocation" label="Allocation by sector" [summary]="allocationDescription()" [table]="allocationTable()" [context]="selectedAccount()?.account_id ?? ''" />
               <button type="button" class="diversification" (click)="openModal('allocation')">
                 <span class="shield-icon"><app-dashboard-icon name="shield" /></span
                 ><span
@@ -421,13 +448,14 @@
                 <h2>Watchlist</h2>
                 <span class="muted-note">Open a stock to add or remove it</span>
               </div>
+              <div class="table-scroll" tabindex="0" role="region" aria-label="Watchlist table" data-scan-group="Watchlist table">
               <table class="watch-table">
                 <caption class="sr-only">Watchlist</caption>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Price</th>
-                    <th>Today</th>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Today</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -448,6 +476,7 @@
                   }
                 </tbody>
               </table>
+              </div>
             </section>
           </div>
         }
@@ -487,12 +516,14 @@
       <div class="trade-chart-price">
         <div class="trade-chart-value">{{ stockChartPrice() | currency }}</div>
         <div class="portfolio-gain" [class.up]="stockChartChange().amount > 0" [class.down]="stockChartChange().amount < 0">
-          <strong><app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /></strong
+          <strong>@if (stockChartChangeAvailable()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Change unavailable }</strong
           ><span>{{ stockChartChange().label }}</span>
         </div>
       </div>
       <app-portfolio-chart
         [subject]="tradeQuote().symbol + ' price'"
+        [accountKey]="tradeQuote().symbol"
+        [notice]="stockChartPeriod() === 'ALL' ? 'Available recorded prices, up to the past five years.' : ''"
         [points]="stockChartPoints()"
         [range]="stockChartSpan()"
         [period]="stockChartPeriod()"
@@ -564,7 +595,7 @@
       </div>
       <label for="novice-shares">Number of shares</label
       ><input
-        id="novice-shares"
+        id="novice-shares" aria-describedby="novice-trade-message"
         type="number"
         min="1"
         step="1"
@@ -578,7 +609,7 @@
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
-      <p>Buying power: {{ buyingPower() | currency }}</p>
+      <p>Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
       @if (protectionNote()) {
         <div class="protection-row">
           <div class="protection-copy">
@@ -607,7 +638,7 @@
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
       @if (reviewing()) {
-        <p class="review-confirmation review-summary" role="status">{{ reviewSummary() }}</p>
+        <p class="review-confirmation review-summary" role="status" appFocusAfterChange>{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
           <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
@@ -615,23 +646,23 @@
       } @else {
         <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
       }
-      <output>{{ tradeMessage() }}</output>
+      <output id="novice-trade-message">{{ tradeMessage() }}</output>
     </form>
     </div>
     </div>
   } @else if (modal() === 'allocation') {
     <h3 class="modal-subhead">By sector</h3>
     <div class="asset-class-list modal-allocation-list">
-      @for (sector of sectorAllocation().sectors; track sector.name) {
-        <div><span><i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i>{{ sector.name }}</span><strong>{{ sector.percent }}%</strong><span>{{ sector.value | currency }}</span></div>
+      @for (sector of allocationReady() ? sectorAllocation().sectors : []; track sector.name) {
+        <div><span><i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i>{{ sector.name }}</span><strong>{{ sector.percent }}%</strong><span>{{ showBalance() ? (sector.value | currency) : '••••••' }}</span></div>
       } @empty {
         <div><span>No investments yet</span><strong>–</strong><span></span></div>
       }
     </div>
     <h3 class="modal-subhead">By asset class</h3>
     <div class="asset-class-list modal-allocation-list">
-      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ assetAllocation().stocksValue | currency }}</span></div>
-      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ assetAllocation().cashValue | currency }}</span></div>
+      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

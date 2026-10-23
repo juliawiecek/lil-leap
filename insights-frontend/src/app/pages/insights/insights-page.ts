@@ -1,6 +1,7 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { LIVE_REPORTS, type ActivityPoint, type OrdersToday, type PlacedOrder, type ReportSummary, type TopInstrument } from '../../live-reports';
 import { DashboardIcon } from '../../shared/dashboard-icon';
+import { InsightsChartAccess } from '../../shared/insights-chart-access';
 import { InsightsChart, type ChartPoint } from '../../shared/insights-chart';
 import { centralClockSeconds, centralHour, centralTime, twelveHour } from '../../shared/app-time';
 
@@ -19,7 +20,7 @@ const DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', d
 /** Home page: today's totals, trades by hour and the most traded stocks for today (Central time). */
 @Component({
   selector: 'app-insights-page',
-  imports: [DashboardIcon, InsightsChart],
+  imports: [DashboardIcon, InsightsChart, InsightsChartAccess],
   templateUrl: './insights-page.html',
   styleUrl: './insights-page.scss',
 })
@@ -131,6 +132,21 @@ export class InsightsPage implements OnDestroy {
     });
   });
   readonly topShare = computed(() => Math.round(Math.min(100, this.ranked().slice(0, RANK_COLORS.length).reduce((sum, row) => sum + row.share, 0))));
+  readonly topDescription = computed(() => {
+    const rows = this.ranked();
+    if (!rows.length) { return this.loading() ? 'Most traded stocks. Reports are loading.' : this.error() ? 'The stock ranking is unavailable because reports could not be loaded.' : 'Most traded stocks today. No trades are recorded yet.'; }
+    const busiest = rows.reduce((a, b) => b.tradeCount > a.tradeCount ? b : a);
+    return `Most traded stocks today. ${rows.length} stocks are shown. ${busiest.instrument} has the most trades, ${COUNT.format(busiest.tradeCount)}. `
+      + rows.map(row => `${row.instrument}: ${COUNT.format(row.tradeCount)} ${this.plural(row.tradeCount, 'trade')}, ${row.share.toFixed(1)} percent of today's trades`).join('; ') + '.';
+  });
+  readonly topTable = computed(() => ({
+    columns: ['Rank', 'Stock', 'Trades', "Share of today's trades"],
+    rows: this.ranked().map((row, i) => [String(i + 1), row.instrument, COUNT.format(row.tradeCount), `${row.share.toFixed(1)}%`]),
+  }));
+  readonly hourlyDescription = computed(() => 'Trades per hour today, Central time. '
+    + this.bars().map(bar => `${bar.label}: ${COUNT.format(bar.count)} ${this.plural(bar.count, 'trade')}`).join('; ') + '.');
+  readonly hourlyTable = computed(() => ({ columns: ['Hour (Central)', 'Trades'],
+    rows: this.bars().map(bar => [bar.label, COUNT.format(bar.count)]) }));
   private destroyed = false;
   private readonly poll: ReturnType<typeof setInterval>;
 

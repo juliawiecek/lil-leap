@@ -20,7 +20,6 @@ export const PAGE_PATHS: Record<string, string> = {
   Activity: '/activity',
   Markets: '/markets',
   Settings: '/settings',
-  Learn: '/learn',
 };
 export function safeReturnUrl(value: string): string | null {
   return sharedReturnUrl(value, PAGE_PATHS, []);

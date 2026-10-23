@@ -196,6 +196,7 @@
 
 :host .allocation {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 26px;
   margin-top: 14px;
@@ -222,7 +223,7 @@
   font: 600 19px var(--font-mono);
 }
 :host .legend {
-  flex: 1;
+  flex: 1 1 180px;
   min-width: 0;
   margin: 0;
   padding: 0;

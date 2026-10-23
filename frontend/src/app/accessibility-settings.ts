@@ -1,7 +1,9 @@
+import { ChartVoice } from './chart-voice';
 import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from './switch-scan-settings';
 import { ColourModeStore } from './colour-mode';
+import { AssistiveSettings } from './assistive-tools';
 
 /**
  * The Accessibility section of Settings on both dashboards (PS-17). Each accessibility ticket adds
@@ -11,7 +13,7 @@ import { ColourModeStore } from './colour-mode';
  */
 @Component({
   selector: 'app-accessibility-settings',
-  imports: [BriefingSettingsCard, SwitchScanSettings],
+  imports: [BriefingSettingsCard, SwitchScanSettings, AssistiveSettings],
   template: `
     <section class="a11y" aria-labelledby="accessibility-settings-title" data-scan-group="Accessibility">
       <div class="a11y-intro">
@@ -22,6 +24,7 @@ import { ColourModeStore } from './colour-mode';
         </p>
       </div>
       <div class="a11y-cards">
+        <app-assistive-settings class="settings-appearance" />
         <fieldset class="a11y-card colour-mode" aria-describedby="colour-mode-help">
           <legend>Colour-blind mode</legend>
           <p id="colour-mode-help">Choose colours you can tell apart. Prices and calculations stay the same.</p>
@@ -36,6 +39,11 @@ import { ColourModeStore } from './colour-mode';
           </div>
         </fieldset>
         <!-- Feature cards (PS-18, PS-19, PS-21, PS-22, PS-27) go here, one per feature. -->
+        <fieldset class="a11y-card colour-mode">
+          <legend>Chart voice</legend>
+          <label class="colour-option"><input type="checkbox" [checked]="chartVoice.enabled()" (change)="chartVoice.setEnabled($any($event.target).checked)" />Read chart summaries aloud</label>
+          <p>Hear a chart when you focus it or choose Explain this chart. Uses your briefing voice speed.</p>
+        </fieldset>
         <app-briefing-settings />
         <app-switch-scan-settings />
         <div class="a11y-card">
@@ -54,13 +62,14 @@ import { ColourModeStore } from './colour-mode';
       .a11y { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 32px; padding: var(--a11y-padding, 26px 0); border-top: var(--a11y-divider, 1px solid var(--surface-tone-05)); }
       .a11y-intro h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
       .a11y-intro p { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.55; }
-      .a11y-cards { display: grid; gap: var(--a11y-cards-gap, 12px); min-width: 0; }
+      .a11y-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--a11y-cards-gap, 12px); min-width: 0; }
       .a11y-card.colour-mode { display: block; margin: 0; min-width: 0; }
-      .colour-mode legend { padding: 0 4px; font-size: 14px; font-weight: 600; }
+      .colour-mode legend { float: left; width: 100%; margin-bottom: 4px; padding: 0; font-size: 14px; font-weight: 600; }
+      .colour-mode legend + * { clear: both; }
       .colour-mode p { margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       .colour-options { display: flex; flex-wrap: wrap; gap: 8px; }
-      .colour-option { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px;
-        border: 1px solid var(--control-border); border-radius: 8px; color: var(--text); cursor: pointer; }
+      .colour-option { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
+        border: 1px solid var(--surface-tone-02); border-radius: 6px; color: var(--text); font-size: 13px; cursor: pointer; }
       .colour-option:has(:checked) { background: var(--selection-surface); border-color: var(--focus); }
       .colour-option:hover { border-color: var(--focus); }
       .colour-option:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
@@ -72,16 +81,17 @@ import { ColourModeStore } from './colour-mode';
       .a11y-text b { font-size: 14px; font-weight: 600; }
       .a11y-text small { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       kbd { padding: 0 5px; border: 1px solid var(--surface-tone-02); border-radius: 4px; font: inherit; font-weight: 700; }
-      .a11y-button { flex: none; min-height: 34px; padding: 0 14px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: transparent;
+      .a11y-button { flex: none; min-height: 36px; padding: 0 14px; border: 1px solid var(--surface-tone-02); border-radius: 6px; background: transparent;
         color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
       .a11y-button:hover { border-color: var(--surface-tone-01); }
       .a11y-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-      @media (max-width: 760px) { .a11y { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; } }
+      @media (max-width: 900px) { .a11y { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; } }
       @media (max-width: 480px) { .a11y-card { flex-wrap: wrap; gap: 12px; padding-inline: 12px; } }
     `,
   ],
 })
 export class AccessibilitySettings {
+  readonly chartVoice = inject(ChartVoice);
   readonly colours = inject(ColourModeStore);
   readonly colourOptions = [
     { value: 'off', label: 'Off' },

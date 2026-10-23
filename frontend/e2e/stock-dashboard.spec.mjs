@@ -106,7 +106,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     if (tier === 'NOVICE') {
       await expect(page.getByRole('region', { name:'Explore a stock', exact:true })).toHaveCount(0);
       await expect(page.locator('app-retail-stock-dashboard')).toHaveCount(0);
-      await expect(page.locator('app-portfolio-chart')).toBeVisible();
+      await expect(page.locator('.portfolio-panel app-portfolio-chart')).toBeVisible();
       expect(requests).toEqual([]);
       expect(errors).toEqual([]);
       return;
@@ -145,7 +145,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
       'var(--area-bottom)',
     );
     // MSFT is below its open here, so the series carries the loss dash as well as the loss colour.
-    await expect(dashboard.locator('app-stock-svg-chart svg')).toHaveAttribute(
+    await expect(dashboard.locator('app-stock-svg-chart svg[role="img"]')).toHaveAttribute(
       'data-performance',
       'loss',
     );
@@ -154,7 +154,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
       '6px, 4px',
     );
     expect(await dashboard.locator('canvas').count()).toBe(0);
-    const chart = dashboard.locator('app-stock-svg-chart svg');
+    const chart = dashboard.locator('app-stock-svg-chart svg[role="img"]');
     await chart.focus();
     await page.keyboard.press('Home');
     await expect(dashboard.locator('.tooltip')).toBeVisible();
@@ -280,7 +280,7 @@ test('portfolio day chart keeps its whole line connected to the endpoint on load
   });
   await page.goto('/dashboard');
   await ready(page);
-  const chart = page.locator('app-portfolio-chart');
+  const chart = page.locator('.portfolio-panel app-portfolio-chart');
   const line = chart.locator('path.line');
   await expect(line).toHaveAttribute('d', /^M.+C/);
   await expect(chart.getByRole('button', { name: 'Recent hour', exact: true })).toHaveAttribute(
@@ -300,11 +300,12 @@ test('portfolio day chart keeps its whole line connected to the endpoint on load
         dash: style.strokeDasharray,
         stroke: style.stroke,
         width: style.strokeWidth,
+        performance: element.querySelector('svg').dataset.performance,
       };
     });
     expect(result.distance).toBeLessThan(0.15);
     expect(result.animation).toBe('none');
-    expect(result.dash).toBe('none');
+    expect(result.dash).toBe(result.performance === 'loss' ? '6px, 4px' : 'none');
     expect(result.stroke).not.toBe('none');
     expect(result.width).toBe('2px');
   };
@@ -337,6 +338,8 @@ test('portfolio day chart keeps its whole line connected to the endpoint on load
   bid = 99;
   await page.clock.fastForward(5000);
   await expect(line).not.toHaveAttribute('d', recent);
+  await expect(chart.locator('svg[role="img"]')).toHaveAttribute('data-performance', 'loss');
+  await expect(line).toHaveCSS('stroke-dasharray', '6px, 4px');
   await checkConnection();
   await chart.screenshot({ path: info.outputPath('portfolio-day-desktop.png') });
   await page.emulateMedia({ reducedMotion: 'reduce' });

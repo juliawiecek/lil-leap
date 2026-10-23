@@ -42,7 +42,7 @@ browser (one settings store, PS-17).
 | PS-19 | Switch control: scan the page with one button; keypads for number and text fields | Prototype, merging |
 | PS-20 | Page structure and an automated axe accessibility check | Planned |
 | PS-23 | Switch control reads each item aloud; order read-back | Read-aloud prototyped |
-| PS-25 | Every chart explained in words and as a table | Planned (portfolio chart already has a summary) |
+| PS-25 | Every chart explained in words and as a table | [Built: chart alternatives and opt-in focus speech](PS-25-chart-alternatives.md); manual assistive-technology review remains |
 | PS-27, PS-28 | Colour-blind palette; arrows and signs so colour is never the only clue | In progress |
 | PS-30 | Warning before the inactivity sign-out | Planned |
 

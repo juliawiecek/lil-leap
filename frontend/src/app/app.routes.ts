@@ -12,9 +12,6 @@ const tierGuard: CanActivateFn = async (route) => {
   await session.initialize();
   const tier = auth.traderLevel;
   const path = route.routeConfig?.path;
-  if (path === 'learn' && tier !== 'NOVICE') {
-    return router.createUrlTree(['/dashboard']);
-  }
   if (path === 'markets' && tier !== 'ADVANCED') {
     return router.createUrlTree(['/dashboard']);
   }

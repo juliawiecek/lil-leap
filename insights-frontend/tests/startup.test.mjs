@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { APP_BOOTSTRAP_LISTENER, destroyPlatform } from '@angular/core';
 const { appConfig } = await import('../src/app/app.config.ts');
 await import('../src/app/shell/shell.ts');
+// Preload the root's shared external templates before bootstrapping in the JIT DOM harness.
+await import('../src/app/app-root.ts');
 
 test('real insights entry point starts at login without a stored session', { timeout: 15000 }, async t => {
   await resolveTemplates();

@@ -66,7 +66,7 @@ test('changes are said in words with two decimals, since daily moves are small',
 
 test('period buttons have spoken names, not abbreviations', () => {
   assert.deepEqual(PERIOD_NAMES, {
-    '1D': '1 day', '1W': '1 week', '1M': '1 month', '3M': '3 months', '1Y': '1 year', ALL: 'All time',
+    '1D': 'Today, Central time', '1W': 'Last 7 days', '1M': 'Last 30 days', '3M': 'Last 90 days', '1Y': 'Last 365 days', ALL: 'All available recorded history',
   });
 });
 
@@ -74,25 +74,38 @@ test('a chosen period says where the portfolio started, where it is now and the 
   const base = { start: 24000, end: 25450.09, fromOpening: false, balanceHidden: false, hasHistory: true };
   assert.equal(
     chartSummary({ ...base, period: '1D' }),
-    '1 day. At the start of the day you had $24,000.00. Now you have $25,450.09, up 6.04 percent.',
+    'Today, Central time. At the start of the day you had $24,000.00. Now you have $25,450.09, up 6.04 percent. Account value includes deposits and transfers.',
   );
   assert.equal(
     chartSummary({ ...base, period: '1M', end: 23500 }),
-    '1 month. A month ago you had $24,000.00. Now you have $23,500.00, down 2.08 percent.',
+    'Last 30 days. 30 days ago you had $24,000.00. Now you have $23,500.00, down 2.08 percent. Account value includes deposits and transfers.',
   );
-  for (const [period, start] of [['1W', 'A week ago'], ['3M', 'Three months ago'], ['1Y', 'A year ago'], ['ALL', 'When you opened your account']]) {
+  for (const [period, start] of [['1W', 'A week ago'], ['3M', '90 days ago'], ['1Y', '365 days ago'], ['ALL', 'At the first recorded value']]) {
     assert.match(chartSummary({ ...base, period }), new RegExp(`^${PERIOD_NAMES[period]}\\. ${start} you had`));
   }
 });
 
 test('a period that starts when the money arrived says so, and hidden balances keep amounts out', () => {
   const base = { period: '1Y', start: 25000, end: 25010, hasHistory: true, balanceHidden: false };
-  assert.match(chartSummary({ ...base, fromOpening: true }), /^1 year\. When you first added money you had \$25,000\.00\./);
+  assert.match(chartSummary({ ...base, fromOpening: true }), /^Last 365 days\. At the first available recorded value you had \$25,000\.00\./);
   const hidden = chartSummary({ ...base, fromOpening: false, balanceHidden: true });
-  assert.equal(hidden, '1 year. Your balance is hidden, so amounts are not read out. Your portfolio is up 0.04 percent.');
+  assert.equal(hidden, 'Last 365 days. Your balance is hidden, so amounts are not read out. Your portfolio is up 0.04 percent.');
   assert.ok(!hidden.includes('$'));
-  assert.equal(chartSummary({ ...base, fromOpening: false, hasHistory: false }), '1 year. There is no history for this period yet.');
-  assert.match(chartSummary({ ...base, fromOpening: false, start: 0 }), /unchanged/, 'no division by zero');
+  assert.equal(chartSummary({ ...base, fromOpening: false, hasHistory: false }), 'Last 365 days. There is no history for this period yet.');
+  assert.match(chartSummary({ ...base, fromOpening: false, start: 0 }), /percentage change unavailable/, 'no invented zero-percent change');
+});
+
+test('partial history never claims its first value was recorded a year ago', () => {
+  const text = chartSummary({ period: '1Y', start: 100, end: 110, hasHistory: true,
+    balanceHidden: false, fromOpening: false, partial: true });
+  assert.match(text, /first available recorded value/);
+  assert.match(text, /Earlier history.*unavailable/);
+  assert.match(text, /Account value includes deposits and transfers/);
+  assert.doesNotMatch(text, /365 days ago you had/);
+  const hidden = chartSummary({ period: '1Y', start: 100, end: 110, hasHistory: true,
+    balanceHidden: true, fromOpening: false, partial: true });
+  assert.match(hidden, /Only part of the requested period/);
+  assert.doesNotMatch(hidden, /\$/);
 });
 
 test('each price on the tape is named by what it shows, and switch control says the company name', async (t) => {

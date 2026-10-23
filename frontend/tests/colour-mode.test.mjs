@@ -88,7 +88,7 @@ test('the actual pre-Angular script uses the same parser and safely handles ever
 test('Settings uses one labelled native radio group and persists changes', async t => {
   storage(t);
   const fixture = await render(t, AccessibilitySettings);
-  const fieldset = fixture.nativeElement.querySelector('fieldset');
+  const fieldset = fixture.nativeElement.querySelector('fieldset[aria-describedby="colour-mode-help"]');
   assert.equal(fieldset.querySelector('legend').textContent.trim(), 'Colour-blind mode');
   const radios = [...fieldset.querySelectorAll('input[type=radio]')];
   assert.deepEqual(radios.map(radio => radio.value), ['off', 'red-green', 'blue-yellow']);

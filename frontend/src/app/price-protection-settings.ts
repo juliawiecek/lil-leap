@@ -114,7 +114,7 @@ const OUT_OF_RANGE = `Choose a value from ${MIN_PROTECTION}% to ${MAX_PROTECTION
       .setting-label > span { font-size: 14px; font-weight: 600; }
       .setting-label small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
       .segmented {
-        display: inline-flex; align-items: center; gap: 2px; padding: 3px;
+        display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 2px; padding: 3px;
         border: 1px solid var(--line); border-radius: 8px; background: var(--shadow-99);
       }
       .segmented button {
@@ -258,6 +258,8 @@ export class PriceProtectionSettings {
       this.menuOpen.set(false);
     } else if (event.key === 'Tab') {
       this.menuOpen.set(false);
+    } else {
+      // Other keys retain their native browser behavior.
     }
   }
 

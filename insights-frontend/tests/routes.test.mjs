@@ -17,6 +17,7 @@ test('every page has its own component behind the sign-in guard and a role guard
     clients: 'ClientsPage',
     'clients/:id': 'ClientDetailPage',
     reports: 'ReportsPage',
+    settings: 'SettingsPage',
     trades: 'TradeLookupPage',
     'trades/:id': 'TradeLookupPage',
   });
@@ -24,7 +25,7 @@ test('every page has its own component behind the sign-in guard and a role guard
 
 test('pages cut in TS-18.4 and unknown paths land on Insights instead of a 404', () => {
   for (const path of ['dashboard', 'history', 'trading-activity', 'client-activity', 'orders', 'orders/:id',
-    'trade-investigation', 'compliance', 'settings']) {
+    'trade-investigation', 'compliance']) {
     assert.ok(RETIRED_PATHS.includes(path), path);
     assert.equal(shell.children.find((child) => child.path === path).redirectTo, 'insights');
   }

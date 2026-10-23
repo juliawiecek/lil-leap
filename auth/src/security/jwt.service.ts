@@ -40,7 +40,7 @@ export class JwtService {
   /** Issues a new signed access token for the given user. Users without an account (analysts) get no trader_level claim. */
   issueToken(userId: string, email: string, traderLevel?: TraderLevel | null, role = 'TRADER', riskProfile?: RiskProfile | null, refreshToken?: string): string {
     const claims: Record<string, string> = { [EMAIL_CLAIM]: email, [CLIENT_ID_CLAIM]: this.clientId, [ROLE_CLAIM]: role };
-    if (refreshToken) claims['sid'] = createHash('sha256').update(refreshToken, 'utf8').digest('base64');
+    if (refreshToken) { claims['sid'] = createHash('sha256').update(refreshToken, 'utf8').digest('base64'); }
     if (traderLevel) {
       claims[TRADER_LEVEL_CLAIM] = traderLevel;
     }

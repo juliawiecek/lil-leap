@@ -1,3 +1,6 @@
+import { ChartAccess, ChartFocus } from './chart-access';
+import { allocation, type ChartSeries } from './chart-data';
+import { categoryDescription, categoryTable, comparisonDescription, comparisonTable } from '../../../shared/chart-description';
 import { PriceFlash } from './price-flash';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
@@ -20,7 +23,7 @@ import {
   OrderHistoryRow,
   newlyFilled,
 } from './order-history-api';
-import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, dayGainOf, valuePortfolio } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, dayGainOf, hasMarketValuation, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { MarketFeed } from './market-feed.service';
 import { PricePoint, isDelayed } from './market-feed-api';
@@ -106,7 +109,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
@@ -131,6 +134,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #historySymbol = '';
   /** The stock and period of the loaded bars, so neither reloads needlessly. */
   #historyKey = '';
+  #historyRequest = 0;
   /** Width of the loaded bars in ms; 0 when the line is raw quotes. */
   #barMs = 0;
   readonly name = input('');
@@ -254,6 +258,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly portfolio = signal(0);
   /** False until the first balances arrive, so placeholders never show as real zeroes (PS-06). */
   readonly portfolioLoaded = signal(false);
+  readonly allocationReady = signal(false);
   /** Unrealised gain across positions at the latest bids, in USD and as % of cost. */
   readonly totalReturn = signal(0);
   readonly totalReturnPercent = signal(0);
@@ -261,11 +266,19 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly dayGain = signal(0);
   readonly dayGainPercent = signal(0);
   /** Cash and stocks as shares of the total, for the summary and the exposure panel. */
+  readonly allocationSeries = computed<readonly ChartSeries[]>(() => this.allocationReady() ? this.exposureCategories().map(c => ({
+    id: 'allocation:' + c.label, label: c.label, unit: 'USD', status: 'ready', points: [{ time: this.feed.now(), value: c.value }],
+  })) : []);
+  readonly exposureCategories = computed(() => {
+    const a = this.exposure();
+    return [{ label: 'Equities', value: a.equities, percent: a.equitiesPercent }, { label: 'Cash', value: a.cash, percent: a.cashPercent }];
+  });
+  readonly exposureDescription = computed(() => !this.portfolioLoaded() ? 'Portfolio exposure. Balances have not loaded yet.' : !this.allocationReady() ? 'Portfolio exposure unavailable until all holdings have market quotes.' : categoryDescription('Portfolio exposure', this.exposureCategories(), this.privateBalance()));
+  readonly exposureTable = computed(() => this.portfolioLoaded() && this.allocationReady() ? categoryTable(this.exposureCategories(), this.privateBalance()) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
   readonly exposure = computed(() => {
-    const total = this.portfolio();
-    const equities = Math.max(0, Math.round((total - this.buyingPower()) * 100) / 100);
-    const equitiesPercent = total > 0 ? Math.round((equities / total) * 1000) / 10 : 0;
-    return { total, equities, cash: this.buyingPower(), equitiesPercent, cashPercent: total > 0 ? Math.round((100 - equitiesPercent) * 10) / 10 : 0 };
+    const a = allocation(this.positions().reduce((sum, p) => sum + p.value, 0), this.buyingPower());
+    return { total: a.total, equities: a.stocksValue, cash: a.cashValue,
+      equitiesPercent: a.stocksPercent, cashPercent: a.cashPercent };
   });
   /** "$100K" / "$1.2M": the total short enough to fit inside the exposure ring. */
   readonly exposureLabel = computed(() =>
@@ -286,6 +299,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     moves.sort((a, b) => b.change - a.change);
     return moves.map((m) => ({ ...m, width: (Math.abs(m.change) / biggest) * 100 }));
   });
+  readonly sectorCategories = computed(() => this.sectors().map(s => ({ label: s.name, value: s.change })));
+  readonly sectorDescription = computed(() => comparisonDescription('Sector performance today', this.sectorCategories()) + ' Each sector is the equally weighted average move of the stocks NextTrade lists in that sector.');
+  readonly sectorTable = computed(() => ({ ...comparisonTable(this.sectorCategories()), note: 'Equally weighted averages of the listed stocks in each sector, not an index or the entire market.' }));
+  readonly heatMapQuotes = computed(() => this.quotes().slice(0, 9));
+  readonly heatCategories = computed(() => this.heatMapQuotes().map(q => ({ label: q.symbol, value: q.change })));
+  readonly heatDescription = computed(() => comparisonDescription('Listed stock performance today', this.heatCategories()) + ' Select a stock to open its chart and trade ticket.');
+  readonly heatTable = computed(() => comparisonTable(this.heatCategories()));
   /** The signed-in user's orders, newest first, loaded from the backend. */
   readonly orders = signal<Order[]>([]);
   readonly side = signal('Buy');
@@ -316,6 +336,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly total = computed(() => Number(this.quantity()) * this.selected().price);
   /** The charted stock's recorded prices, oldest first: its recent history plus each live tick (PS-06). */
   readonly priceHistory = signal<PricePoint[]>([]);
+  readonly historyLoading = signal(false);
+  readonly historyError = signal('');
+  #portfolioRequest = 0;
+  #orderRequest = 0;
   /** Today's move of the charted stock in dollars, from its percent change since the day's first quote. */
   readonly selectedDayMove = computed(() => dayGainOf(this.selected().price, this.selected().change));
   /** Order history rows, kept for the chart's trade markers (PS-13). */
@@ -348,10 +372,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const { start, end } = this.chartWindow();
     const all = this.priceHistory();
     const inside = all.filter((p) => p.at >= start && p.at <= end);
-    if (inside.length && inside[0].at > start) {
-      const before = all.filter((p) => p.at < start).at(-1);
-      inside.unshift({ at: start, price: (before ?? inside[0]).price });
-    }
     return inside;
   });
   /** Price range covering the recorded prices, the live price, every fill and the average cost. */
@@ -425,7 +445,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }
       this.#dayChanges.set(q.instrumentId, q.change);
     }
-    if (this.#portfolio.holdings.length) {
+    if (this.portfolioLoaded()) {
       this.#render();
     }
     const current = this.selected();
@@ -436,6 +456,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     if (current.price) {
       this.selected.set(quote);
       this.#addTick(quote);
+      void this.#loadHistory(quote);
     } else {
       this.setTicketQuote(quote);
     }
@@ -447,17 +468,32 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    * the line still grows from live prices.
    */
   async #loadHistory(quote: Quote, period = this.period()): Promise<void> {
-    const key = quote.symbol + '|' + period;
-    if (!quote.instrumentId || key === this.#historyKey) {
+    const key = quote.symbol + '|' + period + '|' + Math.floor(Date.now() / 60000);
+    if (!quote.instrumentId) {
+      ++this.#historyRequest;
+      this.#historyKey = '';
+      this.#historySymbol = quote.symbol;
+      this.#barMs = 0;
+      this.priceHistory.set([]);
+      this.historyLoading.set(false);
+      this.historyError.set('Recorded prices are unavailable for this security.');
       return;
     }
+    if (key === this.#historyKey) {
+      return;
+    }
+    const selectionChanged = !this.#historyKey.startsWith(quote.symbol + '|' + period + '|');
+    const request = ++this.#historyRequest;
     this.#historyKey = key;
+    this.historyLoading.set(true);
+    this.historyError.set('');
+    if (selectionChanged) { this.priceHistory.set([]); this.#barMs = 0; }
     if (quote.symbol !== this.#historySymbol) {
       this.#historySymbol = quote.symbol;
       this.#barMs = 0;
       this.priceHistory.set([]);
     }
-    const current = () => this.#historyKey === key && !this.#destroyed;
+    const current = () => request === this.#historyRequest && this.#historyKey === key && !this.#destroyed;
     let points: PricePoint[] = [];
     let barMs = 0;
     try {
@@ -466,7 +502,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         if (points.length && points[0].at < Date.now() - (BAR_WIDTH_MS[interval] ?? 0) * bars) {
           break;
         }
-        points = await this.feed.client.closes(quote.instrumentId, interval, bars);
+        // Indicators are initialized from earlier bars, then clipped to the selected view.
+        // This avoids pretending the visible window's first bar is an established EMA.
+        points = await this.feed.client.closes(quote.instrumentId, interval, Math.min(500, bars + 200));
         barMs = BAR_WIDTH_MS[interval] ?? 0;
         if (!current() || points.length >= MIN_CHART_BARS) {
           break;
@@ -480,12 +518,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         }
       }
     } catch {
-      // Keep whatever loaded.
+      if (current()) { this.historyError.set('Historical prices could not be loaded. Live observations remain available.'); }
     }
+    // Keep the identity check valid even if a failed read is made retryable.
     if (current() && points.length) {
       this.#barMs = barMs;
       this.priceHistory.set(points);
       this.#addTick(this.selected());
+    }
+    if (current() && !points.length && !this.historyError()) { this.priceHistory.set([]); }
+    if (current()) {
+      this.historyLoading.set(false);
+      if (this.historyError()) { this.#historyKey = ''; }
     }
   }
   /** Adds the latest price to the line: it moves the open bar, or starts the next bar once that one has closed. */
@@ -501,12 +545,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         return points;
       }
       // Bars sit on fixed boundaries; the last point is the open bar while it is dated after this bar's start.
-      if (last && barMs && last.at > Math.floor(at / barMs) * barMs) {
+      if (last && barMs && last.candle?.time === Math.floor(at / barMs) * barMs) {
         const candle = last.candle ? { ...last.candle, close: quote.price, high: Math.max(last.candle.high, quote.price), low: Math.min(last.candle.low, quote.price), volume: null } : undefined;
         return [...points.slice(0, -1), { at, price: quote.price, ...(candle ? { candle } : {}) }];
       }
-      const candle = barMs && last?.candle ? { time: Math.floor(at / barMs) * barMs, open: quote.price, high: quote.price, low: quote.price, close: quote.price, volume: null } : undefined;
-      return [...points, { at, price: quote.price, ...(candle ? { candle } : {}) }];
+      // A latest quote is not a complete OHLC interval. Keep it as a price observation
+      // until the candle endpoint supplies the interval's actual open and extremes.
+      return [...points, { at, price: quote.price }];
     });
   }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
@@ -700,13 +745,16 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    * fill, including orders queued for the open (PS-10).
    */
   async refreshOrders(): Promise<boolean> {
+    const request = ++this.#orderRequest;
     let rows: OrderHistoryRow[];
     try {
       rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
     } catch (error) {
+      if (request !== this.#orderRequest || this.#destroyed) { return false; }
       this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
       return false;
     }
+    if (request !== this.#orderRequest || this.#destroyed) { return false; }
     const fills = newlyFilled(this.#lastOrderRows, rows);
     this.#lastOrderRows = rows;
     this.orders.set(rows.map(toOrder));
@@ -718,12 +766,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   /** Reloads cash and positions; prices come from the shared feed as they arrive. */
   async refreshPortfolio(): Promise<void> {
+    const request = ++this.#portfolioRequest;
     try {
       const portfolio = await this.portfolioClient.load(this.selectedAccount()?.account_id);
-      if (this.destroyed) { return; }
+      if (this.destroyed || request !== this.#portfolioRequest) { return; }
       this.applyPortfolio(portfolio);
       this.serviceDown.set(false);
     } catch (error) {
+      if (request !== this.#portfolioRequest || this.#destroyed) { return; }
       this.serviceDown.set(true);
       this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
     }
@@ -736,6 +786,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   #render(): void {
     const valuation = valuePortfolio(this.#portfolio, this.#bids, this.#dayChanges);
+    this.allocationReady.set(hasMarketValuation(this.#portfolio, this.#bids));
     this.buyingPower.set(valuation.cash);
     this.portfolio.set(valuation.total);
     this.totalReturn.set(valuation.gain);
@@ -841,6 +892,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #accountChanged(): void {
     if (!this.#started || this.#destroyed) { return; }
     this.message.set('');
+    this.#lastOrderRows = null;
+    this.portfolioLoaded.set(false);
+    this.allocationReady.set(false);
+    this.historyRows.set([]);
+    this.orders.set([]);
+    this.positions.set([]);
     void this.refreshPortfolio();
     void this.refreshOrders();
   }

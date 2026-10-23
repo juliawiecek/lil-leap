@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text, var(--nt-text));
+  font: 13px/1.6 var(--font-ui, system-ui);
+  --tools-surface: var(--surface, var(--nt-background));
+  --tools-raised: var(--surface-raised, #161d20);
+  --tools-border: var(--control-border, var(--nt-muted));
+  --tools-focus: var(--focus, var(--nt-green));
+  --tools-muted: var(--text-muted, var(--nt-muted));
+}
+* { box-sizing: border-box; }
+.assistive-launcher { position: fixed; z-index: 150; right: 14px; bottom: 14px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: calc(100vw - 28px); }
+button, select { min-height: 38px; border: 1px solid var(--tools-border); border-radius: 8px; padding: 7px 12px; background: var(--tools-surface); color: inherit; font: inherit; }
+button { cursor: pointer; font-weight: 600; }
+button:hover { background: var(--tools-raised); }
+.assistive-launcher button { border-radius: 999px; box-shadow: 0 3px 16px var(--shadow-60, #0006); }
+:is(button, select, input):focus-visible { outline: 3px solid var(--tools-focus); outline-offset: 3px; }
+button:disabled, input:disabled { opacity: .65; cursor: not-allowed; }
+dialog { width: min(720px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid var(--tools-border); border-radius: 16px; padding: 24px; background: var(--tools-surface); color: inherit; }
+dialog::backdrop { background: #0009; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+h2 { margin: 0; font-size: 21px; }
+p { margin: 8px 0 12px; color: var(--tools-muted); line-height: 1.6; }
+.assistive-settings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+fieldset { margin: 0; min-width: 0; padding: 16px; border: 1px solid var(--tools-border); border-radius: 10px; }
+legend { font-weight: 700; padding: 0 6px; }
+legend { max-width: 100%; }
+label { display: grid; gap: 6px; margin-block: 8px; }
+label.check { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--tools-focus); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+select { width: 100%; min-width: 0; }
+.reading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.assistive-status { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 480px) { .fields { grid-template-columns: minmax(0, 1fr); } dialog { padding: 16px; } }
+@media (forced-colors: active) {
+  button, select, fieldset, dialog { border-color: ButtonText; background: Canvas; color: CanvasText; }
+  :is(button, select, input):focus-visible { outline-color: Highlight; }
+}

@@ -61,7 +61,7 @@
         <button
           type="button"
           class="generate"
-          [attr.data-testid]="'generate-' + r.kind"
+          [attr.data-testid]="'generate-' + r.kind" [attr.aria-label]="'Export CSV: ' + r.name"
           [disabled]="!!reportDateError() || !!generating()"
           [attr.aria-busy]="generating() === r.kind"
           (click)="generateReport(r)"
@@ -83,16 +83,16 @@
     <span>This session</span>
   </div>
   @if (exports().length) {
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
       <table class="export-table">
         <caption class="sr-only">Reports exported this session</caption>
         <thead class="sr-only">
           <tr>
-            <th scope="col">Report</th>
-            <th scope="col">Period</th>
-            <th scope="col">Rows</th>
-            <th scope="col">Generated</th>
-            <th scope="col">Download</th>
+            <th scope="col" scope="col">Report</th>
+            <th scope="col" scope="col">Period</th>
+            <th scope="col" scope="col">Rows</th>
+            <th scope="col" scope="col">Generated</th>
+            <th scope="col" scope="col">Download</th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +103,7 @@
               <td class="numeric mono">{{ r.rows }} {{ r.rows === 1 ? 'row' : 'rows' }}</td>
               <td class="mono when">{{ dayTime(r.at) }}</td>
               <td class="action">
-                <button type="button" class="download" (click)="download(r)" [attr.aria-label]="'Download ' + r.name">Download</button>
+                <button type="button" class="download" [attr.aria-label]="'Download ' + r.name" (click)="download(r)" [attr.aria-label]="'Download ' + r.name">Download</button>
               </td>
             </tr>
           }

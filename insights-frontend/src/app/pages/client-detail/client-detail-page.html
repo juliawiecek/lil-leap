@@ -1,7 +1,7 @@
 <section class="band" [class.compact]="!detail()">
   <a class="back-link" routerLink="/clients" queryParamsHandling="preserve">← Clients</a>
   @if (detail(); as d) {
-    <header class="head">
+    <header class="head" data-a11y-sensitive>
       <div>
         <h1>{{ d.account.clientName || d.account.accountNumber }}</h1>
         <p class="subtitle"><span class="mono-id">{{ d.account.accountNumber }}</span>{{ d.account.accountName ? ' · ' + d.account.accountName : '' }}{{ d.account.email ? ' · ' + d.account.email : '' }}</p>
@@ -106,16 +106,16 @@
           <h2 id="holdings-title">Holdings</h2>
           <span>Average cost of the shares still held</span>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
           <table>
             <caption class="sr-only">Stocks this account holds</caption>
             <thead>
               <tr>
-                <th>Stock</th>
-                <th class="numeric">Shares</th>
-                <th class="numeric">Average cost</th>
-                <th class="numeric">Cost basis</th>
-                <th class="numeric">Weight</th>
+                <th scope="col">Stock</th>
+                <th scope="col" class="numeric">Shares</th>
+                <th scope="col" class="numeric">Average cost</th>
+                <th scope="col" class="numeric">Cost basis</th>
+                <th scope="col" class="numeric">Weight</th>
               </tr>
             </thead>
             <tbody>
@@ -185,18 +185,18 @@
       }
       <section class="order-list" aria-labelledby="orders-title" [attr.aria-busy]="ordersLoading()">
         <h2 id="orders-title" class="sr-only">Filled orders</h2>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
           <table>
             <caption class="sr-only">Orders for account {{ d.account.accountNumber }}, newest first</caption>
             <thead>
               <tr>
-                <th>Filled</th>
-                <th>Stock</th>
-                <th>Side</th>
-                <th class="numeric">Shares</th>
-                <th class="numeric">Fill price</th>
-                <th class="numeric">Value</th>
-                <th class="numeric">Order ID</th>
+                <th scope="col">Filled</th>
+                <th scope="col">Stock</th>
+                <th scope="col">Side</th>
+                <th scope="col" class="numeric">Shares</th>
+                <th scope="col" class="numeric">Fill price</th>
+                <th scope="col" class="numeric">Value</th>
+                <th scope="col" class="numeric">Order ID</th>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +237,9 @@
     </div>
   }
 } @else if (error()) {
+  <h1>Client account</h1>
   <p class="error" role="alert">{{ error() }}</p>
 } @else {
+  <h1>Client account</h1>
   <p class="loading" aria-busy="true">Loading account…</p>
 }

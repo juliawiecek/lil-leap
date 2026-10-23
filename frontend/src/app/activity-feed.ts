@@ -1,5 +1,6 @@
 import { StatusBadge } from './status-badge';
 import { FinancialChange } from './financial-change';
+import { FocusAfterChange } from './focus-after-change';
 import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { OrderHistoryRow } from './order-history-api';
@@ -22,7 +23,7 @@ export const CANCELLABLE: ReadonlySet<string> = new Set(['SUBMITTED', 'ACCEPTED'
  */
 @Component({
   selector: 'app-activity-feed',
-  imports: [FinancialChange, StatusBadge],
+  imports: [FinancialChange, StatusBadge, FocusAfterChange],
   templateUrl: './activity-feed.html',
   styleUrl: './activity-feed.scss',
   host: { '[class.compact]': 'compact()' },
@@ -43,6 +44,7 @@ export class ActivityFeed implements OnInit, OnDestroy {
   readonly compact = input(false);
   readonly limit = input<number | null>(null);
   readonly viewAll = output<void>();
+  readonly returnToOrder = signal<string | null>(null);
 
   readonly kinds = ACTIVITY_KINDS;
   readonly kind = signal<ActivityKind>('All');
@@ -115,8 +117,14 @@ export class ActivityFeed implements OnInit, OnDestroy {
   }
 
   askCancel(item: ActivityItem): void {
+    this.returnToOrder.set(null);
     this.confirming.set(item.orderId ?? null);
     this.notice.set('');
+  }
+
+  keepOrder(item: ActivityItem): void {
+    this.returnToOrder.set(item.orderId ?? null);
+    this.confirming.set(null);
   }
 
   /** Cancels the confirmed order; the feed then reloads, so it shows "Cancelled" or the order's real status. */

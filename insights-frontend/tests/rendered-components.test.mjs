@@ -24,11 +24,15 @@ test('chart renders empty state, binds points, and exposes values on keyboard fo
   fixture.componentRef.setInput('points', [{ label: '2026-09-01', value: 1234 }, { label: '2026-09-02', value: 2500 }]);
   fixture.componentRef.setInput('label', 'Filtered volume'); fixture.detectChanges();
   assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('aria-label'), 'Filtered volume');
-  const points = fixture.nativeElement.querySelectorAll('circle[tabindex]'); assert.equal(points.length, 2);
-  points[0].dispatchEvent(new Event('focus')); fixture.detectChanges();
+  const svg = fixture.nativeElement.querySelector('svg');
+  const points = fixture.nativeElement.querySelectorAll('circle[aria-hidden="true"]'); assert.equal(points.length, 2);
+  assert.equal(fixture.nativeElement.querySelectorAll('circle[tabindex]').length, 0, 'one chart focus stop avoids descendants hidden by role=img');
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' })); fixture.detectChanges();
   assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /2026-09-01.*1,234/);
-  points[0].dispatchEvent(new Event('blur')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /Hover or focus/);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'ArrowRight' })); fixture.detectChanges();
+  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /2026-09-02.*2,500/);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape' })); fixture.detectChanges();
+  assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /arrow keys/);
   points[1].dispatchEvent(new Event('mouseenter')); fixture.detectChanges();
   assert.match(fixture.nativeElement.querySelector('.chart-readout').textContent, /2,500/);
   points[1].dispatchEvent(new Event('mouseleave')); fixture.detectChanges();
@@ -43,10 +47,10 @@ const signedInAs = (role, session = { logout: async () => {} }) => [
 const navLabels = (fixture) => [...fixture.nativeElement.querySelectorAll('nav a span')].map(span => span.textContent.trim());
 const navGroups = (fixture) => [...fixture.nativeElement.querySelectorAll('nav .nav-group')].map(p => p.textContent.trim());
 
-test('analysts see the three reporting pages, and the header shows who is signed in', async t => {
+test('analysts see the three reporting pages and their settings, and the header shows who is signed in', async t => {
   const fixture = await render(t, Shell, {}, signedInAs('ANALYST'));
-  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports']);
-  assert.deepEqual(navGroups(fixture), ['Analytics']);
+  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Settings']);
+  assert.deepEqual(navGroups(fixture), ['Analytics', 'Preferences']);
   assert.match(fixture.nativeElement.querySelector('.identity').textContent, /analyst@nexttrade\.local.*Analyst/s);
   assert.equal(fixture.nativeElement.querySelector('.avatar').textContent.trim(), 'A');
   assert.equal(fixture.nativeElement.querySelector('header select'), null, 'the role is never chosen in the page');
@@ -54,8 +58,8 @@ test('analysts see the three reporting pages, and the header shows who is signed
 
 test('operations staff see everything analysts see, plus the trade lookup', async t => {
   const fixture = await render(t, Shell, {}, signedInAs('OPERATIONS'));
-  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Trade lookup']);
-  assert.deepEqual(navGroups(fixture), ['Analytics', 'Operations']);
+  assert.deepEqual(navLabels(fixture), ['Insights', 'Clients', 'Reports', 'Trade lookup', 'Settings']);
+  assert.deepEqual(navGroups(fixture), ['Analytics', 'Operations', 'Preferences']);
   assert.equal(fixture.componentInstance.home(), '/insights');
   assert.match(fixture.nativeElement.querySelector('.identity').textContent, /Operations/);
 });
@@ -100,12 +104,15 @@ test('a timed chart labels real times and shows each point\'s detail in the read
   fixture.detectChanges();
   const labels = [...fixture.nativeElement.querySelectorAll('svg > text')].map((text) => [text.textContent.trim(), text.getAttribute('text-anchor')]);
   assert.deepEqual(labels.slice(-3), [['12 AM', 'start'], ['5 AM', 'middle'], ['10 AM', 'end']]);
-  const step = fixture.nativeElement.querySelectorAll('circle[tabindex]')[1];
-  assert.equal(step.getAttribute('aria-label'), '8:30:21 AM CT: 1, Buy 3 MSFT · $1,524.46');
-  step.dispatchEvent(new Event('focus')); fixture.detectChanges();
+  const image = fixture.nativeElement.querySelector('svg[tabindex="0"]');
+  assert.ok(image, 'the entire chart is one keyboard stop');
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); fixture.detectChanges();
   const readout = fixture.nativeElement.querySelector('.chart-readout');
   assert.equal(readout.querySelector('.note').textContent.trim(), 'Buy 3 MSFT · $1,524.46');
   assert.match(readout.textContent, /8:30:21 AM CT\s*Buy 3 MSFT · \$1,524\.46\s*Orders so far\s*1/);
-  fixture.nativeElement.querySelectorAll('circle[tabindex]')[0].dispatchEvent(new Event('focus')); fixture.detectChanges();
+  assert.match(fixture.componentInstance.description(), /Buy 3 MSFT/);
+  assert.equal(fixture.componentInstance.dataTable().rows[1][2], 'Buy 3 MSFT · $1,524.46');
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' })); fixture.detectChanges();
   assert.equal(fixture.nativeElement.querySelector('.chart-readout .note'), null, 'a point without a detail shows none');
 });

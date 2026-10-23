@@ -10,6 +10,11 @@ export interface KeyboardShortcut {
 }
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
+  { keys: ['Alt + Shift + A'], action: 'Open Settings for accessibility. Before sign-in, open accessibility tools.' },
+  { keys: ['Alt + Shift + R'], action: 'Read the focused element on demand.' },
+  { keys: ['Alt + Shift + P'], action: 'Read a concise page summary.' },
+  { keys: ['Alt + Shift + X'], action: 'Stop speech immediately, including while typing.' },
+  { keys: ['Alt + Shift + Space'], action: 'Pause or resume speech.' },
   { keys: ['?'], action: 'Open this list of shortcuts from anywhere on the dashboard.' },
   { keys: ['Alt + B'], action: 'Play the audio market briefing.' },
   { keys: ['Alt + S'], action: 'Turn switch control on, reading each item aloud, or off. Works on every page.' },
@@ -19,6 +24,7 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: ['Esc'], action: 'Close a dialog, clear the search, or stop exploring a chart.' },
   { keys: ['←', '→'], action: 'On a focused chart, step back or forward through its prices.' },
   { keys: ['Home', 'End'], action: 'On a focused chart, jump to its first or latest price.' },
+  { keys: ['Tab', 'Enter'], action: 'Focus Explain this chart or Show as table, then activate it. In a tablist, use arrows and Home/End to move; Enter or Space selects.' },
 ];
 
 /** "?" opens the shortcuts, unless the user is typing in a field or holding a modifier. */
