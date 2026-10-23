@@ -143,6 +143,11 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Rolls back a settlement that has not changed any balance: removes the fill and rejects its order.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#status(java.util.UUID)" class="member-name-link">status</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;tradeId)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Derives the settlement state from one primary database snapshot.</div>
+</div>
 </div>
 </div>
 </div>
@@ -219,6 +224,22 @@ loadScripts(document, 'script');</script>
 <dd>the ROLLED_BACK result</dd>
 <dt>Throws:</dt>
 <dd><code><a href="SettlementException.html" title="class in com.neueda.leap.order.settlement">SettlementException</a></code> - 404 when the fill does not exist, 409 when balances already changed</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="status(java.util.UUID)">
+<h3>status</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="SettlementStatusResponse.html" title="class in com.neueda.leap.order.settlement">SettlementStatusResponse</a></span>&nbsp;<span class="element-name">status</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;tradeId)</span></div>
+<div class="block">Derives the settlement state from one primary database snapshot. The trade id is the order
+ id; the fill and both append-only ledger legs are required before a trade is settled.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>tradeId</code> - the permanent order/trade identifier</dd>
+<dt>Returns:</dt>
+<dd>the current ledger-derived state</dd>
+<dt>Throws:</dt>
+<dd><code><a href="SettlementException.html" title="class in com.neueda.leap.order.settlement">SettlementException</a></code> - 404 when the order does not exist</dd>
 </dl>
 </section>
 </li>

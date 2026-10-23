@@ -148,6 +148,18 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../PriceCandle.html" title="class in com.neueda.leap.marketdata">PriceCandle</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getCandles(java.util.UUID,java.lang.String,int)" class="member-name-link">getCandles</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;interval,
+ int&nbsp;limit)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns midpoint candles for the price charts, e.g.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getDayOpens(java.util.List)" class="member-name-link">getDayOpens</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Reads session baselines independently of the recent-history page limit.</div>
+</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getHistory(java.util.UUID,int)" class="member-name-link">getHistory</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
  int&nbsp;limit)</code></div>
@@ -159,20 +171,26 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Retrieves the latest quote for a specific instrument.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getLatestByMarketSymbol(java.lang.String,java.lang.String)" class="member-name-link">getLatestByMarketSymbol</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;market,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getLatestByInstruments(java.util.List)" class="member-name-link">getLatestByInstruments</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Retrieves the latest quote for several instruments in one request, so a dashboard makes one
+ price request per refresh instead of one per stock (PS-10).</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getLatestByMarketSymbol(java.lang.String,java.lang.String)" class="member-name-link">getLatestByMarketSymbol</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;market,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;symbol)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Retrieves the latest quote for an enabled, tradable instrument identified by market and symbol.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#invalidRequest(java.lang.IllegalArgumentException)" class="member-name-link">invalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a>&nbsp;exception)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#invalidRequest(java.lang.IllegalArgumentException)" class="member-name-link">invalidRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a>&nbsp;exception)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Maps invalid parameters to an HTTP 400 response.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#quoteNotFound(com.neueda.leap.marketdata.controller.QuoteController.QuoteNotFoundException)" class="member-name-link">quoteNotFound</a><wbr>(<a href="QuoteController.QuoteNotFoundException.html" title="class in com.neueda.leap.marketdata.controller">QuoteController.QuoteNotFoundException</a>&nbsp;exception)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#quoteNotFound(com.neueda.leap.marketdata.controller.QuoteController.QuoteNotFoundException)" class="member-name-link">quoteNotFound</a><wbr>(<a href="QuoteController.QuoteNotFoundException.html" title="class in com.neueda.leap.marketdata.controller">QuoteController.QuoteNotFoundException</a>&nbsp;exception)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Maps a missing quote to an HTTP 404 response.</div>
 </div>
 </div>
@@ -229,6 +247,43 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
+<section class="detail" id="getLatestByInstruments(java.util.List)">
+<h3>getLatestByInstruments</h3>
+<div class="member-signature"><span class="annotations">@GetMapping("/latest/by-instruments")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</span>&nbsp;<span class="element-name">getLatestByInstruments</span><wbr><span class="parameters">(@RequestParam("ids")
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</span></div>
+<div class="block">Retrieves the latest quote for several instruments in one request, so a dashboard makes one
+ price request per refresh instead of one per stock (PS-10). Instruments with no quote yet are
+ left out rather than failing the whole batch.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>ids</code> - instrument identifiers, comma-separated, at most 100</dd>
+<dt>Returns:</dt>
+<dd>the latest quote of each instrument that has one, in the order requested</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if no ids or more than 100 are given</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="getDayOpens(java.util.List)">
+<h3>getDayOpens</h3>
+<div class="member-signature"><span class="annotations">@GetMapping("/day-opens")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../dto/QuoteResponse.html" title="class in com.neueda.leap.marketdata.dto">QuoteResponse</a>&gt;</span>&nbsp;<span class="element-name">getDayOpens</span><wbr><span class="parameters">(@RequestParam("ids")
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&gt;&nbsp;ids)</span></div>
+<div class="block">Reads session baselines independently of the recent-history page limit. The server
+ captures one instant for the batch; browser time zones cannot change the result.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>ids</code> - instrument identifiers, comma-separated, at most 100</dd>
+<dt>Returns:</dt>
+<dd>baseline quotes in request order, omitting instruments without a baseline</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if no ids or too many ids are given</dd>
+</dl>
+</section>
+</li>
+<li>
 <section class="detail" id="getLatestByMarketSymbol(java.lang.String,java.lang.String)">
 <h3>getLatestByMarketSymbol</h3>
 <div class="member-signature"><span class="annotations">@GetMapping("/latest/by-market-symbol")
@@ -268,6 +323,32 @@ loadScripts(document, 'script');</script>
 <dt>Throws:</dt>
 <dd><code><a href="QuoteController.QuoteNotFoundException.html" title="class in com.neueda.leap.marketdata.controller">QuoteController.QuoteNotFoundException</a></code> - if the instrument does not exist</dd>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if limit is invalid</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="getCandles(java.util.UUID,java.lang.String,int)">
+<h3>getCandles</h3>
+<div class="member-signature"><span class="annotations">@GetMapping("/candles/{instrumentId}")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="../PriceCandle.html" title="class in com.neueda.leap.marketdata">PriceCandle</a>&gt;</span>&nbsp;<span class="element-name">getCandles</span><wbr><span class="parameters">(@PathVariable
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;instrumentId,
+ @RequestParam(value="interval",defaultValue="1m",required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;interval,
+ @RequestParam(value="limit",defaultValue="120",required=false)
+ int&nbsp;limit)</span></div>
+<div class="block">Returns midpoint candles for the price charts, e.g.
+ <code>GET /quotes/candles/{instrumentId}?interval=1m&amp;limit=120</code> for the last two hours.
+ An instrument with no quotes in the window returns an empty list, so a chart can show
+ "no data yet" instead of an error.</div>
+<dl class="notes">
+<dt>Parameters:</dt>
+<dd><code>instrumentId</code> - persistent instrument identifier</dd>
+<dd><code>interval</code> - candle width: 1m, 5m, 15m, 1h or 1d (default 1m)</dd>
+<dd><code>limit</code> - number of most recent intervals to cover (default 120, at most 500)</dd>
+<dt>Returns:</dt>
+<dd>candles ordered oldest first</dd>
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the interval or limit is invalid</dd>
 </dl>
 </section>
 </li>

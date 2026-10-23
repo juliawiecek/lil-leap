@@ -168,6 +168,118 @@ class SettlementRecoveryServiceTest {
         assertThat(service.status(trade).status()).isEqualTo("INCONSISTENT");
     }
 
+    @Test
+    void orderWithoutAFillIsRejectedOrNotSettledByItsStatus() {
+        UUID rejected = order("BUY", 3, "REJECTED");
+        UUID waiting = order("BUY", 3, "ACCEPTED");
+
+        assertThat(service.status(rejected)).isEqualTo(new SettlementStatusResponse(rejected, "REJECTED", null));
+        assertThat(service.status(waiting)).isEqualTo(new SettlementStatusResponse(waiting, "NOT_SETTLED", null));
+    }
+
+    @Test
+    void rejectedOrderWithAFillButNoBalanceChangeIsRejected() {
+        UUID fill = fill("BUY", 2, "10", "REJECTED");
+        completionAudit(fill);
+
+        assertThat(service.status(tradeFor(fill)).status()).isEqualTo("REJECTED");
+    }
+
+    @Test
+    void rejectedOrderWhoseFillMovedHoldingsOrCashIsInconsistent() {
+        UUID moved = fill("BUY", 2, "10", "REJECTED");
+        movement(moved, "BUY", 2, "10");
+        UUID paid = fill("SELL", 2, "10", "REJECTED");
+        cash(paid, "SELL", "20.00");
+
+        assertThat(service.status(tradeFor(moved)).status()).isEqualTo("INCONSISTENT");
+        assertThat(service.status(tradeFor(paid)).status()).isEqualTo("INCONSISTENT");
+    }
+
+    @Test
+    void filledOrderMissingAnyLedgerLegOrTheCompletionAuditIsInconsistent() {
+        UUID bare = fill("BUY", 1, "10", "FILLED");
+        UUID noCash = fill("BUY", 1, "10", "FILLED");
+        movement(noCash, "BUY", 1, "10");
+        completionAudit(noCash);
+        UUID noAudit = fill("BUY", 1, "10", "FILLED");
+        movement(noAudit, "BUY", 1, "10");
+        cash(noAudit, "BUY", "-10.00");
+
+        assertThat(service.status(tradeFor(bare)).status()).isEqualTo("INCONSISTENT");
+        assertThat(service.status(tradeFor(noCash)).status()).isEqualTo("INCONSISTENT");
+        assertThat(service.status(tradeFor(noAudit)).status()).isEqualTo("INCONSISTENT");
+    }
+
+    @Test
+    void waitingOrderWithOnlyPartOfItsSettlementIsInconsistent() {
+        UUID movedOnly = fill("BUY", 1, "10", "ACCEPTED");
+        movement(movedOnly, "BUY", 1, "10");
+        UUID paidOnly = fill("BUY", 1, "10", "ACCEPTED");
+        cash(paidOnly, "BUY", "-10.00");
+        UUID auditedOnly = fill("BUY", 1, "10", "ACCEPTED");
+        completionAudit(auditedOnly);
+
+        assertThat(service.status(tradeFor(movedOnly)).status()).isEqualTo("INCONSISTENT");
+        assertThat(service.status(tradeFor(paidOnly)).status()).isEqualTo("INCONSISTENT");
+        assertThat(service.status(tradeFor(auditedOnly)).status()).isEqualTo("INCONSISTENT");
+    }
+
+    @Test
+    void settlementWithOnlyItsCashLegCannotBeRolledBack() {
+        UUID fill = fill("SELL", 2, "10", "ACCEPTED");
+        cash(fill, "SELL", "20.00");
+
+        assertThatThrownBy(() -> service.rollback(fill))
+                .isInstanceOfSatisfying(SettlementException.class, failure -> {
+                    assertThat(failure.status()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(failure.code()).isEqualTo("SETTLEMENT_APPLIED");
+                });
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM fills", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void sellWithOnlyAFillIsRecoveredByRemovingSharesAndCreditingCash() {
+        UUID fill = fill("SELL", 3, "20", "ACCEPTED");
+
+        assertThat(service.reportIncomplete()).containsExactly(fill);
+        assertThat(jdbc.queryForObject("SELECT payload FROM audit_log WHERE event_type = ?", String.class,
+                SettlementRecoveryService.INCOMPLETE))
+                .contains(fill.toString())
+                .contains("\"missing\":[\"HOLDING_MOVEMENT\",\"CASH_TRANSACTION\",\"ORDER_STATUS\",\"COMPLETION_AUDIT\"]");
+
+        var result = service.recover(fill);
+
+        assertThat(result.action()).isEqualTo("RECOVERED");
+        assertThat(jdbc.queryForObject("SELECT quantity_change FROM holding_movements WHERE fill_id = ?", Long.class, fill))
+                .isEqualTo(-3);
+        assertThat(jdbc.queryForObject("SELECT amount FROM cash_transactions WHERE fill_id = ?", BigDecimal.class, fill))
+                .isEqualByComparingTo("60.00");
+        assertThat(balance()).isEqualByComparingTo("1060.00");
+        assertThat(jdbc.queryForObject("SELECT payload FROM audit_log WHERE event_type = ?", String.class,
+                SettlementRecoveryService.COMPLETED)).contains("\"cashDelta\":60.00");
+        assertThat(service.status(tradeFor(fill)).status()).isEqualTo("SETTLED");
+    }
+
+    private UUID order(String side, long quantity, String orderStatus) {
+        UUID order = UUID.randomUUID();
+        jdbc.update("INSERT INTO orders(order_id, account_id, instrument_id, side, quantity, status) VALUES (?, ?, ?, ?, ?, ?)",
+                order, account, instrument, side, quantity, orderStatus);
+        return order;
+    }
+
+    private void movement(UUID fill, String side, long quantity, String price) {
+        jdbc.update("""
+                INSERT INTO holding_movements(account_id, instrument_id, fill_id, quantity_change, cost_basis, movement_type)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, account, instrument, fill, "BUY".equals(side) ? quantity : -quantity, new BigDecimal(price), side);
+    }
+
+    private void cash(UUID fill, String side, String amount) {
+        jdbc.update("INSERT INTO cash_transactions(account_id, fill_id, transaction_type, amount, currency, settlement_status, settled_at) "
+                + "VALUES (?, ?, ?, ?, 'USD', 'SETTLED', CURRENT_TIMESTAMP)", account, fill, side, new BigDecimal(amount));
+    }
+
     private UUID fill(String side, long quantity, String price, String orderStatus) {
         UUID order = UUID.randomUUID();
         UUID fill = UUID.randomUUID();

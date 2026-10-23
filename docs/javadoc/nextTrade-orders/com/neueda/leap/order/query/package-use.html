@@ -58,8 +58,12 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">REST exception translation with client-facing error responses.</div>
 </div>
-<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-first odd-row-color"><a href="#com.neueda.leap.order.cancel">com.neueda.leap.order.cancel</a></div>
 <div class="col-last odd-row-color">
+<div class="block">Client cancellation of an order that is still waiting to execute (PS-14).</div>
+</div>
+<div class="col-first even-row-color"><a href="#com.neueda.leap.order.query">com.neueda.leap.order.query</a></div>
+<div class="col-last even-row-color">
 <div class="block">Caller-scoped reads of a single order's detail and current status.</div>
 </div>
 </div>
@@ -75,6 +79,19 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">Thrown when an order does not exist or belongs to another user; the two cases are
  deliberately indistinguishable to the caller.</div>
+</div>
+</div>
+</section>
+</li>
+<li>
+<section class="detail" id="com.neueda.leap.order.cancel">
+<div class="caption"><span>Classes in <a href="package-summary.html">com.neueda.leap.order.query</a> used by <a href="../cancel/package-summary.html">com.neueda.leap.order.cancel</a></span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><a href="class-use/OrderStatusResponse.html#com.neueda.leap.order.cancel">OrderStatusResponse</a></div>
+<div class="col-last even-row-color">
+<div class="block">Current status of one order and the most recent entry in its status history.</div>
 </div>
 </div>
 </section>

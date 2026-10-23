@@ -93,6 +93,19 @@ describe('RefreshTokenService', () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
+  it.each(['DISABLED', 'DELETED'])('rotate ends the session of a %s user without issuing a new token', async userStatus => {
+    repository.findOne.mockResolvedValue({ user: { ...user, userStatus } } as Session);
+    manager.findOne.mockResolvedValue({ ...user, userStatus });
+    repository.update.mockResolvedValue({ affected: 1 } as any);
+
+    await expect(service.rotate('still-open')).rejects.toThrow(InvalidRefreshTokenException);
+    expect(repository.update).toHaveBeenCalledWith(
+      expect.objectContaining({ tokenHash: hashOf('still-open') }),
+      { revokedAt: expect.any(Date), lastActiveAt: expect.any(Date) },
+    );
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it('revoke is a no-op for a token that is not active', async () => {
     repository.update.mockResolvedValue({ affected: 0 } as any);
 

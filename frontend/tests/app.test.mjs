@@ -274,3 +274,24 @@ test('a Caps Lock hint shows under the password while Caps Lock is on, and clear
   assert.equal(fixture.nativeElement.querySelector('#caps-hint'), null);
   app.checkCapsLock({}); assert.equal(app.capsLock(), false);
 });
+
+test('after the inactivity sign-out the sign-in page says why (PS-30)', async t => {
+  const { fixture, app } = await setup(t, {}, { path: 'login', query: { returnUrl: '/dashboard', reason: 'inactive' } });
+  fixture.detectChanges();
+
+  const notice = fixture.nativeElement.querySelector('.signed-out-notice');
+  assert.equal(app.pageReady(), true);
+  assert.equal(notice.getAttribute('role'), 'alert');
+  assert.equal(notice.textContent.trim(), 'You were signed out after 10 minutes of inactivity. Please sign in again.');
+
+  app.setAuthMode('signup'); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('.signed-out-notice'), null, 'only on the sign-in form');
+});
+
+test('an ordinary visit to sign-in shows no sign-out notice', async t => {
+  const { fixture, app } = await setup(t, {}, { path: 'login', query: { returnUrl: '/dashboard' } });
+  fixture.detectChanges();
+
+  assert.equal(app.signedOutNotice(), '');
+  assert.equal(fixture.nativeElement.querySelector('.signed-out-notice'), null);
+});

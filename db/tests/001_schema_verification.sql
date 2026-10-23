@@ -78,6 +78,14 @@ BEGIN
       AND pg_get_constraintdef(oid) ILIKE '%user_role%ANALYST%'
   ) THEN RAISE EXCEPTION 'users.user_role CHECK constraint does not permit ANALYST'; END IF;
 
+  -- BR-03: users.user_status limits sign-in to ACTIVE users
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.users'::regclass
+      AND conname = 'chk_user_status'
+      AND pg_get_constraintdef(oid) ILIKE '%ACTIVE%DISABLED%DELETED%'
+  ) THEN RAISE EXCEPTION 'users.user_status CHECK constraint chk_user_status is missing'; END IF;
+
 END $$;
 
 SELECT 'PASS: Schema verification successful - all 17 tables, 5 views, encrypted SSN, no plaintext SSN, trigger, quote provenance fields, and ANALYST role present' AS result;

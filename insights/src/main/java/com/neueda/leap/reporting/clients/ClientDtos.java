@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Response shapes of the Clients endpoints, built from the reporting dataset ({@code reports/trades.csv}).
+ * Response shapes of the Clients endpoints, built from the fills on the reporting replica.
  * Accounts carry their owner's name and email so analysts can tell who a client is; the owning user's
  * id is never returned.
  */

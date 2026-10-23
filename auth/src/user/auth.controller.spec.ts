@@ -8,6 +8,8 @@ import { TierService } from '../onboarding/tier.service';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { UserRole } from './user-role.enum';
 import { ProfileAccessDeniedException } from './exceptions/profile-access-denied.exception';
+import { ProfileNotFoundException } from './exceptions/profile-not-found.exception';
+import { InvalidRefreshTokenException } from './exceptions/invalid-refresh-token.exception';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -161,5 +163,41 @@ describe('AuthController', () => {
     );
 
     expect(userService.findProfileByUserId).not.toHaveBeenCalled();
+  });
+
+  it('throws ProfileNotFoundException when the authenticated user has no profile row', async () => {
+    userService.findProfileByUserId.mockResolvedValue(null);
+
+    await expect(controller.profile(user.userId, { userId: user.userId } as any)).rejects.toThrow(ProfileNotFoundException);
+
+    expect(userService.findProfileByUserId).toHaveBeenCalledWith(user.userId);
+  });
+
+  it('refresh re-reads the tier so a tier change shows up in the new access token', async () => {
+    refreshTokenService.rotate.mockResolvedValue({ user: user as any, newRawRefreshToken: 'new-raw-token' });
+    tierService.findTraderLevel.mockResolvedValue('NOVICE' as any);
+    tierService.findRiskProfile.mockResolvedValue(null);
+
+    await controller.refresh({ refreshToken: 'old-raw-token' } as any);
+
+    expect(jwtService.issueToken).toHaveBeenCalledWith(user.userId, user.email, 'NOVICE', UserRole.TRADER, null, 'new-raw-token');
+  });
+
+  it('refresh issues no access token when the refresh token is rejected', async () => {
+    refreshTokenService.rotate.mockRejectedValue(new InvalidRefreshTokenException());
+
+    await expect(controller.refresh({ refreshToken: 'reused-token' } as any)).rejects.toThrow(InvalidRefreshTokenException);
+
+    expect(tierService.findTraderLevel).not.toHaveBeenCalled();
+    expect(jwtService.issueToken).not.toHaveBeenCalled();
+  });
+
+  it('login issues no tokens when credentials are rejected', async () => {
+    userService.login.mockRejectedValue(new InvalidCredentialsException('Invalid email or password.'));
+
+    await expect(controller.login({ email: 'trader@example.com', password: 'wrong' } as any)).rejects.toThrow();
+
+    expect(jwtService.issueToken).not.toHaveBeenCalled();
+    expect(refreshTokenService.issue).not.toHaveBeenCalled();
   });
 });

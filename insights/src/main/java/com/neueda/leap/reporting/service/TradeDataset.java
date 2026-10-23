@@ -1,173 +1,89 @@
 package com.neueda.leap.reporting.service;
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Locale;
 
 /**
- * The fills in {@code reports/trades.csv}, the standalone dataset the Reports and Clients pages read
- * so they never compete with live trading for database capacity.
+ * Every fill, read from the reporting replica (BR-16) so the Reports and Clients pages never compete with live
+ * trading for database capacity. Client names and emails come from {@code v_trade_clients}, the only view of
+ * user data the reporting role may read.
  */
 @Component
+@Transactional(readOnly = true)
 public class TradeDataset {
 
-    private static final String RESOURCE_PATH = "classpath:reports/trades.csv";
-    private static final String NAME = "Reporting dataset";
+    private static final String FILLS = """
+            SELECT f.fill_id, o.order_id, f.filled_at, i.instrument_id, i.symbol, i.instrument_name, i.asset_class,
+                   i.market_code, a.user_id, c.email, c.first_name, c.last_name, a.account_id, a.account_number,
+                   a.account_name, a.account_status, a.trader_level, o.side, f.filled_quantity, f.execution_price
+            FROM fills f
+            JOIN orders o ON o.order_id = f.order_id
+            JOIN instruments i ON i.instrument_id = o.instrument_id
+            JOIN accounts a ON a.account_id = o.account_id
+            LEFT JOIN v_trade_clients c ON c.user_id = a.user_id
+            ORDER BY f.filled_at, f.fill_id
+            """;
 
-    private static final List<String> HEADERS = List.of(
-            "fill_id",
-            "order_id",
-            "filled_at",
-            "instrument_id",
-            "instrument_symbol",
-            "instrument_name",
-            "asset_class",
-            "market_code",
-            "user_id",
-            "client_email",
-            "client_name",
-            "account_id",
-            "account_number",
-            "account_name",
-            "account_status",
-            "trader_level",
-            "side",
-            "filled_quantity",
-            "execution_price");
-
-    private final ResourceLoader resourceLoader;
+    private final JdbcTemplate jdbc;
 
     /**
      * Creates the dataset reader.
      *
-     * @param resourceLoader classpath resource loader used to read the CSV
+     * @param jdbc read-only operations on the reporting replica
      */
-    public TradeDataset(ResourceLoader resourceLoader) {
-        this.resourceLoader = resourceLoader;
+    public TradeDataset(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     /**
-     * Reads every fill in the dataset, in file order.
+     * Reads every fill, oldest first.
      *
      * @return the fills
-     * @throws IllegalStateException when the file is missing, unreadable or malformed
      */
     public List<Trade> trades() {
-        Resource resource = resourceLoader.getResource(RESOURCE_PATH);
-        if (!resource.exists()) {
-            throw new IllegalStateException(NAME + " not found: " + RESOURCE_PATH);
-        }
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                throw new IllegalStateException(NAME + " is empty: " + RESOURCE_PATH);
-            }
-
-            List<String> actualHeaders = parseCsvLine(headerLine);
-            if (!HEADERS.equals(actualHeaders)) {
-                throw new IllegalStateException("Unexpected " + NAME.toLowerCase(Locale.ROOT) + " header: " + actualHeaders);
-            }
-
-            List<Trade> trades = new ArrayList<>();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) {
-                    continue;
-                }
-
-                List<String> columns = parseCsvLine(line);
-                if (columns.size() != HEADERS.size()) {
-                    throw new IllegalStateException("Unexpected column count in " + NAME.toLowerCase(Locale.ROOT) + " row: " + columns);
-                }
-
-                trades.add(trade(columns));
-            }
-
-            return trades;
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read " + NAME.toLowerCase(Locale.ROOT) + " from " + RESOURCE_PATH, ex);
-        }
+        return jdbc.query(FILLS, (row, index) -> trade(row));
     }
 
-    private static Trade trade(List<String> columns) {
+    private static Trade trade(ResultSet row) throws SQLException {
         return new Trade(
-                columns.get(0),
-                columns.get(1),
-                Instant.parse(columns.get(2)),
-                columns.get(3),
-                columns.get(4),
-                columns.get(5),
-                columns.get(6),
-                columns.get(7),
-                columns.get(8),
-                columns.get(9),
-                columns.get(10),
-                columns.get(11),
-                columns.get(12),
-                columns.get(13),
-                columns.get(14),
-                columns.get(15),
-                columns.get(16),
-                Long.parseLong(columns.get(17)),
-                new BigDecimal(columns.get(18)));
+                row.getString("fill_id"),
+                row.getString("order_id"),
+                row.getObject("filled_at", OffsetDateTime.class).toInstant(),
+                row.getString("instrument_id"),
+                row.getString("symbol"),
+                row.getString("instrument_name"),
+                row.getString("asset_class"),
+                row.getString("market_code"),
+                row.getString("user_id"),
+                row.getString("email"),
+                clientName(row.getString("first_name"), row.getString("last_name")),
+                row.getString("account_id"),
+                row.getString("account_number"),
+                row.getString("account_name"),
+                row.getString("account_status"),
+                row.getString("trader_level"),
+                row.getString("side"),
+                row.getLong("filled_quantity"),
+                price(row.getBigDecimal("execution_price")));
     }
 
-    /** Splits one CSV line, honouring quoted fields and doubled quotes; shared with {@link TradeEventDataset}. */
-    static List<String> parseCsvLine(String line) {
-        List<String> values = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean[] inQuotes = {false};
-
-        int index = 0;
-        while (index < line.length()) {
-            index = consumeCsvCharacter(line, index, values, current, inQuotes);
-        }
-
-        values.add(current.toString());
-        return values;
+    /** Drops the column's padding zeros but keeps at least cents: 225.10000000 becomes 225.10, 49.52500000 49.525. */
+    static BigDecimal price(BigDecimal stored) {
+        BigDecimal trimmed = stored.stripTrailingZeros();
+        return trimmed.scale() < 2 ? trimmed.setScale(2) : trimmed;
     }
 
-    private static boolean isEscapedQuote(String line, int index) {
-        return line.charAt(index) == '"' && index + 1 < line.length() && line.charAt(index + 1) == '"';
-    }
-
-    private static int consumeCsvCharacter(String line, int index, List<String> values, StringBuilder current, boolean[] inQuotes) {
-        char character = line.charAt(index);
-        if (inQuotes[0]) {
-            if (isEscapedQuote(line, index)) {
-                current.append('"');
-                return index + 2;
-            }
-            if (character == '"') {
-                inQuotes[0] = false;
-            } else {
-                current.append(character);
-            }
-            return index + 1;
-        }
-
-        if (character == ',') {
-            values.add(current.toString());
-            current.setLength(0);
-            return index + 1;
-        }
-        if (character == '"') {
-            inQuotes[0] = true;
-            return index + 1;
-        }
-        current.append(character);
-        return index + 1;
+    /** Joins a trader's first and last name; empty when the trader has no profile. */
+    static String clientName(String first, String last) {
+        return String.join(" ", first == null ? "" : first, last == null ? "" : last).trim();
     }
 
     /**

@@ -1,65 +1,139 @@
 package com.neueda.leap.trades;
 
-import com.neueda.leap.reporting.service.TradeDataset;
-import com.neueda.leap.reporting.service.TradeEventDataset;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TradeLookupTest {
 
     private static final UUID ORDER = UUID.fromString("f0000000-0000-4000-8000-000000000012");
     private static final UUID ACCOUNT = UUID.fromString("e0000000-0000-4000-8000-000000000001");
-    private static final String TRADES = """
-            fill_id,order_id,filled_at,instrument_id,instrument_symbol,instrument_name,asset_class,market_code,user_id,client_email,client_name,account_id,account_number,account_name,account_status,trader_level,side,filled_quantity,execution_price
-            d451bd0a-40e6-d7c5-f00c-dc2a1f31a24f,f0000000-0000-4000-8000-000000000012,2026-10-05T18:04:36Z,34f28579-c9a3-4a56-dfd9-127b43ecf73f,BAC,"Bank of America, Corp.",COMMON_STOCK,NYSE,d0000000-0000-4000-8000-000000000001,maya.chen@demo.nexttrade.local,Maya Chen,e0000000-0000-4000-8000-000000000001,NT-DEMO-0001,Maya Chen Individual,ACTIVE,NOVICE,BUY,49,49.525
-            """;
-    private static final String EVENTS = """
-            order_id,occurred_at,source,type,actor,details
-            f0000000-0000-4000-8000-000000000012,2026-10-05T18:04:34Z,STATUS,SUBMITTED,,"{""reasonCode"":""SUBMISSION_VALIDATED""}"
-            f0000000-0000-4000-8000-000000000099,2026-10-05T18:04:35Z,STATUS,SUBMITTED,,"{""reasonCode"":""SUBMISSION_VALIDATED""}"
-            f0000000-0000-4000-8000-000000000012,2026-10-05T18:04:36Z,AUDIT,ORDER_FILLED,SYSTEM,"{""quantity"":49,""cashDelta"":""-2426.73""}"
-            """;
+    private static final Instant FILLED = Instant.parse("2026-10-05T18:04:36Z");
 
-    private final TradeLookup lookup;
-
-    TradeLookupTest() {
-        ResourceLoader loader = mock(ResourceLoader.class);
-        when(loader.getResource("classpath:reports/trades.csv"))
-                .thenAnswer(ignored -> new ByteArrayResource(TRADES.getBytes(StandardCharsets.UTF_8)));
-        when(loader.getResource("classpath:reports/trade-events.csv"))
-                .thenAnswer(ignored -> new ByteArrayResource(EVENTS.getBytes(StandardCharsets.UTF_8)));
-        lookup = new TradeLookup(new TradeDataset(loader), new TradeEventDataset(loader));
-    }
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final TradeLookup lookup = new TradeLookup(jdbc, new ObjectMapper());
 
     @Test
-    void findsATradeWithItsValueClientAndOnlyItsOwnSteps() {
+    void findsAFilledTradeWithItsValueClientAndSteps() throws SQLException {
+        trade(tradeRow("Maya", "Chen"));
+        steps(stepRow("STATUS", "SUBMITTED", null, FILLED.minusSeconds(2), "{\"reasonCode\": \"SUBMISSION_VALIDATED\"}"),
+                stepRow("AUDIT", "ORDER_FILLED", "SYSTEM", FILLED, "{\"quantity\": 49, \"cashDelta\": \"-2426.73\"}"));
+
         TradeRecord trade = lookup.find(ORDER).orElseThrow();
 
+        assertThat(trade.orderId()).isEqualTo(ORDER);
+        assertThat(trade.filledAt()).isEqualTo(FILLED);
         assertThat(trade.symbol()).isEqualTo("BAC");
-        assertThat(trade.instrumentName()).isEqualTo("Bank of America, Corp.");
-        assertThat(trade.value()).isEqualByComparingTo(new BigDecimal("2426.73"));
+        assertThat(trade.side()).isEqualTo("BUY");
+        assertThat(trade.quantity()).isEqualTo(49);
+        assertThat(trade.price()).isEqualByComparingTo("49.525");
+        assertThat(trade.value()).isEqualTo(new BigDecimal("2426.73"));
         assertThat(trade.account()).isEqualTo(new TradeRecord.Account(ACCOUNT, "NT-DEMO-0001", "Maya Chen Individual",
                 "Maya Chen", "maya.chen@demo.nexttrade.local", "NOVICE", "ACTIVE"));
         assertThat(trade.events()).containsExactly(
-                new TradeRecord.Event("STATUS", "SUBMITTED", null, Instant.parse("2026-10-05T18:04:34Z"),
+                new TradeRecord.Event("STATUS", "SUBMITTED", null, FILLED.minusSeconds(2),
                         Map.of("reasonCode", "SUBMISSION_VALIDATED")),
-                new TradeRecord.Event("AUDIT", "ORDER_FILLED", "SYSTEM", Instant.parse("2026-10-05T18:04:36Z"),
+                new TradeRecord.Event("AUDIT", "ORDER_FILLED", "SYSTEM", FILLED,
                         Map.of("quantity", 49, "cashDelta", "-2426.73")));
+        verify(jdbc).query(contains("v_trade_clients"), any(RowMapper.class), eq(ORDER));
     }
 
     @Test
-    void anOrderMissingFromTheDatasetIsEmpty() {
-        assertThat(lookup.find(UUID.randomUUID())).isEmpty();
+    void anOrderWithNoFillIsEmptyAndItsStepsAreNotRead() {
+        trade();
+
+        assertThat(lookup.find(ORDER)).isEmpty();
+        verify(jdbc, never()).query(contains("order_status_history"), any(RowMapper.class),
+                any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aTraderWithoutAProfileHasNoName() throws SQLException {
+        trade(tradeRow(null, null));
+        steps();
+
+        assertThat(lookup.find(ORDER).orElseThrow().account().clientName()).isNull();
+    }
+
+    @Test
+    void aStepThatIsNotJsonFailsLoudly() throws SQLException {
+        trade(tradeRow("Maya", "Chen"));
+        steps(stepRow("AUDIT", "ORDER_FILLED", "SYSTEM", FILLED, "not json"));
+
+        assertThatThrownBy(() -> lookup.find(ORDER)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void trade(ResultSet... rows) {
+        when(jdbc.query(contains("FROM orders o"), any(RowMapper.class), eq(ORDER)))
+                .thenAnswer(call -> map(call.getArgument(1, RowMapper.class), rows));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void steps(ResultSet... rows) {
+        when(jdbc.query(contains("order_status_history"), any(RowMapper.class),
+                eq(ORDER), eq(ORDER), eq(ORDER), eq(ORDER), eq(ORDER)))
+                .thenAnswer(call -> map(call.getArgument(1, RowMapper.class), rows));
+    }
+
+    private static List<Object> map(RowMapper<?> mapper, ResultSet... rows) throws SQLException {
+        List<Object> mapped = new ArrayList<>();
+        for (int i = 0; i < rows.length; i++) {
+            mapped.add(mapper.mapRow(rows[i], i));
+        }
+        return mapped;
+    }
+
+    private static ResultSet tradeRow(String firstName, String lastName) throws SQLException {
+        ResultSet row = mock(ResultSet.class);
+        when(row.getObject("order_id", UUID.class)).thenReturn(ORDER);
+        when(row.getObject("filled_at", OffsetDateTime.class)).thenReturn(FILLED.atOffset(ZoneOffset.UTC));
+        when(row.getString("symbol")).thenReturn("BAC");
+        when(row.getString("instrument_name")).thenReturn("Bank of America, Corp.");
+        when(row.getString("side")).thenReturn("BUY");
+        when(row.getLong("filled_quantity")).thenReturn(49L);
+        when(row.getBigDecimal("execution_price")).thenReturn(new BigDecimal("49.52500000"));
+        when(row.getObject("account_id", UUID.class)).thenReturn(ACCOUNT);
+        when(row.getString("account_number")).thenReturn("NT-DEMO-0001");
+        when(row.getString("account_name")).thenReturn("Maya Chen Individual");
+        when(row.getString("trader_level")).thenReturn("NOVICE");
+        when(row.getString("account_status")).thenReturn("ACTIVE");
+        when(row.getString("first_name")).thenReturn(firstName);
+        when(row.getString("last_name")).thenReturn(lastName);
+        when(row.getString("email")).thenReturn("maya.chen@demo.nexttrade.local");
+        return row;
+    }
+
+    private static ResultSet stepRow(String source, String type, String actor, Instant at, String details)
+            throws SQLException {
+        ResultSet row = mock(ResultSet.class);
+        when(row.getString("source")).thenReturn(source);
+        when(row.getString("type")).thenReturn(type);
+        when(row.getString("actor")).thenReturn(actor);
+        when(row.getObject("occurred_at", OffsetDateTime.class)).thenReturn(at.atOffset(ZoneOffset.UTC));
+        when(row.getString("details")).thenReturn(details);
+        return row;
     }
 }

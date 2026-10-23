@@ -125,8 +125,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>org.springframework.http.ResponseEntity<wbr>&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)" class="member-name-link">submit</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
- @Valid <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)" class="member-name-link">submit</a><wbr>(<a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
+ @Valid <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
 </div>
@@ -167,18 +168,21 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest)">
+<section class="detail" id="submit(com.neueda.leap.security.JwtPrincipal,com.neueda.leap.order.submission.dto.SubmitOrderRequest,java.util.UUID)">
 <h3>submit</h3>
 <div class="member-signature"><span class="annotations">@PostMapping
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type">org.springframework.http.ResponseEntity&lt;<a href="../dto/OrderSubmissionResponse.html" title="class in com.neueda.leap.order.submission.dto">OrderSubmissionResponse</a>&gt;</span>&nbsp;<span class="element-name">submit</span><wbr><span class="parameters">(@AuthenticationPrincipal
  <a href="../../../security/JwtPrincipal.html" title="class in com.neueda.leap.security">JwtPrincipal</a>&nbsp;principal,
  @Valid @RequestBody
- @Valid <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request)</span></div>
+ @Valid <a href="../dto/SubmitOrderRequest.html" title="class in com.neueda.leap.order.submission.dto">SubmitOrderRequest</a>&nbsp;request,
+ @RequestAttribute(name="com.neueda.leap.order.submission.audit.requestId",required=false)
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/UUID.html" title="class or interface in java.util" class="external-link">UUID</a>&nbsp;requestId)</span></div>
 <div class="block">Submits a validated order on behalf of the authenticated caller.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
 <dd><code>principal</code> - authenticated identity supplied by Spring Security</dd>
 <dd><code>request</code> - submission payload validated before this method is called</dd>
+<dd><code>requestId</code> - id already returned as <code>X-Request-Id</code>; generated here only without the filter</dd>
 <dt>Returns:</dt>
 <dd>HTTP 201 for a new order or HTTP 200 for an existing retry</dd>
 </dl>

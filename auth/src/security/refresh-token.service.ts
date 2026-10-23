@@ -60,14 +60,18 @@ export class RefreshTokenService {
     const tokenHash = this.hash(rawRefreshToken);
     const session = await this.sessionRepository.findOne({ where: { tokenHash }, relations: ['user'] });
     if (!session) throw new InvalidRefreshTokenException();
-    return this.sessionRepository.manager.transaction(async manager => {
+    const result = await this.sessionRepository.manager.transaction(async manager => {
       const user = await this.lockUser(manager, session.user.userId);
       const repository = manager.getRepository(Session);
-      if (!user || user.userStatus !== 'ACTIVE' || !(await this.revokeActive(tokenHash, repository))) {
+      if (!user || !(await this.revokeActive(tokenHash, repository))) {
         throw new InvalidRefreshTokenException();
       }
+      // Commit revocation for an inactive account before rejecting the refresh.
+      if (user.userStatus !== 'ACTIVE') return null;
       return { user, newRawRefreshToken: await this.createSession(user, repository) };
     });
+    if (!result) throw new InvalidRefreshTokenException();
+    return result;
   }
 
   private lockUser(manager: EntityManager, userId: string): Promise<User | null> {

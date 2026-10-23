@@ -110,10 +110,11 @@ implements <a href="OrderLifecycleEventPublisher.html" title="interface in com.n
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String)" class="member-name-link">KafkaOrderLifecycleEventPublisher</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbcTemplate,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String,boolean)" class="member-name-link">KafkaOrderLifecycleEventPublisher</a><wbr>(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbcTemplate,
  org.springframework.kafka.core.KafkaTemplate&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;kafkaTemplate,
  com.fasterxml.jackson.databind.ObjectMapper&nbsp;objectMapper,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;topic)</code></div>
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;topic,
+ boolean&nbsp;enabled)</code></div>
 <div class="col-last even-row-color">
 <div class="block">Creates the publisher.</div>
 </div>
@@ -154,13 +155,15 @@ implements <a href="OrderLifecycleEventPublisher.html" title="interface in com.n
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String)">
+<section class="detail" id="&lt;init&gt;(org.springframework.jdbc.core.JdbcTemplate,org.springframework.kafka.core.KafkaTemplate,com.fasterxml.jackson.databind.ObjectMapper,java.lang.String,boolean)">
 <h3>KafkaOrderLifecycleEventPublisher</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">KafkaOrderLifecycleEventPublisher</span><wbr><span class="parameters">(org.springframework.jdbc.core.JdbcTemplate&nbsp;jdbcTemplate,
  org.springframework.kafka.core.KafkaTemplate&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;kafkaTemplate,
  com.fasterxml.jackson.databind.ObjectMapper&nbsp;objectMapper,
  @Value("${orders.kafka.topic:order-events}")
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;topic)</span></div>
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;topic,
+ @Value("${orders.kafka.enabled:true}")
+ boolean&nbsp;enabled)</span></div>
 <div class="block">Creates the publisher.</div>
 <dl class="notes">
 <dt>Parameters:</dt>
@@ -168,6 +171,7 @@ implements <a href="OrderLifecycleEventPublisher.html" title="interface in com.n
 <dd><code>kafkaTemplate</code> - Kafka client used to publish the JSON payload</dd>
 <dd><code>objectMapper</code> - shared JSON mapper</dd>
 <dd><code>topic</code> - Kafka topic used for order lifecycle events</dd>
+<dd><code>enabled</code> - whether to publish events (false for stacks without a broker)</dd>
 </dl>
 </section>
 </li>

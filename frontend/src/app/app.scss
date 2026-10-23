@@ -942,3 +942,15 @@ body.auth-phase .brand-name { font-size: 34px; line-height: 1.05; }
 .auth-copy h1 .headline-period { margin-left: 0.06em; }
 
 .auth-copy h1 .headline-trade { margin-right: 0.06em; }
+
+/* PS-30: why the user is back at sign-in after an inactivity sign-out. */
+.auth-panel .signed-out-notice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--surface-tone-02);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}

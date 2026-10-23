@@ -20,8 +20,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Trading accounts, their holdings and filled orders, worked out from the reporting dataset
- * ({@code reports/trades.csv}), the same file the Reports page reads. An account appears once it has a fill.
+ * Trading accounts, their holdings and filled orders, worked out from the fills on the reporting replica
+ * ({@link TradeDataset}), the same data the Reports page reads. An account appears once it has a fill.
  */
 @Repository
 public class ClientRepository {
