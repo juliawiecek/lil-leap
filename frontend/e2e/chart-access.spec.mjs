@@ -210,7 +210,7 @@ test('chart alternatives reflow at mobile width and the exact table scrolls with
   await page.screenshot({ path: 'test-results/ps25-mobile.png' });
 });
 
-test('Insights activity chart describes its real counts and provides a labelled table and focus voice', async ({ page }, info) => {
+test('Insights order chart and hourly bars describe their real counts with tables and focus voice', async ({ page }, info) => {
   test.skip(info.project.name !== 'Insights');
   await identity(page, info);
   await page.addInitScript(() => {
@@ -220,7 +220,11 @@ test('Insights activity chart describes its real counts and provides a labelled 
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     let json = [];
-    if (path.includes('activity')) json = [{ hour: '09:00', tradeCount: 3 }, { hour: '10:00', tradeCount: 6 }];
+    if (path.endsWith('/orders-today')) json = { date: '2026-10-21', dayStart: '2026-10-21T05:00:00Z', orders: [
+      { placedAt: '2026-10-21T14:00:00Z', symbol: 'AAPL', side: 'BUY', quantity: 1, status: 'FILLED', filledValue: 100 },
+      { placedAt: '2026-10-21T15:00:00Z', symbol: 'MSFT', side: 'SELL', quantity: 2, status: 'FILLED', filledValue: 200 },
+    ] };
+    else if (path.includes('activity')) json = [{ hour: '09:00', tradeCount: 3 }, { hour: '10:00', tradeCount: 6 }];
     else if (path.includes('top-instruments')) json = [{ instrument: 'AAPL', tradeCount: 6 }, { instrument: 'MSFT', tradeCount: 3 }];
     else if (path.includes('summary')) json = { date: '2026-10-21', fills: 9, orders: 9, accounts: 1, gross_executed_value: 100 };
     await route.fulfill({ json });
@@ -229,23 +233,28 @@ test('Insights activity chart describes its real counts and provides a labelled 
   const chart = page.locator('app-insights-chart');
   await expect(chart.locator('svg[role="img"]')).toBeVisible();
   await alternatives(page, chart.locator('svg[role="img"]'), chart);
-  await expect(chart.locator('tbody')).toContainText('3 trades');
-  await expect(chart.locator('tbody')).toContainText('6 trades');
+  await expect(chart.locator('tbody')).toContainText('1 orders');
+  await expect(chart.locator('tbody')).toContainText('2 orders');
+  await expect(chart.locator('tbody')).toContainText('Buy 1 AAPL');
+  const hourly = page.locator('app-insights-chart-access').filter({ has: page.locator('#insights-hourly-summary') });
+  await alternatives(page, page.locator('.bars'), hourly);
+  await expect(hourly.locator('tbody')).toContainText('3');
+  await expect(hourly.locator('tbody')).toContainText('6');
   const ranking = page.locator('app-insights-chart-access').filter({ has: page.locator('#insights-top-summary') });
   const rankingDescription = await alternatives(page, page.locator('.ranking-graphic'), ranking);
   await expect(rankingDescription).toContainText('AAPL has the most trades, 6');
-  await expect(ranking.locator('tbody')).toContainText('50%');
+  await expect(ranking.locator('tbody')).toContainText('66.7%');
   expect(await page.evaluate(() => window.chartSpeech.length)).toBe(0);
   await chart.getByRole('checkbox', { name: 'Read chart summaries aloud' }).check();
   await expect(ranking.getByRole('checkbox', { name: 'Read chart summaries aloud' })).toBeChecked();
   await page.locator('.ranking-graphic').focus();
   await expect.poll(() => page.evaluate(() => window.chartSpeech.join(' '))).toContain('AAPL has the most trades, 6');
   await chart.locator('svg[role="img"]').focus();
-  await expect.poll(() => page.evaluate(() => window.chartSpeech.join(' '))).toContain('3 trades on 09:00');
+  await expect.poll(() => page.evaluate(() => window.chartSpeech.join(' '))).toContain('Orders placed today');
   await page.keyboard.press('Home');
-  await expect(chart.locator('.chart-readout')).toContainText('09:00');
+  await expect(chart.locator('.chart-readout')).toContainText('Midnight');
   await page.keyboard.press('ArrowRight');
-  await expect(chart.locator('.chart-readout')).toContainText('10:00');
+  await expect(chart.locator('.chart-readout')).toContainText('9:00:00 AM CT');
   await page.keyboard.press('Escape');
   await expect(chart.locator('.chart-readout')).toContainText('arrow keys');
   await ranking.getByRole('checkbox', { name: 'Read chart summaries aloud' }).uncheck();

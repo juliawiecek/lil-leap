@@ -82,3 +82,22 @@ test('unsorted, duplicate and invalid observations share one normalized plot and
   assert.match(chart.description(), /from \$12\.00 on 2026-10-21 to \$20\.00 on 2026-10-22/);
   assert.doesNotMatch(chart.path(), /NaN|Infinity/);
 });
+
+test('timed points sit at their real times, so the gaps show how far apart they happened', t => {
+  const chart = component(t, InsightsChart);
+  chart.points = signal([{ label: 'a', value: 0, at: 0 }, { label: 'b', value: 1, at: 900 }, { label: 'c', value: 2, at: 1000 }]);
+  assert.equal(chart.timed(), true);
+  assert.equal(chart.x(0), 54);
+  assert.equal(chart.x(2), 626);
+  assert.ok(Math.abs(chart.x(1) - (54 + 0.9 * 572)) < 1e-9, 'the second point is 90% of the way across, not halfway');
+  assert.equal(chart.xAt(500), 54 + 0.5 * 572);
+  assert.match(chart.path(), /^M54,[\d.]+ L568\.8\d*,[\d.]+ L568\.8\d*,[\d.]+ L626,/, 'the step rises at the real time');
+  assert.equal(chart.anchorAt(54), 'start');
+  assert.equal(chart.anchorAt(340), 'middle');
+  assert.equal(chart.anchorAt(620), 'end');
+  chart.points.set([{ label: 'a', value: 1, at: 5 }, { label: 'b', value: 2 }]);
+  assert.equal(chart.timed(), false, 'one point without a time spaces the points evenly');
+  assert.equal(chart.x(1), 626);
+  chart.points.set([{ label: 'a', value: 1, at: 5 }, { label: 'b', value: 1, at: 5 }]);
+  assert.equal(chart.xAt(5), 54, 'two points at the same instant do not divide by zero');
+});

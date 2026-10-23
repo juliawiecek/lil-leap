@@ -16,13 +16,16 @@
   font-display: swap;
 }
 :root {
-  --font-ui: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --nt-background: #0c1011;
-  --nt-text: #f1f3f5;
-  --nt-muted: #b1bac8;
-  --nt-green: #7ede8b;
-  --nt-border: #20282c;
-  --nt-panel: linear-gradient(120deg, #101516, #10161770);
+  /* NextTrade brand: the same font, colours and green as the client app. */
+  --font-ui: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', Arial, sans-serif;
+  --nt-background: #070807;
+  --nt-surface: #0b0d0c;
+  --nt-text: #f2f0e9;
+  --nt-muted: #a4a79e;
+  --nt-subtle: #7e8279;
+  --nt-green: #94c973;
+  --nt-border: #1f231f;
+  --nt-panel: #0b0d0c;
   --font-mono: 'IBM Plex Mono', Consolas, monospace;
   color-scheme: dark;
 }
@@ -30,6 +33,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #0c1011;
+  background: #070807;
   font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }

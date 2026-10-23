@@ -1,5 +1,5 @@
-// Shell chrome only: sidebar, top bar, footer and skip link. Shared page styles are in
-// ../shared/workspace.scss.
+// Shell chrome only: sidebar, top bar, footer and skip link, in NextTrade's look. Shared page
+// styles are in ../shared/workspace.scss.
 :host {
   display: block;
   --bg: var(--nt-background);
@@ -9,122 +9,207 @@
   --text: var(--nt-text);
   color: var(--text);
   background: var(--bg);
-  font: 12px/1.4 var(--font-ui);
+  font: 13px/1.45 var(--font-ui);
   color-scheme: dark;
   min-height: 100dvh;
 }
 .shell {
   display: grid;
-  grid-template-columns: 218px minmax(0, 1fr);
+  grid-template-columns: 228px minmax(0, 1fr);
   min-height: 100dvh;
-  background: radial-gradient(ellipse at 60% 45%, #11171844, transparent 75%);
+  background-color: #070807;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 .sidebar {
   position: sticky;
   top: 0;
   height: 100dvh;
-  padding: 20px 15px 12px 14px;
-  background: linear-gradient(110deg, #0d1112, #0c1011);
-  border-right: 1px solid #1b2225;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid #1a1d1a;
+  background: #070807;
   z-index: 20;
 }
 .brand {
   display: flex;
   align-items: center;
-  margin: 0 11px;
-  color: #f5f6f7;
-  font: 650 21px var(--font-ui);
-  letter-spacing: -0.8px;
+  gap: 9px;
+  height: 56px;
+  padding: 0 18px;
+  border-bottom: 1px solid #1a1d1a;
+  color: #f2f0e9;
   text-decoration: none;
   white-space: nowrap;
 }
-.brand > span {
-  color: #87d996;
+.brand b {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.brand b span {
+  color: #94c973;
+}
+.brand em {
+  font-style: normal;
+  font-size: 15px;
+  font-weight: 600;
+  color: #a4a79e;
 }
 .brand-mark {
-  margin-right: 8px;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
 }
-.workspace-label {
-  margin: 9px 11px 0;
-  font-size: 10px;
-  font-weight: 500;
-  color: #99b8ce;
-  letter-spacing: 0.25px;
-}
-.workspace-label span {
-  color: var(--muted);
-}
 nav {
-  display: grid;
-  gap: 10px;
-  margin-top: 27px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 16px 10px;
   overflow-y: auto;
   min-height: 0;
 }
 .nav-group {
-  margin: 0;
-  padding: 12px 12px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  margin: 10px 10px 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: #858980;
 }
 nav a {
   display: flex;
   align-items: center;
-  gap: 13px;
-  width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 6px;
-  color: #bec7d5;
-  font-size: 13px;
+  gap: 11px;
+  height: 36px;
+  padding: 0 10px;
+  border-left: 2px solid transparent;
+  border-radius: 0 4px 4px 0;
+  color: #a4a79e;
+  font-size: 13.5px;
+  font-weight: 500;
   text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+nav a app-dashboard-icon {
+  width: 16px;
+  height: 16px;
 }
 nav a:hover {
-  background: #151f1d;
+  background: #121512;
+  color: #f2f0e9;
 }
 nav a.active {
-  background: #19251f;
-  color: #a6e4ac;
+  border-left-color: #94c973;
+  background: #121512;
+  color: #f2f0e9;
+  font-weight: 700;
+}
+nav a:focus-visible,
+.brand:focus-visible,
+.sign-out:focus-visible {
+  outline: 2px solid #f2efe6;
+  outline-offset: 2px;
 }
 .sidebar-footer {
-  margin: auto 10px 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  color: #b1bac8;
-  font: 10px var(--font-mono);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+  padding: 14px 16px;
+  border-top: 1px solid #1a1d1a;
 }
-.sidebar-footer p {
-  font: 12px/1.55 var(--font-ui);
-  color: var(--muted);
-  margin: 15px 0;
+.environment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #a4a79e;
 }
-.environment-dot {
-  display: inline-block;
+.environment i {
   width: 6px;
   height: 6px;
-  background: var(--accent);
   border-radius: 50%;
-  margin-right: 7px;
+  background: #94c973;
+}
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.avatar {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #1f231f;
+  color: #f2f0e9;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.identity {
+  min-width: 0;
+}
+.identity strong {
+  display: block;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.identity span {
+  display: block;
+  font-size: 11.5px;
+  color: #7e8279;
+}
+.sign-out {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 122, 110, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: #ff7a6e;
+  font: 700 12.5px/1 var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.sign-out:hover {
+  border-color: #ff7a6e;
+  background: rgba(255, 122, 110, 0.1);
+  color: #ff8f85;
 }
 .workspace {
   min-width: 0;
 }
 .topbar {
-  height: 58px;
-  border-bottom: 1px solid #1c2326;
-  padding: 0 25px;
   display: flex;
   align-items: center;
-  gap: 24px;
-  background: linear-gradient(100deg, #10161770, #11181a80);
+  gap: 14px;
+  height: 56px;
+  padding: 0 24px;
+  border-bottom: 1px solid #1a1d1a;
+  background: #070807;
+}
+.crumb {
+  font-size: 13px;
+  color: #7e8279;
+}
+.crumb i {
+  margin: 0 8px;
+  font-style: normal;
+  color: #3a3f39;
+}
+.crumb b {
+  color: #f2f0e9;
+  font-weight: 700;
 }
 .top-actions {
   display: flex;
@@ -132,52 +217,43 @@ nav a.active {
   gap: 14px;
   margin-left: auto;
 }
+.clock {
+  font: 500 12px var(--font-mono);
+  color: #a4a79e;
+}
+.role-tag {
+  padding: 3px 8px;
+  border: 1px solid #2c312b;
+  border-radius: 4px;
+  color: #d6d4cc;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
 .icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: none;
   border: 0;
   padding: 7px;
-}
-.avatar {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(140deg, #44515c, #2c343b);
-  color: #eef3f7;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.identity strong {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-}
-.identity span {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
+  background: none;
+  color: inherit;
 }
 .menu {
   display: none;
 }
 main {
-  padding: 27px 28px 16px;
-  max-width: 1850px;
-  margin: auto;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px 16px;
 }
 footer {
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  color: #939eaf;
-  font-size: 10px;
-  margin-top: 10px;
-  padding: 6px 0;
+  padding: 8px 0;
+  color: #4a5048;
+  font-size: 11.5px;
 }
 .skip-link {
   position: fixed;
@@ -186,43 +262,13 @@ footer {
   z-index: 100;
   padding: 12px;
   background: var(--accent);
-  color: #111;
+  color: #0b130a;
 }
 .skip-link:focus {
   top: 15px;
 }
-@media (min-width: 1650px) {
-  main {
-    padding: 34px 36px;
-  }
-}
-@media (max-width: 1200px) {
-  .shell {
-    grid-template-columns: 185px minmax(0, 1fr);
-  }
-  .sidebar {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  .brand {
-    font-size: 20px;
-  }
-  nav a {
-    gap: 9px;
-    font-size: 11px;
-  }
-  main {
-    padding: 24px 20px;
-  }
-  .topbar {
-    padding: 0 20px;
-  }
-  .top-actions {
-    gap: 9px;
-  }
-}
 @media (max-width: 980px) {
-  .identity {
+  .clock {
     display: none;
   }
 }
@@ -234,7 +280,7 @@ footer {
     visibility: hidden;
     position: fixed;
     left: -240px;
-    width: 218px;
+    width: 228px;
     transition: left 0.2s;
   }
   .sidebar.open {
@@ -246,23 +292,14 @@ footer {
     display: inline-flex;
   }
   .topbar {
-    height: 65px;
-    padding: 0 12px;
-    gap: 10px;
     position: sticky;
     top: 0;
     z-index: 25;
-  }
-  .avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 10px;
-  }
-  .top-actions {
-    gap: 8px;
+    padding: 0 12px;
+    gap: 10px;
   }
   main {
-    padding: 22px 14px;
+    padding: 20px 16px 16px;
   }
   footer {
     flex-direction: column;

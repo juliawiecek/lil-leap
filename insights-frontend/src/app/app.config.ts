@@ -6,7 +6,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { firstValueFrom } from 'rxjs';
 import {
   LIVE_REPORTS, REPORT_FILES, attachmentFilename,
-  type ActivityPoint, type LiveReports, type ReportFiles, type ReportSummary, type TopInstrument,
+  type ActivityPoint, type LiveReports, type OrdersToday, type ReportFiles, type ReportSummary, type TopInstrument,
 } from './live-reports';
 import {
   CLIENT_ACCOUNTS, queryParams,
@@ -27,6 +27,7 @@ export const appConfig: ApplicationConfig = {
         load: () => firstValueFrom(http.get<ReportSummary>('/api/v1/reports/summary')),
         topInstruments: () => firstValueFrom(http.get<TopInstrument[]>('/api/v1/reports/insights/top-instruments')),
         activityTrend: () => firstValueFrom(http.get<ActivityPoint[]>('/api/v1/reports/insights/client-activity-trend')),
+        ordersToday: () => firstValueFrom(http.get<OrdersToday>('/api/v1/reports/orders-today')),
       };
     } },
     { provide: CLIENT_ACCOUNTS, useFactory: (): ClientAccounts => {

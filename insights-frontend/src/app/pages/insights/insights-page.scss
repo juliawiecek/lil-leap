@@ -1,14 +1,547 @@
+// Insights home in NextTrade's look: one lighter band for today's headline figures, then two
+// sections on their own surfaces. Selectors start at :host so they win over the shared workspace
+// styles they refine.
 :host {
   display: block;
+  --accent: #94c973;
+  --line: #1f231f;
 }
-.ranking-graphic:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.bar-cell {
-  width: 40%;
+:host .mono {
+  font-family: var(--font-mono);
+  font-size: inherit;
+  font-weight: 500;
 }
-.bar {
+
+/* Today at a glance: a full-width band one step lighter than the page */
+:host .glance {
+  margin: -24px -32px 0;
+  padding: 26px 32px 24px;
+  border-bottom: 1px solid #1f231f;
+  position: relative;
+  background: none;
+}
+/* NextTrade green on the left of the header's bottom line, like the underline of a selected tab. */
+:host .glance::after {
+  content: '';
+  position: absolute;
+  left: var(--band-inset, 32px);
+  bottom: -1px;
+  width: 160px;
+  height: 2px;
+  background: var(--nt-green);
+}
+:host .glance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+:host .glance h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  word-spacing: 0.12em;
+  line-height: 1.15;
+}
+/* The time of day in NextTrade's "Trade" green. */
+:host .glance h1 .accent {
+  color: #94c973;
+}
+:host .glance .subtitle {
+  margin-top: 4px;
+  color: #a4a79e;
+  font-size: 13.5px;
+}
+:host .sentence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 0;
+  color: #a4a79e;
+  font-size: 14px;
+  text-align: right;
+}
+:host .sentence .lead-in {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7e8279;
+}
+:host .sentence b {
+  color: #f2f0e9;
+  font-weight: 600;
+}
+:host .sentence .sep {
+  margin: 0 8px;
+  color: #4a5048;
+}
+:host .glance .error {
+  margin: 16px 0 0;
+}
+:host .glance-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 48px;
+  align-items: end;
+  margin-top: 22px;
+}
+:host .hero-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a4a79e;
+}
+:host .hero-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 4px;
+}
+:host .hero-figure b {
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+:host .hero-note {
+  color: #a4a79e;
+  font-size: 14px;
+}
+:host .hero-note .mono {
+  color: #f2f0e9;
+}
+:host .hero-chart {
+  margin-top: 14px;
+}
+:host .hero-chart app-insights-chart {
+  display: block;
+}
+:host .hero-chart {
+  --line: #1f231f;
+  --muted: #7e8279;
+  --chart-fill: #121a10;
+}
+:host .hero-note .up {
+  color: #94c973;
+  font-weight: 600;
+}
+:host .updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #8b8f86;
+}
+:host .updated i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94c973;
+}
+:host .hero-empty {
+  margin: 18px 0 0;
+  color: #7e8279;
+}
+
+/* Traded value across the top, orders and accounts side by side, fill rate across the bottom; hairlines
+   between, traded value in green as the day's headline money figure. */
+:host .stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  padding-left: 28px;
+  border-left: 1px solid #1f231f;
+}
+:host .stats > div {
+  min-width: 0;
+  padding: 16px 0;
+  border-top: 1px solid #1f231f;
+}
+:host .stats > .value,
+:host .stats > .rate {
+  grid-column: 1 / -1;
+}
+:host .stats > .value {
+  padding-top: 2px;
+  border-top: 0;
+}
+:host .stats > .pair-left {
+  padding-right: 20px;
+  border-right: 1px solid #1f231f;
+}
+:host .stats > .pair-right {
+  padding-left: 20px;
+}
+:host .stats dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b8f86;
+}
+:host .stats dd {
+  margin: 0;
+}
+:host .stats .figure {
+  margin-top: 8px;
+  font: 600 30px/1.05 var(--font-mono);
+  letter-spacing: -0.03em;
+  color: #f2f0e9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:host .stats .figure.money {
+  font-size: 34px;
+  color: #94c973;
+}
+:host .stats .figure .cents {
+  color: #5f8a48;
+}
+:host .stats .rate .figure {
+  font-size: 24px;
+}
+:host .stats .note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #8b8f86;
+}
+:host .stats .note .mono {
+  color: #d6d4cc;
+}
+:host .rate-bar {
+  display: block;
+  height: 4px;
+  margin: 2px 0 7px;
+  border-radius: 2px;
+  background: #1a1d1a;
+}
+:host .rate-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: #94c973;
+  transition: width 0.6s ease;
+}
+
+/* Most traded tape */
+:host .tape {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  margin: 0 -32px;
+  border-bottom: 1px solid #1a1d1a;
+  background: #070807;
+  overflow: hidden;
+}
+:host .tape-live {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 32px;
+  color: #94c973;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+:host .tape-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94c973;
+  animation: insights-pulse 2.2s ease-out infinite;
+}
+:host .tape-window {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+/* A short list sits still, so it does not need the fade that scrolling names slide in through. */
+:host .tape-window.still {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:host .tape-track {
+  display: flex;
+  width: max-content;
+  animation: insights-tape 40s linear infinite;
+}
+:host .tape:hover .tape-track {
+  animation-play-state: paused;
+}
+:host .tape ul {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  padding: 0 14px;
+  list-style: none;
+}
+:host .tape li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  color: #7e8279;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+:host .tape li b {
+  color: #f2f0e9;
+  font-weight: 800;
+}
+:host .tape li .mono {
+  color: #d6d4cc;
+}
+:host .tape li .share {
+  margin-left: 4px;
+  color: #858980;
+  font-size: 11.5px;
+}
+:host .tape-track.still {
+  animation: none;
+}
+/* Fewer than four stocks: no ticker, just the stocks laid out evenly with a hairline between them. */
+:host .tape-track.still ul {
+  gap: 0;
+  padding: 0;
+}
+:host .tape-track.still li {
+  padding: 0 28px;
+  border-left: 1px solid #1f231f;
+}
+:host .tape-track.still li:first-child {
+  padding-left: 12px;
+  border-left: 0;
+}
+@keyframes insights-tape {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes insights-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0.5); }
+  70% { box-shadow: 0 0 0 5px rgba(148, 201, 115, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(148, 201, 115, 0); }
+}
+
+/* Two sections, each on its own lighter surface, with the page showing between them */
+:host .sections {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+:host .area {
+  min-width: 0;
+  padding: 22px 24px 20px;
+  border-radius: 12px;
+  background: #0b0d0c;
+}
+:host .area-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1a1d1a;
+}
+:host .area-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+:host .area-heading .muted {
+  color: #7e8279;
+  font-size: 12.5px;
+}
+:host .bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 200px;
+  padding-top: 18px;
+}
+:host .bar-col {
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+:host .bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: #2c312b;
+  transition: height 0.6s ease;
+}
+:host .bar-col:hover .bar {
+  background: #3a4038;
+}
+:host .bar-col.now .bar {
+  background: #94c973;
+}
+:host .bar-count,
+:host .bar-hour {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+  color: #858980;
+  min-height: 14px;
+}
+:host .bar-col.now .bar-count {
+  color: #94c973;
+}
+:host .bar-col.now .bar-hour {
+  color: #f2f0e9;
+}
+:host .area-note {
+  margin: 14px 0 0;
+  color: #7e8279;
+  font-size: 12.5px;
+}
+:host .area-note .mono {
+  color: #d6d4cc;
+}
+:host .area .empty {
+  padding: 40px 16px;
+}
+:host .top-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  padding-top: 12px;
+}
+:host .ring {
+  position: relative;
+  width: 124px;
+  height: 124px;
+}
+:host .ring svg {
+  width: 124px;
+  height: 124px;
+  transform: rotate(-90deg);
+}
+:host .ring circle {
+  fill: none;
+  stroke-width: 4.5;
+  transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;
+}
+:host .ring .ring-track {
+  stroke: #141714;
+}
+:host .ring > span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+:host .ring b {
+  font-size: 16px;
+}
+:host .ring small {
+  color: #7e8279;
+  font-size: 10.5px;
+}
+:host table {
+  font-size: 13px;
+}
+:host th {
+  padding: 8px 8px;
+  border-bottom: 1px solid #1a1d1a;
+  background: none;
+  color: #7e8279;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+:host td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #121512;
+}
+:host tbody tr:hover {
+  background: #121512;
+}
+:host .swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 2px;
+  vertical-align: 1px;
+}
+:host .share-cell {
+  width: 32%;
+}
+:host .share-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: #141714;
+}
+:host .share-bar i {
   display: block;
   height: 6px;
   min-width: 4px;
-  border-radius: 10px;
-  background: var(--accent);
+  border-radius: 3px;
 }
+
+@media (max-width: 1100px) {
+  :host .stats {
+    padding-left: 0;
+    border-left: 0;
+  }
+  :host .glance-body,
+  :host .sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :host .glance-body {
+    gap: 20px;
+  }
+}
+@media (max-width: 680px) {
+  :host .glance {
+    margin: -20px -16px 0;
+    --band-inset: 16px;
+    padding: 20px 16px;
+  }
+  :host .tape {
+    margin: 0 -16px;
+  }
+  :host .hero-figure b {
+    font-size: 40px;
+  }
+  :host .top-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :host .ring {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :host .tape-track,
+  :host .tape-live i {
+    animation: none;
+  }
+  :host .tape-window {
+    overflow-x: auto;
+  }
+}
+
+.ranking-graphic:focus-visible, .bars:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

@@ -31,6 +31,7 @@ SELECT to_regclass('public.users') IS NULL AS needs_schema \gset
 \ir migrations/010_cash_transfers.sql
 \ir migrations/011_order_reference_price.sql
 \ir migrations/012_operations_role.sql
+\ir startup-migrations.sql
 
 -- Idempotent seeds, so they also run on an existing database: the instrument
 -- universe, dev test logins (TS-DB-04), and demo trading activity (which adds

@@ -1,33 +1,39 @@
-@if (fromAccount()) {
-  <button type="button" class="text-button back-link" (click)="backToAccount()">← Back to client account</button>
-}
-<app-page-heading title="Trade lookup" subtitle="One trade, the client behind it and every recorded step, oldest first, for audits and client disputes." />
-<form class="filter-bar" method="get" (submit)="$event.preventDefault(); submit()">
-  <label class="grow"
-    >Order ID<input
-      name="orderId"
-      autocomplete="off"
-      spellcheck="false"
-      placeholder="e.g. 3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f"
-      [value]="query()"
-      (input)="query.set($any($event.target).value)"
-  /></label>
-  <button class="primary" type="submit" [disabled]="loading()">
-    {{ loading() ? 'Looking up…' : 'Look up' }}
-  </button>
-</form>
+<section class="band" aria-labelledby="lookup-heading">
+  @if (fromAccount()) {
+    <button type="button" class="back-link" (click)="backToAccount()">← Back to client account</button>
+  }
+  <h1 id="lookup-heading">Trade lookup</h1>
+  <p class="lede">One trade, the client behind it and every recorded step, oldest first, for audits and client disputes.</p>
+  <form class="lookup" method="get" (submit)="$event.preventDefault(); submit()">
+    <label class="search"
+      ><span class="sr-only">Order ID</span
+      ><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg
+      ><input
+        name="orderId"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Order ID, e.g. 3f2c9a1e-5b7d-4c8e-9f01-2a3b4c5d6e7f"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+    /></label>
+    <button class="go" type="submit" [disabled]="loading()">
+      {{ loading() ? 'Looking up…' : 'Look up' }}
+    </button>
+  </form>
+</section>
+
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
 @if (result(); as trade) {
-  <div class="two-columns">
-    <section class="panel" aria-labelledby="trade-title">
-      <div class="panel-heading">
+  <div class="facts">
+    <section aria-labelledby="trade-title">
+      <div class="section-head">
         <div>
-          <p class="eyebrow">ORDER</p>
-          <h2 id="trade-title" class="mono order-id">{{ trade.orderId }}</h2>
+          <span class="kicker">Order</span>
+          <h2 id="trade-title" class="order-id">{{ trade.orderId }}</h2>
         </div>
-        <span class="badge">Filled</span>
+        <span class="state ok">Filled</span>
       </div>
       <dl class="details">
         <dt>Stock</dt>
@@ -42,10 +48,13 @@
         <dd>{{ dateTime(trade.filledAt) }}</dd>
       </dl>
     </section>
-    <section class="panel" aria-labelledby="client-title" data-a11y-sensitive>
-      <div class="panel-heading">
-        <h2 id="client-title">Client</h2>
-        <span class="badge" [class.rejected]="trade.account.status === 'BLOCKED' || trade.account.status === 'CLOSED'">{{ label(trade.account.status) }}</span>
+    <section aria-labelledby="client-title" data-a11y-sensitive>
+      <div class="section-head">
+        <div>
+          <span class="kicker">Client</span>
+          <h2 id="client-title">{{ trade.account.clientName || trade.account.accountNumber }}</h2>
+        </div>
+        <span class="state" [class.bad]="trade.account.status === 'BLOCKED' || trade.account.status === 'CLOSED'" [class.ok]="trade.account.status === 'ACTIVE'">{{ label(trade.account.status) }}</span>
       </div>
       <dl class="details">
         <dt>Name</dt>
@@ -60,10 +69,10 @@
     </section>
   </div>
   @if (summary(); as c) {
-    <section class="panel" aria-labelledby="checks-title">
-      <div class="panel-heading">
+    <section class="block" aria-labelledby="checks-title">
+      <div class="block-head">
         <h2 id="checks-title">Record checks</h2>
-        <span class="badge" [class.rejected]="problems() > 0">{{ problems() ? problems() + ' to review' : 'All consistent' }}</span>
+        <span class="state" [class.bad]="problems() > 0" [class.ok]="problems() === 0">{{ problems() ? problems() + ' to review' : 'All consistent' }}</span>
       </div>
       <ul class="checks">
         @for (check of c.checks; track check.label) {
@@ -76,13 +85,13 @@
       </ul>
     </section>
   }
-  <section class="panel" aria-labelledby="trail-title">
-    <div class="panel-heading">
+  <section class="block" aria-labelledby="trail-title">
+    <div class="block-head">
       <h2 id="trail-title">Recorded steps</h2>
-      <span class="badge neutral">{{ trade.events.length }} steps, oldest first</span>
+      <span class="count">{{ trade.events.length }} steps, oldest first</span>
     </div>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
-      <table>
+      <table class="steps">
         <caption class="sr-only">Recorded steps for order {{ trade.orderId }}</caption>
         <thead>
           <tr>
@@ -95,9 +104,9 @@
         <tbody>
           @for (event of trade.events; track $index) {
             <tr>
-              <td>{{ dateTime(event.occurredAt) }}</td>
-              <td>{{ sourceLabel(event.source) }}</td>
-              <td>{{ label(event.type) }}</td>
+              <td class="when">{{ dateTime(event.occurredAt) }}</td>
+              <td class="quiet">{{ sourceLabel(event.source) }}</td>
+              <td class="step">{{ label(event.type) }}</td>
               <td class="details-cell">
                 @for (item of fields(event); track $index) {
                   <span><b>{{ item.label }}</b> {{ item.value }}</span>
@@ -116,9 +125,8 @@
     </div>
   </section>
 } @else if (!loading() && !error()) {
-  <section class="panel empty">
-    <app-dashboard-icon name="search" />
+  <div class="start">
     <h2>Look up a trade</h2>
     <p>Enter an order ID to see what was traded and by which client, and every recorded step from submission to settlement.</p>
-  </section>
+  </div>
 }

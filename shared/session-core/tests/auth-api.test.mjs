@@ -108,6 +108,10 @@ test('maps error codes to fixed messages and never echoes the server message', a
       /minimum of \$5,000 in investable assets/,
     ],
     [
+      { status: 422, body: { error: 'INITIAL_DEPOSIT_ABOVE_LIQUIDITY', message: 'x' } },
+      /initial deposit cannot be more than your liquidity position/,
+    ],
+    [
       { status: 500, body: { error: 'INTERNAL_ERROR', message: 'password=secret-canary' } },
       'Something went wrong. Please try again.',
     ],

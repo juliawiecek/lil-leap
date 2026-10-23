@@ -19,7 +19,7 @@ export interface TradeEvent {
   occurredAt: string;
   details: Record<string, unknown> | null;
 }
-/** One trade as the reporting dataset (`reports/trades.csv`) records it; the dataset holds filled orders only. */
+/** One filled trade, read from the reporting replica. */
 export interface TradeRecord {
   orderId: string;
   filledAt: string;

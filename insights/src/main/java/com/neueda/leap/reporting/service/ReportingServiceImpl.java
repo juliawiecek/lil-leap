@@ -105,7 +105,7 @@ public class ReportingServiceImpl implements ReportingService {
      * Creates the reporting service.
      *
      * @param repository existing read-only reporting repository used by the dashboard insights endpoints
-     * @param clock source of the current instant, used to find today's New York trading day
+     * @param clock source of the current instant, used to find today's Central-time day
      * @param dataset every fill, read from the reporting replica (BR-16)
      */
     public ReportingServiceImpl(TradeReportingRepository repository, Clock clock, TradeDataset dataset) {
@@ -390,8 +390,8 @@ public class ReportingServiceImpl implements ReportingService {
     }
 
     private static ActivityKey activityKey(Trade trade) {
-        ZonedDateTime newYorkTime = trade.filledAt().atZone(MarketDay.ZONE);
-        return new ActivityKey(newYorkTime.toLocalDate(), newYorkTime.getHour());
+        ZonedDateTime centralTime = trade.filledAt().atZone(MarketDay.ZONE);
+        return new ActivityKey(centralTime.toLocalDate(), centralTime.getHour());
     }
 
     private record InstrumentKey(String instrumentSymbol, String instrumentName, String assetClass, String marketCode) {

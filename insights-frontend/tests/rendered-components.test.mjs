@@ -90,3 +90,29 @@ test('report download creates a CSV blob, clicks its filename, and revokes the U
   assert.deepEqual(revoked, []);
   t.mock.timers.tick(1000); assert.deepEqual(revoked, ['blob:report']);
 });
+
+test('a timed chart labels real times and shows each point\'s detail in the readout', async t => {
+  const fixture = await render(t, InsightsChart);
+  fixture.componentRef.setInput('points', [
+    { label: 'Midnight', value: 0, at: 0 },
+    { label: '8:30:21 AM CT', value: 1, at: 30_621_000, note: 'Buy 3 MSFT · $1,524.46' },
+    { label: 'Now', value: 1, at: 36_000_000 },
+  ]);
+  fixture.componentRef.setInput('ticks', [{ at: 0, label: '12 AM' }, { at: 18_000_000, label: '5 AM' }, { at: 36_000_000, label: '10 AM' }]);
+  fixture.componentRef.setInput('prefix', '');
+  fixture.componentRef.setInput('valueLabel', 'Orders so far');
+  fixture.detectChanges();
+  const labels = [...fixture.nativeElement.querySelectorAll('svg > text')].map((text) => [text.textContent.trim(), text.getAttribute('text-anchor')]);
+  assert.deepEqual(labels.slice(-3), [['12 AM', 'start'], ['5 AM', 'middle'], ['10 AM', 'end']]);
+  const image = fixture.nativeElement.querySelector('svg[tabindex="0"]');
+  assert.ok(image, 'the entire chart is one keyboard stop');
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); fixture.detectChanges();
+  const readout = fixture.nativeElement.querySelector('.chart-readout');
+  assert.equal(readout.querySelector('.note').textContent.trim(), 'Buy 3 MSFT · $1,524.46');
+  assert.match(readout.textContent, /8:30:21 AM CT\s*Buy 3 MSFT · \$1,524\.46\s*Orders so far\s*1/);
+  assert.match(fixture.componentInstance.description(), /Buy 3 MSFT/);
+  assert.equal(fixture.componentInstance.dataTable().rows[1][2], 'Buy 3 MSFT · $1,524.46');
+  image.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' })); fixture.detectChanges();
+  assert.equal(fixture.nativeElement.querySelector('.chart-readout .note'), null, 'a point without a detail shows none');
+});

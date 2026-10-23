@@ -46,6 +46,7 @@ services:
       - password_reset_outbox:/app/outbox
     depends_on:
       db: {condition: service_healthy}
+      db-migrate: {condition: service_completed_successfully}
 
   holdings:
     build: ./nextTrade-holdings
@@ -57,6 +58,7 @@ services:
       QUOTE_SEED: ${QUOTE_SEED:-42}
     depends_on:
       db: {condition: service_healthy}
+      db-migrate: {condition: service_completed_successfully}
 
   orders:
     build: ./nextTrade-orders
@@ -67,6 +69,7 @@ services:
       NEXTTRADE_MARKET_RESPECT_HOURS: ${NEXTTRADE_MARKET_RESPECT_HOURS:-true}
     depends_on:
       db: {condition: service_healthy}
+      db-migrate: {condition: service_completed_successfully}
 
   # BR-16: every Insights page reads the read-only replica, never the main database, so it cannot load live trading.
   insights:
@@ -110,11 +113,26 @@ services:
       # Demo clients and trade book, which Insights reads through the replica. Dev/demo only.
       - ./db/seeds/003_demo_trading_activity.sql:/docker-entrypoint-initdb.d/06-demo-trading-activity.sql:ro
 
-  # Runs on every start and exits: the trader-name view (migration 018), then the reporting role and replication
-  # slot (db/init-reporting.sh). All idempotent, so new and existing volumes get the replica with no manual step.
+  # Repeatable upgrades run before application startup, including on existing volumes.
+  # Admin credentials stay in this short-lived service, never in application containers.
+  db-migrate:
+    image: postgres:16-alpine
+    entrypoint: ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-f", "/migrations/startup-migrations.sql"]
+    environment:
+      PGHOST: db
+      PGUSER: main
+      PGDATABASE: nexttrade
+      PGPASSWORD: ${POSTGRES_PASSWORD:-main_password}
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - ./db/startup-migrations.sql:/migrations/startup-migrations.sql:ro
+      - ./db/migrations:/migrations/migrations:ro
+
+  # Runs after schema upgrades: creates the reporting role and replication slot.
   reporting-setup:
     image: postgres:16-alpine
-    entrypoint: ["bash", "-c", "psql -v ON_ERROR_STOP=1 -f /reporting/018_trade_clients.sql && bash /reporting/init-reporting.sh"]
+    entrypoint: ["bash", "/reporting/init-reporting.sh"]
     environment:
       PGHOST: db
       PGUSER: main
@@ -126,8 +144,8 @@ services:
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-replication_dev_password}
     depends_on:
       db: {condition: service_healthy}
+      db-migrate: {condition: service_completed_successfully}
     volumes:
-      - ./db/migrations/018_trade_clients.sql:/reporting/018_trade_clients.sql:ro
       - ./db/init-reporting.sh:/reporting/init-reporting.sh:ro
 
   # Streaming read-only copy of db for Insights (db/start-reporting-replica.sh).

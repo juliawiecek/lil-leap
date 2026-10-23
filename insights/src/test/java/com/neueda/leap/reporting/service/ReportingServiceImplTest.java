@@ -35,7 +35,7 @@ class ReportingServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-10-01T15:30:00Z");
     private static final Clock UTC_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
-    /** 15:30 UTC is 11:30 in New York, so today is October 1 there too. */
+    /** 15:30 UTC is 10:30 Central time, so today is October 1 there too. */
     private static final MarketDay TODAY_RANGE = new MarketDay(LocalDate.of(2026, 10, 1));
     private static final ReportDateRange FULL_RANGE =
             new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 31));
@@ -44,7 +44,7 @@ class ReportingServiceImplTest {
     private final ReplicaDatabase replica = new ReplicaDatabase();
     private final ReportingServiceImpl service = new ReportingServiceImpl(repository, UTC_CLOCK, replica.dataset());
 
-    /** A small trade book on the replica; New York is UTC-4 in October. */
+    /** A small trade book on the replica; Central time is UTC-5 in October. */
     ReportingServiceImplTest() {
         replica.instrument("AAPL", "Apple Inc.", "COMMON_STOCK", "NASDAQ");
         replica.instrument("JPM", "JPMorgan Chase & Co.", "COMMON_STOCK", "NYSE");
@@ -59,13 +59,13 @@ class ReportingServiceImplTest {
         replica.fill(ada, "AAPL", "BUY", 5, "230.00", "2026-10-16T14:10:00Z");
         replica.fill(ada, "AAPL", "SELL", 2, "235.00", "2026-10-16T14:40:00Z");
         replica.fill(sam, "JPM", "BUY", 4, "300.00", "2026-10-16T18:00:00Z");
-        // 03:30 UTC on the 17th is still the 16th (23:30) in New York.
+        // 03:30 UTC on the 17th is still the 16th (22:30) in Central time.
         replica.fill(maya, "KO", "SELL", 3, "68.50", "2026-10-17T03:30:00Z");
         replica.fill(sam, "KO", "BUY", 1, "70.00", "2026-10-17T14:00:00Z");
     }
 
     @Test
-    void overviewUsesTodaysNewYorkTradingDay() {
+    void overviewUsesTodaysCentralDay() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.OverviewProjection projection = mock(TradeReportingRepository.OverviewProjection.class);
@@ -80,7 +80,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void topInstrumentsUseTodaysNewYorkTradingDayAndDefaultLimit() {
+    void topInstrumentsUseTodaysCentralDayAndDefaultLimit() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeReportingRepository.TopInstrumentProjection row = mock(TradeReportingRepository.TopInstrumentProjection.class);
@@ -102,7 +102,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void trendCountsNewYorkHoursAndFillsHoursWithoutTradesWithZero() {
+    void trendCountsCentralHoursAndFillsHoursWithoutTradesWithZero() {
         Instant startInclusive = TODAY_RANGE.startInclusive();
         Instant endExclusive = TODAY_RANGE.endExclusive();
         TradeFillEntity morningOne = mock(TradeFillEntity.class);
@@ -121,12 +121,12 @@ class ReportingServiceImplTest {
 
         List<ClientActivityTrendDto> trend = service.getClientActivityTrend();
 
-        // 09:15 and 09:59 UTC are 05:00 in New York (EDT); 13:01 UTC is 09:00.
+        // 09:15 and 09:59 UTC are 04:00 Central time (CDT); 13:01 UTC is 08:00.
         assertThat(trend)
                 .hasSize(24)
                 .contains(new ClientActivityTrendDto("00:00", 0), atIndex(0))
-                .contains(new ClientActivityTrendDto("05:00", 2), atIndex(5))
-                .contains(new ClientActivityTrendDto("09:00", 1), atIndex(9))
+                .contains(new ClientActivityTrendDto("04:00", 2), atIndex(4))
+                .contains(new ClientActivityTrendDto("08:00", 1), atIndex(8))
                 .contains(new ClientActivityTrendDto("13:00", 0), atIndex(13))
                 .contains(new ClientActivityTrendDto("23:00", 0), atIndex(23));
         verify(repository).findByFilledAtGreaterThanEqualAndFilledAtLessThanOrderByFilledAtAsc(
@@ -152,14 +152,14 @@ class ReportingServiceImplTest {
                 "ADVANCED,4,2,12,2890.00",
                 "NOVICE,2,1,13,2405.50");
 
-        // Grouped by New York date and hour: 14:10 UTC is 10:00, 03:30 UTC on the 17th is 23:00 on the 16th.
+        // Grouped by Central date and hour: 14:10 UTC is 09:00, 03:30 UTC on the 17th is 22:00 on the 16th.
         assertThat(activityCsv.lines()).containsExactly(
                 "trade_date,trade_hour,trade_count,unique_clients,total_quantity,total_notional",
-                "2026-10-15,10:00,1,1,10,2200.00",
-                "2026-10-16,10:00,2,1,7,1620.00",
-                "2026-10-16,14:00,1,1,4,1200.00",
-                "2026-10-16,23:00,1,1,3,205.50",
-                "2026-10-17,10:00,1,1,1,70.00");
+                "2026-10-15,09:00,1,1,10,2200.00",
+                "2026-10-16,09:00,2,1,7,1620.00",
+                "2026-10-16,13:00,1,1,4,1200.00",
+                "2026-10-16,22:00,1,1,3,205.50",
+                "2026-10-17,09:00,1,1,1,70.00");
     }
 
     @Test
@@ -209,7 +209,7 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void reportsOnlyIncludeTradesInsideTheNewYorkDateRange() {
+    void reportsOnlyIncludeTradesInsideTheCentralDateRange() {
         ReportDateRange october16 = new ReportDateRange(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16));
 
         // The 15th and the 17th's 14:00 UTC fill are left out; 03:30 UTC on the 17th counts for the 16th.
@@ -233,11 +233,11 @@ class ReportingServiceImplTest {
     }
 
     @Test
-    void dateRangeIsInclusiveAndBoundedByNewYorkMidnight() {
+    void dateRangeIsInclusiveAndBoundedByCentralMidnight() {
         ReportDateRange range = new ReportDateRange(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
-        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T04:00:00Z"));
-        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T04:00:00Z"));
+        assertThat(range.startInclusive()).isEqualTo(Instant.parse("2026-09-01T05:00:00Z"));
+        assertThat(range.endExclusive()).isEqualTo(Instant.parse("2026-10-01T05:00:00Z"));
     }
 
     @Test

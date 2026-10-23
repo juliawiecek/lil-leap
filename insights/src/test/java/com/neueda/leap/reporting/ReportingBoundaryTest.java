@@ -11,6 +11,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.test.web.servlet.MockMvc;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,6 +47,23 @@ class ReportingBoundaryTest {
         for (String role : new String[]{"ANALYST", "OPERATIONS"}) {
             mvc.perform(get("/reports/summary").header("Authorization", token(role)))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.fills").value(2));
+        }
+    }
+
+    @Test
+    void analystsAndOperationsStaffCanReadTodaysOrders() throws Exception {
+        when(reports.ordersToday()).thenReturn(new ReportingQueryService.OrdersToday("2026-10-23",
+                Instant.parse("2026-10-23T05:00:00Z"), List.of(new ReportingQueryService.PlacedOrder(
+                        Instant.parse("2026-10-23T13:30:21Z"), "MSFT", "BUY", 3L, "FILLED", new BigDecimal("1524.46")))));
+        mvc.perform(get("/reports/orders-today")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/reports/orders-today").header("Authorization", token("TRADER"))).andExpect(status().isForbidden());
+        for (String role : new String[]{"ANALYST", "OPERATIONS"}) {
+            mvc.perform(get("/reports/orders-today").header("Authorization", token(role)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.dayStart").value("2026-10-23T05:00:00Z"))
+                    .andExpect(jsonPath("$.orders[0].placedAt").value("2026-10-23T13:30:21Z"))
+                    .andExpect(jsonPath("$.orders[0].symbol").value("MSFT"))
+                    .andExpect(jsonPath("$.orders[0].filledValue").value(1524.46));
         }
     }
 

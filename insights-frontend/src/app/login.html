@@ -1,101 +1,138 @@
 <a class="assistive-login-skip" href="#insights-login-main" (click)="$event.preventDefault(); loginMain.focus()">Skip to sign in</a>
 <div class="login-screen">
-  <div class="market-tape" aria-hidden="true">
+  <div class="tape" aria-hidden="true">
     <div class="tape-track">
       @for (copy of [0, 1]; track copy) {
         <div class="tape-group">
+          <span class="live"><i></i>Live</span>
           @for (word of tape; track word) {
-            <span>{{ word }}</span><span class="divider">/</span>
+            <span class="sep">·</span><span>{{ word }}</span>
           }
+          <span class="sep">·</span>
         </div>
       }
     </div>
   </div>
-  <div class="signin-stock-background" aria-hidden="true">
-    <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
-      <defs>
-        <pattern id="signin-chart-grid" width="52" height="26" patternUnits="userSpaceOnUse">
-          <path d="M52 0H0V26" fill="none" stroke="#ffffff" stroke-opacity="0.035" />
-        </pattern>
-      </defs>
-      <rect width="420" height="500" fill="url(#signin-chart-grid)" />
-      <g class="login-candles">
-        @for (candle of candles; track $index) {
-          <g [attr.opacity]="candle.opacity" [class.falling]="candle.falling">
-            <path [attr.d]="'M' + candle.x + ' ' + candle.high + 'V' + candle.low" />
-            <rect [attr.x]="candle.x - 1.8" [attr.y]="candle.top" width="3.6" [attr.height]="candle.height" />
-          </g>
-        }
-      </g>
-    </svg>
-  </div>
-
-  <div class="brand-lockup" role="img" aria-label="NextTrade Insights">
-    <svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
-      <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#eeeeee" />
-      <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#78a85f" />
-    </svg>
-    <span class="brand-copy" aria-hidden="true">
-      <span class="brand-name"><span class="brand-next">Next</span><span class="brand-accent">Trade</span></span>
-      <span class="brand-name brand-product">Insights</span>
-    </span>
-  </div>
-
-  <section class="auth-shell">
-    <header class="auth-header">
-      <div class="secure-status">Secure connection</div>
-    </header>
-
-    <div class="auth-content">
-      <section class="auth-copy" aria-labelledby="landing-title">
-        <div class="auth-eyebrow">Insights · Internal workspace</div>
-        <h1 id="landing-title">See what’s <em>next<span>.</span></em></h1>
-        <p>Trading activity, client accounts and the full record of every trade, for NextTrade analysts and operations staff.</p>
-      </section>
-
-      <main #loginMain id="insights-login-main" tabindex="-1" class="auth-panel" aria-labelledby="login-title">
-        <h2 id="login-title">Welcome back</h2>
-        <p class="auth-subtitle">Sign in with your analyst or operations account.</p>
-        <form method="post" novalidate [attr.aria-describedby]="message() ? 'insights-login-error' : null" (submit)="$event.preventDefault(); signIn(email.value, password.value)">
-          <div class="field-group">
-            <label for="email">Email address</label>
-            <input #email id="email" name="email" type="email" autocomplete="username" placeholder="you@nexttrade.local" required />
-          </div>
-          <div class="field-group">
-            <label for="password">Password</label>
-            <div class="input-wrap">
-              <input
-                #password
-                id="password"
-                name="password"
-                [type]="passwordVisible() ? 'text' : 'password'"
-                autocomplete="current-password"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                class="password-toggle"
-                type="button"
-                [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
-                (click)="passwordVisible.set(!passwordVisible())"
-              >
-                {{ passwordVisible() ? 'Hide' : 'Show' }}
-              </button>
-            </div>
-          </div>
-          @if (message()) {
-            <p id="insights-login-error" class="form-status" role="alert">{{ message() }}</p>
+  <section class="showcase" aria-labelledby="landing-title">
+    <div class="backdrop-chart" aria-hidden="true">
+      <svg viewBox="0 0 420 500" preserveAspectRatio="none" focusable="false">
+        <defs>
+          <pattern id="insights-signin-grid" width="52" height="26" patternUnits="userSpaceOnUse">
+            <path d="M52 0H0V26" fill="none" stroke="#ffffff" stroke-opacity="0.035" />
+          </pattern>
+        </defs>
+        <rect width="420" height="500" fill="url(#insights-signin-grid)" />
+        <g class="candles">
+          @for (candle of candles; track $index) {
+            <g [attr.opacity]="candle.opacity" [class.falling]="candle.falling">
+              <path [attr.d]="'M' + candle.x + ' ' + candle.high + 'V' + candle.low" />
+              <rect [attr.x]="candle.x - 1.8" [attr.y]="candle.top" width="3.6" [attr.height]="candle.height" />
+            </g>
           }
-          <button class="primary-action" type="submit" [disabled]="pending()">
-            {{ pending() ? 'Signing in…' : 'Continue securely' }}
-          </button>
-        </form>
-      </main>
+        </g>
+      </svg>
     </div>
 
-    <footer class="auth-footer">
-      <span>© 2026 NextTrade. Internal use only.</span>
-      <span>Access is limited to each role’s responsibilities.</span>
-    </footer>
+    <div class="brand-lockup" role="img" aria-label="NextTrade Insights">
+      <svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+        <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#f2f0e9" />
+        <path d="M35 8H65V18H55V38H44V18H35V8Z" fill="#94c973" />
+      </svg>
+      <b aria-hidden="true">Next<span>Trade</span></b>
+      <i class="rule" aria-hidden="true"></i>
+      <em aria-hidden="true">Insights</em>
+    </div>
+
+    <div class="copy">
+      <p class="eyebrow">Analyst &amp; operations workspace</p>
+      <h1 id="landing-title">See what’s<br /><span>next.</span></h1>
+      <p class="lede">Trading activity, client accounts and the full record of every trade, for NextTrade analysts and operations staff.</p>
+    </div>
+
+    <p class="legal">© 2026 NextTrade<span>Internal use only</span><span>Access is limited by role</span></p>
   </section>
+
+  <main #loginMain id="insights-login-main" tabindex="-1" class="auth" aria-labelledby="login-title">
+    <div class="auth-top">
+      <span class="secure">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        Secure connection
+      </span>
+    </div>
+    <div class="auth-body">
+      <div class="auth-heading">
+        <h2 id="login-title">Staff Sign In</h2>
+        <p class="auth-subtitle">Welcome back. Use your analyst or operations account.</p>
+      </div>
+      <form method="post" novalidate [attr.aria-describedby]="message() ? 'insights-login-error' : null" (submit)="$event.preventDefault(); signIn(email.value, password.value)">
+        <div class="field">
+          <label for="email">Email address</label>
+          <div class="input-shell" [class.invalid]="emailError()">
+            <input
+              #email
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="username"
+              placeholder="you@nexttrade.local"
+              required
+              [attr.aria-invalid]="emailError() ? true : null"
+              [attr.aria-describedby]="emailError() ? 'email-error' : null"
+              (input)="emailError.set('')"
+            />
+          </div>
+          @if (emailError()) {
+            <p id="email-error" class="field-error">{{ emailError() }}</p>
+          }
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-shell" [class.invalid]="passwordError()">
+            <input
+              #password
+              id="password"
+              name="password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              required
+              [attr.aria-invalid]="passwordError() ? true : null"
+              [attr.aria-describedby]="passwordError() ? 'password-error' : capsLock() ? 'caps-hint' : null"
+              (input)="passwordError.set('')"
+              (keydown)="checkCapsLock($event)"
+              (keyup)="checkCapsLock($event)"
+              (blur)="capsLock.set(false)"
+            />
+            <button
+              class="password-toggle"
+              type="button"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              (click)="passwordVisible.set(!passwordVisible())"
+            >
+              {{ passwordVisible() ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          @if (passwordError()) {
+            <p id="password-error" class="field-error">{{ passwordError() }}</p>
+          } @else if (capsLock()) {
+            <p id="caps-hint" class="field-hint">Caps Lock is on</p>
+          }
+        </div>
+        @if (message()) {
+          <p id="insights-login-error" class="form-status" role="alert">{{ message() }}</p>
+        }
+        <button class="primary-action" type="submit" [disabled]="pending()" [attr.aria-busy]="pending()">
+          @if (pending()) {
+            <i class="spinner" aria-hidden="true"></i>
+          }
+          {{ pending() ? 'Signing in…' : 'Continue securely' }}
+        </button>
+        <p class="forgot">Forgot your password? Your NextTrade administrator can reset it.</p>
+      </form>
+    </div>
+    <div class="auth-bottom">
+      <span>Need access? Ask your NextTrade administrator.</span>
+      <span>Analyst · Operations</span>
+    </div>
+  </main>
 </div>

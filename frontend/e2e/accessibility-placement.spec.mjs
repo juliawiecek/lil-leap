@@ -61,7 +61,8 @@ for (const role of ['ANALYST', 'OPERATIONS']) {
     await identity(page, info, { role });
     await page.route('**/api/**', async route => {
       const path = new URL(route.request().url()).pathname;
-      const json = path.endsWith('/clients') ? { content: [], page: 0, size: 25, totalPages: 0, totalElements: 0 }
+      const json = path.endsWith('/orders-today') ? { date: '2026-10-22', dayStart: '2026-10-22T05:00:00Z', orders: [] }
+        : path.endsWith('/clients') ? { content: [], page: 0, size: 25, totalPages: 0, totalElements: 0 }
         : path.endsWith('/summary') ? { date: '2026-10-22', fills: 0, orders: 0, accounts: 0, gross_executed_value: 0 } : [];
       await route.fulfill({ json });
     });
