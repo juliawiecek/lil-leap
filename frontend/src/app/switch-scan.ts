@@ -602,8 +602,10 @@ export class ScanEngine {
       this.#openTypingPad(el as HTMLInputElement, type === 'number' ? NUMBER_ROWS : LETTER_ROWS);
     } else {
       this.#resumeAt = el;
-      el.click();
+      // Confirm first, then click: what the click says (an order read-back, which cuts in) must
+      // not be cut off by this confirmation (PS-23).
       this.#announce(`${scanLabel(el)} selected.`);
+      el.click();
     }
   }
 
