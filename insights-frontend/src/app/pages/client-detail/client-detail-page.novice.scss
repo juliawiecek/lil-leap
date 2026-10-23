@@ -55,16 +55,23 @@
   @include nv.card-heading;
   font-size: 18px;
 }
-:host .allocation .track {
-  stroke: var(--nv-pill-track);
+/* Allocation: the ring drawn like the Novice "Asset allocation" donut - a sixth of its width thick, flat-ended,
+   on a grey track, the value in bold with a quiet caption underneath. */
+:host .allocation circle {
+  stroke-width: 24;
 }
-:host .ring-label {
-  font-weight: 600;
-  letter-spacing: 0.06em;
+:host .allocation .track {
+  stroke: #68645e;
 }
 :host .ring-value {
-  font: 800 22px var(--font-ui);
-  letter-spacing: -0.04em;
+  fill: var(--nt-text);
+  font: 800 14px var(--font-ui);
+  letter-spacing: normal;
+}
+:host .ring-label {
+  fill: var(--nt-muted);
+  font: 500 12px var(--font-ui);
+  letter-spacing: 0;
 }
 :host .legend i {
   width: 10px;

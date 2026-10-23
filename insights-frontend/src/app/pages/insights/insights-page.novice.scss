@@ -93,23 +93,31 @@
   font-weight: 600;
 }
 
-/* Top traded today: the Novice allocation ring and legend */
+/* Top traded today: the ring drawn like the Novice "Asset allocation" donut - thick, flat-ended, on a grey track,
+   the value in bold with a quiet caption underneath. */
+:host .ring,
+:host .ring svg {
+  width: 148px;
+  height: 148px;
+}
 :host .ring circle {
-  stroke-width: 5;
-  stroke-linecap: round;
+  stroke-width: 7;
+  stroke-linecap: butt;
 }
 :host .ring .ring-track {
-  stroke: var(--nv-pill-track);
+  stroke: #68645e;
 }
 :host .ring b {
-  @include nv.figure(22px);
+  font: 800 14px var(--font-ui);
+  letter-spacing: normal;
 }
 :host .ring small {
   margin-top: 2px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--nt-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 :host .swatch {
   width: 10px;
