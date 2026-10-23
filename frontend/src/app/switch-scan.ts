@@ -325,6 +325,14 @@ export class ScanEngine {
     }
   }
 
+  /** Stops what the ring is saying right now (Stop speech); the next item is read as usual. */
+  hush(): void {
+    if (this.#utterance) {
+      speechCoordinator.stop('switch');
+      this.#utterance = null;
+    }
+  }
+
   stop(): void {
     if (!this.#running) {
       return;
@@ -1066,6 +1074,11 @@ export class SwitchScanService {
   /** Says something for the page (a chart summary, an order read-back) while switch control is on. */
   announce(text: string, interrupt = false): void {
     this.#engine?.say(text, interrupt);
+  }
+
+  /** Cuts off the sentence being read without changing any setting (Stop speech, Alt+Shift+X). */
+  hush(): void {
+    this.#engine?.hush();
   }
 
   /**

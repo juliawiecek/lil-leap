@@ -25,7 +25,9 @@ export class SiteAccessibility {
     settings: () => this.settings(), status: text => this.status.set(text),
     state: (active, paused) => { this.speaking.set(active); this.paused.set(paused); },
     voices: voices => this.voices.set(voices), scanning: () => this.scan.settings().enabled,
-    stopScanningSpeech: () => { if (this.scan.settings().enabled) this.scan.update({ speak: false }); },
+    // Stop speech silences the current sentence only; turning off "Read items aloud" here would
+    // leave a switch user with a silent ring until they found the setting again (PS-19).
+    stopScanningSpeech: () => this.scan.hush(),
     format: speakable,
   });
   private started = false;
