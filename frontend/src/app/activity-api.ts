@@ -5,7 +5,9 @@
 import { firstValueFrom } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiHttpClient } from '@lilleap/session-core/angular';
-import type { AccessTokenSource, OrderHistoryRow } from './order-history-api';
+import type { AccessTokenSource, OrderEvent, OrderHistoryRow } from './order-history-api';
+import { rejectionMessage } from './order-feedback';
+import { centralTimestamp } from './app-time';
 
 /** A deposit, withdrawal, transfer or other non-trade cash movement. Amount is signed USD. */
 export interface CashMovement {
@@ -62,16 +64,9 @@ export function formatMoney(value: number, signed = false): string {
   return value > 0 ? `+${text}` : `−${text}`;
 }
 
-/** "16 Oct 2026, 14:32 GMT+1": local date and time with the zone shown, so nobody guesses which clock. */
-export function formatLocalTime(iso: string, locale?: string, timeZone?: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    hour12: false, timeZoneName: 'short', timeZone,
-  }).format(date);
+/** "Oct 16, 2026, 2:32 PM CT": every time in the app is Central on a 12-hour clock, so nobody guesses which clock. */
+export function formatLocalTime(iso: string): string {
+  return centralTimestamp(iso);
 }
 
 /** An order as a feed row: what was traded, how it ended, and the cash it moved once filled. */
@@ -126,6 +121,69 @@ export function buildActivity(orders: readonly OrderHistoryRow[], cash: readonly
     ...(kind === 'Orders' ? [] : cash.map(cashItem)),
   ];
   return items.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.id.localeCompare(b.id));
+}
+
+/** One line of the order trail, in plain words: what happened and, when it helps, why or at what price. */
+export interface TrailStep {
+  type: string;
+  at: string;
+  label: string;
+  detail: string;
+  /** How the step ended, for colour and the status badge: 'done', 'waiting', 'failed' or 'cancelled'. */
+  tone: 'done' | 'waiting' | 'failed' | 'cancelled';
+}
+
+const WAITING_REASONS: Record<string, string> = {
+  MARKET_CLOSED: 'The market is closed. It fills at the next open.',
+  ORDER_REQUEUED: 'Execution will be retried shortly.',
+};
+
+function money(value: unknown): string | null {
+  const amount = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(amount) ? formatMoney(amount) : null;
+}
+
+/** Turns a recorded step into the wording the dashboards show. Unknown steps still read as something happened. */
+export function trailStep(event: OrderEvent, side = 'BUY'): TrailStep {
+  const base = { type: event.type, at: event.at };
+  switch (event.type) {
+    case 'SUBMITTED':
+      return { ...base, label: 'Order received', detail: 'We got your order and started checking it.', tone: 'done' };
+    case 'ACCEPTED':
+      return { ...base, label: 'Accepted', detail: 'All checks passed. Sent for execution.', tone: 'done' };
+    case 'PENDING':
+    case 'DELAYED':
+      return {
+        ...base, label: event.type === 'PENDING' ? 'Waiting' : 'Delayed', tone: 'waiting',
+        detail: event.reasonText?.trim() || WAITING_REASONS[event.reasonCode ?? ''] || 'Your order is in the queue.',
+      };
+    case 'PRICE_DECISION': {
+      const price = money(event.details['actualPrice']);
+      const limit = money(event.details['limitPrice']);
+      return {
+        ...base, label: price ? `Priced at ${price}` : 'Priced', tone: 'done',
+        detail: limit ? `Within your protection limit of ${limit}.` : 'The live price was checked against your protection limit.',
+      };
+    }
+    case 'FILLED':
+      return { ...base, label: 'Filled', detail: 'Your order executed.', tone: 'done' };
+    case 'SETTLEMENT_COMPLETED': {
+      const raw = event.details['cashDelta'];
+      const delta = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+      return {
+        ...base, label: 'Cash and holdings updated', tone: 'done',
+        detail: Number.isFinite(delta)
+          ? `${formatMoney(delta, true)} ${delta < 0 ? 'taken from' : 'added to'} your cash balance.`
+          : 'Your balances reflect this trade.',
+      };
+    }
+    case 'REJECTED':
+      return { ...base, label: 'Rejected', detail: rejectionMessage({ reasonCode: event.reasonCode, reasonText: event.reasonText }), tone: 'failed' };
+    case 'CANCELLED':
+      return { ...base, label: 'Cancelled', detail: 'You cancelled this order. Nothing was charged.', tone: 'cancelled' };
+    default:
+      return { ...base, label: titleCase(event.type.replaceAll('_', ' ')), detail: event.reasonText?.trim() || '', tone: 'done' };
+  }
 }
 
 export class CashActivityClient {

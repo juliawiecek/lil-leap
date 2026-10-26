@@ -24,6 +24,22 @@ export interface OrderHistoryRow {
   filledAt: string | null;
 }
 
+/** One step of an order's audit trail (GET /orders/{id}/events): a status change, the pricing decision or the settlement. */
+export interface OrderEvent {
+  type: string;
+  reasonCode: string | null;
+  reasonText: string | null;
+  at: string;
+  /** Prices and the cash delta for pricing and settlement steps; empty for status steps. */
+  details: Record<string, unknown>;
+}
+
+export interface OrderTrail {
+  orderId: string;
+  status: string;
+  events: OrderEvent[];
+}
+
 /** Statuses after which an order no longer changes. */
 export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED', 'CANCELLED']);
 /** How often, and for how long, a dashboard re-reads a just-submitted order while it executes. */
@@ -110,6 +126,22 @@ export class OrderHistoryClient {
       fillPrice: row.fillPrice === null ? null : Number(row.fillPrice),
       filledQuantity: row.filledQuantity === null ? null : Number(row.filledQuantity),
     }));
+  }
+
+  /** The audit trail of one of the caller's orders, oldest step first (BR-15). Throws with a sentence the user can read. */
+  async events(orderId: string): Promise<OrderTrail> {
+    if (!this.#tokens.accessToken) {
+      throw new Error('Sign in to see your order details.');
+    }
+    try {
+      const trail = await firstValueFrom(this.#http.get<OrderTrail>(`${this.#baseUrl}/orders/${encodeURIComponent(orderId)}/events`));
+      return { ...trail, events: trail.events.map((event) => ({ ...event, details: event.details ?? {} })) };
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status !== 0) {
+        throw new Error(error.status === 404 ? 'That order was not found.' : 'Could not load the order details. Please try again.');
+      }
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
   }
 
   /**

@@ -54,18 +54,51 @@
             ><app-status-badge [value]="item.status" /></span
           >
           <span class="amount" [class.gain]="(item.amount ?? 0) > 0" [class.loss]="(item.amount ?? 0) < 0"><app-financial-change [value]="item.amount" unit="currency" /></span>
-          @if (canCancel(item)) {
+          @if (item.kind === 'order' && item.orderId) {
             <span class="actions">
-              @if (confirming() === item.orderId) {
-                <span class="confirm" role="group" appFocusAfterChange [attr.aria-label]="'Cancel ' + item.title + '?'">
-                  Cancel this order?
-                  <button type="button" class="danger" [disabled]="cancelling()" (click)="confirmCancel(item)">Yes, cancel</button>
-                  <button type="button" (click)="keepOrder(item)">Keep</button>
-                </span>
-              } @else {
-                <button type="button" [appFocusAfterChange]="returnToOrder() === item.orderId" (click)="askCancel(item)">Cancel</button>
+              <button
+                type="button"
+                class="trail-toggle"
+                [attr.aria-expanded]="expanded() === item.orderId"
+                [attr.aria-controls]="'trail-' + item.orderId"
+                [attr.aria-label]="(expanded() === item.orderId ? 'Hide details for ' : 'Show details for ') + item.title"
+                (click)="toggleTrail(item)"
+              >
+                {{ expanded() === item.orderId ? 'Hide details' : 'Details' }}
+              </button>
+              @if (canCancel(item)) {
+                @if (confirming() === item.orderId) {
+                  <span class="confirm" role="group" appFocusAfterChange [attr.aria-label]="'Cancel ' + item.title + '?'">
+                    Cancel this order?
+                    <button type="button" class="danger" [disabled]="cancelling()" (click)="confirmCancel(item)">Yes, cancel</button>
+                    <button type="button" (click)="keepOrder(item)">Keep</button>
+                  </span>
+                } @else {
+                  <button type="button" [appFocusAfterChange]="returnToOrder() === item.orderId" (click)="askCancel(item)">Cancel</button>
+                }
               }
             </span>
+          }
+          @if (expanded() === item.orderId) {
+            <div class="trail" [id]="'trail-' + item.orderId" data-scan-group="Order details">
+              @if (trailError()) {
+                <p class="activity-message error" role="alert">{{ trailError() }}</p>
+              } @else if (!trail()) {
+                <p class="activity-message" aria-live="polite">Loading order details…</p>
+              } @else if (!steps().length) {
+                <p class="activity-message">No steps have been recorded for this order yet.</p>
+              } @else {
+                <ol class="trail-steps" [class.refreshing]="trailLoading()" [attr.aria-label]="'What happened to ' + item.title + ', oldest first'">
+                  @for (step of steps(); track $index) {
+                    <li class="trail-step" [class.waiting]="step.tone === 'waiting'" [class.failed]="step.tone === 'failed'" [class.cancelled]="step.tone === 'cancelled'">
+                      <span class="marker" aria-hidden="true"></span>
+                      <span class="step-what"><b>{{ step.label }}</b>@if (step.detail) {<small>{{ step.detail }}</small>}</span>
+                      <time [attr.datetime]="step.at">{{ when(step.at) }}</time>
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
           }
         </li>
       }

@@ -489,6 +489,27 @@ test('missing active account or stale instrument mapping prevents submission', a
   assert.equal(calls, 0);
 });
 
+test('the sidebar resizes from the keyboard and a double-click on its edge, within its limits, like the novice dashboard', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(fakeFeed([]))]);
+  const key = (k) => desk.sidebar.keys({ key: k, preventDefault() {} });
+  desk.sidebar.width.set(165);
+  key('ArrowRight');
+  assert.equal(desk.sidebar.width(), 181);
+  key('End');
+  assert.equal(desk.sidebar.width(), desk.sidebar.max, 'never wider than the maximum');
+  desk.sidebar.width.set(240);
+  desk.sidebar.toggle();
+  assert.equal(desk.sidebar.width(), desk.sidebar.min);
+  assert.equal(desk.collapsed(), true, 'the icon strip hides labels');
+  key('ArrowLeft');
+  assert.equal(desk.sidebar.width(), desk.sidebar.min, 'never narrower than the icon strip');
+  desk.sidebar.toggle();
+  assert.equal(desk.sidebar.width(), 240, 'a double-click re-opens at the last open width');
+  assert.equal(desk.collapsed(), false);
+  key('Home');
+  assert.equal(desk.collapsed(), true);
+});
+
 test('limit orders submit the selected price and both exit thresholds', async t => {
   const desk = tradingDesk(t);
   await desk.loadTradingData();

@@ -3,11 +3,11 @@ import { FinancialChange } from './financial-change';
 import { FocusAfterChange } from './focus-after-change';
 import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
-import { OrderHistoryRow } from './order-history-api';
+import { OrderHistoryRow, OrderTrail } from './order-history-api';
 import { OrderHistoryService } from './order-history.service';
 import { AccountsService } from './accounts.service';
 import { CashActivityService } from './cash-activity.service';
-import { ACTIVITY_KINDS, ActivityItem, ActivityKind, CashMovement, buildActivity, formatLocalTime, formatMoney } from './activity-api';
+import { ACTIVITY_KINDS, ActivityItem, ActivityKind, CashMovement, TrailStep, buildActivity, formatLocalTime, formatMoney, trailStep } from './activity-api';
 
 /** How often the feed re-reads, matching the dashboards' price refresh. */
 export const ACTIVITY_REFRESH_MS = 5000;
@@ -69,6 +69,13 @@ export class ActivityFeed implements OnInit, OnDestroy {
   readonly cancelling = signal(false);
   /** Outcome of the last cancel, e.g. "Order cancelled: 1 AAPL. Nothing was charged." */
   readonly notice = signal('');
+  /** The order whose audit trail is open under its row (BR-15), if any. */
+  readonly expanded = signal<string | null>(null);
+  readonly trail = signal<OrderTrail | null>(null);
+  readonly trailLoading = signal(false);
+  readonly trailError = signal('');
+  /** The open trail as plain-language steps, oldest first. */
+  readonly steps = computed<TrailStep[]>(() => this.trail()?.events.map((event) => trailStep(event)) ?? []);
   readonly money = formatMoney;
   readonly when = formatLocalTime;
 
@@ -145,6 +152,42 @@ export class ActivityFeed implements OnInit, OnDestroy {
     }
   }
 
+  /** Opens the audit trail under an order row, or closes it when it is already open. */
+  async toggleTrail(item: ActivityItem): Promise<void> {
+    if (item.kind !== 'order' || !item.orderId) {
+      return;
+    }
+    if (this.expanded() === item.orderId) {
+      this.expanded.set(null);
+      this.trail.set(null);
+      this.trailError.set('');
+      return;
+    }
+    this.expanded.set(item.orderId);
+    this.trail.set(null);
+    await this.loadTrail(item.orderId);
+  }
+
+  /** Reads the open order's trail; a stale answer (row closed or another opened meanwhile) is dropped. */
+  async loadTrail(orderId: string): Promise<void> {
+    this.trailLoading.set(true);
+    this.trailError.set('');
+    try {
+      const trail = await this.#orders.events(orderId);
+      if (this.expanded() === orderId) {
+        this.trail.set(trail);
+      }
+    } catch (e) {
+      if (this.expanded() === orderId) {
+        this.trailError.set(reason(e, 'Could not load the order details. Please try again.'));
+      }
+    } finally {
+      if (this.expanded() === orderId) {
+        this.trailLoading.set(false);
+      }
+    }
+  }
+
   /** "FILLED" becomes "Filled", "SETTLED" becomes "Settled". */
   statusLabel(status: string): string {
     return status.charAt(0) + status.slice(1).toLowerCase();
@@ -169,6 +212,11 @@ export class ActivityFeed implements OnInit, OnDestroy {
     }
     this.loading.set(false);
     this.loaded.set(true);
+    // An open trail follows the feed's refresh, so a fill or rejection shows up without closing it.
+    const open = this.expanded();
+    if (open && orders.status === 'fulfilled' && orders.value.some((row) => row.orderId === open)) {
+      void this.loadTrail(open);
+    }
     if (orders.status === 'rejected' && cash.status === 'rejected') {
       this.error.set(reason(orders.reason, 'Could not load your activity. Please try again.'));
       this.orders.set([]);

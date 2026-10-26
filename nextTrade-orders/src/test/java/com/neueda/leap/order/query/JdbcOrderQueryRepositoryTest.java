@@ -88,4 +88,53 @@ class JdbcOrderQueryRepositoryTest {
         assertNull(status.reasonCode());
         assertNull(status.statusChangedAt());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void trailIsReadOnlyAfterOwnershipIsConfirmed() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(order), eq(user))).thenReturn(List.of());
+
+        assertTrue(repository.findEvents(order, user).isEmpty());
+        verify(jdbc).query(contains("a.user_id = ?"), any(RowMapper.class), eq(order), eq(user));
+        verify(jdbc, org.mockito.Mockito.never()).query(anyString(), any(RowMapper.class), eq(order), eq(order));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void trailJoinsStatusHistoryWithPricingAndSettlementAuditRowsAndMapsPayloads() throws Exception {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(order), eq(user))).thenReturn(List.of("FILLED"));
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(order), eq(order))).thenReturn(List.of());
+
+        OrderEventsResponse trail = repository.findEvents(order, user).orElseThrow();
+        assertEquals("FILLED", trail.status());
+        assertEquals(List.of(), trail.events());
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<RowMapper<OrderEvent>> mapper = ArgumentCaptor.forClass(RowMapper.class);
+        verify(jdbc).query(sql.capture(), mapper.capture(), eq(order), eq(order));
+        assertTrue(sql.getValue().contains("order_status_history"));
+        assertTrue(sql.getValue().contains("'PRICE_DECISION', 'SETTLEMENT_COMPLETED'"));
+        assertTrue(sql.getValue().contains("ORDER BY occurred_at, rank"));
+
+        ResultSet priced = mock(ResultSet.class);
+        when(priced.getString("type")).thenReturn("PRICE_DECISION");
+        when(priced.getString("payload")).thenReturn("{\"actualPrice\": 101.5, \"attemptNumber\": 1}");
+        when(priced.getTimestamp("occurred_at")).thenReturn(Timestamp.from(SUBMITTED.plusSeconds(2)));
+        OrderEvent decision = mapper.getValue().mapRow(priced, 0);
+        assertEquals("PRICE_DECISION", decision.type());
+        assertEquals(101.5, decision.details().get("actualPrice"));
+        assertEquals(1, decision.details().get("attemptNumber"));
+        assertEquals(SUBMITTED.plusSeconds(2), decision.at());
+        assertNull(decision.reasonCode());
+
+        ResultSet rejected = mock(ResultSet.class);
+        when(rejected.getString("type")).thenReturn("REJECTED");
+        when(rejected.getString("reason_code")).thenReturn("PRICE_MOVED");
+        when(rejected.getString("reason_text")).thenReturn("The price rose 3.1%");
+        when(rejected.getTimestamp("occurred_at")).thenReturn(Timestamp.from(SUBMITTED.plusSeconds(3)));
+        OrderEvent refusal = mapper.getValue().mapRow(rejected, 1);
+        assertEquals("PRICE_MOVED", refusal.reasonCode());
+        assertEquals("The price rose 3.1%", refusal.reasonText());
+        assertEquals(java.util.Map.of(), refusal.details());
+    }
 }

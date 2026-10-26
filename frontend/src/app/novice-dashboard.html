@@ -134,7 +134,7 @@
           }
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
+          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketDate() }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">

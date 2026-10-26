@@ -12,10 +12,10 @@ export function chartPeriodLabel(period: string): string {
   return ({ '1D': 'one day', '1W': 'one week', '1M': 'one month', '3M': 'three months', '6M': 'six months', '1Y': 'one year', '5Y': 'five years', ALL: 'all recorded history', All: 'all recorded history' } as Record<string, string>)[period] ?? period;
 }
 const DATE = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York', year: 'numeric', month: 'short', day: 'numeric',
+  timeZone: 'America/Chicago', year: 'numeric', month: 'short', day: 'numeric',
   hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
 });
-const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' });
 export const chartDate = (at: number): string => DATE.format(at);
 export function chartValue(value: number, options: SeriesOptions = {}): string {
   return new Intl.NumberFormat('en-US', options.currency
@@ -52,15 +52,15 @@ export function seriesTable(input: readonly SeriesPoint[], options: SeriesOption
   if (options.hidden) return { columns: ['Time', 'Value'], rows: [], note: 'Amounts are hidden. Show balances to read the table.' };
   const grouped = group && points.length > 400 && !options.categorical;
   const format = (n: number) => chartValue(n, options);
-  if (!grouped) return { columns: ['Time / category (New York)', options.unit ?? (options.currency ? `Value (${options.currency})` : 'Value')], rows: points.map(p => [p.label ?? chartDate(p.at), format(p.value)]) };
+  if (!grouped) return { columns: ['Time / category (Central)', options.unit ?? (options.currency ? `Value (${options.currency})` : 'Value')], rows: points.map(p => [p.label ?? chartDate(p.at), format(p.value)]) };
   const days = new Map<string, SeriesPoint[]>();
   for (const p of points) { const day = DAY.format(p.at); const bucket = days.get(day) ?? []; bucket.push(p); days.set(day, bucket); }
   return {
     grouped: true,
-    columns: sum ? ['Day (New York)', 'Total', 'Observations'] : ['Day (New York)', 'First', 'Low', 'High', 'Last', 'Observations'],
+    columns: sum ? ['Day (Central)', 'Total', 'Observations'] : ['Day (Central)', 'First', 'Low', 'High', 'Last', 'Observations'],
     rows: [...days].map(([day, ps]) => sum ? [day, format(ps.reduce((n, p) => n + p.value, 0)), String(ps.length)]
       : [day, format(ps[0].value), format(ps.reduce((n, p) => Math.min(n, p.low ?? p.value), Infinity)), format(ps.reduce((n, p) => Math.max(n, p.high ?? p.value), -Infinity)), format(ps.at(-1)!.value), String(ps.length)]),
-    note: `Grouped by New York calendar day from ${points.length} observations. ${sum ? 'Totals sum the reported values.' : 'First, last and extremes are retained.'} Choose every observation for exact timestamps.`,
+    note: `Grouped by Central calendar day from ${points.length} observations. ${sum ? 'Totals sum the reported values.' : 'First, last and extremes are retained.'} Choose every observation for exact timestamps.`,
   };
 }
 export interface Category { label: string; value: number; percent: number }

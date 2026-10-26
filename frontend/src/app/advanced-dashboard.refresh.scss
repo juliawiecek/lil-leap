@@ -150,6 +150,7 @@ tbody tr:hover { background: var(--surface-tone-30); }
   inset: 0;
   display: grid;
   place-items: center;
+  white-space: nowrap;
   border-radius: 999px;
   background: var(--text-tone-03);
   color: var(--surface-tone-20);
@@ -391,3 +392,45 @@ dialog p { font-size: 13.5px; }
 
 /* Keep the per-stock override menu above the rows that follow it. */
 .settings-panel app-price-protection-settings:has(.stock-menu) { position: relative; z-index: 2; }
+
+/* Resizable sidebar, as on the novice dashboard: drag the edge, arrow keys step, double-click collapses. */
+.pro-shell { transition: grid-template-columns 0.2s ease; }
+.pro-shell.resizable, .pro-shell.resizable.collapsed { grid-template-columns: var(--sidebar-width, 165px) minmax(0, 1fr); }
+.pro-shell.resizing { transition: none; cursor: col-resize; user-select: none; }
+.pro-sidebar .sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 5;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.pro-sidebar .sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+.pro-sidebar .sidebar-resizer:hover::after,
+.pro-sidebar .sidebar-resizer:focus-visible::after,
+.pro-shell.resizing .sidebar-resizer::after { background: var(--gain); }
+.pro-sidebar .sidebar-resizer:focus-visible { outline: none; }
+/* Mid widths: labels trim instead of spilling past the edge. */
+.pro-logo { overflow: hidden; white-space: nowrap; }
+.pro-sidebar nav button span,
+.sidebar-help button span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pro-sidebar nav button, .sidebar-help button { min-width: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .pro-shell { transition: none; }
+}
+/* Small screens keep the fixed icon strip; there is no room to drag. */
+@media (max-width: 950px) {
+  .pro-shell.resizable, .pro-shell.resizable.collapsed { grid-template-columns: 62px minmax(0, 1fr); }
+  .pro-sidebar .sidebar-resizer { display: none; }
+}

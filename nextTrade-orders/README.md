@@ -16,6 +16,7 @@ ownership, gateway routing, database setup, known gaps and verification.
 | POST | `/api/v1/orders` | Submit an order for a caller-owned account (TRADER only) |
 | GET | `/api/v1/orders/{id}` | One caller-owned order, with its fill once executed (TRADER only) |
 | GET | `/api/v1/orders/{id}/status` | Current status and the latest status-history reason code (TRADER only) |
+| GET | `/api/v1/orders/{id}/events` | The order's audit trail, oldest first: every status change plus the pricing decision and settlement from `audit_log`, shown as Details on the dashboards (TRADER only, BR-15) |
 | GET | `/api/v1/orders/quote-preview` | Indicative price and total before submitting (TRADER only) |
 | GET | `/api/v1/market/status` | `{ open, exchangeTimeZone, nextOpen, nextClose }` with UTC instants (any signed-in user) |
 

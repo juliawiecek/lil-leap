@@ -1,5 +1,24 @@
-<div class="pro-shell" [class.collapsed]="collapsed()">
+<div
+  class="pro-shell resizable"
+  [class.collapsed]="collapsed()"
+  [class.resizing]="sidebar.resizing()"
+  [style.--sidebar-width.px]="sidebar.width()"
+>
   <aside class="pro-sidebar" aria-label="Menu" data-scan-group="Menu">
+    <div
+      class="sidebar-resizer"
+      role="separator"
+      tabindex="0"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      [attr.aria-valuemin]="sidebar.min"
+      [attr.aria-valuemax]="sidebar.max"
+      [attr.aria-valuenow]="sidebar.width()"
+      title="Drag to resize"
+      (pointerdown)="sidebar.start($event)"
+      (keydown)="sidebar.keys($event)"
+      (dblclick)="sidebar.toggle()"
+    ></div>
     <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
@@ -21,13 +40,6 @@
       <span>Help &amp; Support</span
       ><button type="button" aria-label="Keyboard shortcuts" (click)="openModal('shortcuts')">
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
-      ><button
-        type="button"
-        (click)="collapsed.set(!collapsed())"
-        [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-      >
-        <app-dashboard-icon name="collapse" /><span>Collapse</span>
-      </button
       ><button type="button" class="sign-out" aria-label="Sign out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
         <app-dashboard-icon name="signout" /><span>Sign out</span>
       </button>
@@ -506,12 +518,6 @@
             </div>
             <div>
               <span>Trader tier</span><strong title="Assigned from the net worth and income you declared">Advanced · Pro</strong>
-            </div>
-            <div>
-              <span>Sidebar</span
-              ><button type="button" class="secondary-button" (click)="collapsed.set(!collapsed())">
-                {{ collapsed() ? 'Expand' : 'Collapse' }}
-              </button>
             </div>
             <app-price-protection-settings [symbols]="listedSymbols()" />
             <app-accessibility-settings (openShortcuts)="openModal('shortcuts')" />

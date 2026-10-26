@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Exposes a single order at {@code GET /api/v1/orders/{id}} and its status at
- * {@code GET /api/v1/orders/{id}/status}. Another user's order returns 404, identically
+ * Exposes a single order at {@code GET /api/v1/orders/{id}}, its status at
+ * {@code GET /api/v1/orders/{id}/status} and its audit trail at
+ * {@code GET /api/v1/orders/{id}/events}. Another user's order returns 404, identically
  * to an unknown id.
  */
 @RestController
@@ -50,5 +51,18 @@ public class OrderQueryController {
     public ResponseEntity<OrderStatusResponse> status(
             @AuthenticationPrincipal JwtPrincipal principal, @PathVariable UUID id) {
         return ResponseEntity.ok(service.getStatus(id, principal.userId()));
+    }
+
+    /**
+     * Returns the audit trail of one of the caller's orders: every status change, the pricing
+     * decision and the settlement, oldest first, so the dashboards can show what happened (BR-15).
+     * @param principal authenticated identity supplied by Spring Security
+     * @param id order identifier
+     * @return HTTP 200 with the current status and the ordered steps
+     */
+    @GetMapping("/{id}/events")
+    public ResponseEntity<OrderEventsResponse> events(
+            @AuthenticationPrincipal JwtPrincipal principal, @PathVariable UUID id) {
+        return ResponseEntity.ok(service.getEvents(id, principal.userId()));
     }
 }
