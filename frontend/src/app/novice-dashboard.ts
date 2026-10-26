@@ -47,7 +47,7 @@ import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { FocusAfterChange } from './focus-after-change';
 
 /** How often the portfolio-value chart re-reads its history. */

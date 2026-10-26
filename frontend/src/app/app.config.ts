@@ -10,7 +10,7 @@ import { ApplicationConfig, ErrorHandler, provideBrowserGlobalErrorListeners } f
 import { SafeErrorHandler } from './safe-error-handler';
 import { provideAccessibility, provideAccessibilityStartup } from './accessibility';
 import { provideColourMode } from './colour-mode';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { PageTitleStrategy } from './page-title';
 import { SiteAccessibility } from './site-accessibility';
 

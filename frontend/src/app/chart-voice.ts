@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject } from '@angular/core';
 import { AccessibilityStore } from './accessibility';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { ChartNarrator } from '../../../shared/chart-narrator';
 import { speakable } from './speech-text';
 

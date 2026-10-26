@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
-const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+const { SwitchScanService } = await import('../../shared/switch-scan.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 
 const NAMES = { AAPL: 'Apple Inc.', MSFT: 'Microsoft Corporation', NVDA: 'NVIDIA Corporation', AMZN: 'Amazon.com, Inc.', GOOGL: 'Alphabet Inc.' };

@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { accessibilityStore } from './accessibility';
-import { speakable } from './speech-text';
-import { speechCoordinator } from '../../../shared/speech-coordinator';
+import { accessibilityStore } from '../frontend/src/app/accessibility';
+import { speakable } from '../frontend/src/app/speech-text';
+import { speechCoordinator } from './speech-coordinator';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff

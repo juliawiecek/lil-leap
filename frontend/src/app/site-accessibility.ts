@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AccessibilityStore } from './accessibility';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { speakable } from './speech-text';
 import { AssistiveController } from '../../../shared/assistive-controller';
 import { mergeAssistivePreferences, parseAssistivePreferences, type AssistivePreferences } from '../../../shared/assistive-preferences';

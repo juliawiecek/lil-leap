@@ -1,5 +1,5 @@
 import { Directive, ElementRef, afterNextRender, booleanAttribute, inject, input } from '@angular/core';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 
 /** Focus a newly rendered, user-requested step without taking focus from switch scanning. */
 @Directive({ selector: '[appFocusAfterChange]' })

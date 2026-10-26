@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import { render, browser } from './dom-helper.mjs';
 const {
   ScanEngine, SwitchScanService, isSwitchControlShortcut, isSwitchKey, parseScanSettings, ringTarget, scanLabel, screenBox, spokenItem,
-} = await import('../src/app/switch-scan.ts');
+} = await import('../../shared/switch-scan.ts');
 const { ACCESSIBILITY_STORAGE_KEY } = await import('../src/app/accessibility.ts');
-const { SwitchScanSettings } = await import('../src/app/switch-scan-settings.ts');
+const { SwitchScanSettings } = await import('../../shared/switch-scan-settings.ts');
 
 const doc = browser.document;
 const PAGE = `
