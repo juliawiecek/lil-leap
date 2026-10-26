@@ -23,4 +23,13 @@ public interface OrderQueryRepository {
      * @return the status, or empty when the order does not exist or belongs to another user
      */
     Optional<OrderStatusResponse> findStatus(UUID orderId, UUID userId);
+
+    /**
+     * Reads an order's full audit trail, oldest step first, only when its account belongs to the user.
+     *
+     * @param orderId persistent order identifier
+     * @param userId authenticated user identifier
+     * @return the trail, or empty when the order does not exist or belongs to another user
+     */
+    Optional<OrderEventsResponse> findEvents(UUID orderId, UUID userId);
 }

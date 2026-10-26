@@ -3,6 +3,8 @@ package com.neueda.leap.order.query;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,11 +29,22 @@ class OrderQueryServiceTest {
     }
 
     @Test
+    void returnsTheCallersOrderTrail() {
+        OrderEventsResponse trail = new OrderEventsResponse(order, "FILLED", List.of(
+                new OrderEvent("SUBMITTED", null, null, Instant.parse("2026-10-08T12:00:00Z"), Map.of())));
+        when(repository.findEvents(order, user)).thenReturn(Optional.of(trail));
+
+        assertThat(service.getEvents(order, user)).isSameAs(trail);
+    }
+
+    @Test
     void missingOrUnownedOrderIsNotFound() {
         when(repository.findDetail(order, user)).thenReturn(Optional.empty());
         when(repository.findStatus(order, user)).thenReturn(Optional.empty());
+        when(repository.findEvents(order, user)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getDetail(order, user)).isInstanceOf(OrderNotFoundException.class);
         assertThatThrownBy(() -> service.getStatus(order, user)).isInstanceOf(OrderNotFoundException.class);
+        assertThatThrownBy(() -> service.getEvents(order, user)).isInstanceOf(OrderNotFoundException.class);
     }
 }

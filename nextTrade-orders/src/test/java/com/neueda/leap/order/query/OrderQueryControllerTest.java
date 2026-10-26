@@ -67,11 +67,33 @@ class OrderQueryControllerTest {
     }
 
     @Test
+    void traderReadsOwnOrderTrailOldestFirst() throws Exception {
+        Instant submitted = Instant.parse("2026-10-08T12:00:00Z");
+        when(service.getEvents(order, user)).thenReturn(new OrderEventsResponse(order, "FILLED", java.util.List.of(
+                new OrderEvent("SUBMITTED", null, null, submitted, java.util.Map.of()),
+                new OrderEvent("ACCEPTED", "ORDER_ACCEPTED", null, submitted.plusSeconds(1), java.util.Map.of()),
+                new OrderEvent("PRICE_DECISION", null, null, submitted.plusSeconds(2), java.util.Map.of("actualPrice", 101.5)),
+                new OrderEvent("FILLED", "EXECUTION_SUCCESS", null, submitted.plusSeconds(2), java.util.Map.of()),
+                new OrderEvent("SETTLEMENT_COMPLETED", null, null, submitted.plusSeconds(2), java.util.Map.of("cashDelta", -1015.0)))));
+
+        mvc.perform(get("/orders/{id}/events", order).header("Authorization", trader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").value(order.toString()))
+                .andExpect(jsonPath("$.status").value("FILLED"))
+                .andExpect(jsonPath("$.events.length()").value(5))
+                .andExpect(jsonPath("$.events[0].type").value("SUBMITTED"))
+                .andExpect(jsonPath("$.events[2].details.actualPrice").value(101.5))
+                .andExpect(jsonPath("$.events[4].details.cashDelta").value(-1015.0));
+        verify(service).getEvents(order, user);
+    }
+
+    @Test
     void unknownOrOtherClientsOrderIsNotFound() throws Exception {
         when(service.getDetail(order, user)).thenThrow(new OrderNotFoundException());
         when(service.getStatus(order, user)).thenThrow(new OrderNotFoundException());
+        when(service.getEvents(order, user)).thenThrow(new OrderNotFoundException());
 
-        for (String path : new String[]{"/orders/{id}", "/orders/{id}/status"}) {
+        for (String path : new String[]{"/orders/{id}", "/orders/{id}/status", "/orders/{id}/events"}) {
             mvc.perform(get(path, order).header("Authorization", trader()))
                     .andExpect(status().isNotFound())
                     .andExpect(content().json("{\"error\":\"ORDER_NOT_FOUND\",\"message\":\"The order was not found.\"}", true));
@@ -82,6 +104,7 @@ class OrderQueryControllerTest {
     void missingAuthenticationCannotRead() throws Exception {
         mvc.perform(get("/orders/{id}", order)).andExpect(status().isUnauthorized());
         mvc.perform(get("/orders/{id}/status", order)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/orders/{id}/events", order)).andExpect(status().isUnauthorized());
         verifyNoInteractions(service);
     }
 
@@ -90,6 +113,7 @@ class OrderQueryControllerTest {
         String analyst = "Bearer " + tokens.issueToken(user, "analyst@example.test", "ANALYST");
         mvc.perform(get("/orders/{id}", order).header("Authorization", analyst)).andExpect(status().isForbidden());
         mvc.perform(get("/orders/{id}/status", order).header("Authorization", analyst)).andExpect(status().isForbidden());
+        mvc.perform(get("/orders/{id}/events", order).header("Authorization", analyst)).andExpect(status().isForbidden());
         verifyNoInteractions(service);
     }
 

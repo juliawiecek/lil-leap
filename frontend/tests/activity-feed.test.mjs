@@ -6,7 +6,7 @@ const { OrderHistoryClient, newlyFilled, hasOpenOrders } = await import('../src/
 const { ActivityFeed } = await import('../src/app/activity-feed.ts');
 const { OrderHistoryService } = await import('../src/app/order-history.service.ts');
 const { CashActivityService } = await import('../src/app/cash-activity.service.ts');
-const { CashActivityClient, buildActivity, orderItem, cashItem, formatMoney, formatLocalTime } = await import('../src/app/activity-api.ts');
+const { CashActivityClient, buildActivity, orderItem, cashItem, formatMoney, formatLocalTime, trailStep } = await import('../src/app/activity-api.ts');
 
 const USER_ID = '7c2e33ef-b0ee-43b0-8040-90481f82236e';
 const encode = value => btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -122,16 +122,125 @@ test('fills since the last read are found once, and open orders keep polling ali
   assert.equal(hasOpenOrders([filled, row({ status: 'REJECTED' })]), false);
 });
 
-function feedWith(orders, cash = () => []) {
-  const calls = { orders: [], cash: [] };
+function feedWith(orders, cash = () => [], events = async () => ({ orderId: 'o-1', status: 'FILLED', events: [] })) {
+  const calls = { orders: [], cash: [], events: [] };
   return {
     calls,
     providers: [
-      { provide: OrderHistoryService, useValue: { list: async filters => { calls.orders.push(filters); return orders(filters); } } },
+      { provide: OrderHistoryService, useValue: {
+        list: async filters => { calls.orders.push(filters); return orders(filters); },
+        events: async orderId => { calls.events.push(orderId); return events(orderId); },
+      } },
       { provide: CashActivityService, useValue: { list: async filters => { calls.cash.push(filters); return cash(filters); } } },
     ],
   };
 }
+
+const step = (type, overrides = {}) => ({ type, reasonCode: null, reasonText: null, at: '2026-09-30T18:00:00Z', details: {}, ...overrides });
+
+test('every recorded step reads as plain words with the price, cash and reason where they matter (BR-15)', () => {
+  assert.deepEqual([trailStep(step('SUBMITTED')).label, trailStep(step('SUBMITTED')).tone], ['Order received', 'done']);
+  assert.equal(trailStep(step('ACCEPTED', { reasonCode: 'ORDER_ACCEPTED' })).detail, 'All checks passed. Sent for execution.');
+  const waiting = trailStep(step('PENDING', { reasonCode: 'MARKET_CLOSED' }));
+  assert.deepEqual([waiting.label, waiting.detail, waiting.tone], ['Waiting', 'The market is closed. It fills at the next open.', 'waiting']);
+  assert.equal(trailStep(step('DELAYED', { reasonText: 'Retrying in a moment.' })).detail, 'Retrying in a moment.');
+  assert.equal(trailStep(step('PENDING')).detail, 'Your order is in the queue.');
+  const priced = trailStep(step('PRICE_DECISION', { details: { actualPrice: 227.4, limitPrice: '231.95' } }));
+  assert.deepEqual([priced.label, priced.detail], ['Priced at $227.40', 'Within your protection limit of $231.95.']);
+  assert.equal(trailStep(step('PRICE_DECISION')).label, 'Priced');
+  assert.equal(trailStep(step('FILLED', { reasonCode: 'EXECUTION_SUCCESS' })).label, 'Filled');
+  const settled = trailStep(step('SETTLEMENT_COMPLETED', { details: { cashDelta: -2274 } }));
+  assert.equal(settled.detail, '−$2,274.00 taken from your cash balance.');
+  assert.equal(trailStep(step('SETTLEMENT_COMPLETED', { details: { cashDelta: '150.5' } })).detail, '+$150.50 added to your cash balance.');
+  assert.equal(trailStep(step('SETTLEMENT_COMPLETED')).detail, 'Your balances reflect this trade.');
+  const rejected = trailStep(step('REJECTED', { reasonCode: 'INSUFFICIENT_CASH' }));
+  assert.equal(rejected.tone, 'failed');
+  assert.match(rejected.detail, /not enough cash/);
+  assert.equal(trailStep(step('REJECTED', { reasonCode: 'PRICE_MOVED', reasonText: 'The price rose 3.1%.' })).detail, 'The price rose 3.1%.');
+  const cancelled = trailStep(step('CANCELLED', { reasonCode: 'CANCELLED_BY_CLIENT' }));
+  assert.deepEqual([cancelled.label, cancelled.tone], ['Cancelled', 'cancelled']);
+  assert.equal(trailStep(step('ORDER_REQUEUED')).label, 'Order requeued');
+});
+
+test('client reads an order trail through the shared transport and explains a missing order', async () => {
+  const trail = { orderId: 'o-1', status: 'FILLED', events: [{ type: 'SUBMITTED', reasonCode: null, reasonText: null, at: '2026-09-30T18:00:00Z', details: null }] };
+  const { calls, fetchImpl } = fakeFetch(json(200, trail));
+  const got = await new OrderHistoryClient({ accessToken: token }, apiHttp(fetchImpl)).events('o-1');
+  assert.equal(calls[0].url, '/api/v1/orders/o-1/events');
+  assert.deepEqual(got.events[0].details, {});
+  await assert.rejects(new OrderHistoryClient({ accessToken: null }, apiHttp(fetchImpl)).events('o-1'), /Sign in/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(json(404, {})).fetchImpl)).events('o-9'), /not found/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new Response('x', { status: 500 })).fetchImpl)).events('o-1'), /order details/);
+  await assert.rejects(new OrderHistoryClient({ accessToken: token }, apiHttp(fakeFetch(new TypeError('net')).fetchImpl)).events('o-1'), /Could not reach the server/);
+});
+
+test('Details opens one order trail under its row, follows the feed refresh, and closes again (BR-15)', async t => {
+  let trailEvents = [step('SUBMITTED'), step('ACCEPTED', { at: '2026-09-30T18:00:01Z' })];
+  const { calls, providers } = feedWith(() => [row({ status: 'ACCEPTED', fillPrice: null }), row({ orderId: 'o-2' })], () => [],
+    async orderId => ({ orderId, status: 'ACCEPTED', events: trailEvents }));
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  await flush();
+  const first = feed.items().find(i => i.orderId === 'o-1');
+  const second = feed.items().find(i => i.orderId === 'o-2');
+  assert.equal(feed.expanded(), null);
+
+  await feed.toggleTrail(first);
+  assert.equal(feed.expanded(), 'o-1');
+  assert.deepEqual(calls.events, ['o-1']);
+  assert.deepEqual(feed.steps().map(s => s.label), ['Order received', 'Accepted']);
+  assert.equal(feed.trailLoading(), false);
+
+  // The feed's own refresh re-reads the open trail, so a fill shows up without closing it.
+  trailEvents = [...trailEvents, step('FILLED', { at: '2026-09-30T18:00:02Z' })];
+  await feed.load();
+  await flush();
+  assert.deepEqual(calls.events, ['o-1', 'o-1']);
+  assert.deepEqual(feed.steps().map(s => s.label), ['Order received', 'Accepted', 'Filled']);
+
+  await feed.toggleTrail(second);
+  assert.equal(feed.expanded(), 'o-2');
+  assert.deepEqual(calls.events, ['o-1', 'o-1', 'o-2']);
+  await feed.toggleTrail(second);
+  assert.equal(feed.expanded(), null);
+  assert.equal(feed.trail(), null);
+  await feed.toggleTrail({ kind: 'cash', id: 'cash-1' });
+  assert.equal(feed.expanded(), null);
+  feed.ngOnDestroy();
+});
+
+test('a trail that cannot be loaded says so under the row, and a stale answer never lands on another order', async t => {
+  let fail = true;
+  const pending = {};
+  const { providers } = feedWith(() => [row(), row({ orderId: 'o-2' })], () => [], async orderId => {
+    if (fail) throw new Error('Could not reach the server. Check your connection and try again.');
+    await new Promise(resolve => { pending[orderId] = resolve; });
+    return { orderId, status: 'FILLED', events: [step('SUBMITTED')] };
+  });
+  const feed = component(t, ActivityFeed, providers);
+  feed.ngOnInit();
+  await flush();
+  const first = feed.items().find(i => i.orderId === 'o-1');
+  const second = feed.items().find(i => i.orderId === 'o-2');
+  await feed.toggleTrail(first);
+  assert.match(feed.trailError(), /Could not reach the server/);
+  assert.equal(feed.trailLoading(), false);
+
+  fail = false;
+  await feed.toggleTrail(first); // closes
+  const opening = feed.toggleTrail(first); // slow answer for o-1 ...
+  await flush();
+  const switching = feed.toggleTrail(second); // ... while o-2 is opened meanwhile
+  await flush();
+  pending['o-1']();
+  await opening;
+  assert.equal(feed.expanded(), 'o-2');
+  assert.equal(feed.trail(), null, 'the late o-1 answer is dropped');
+  pending['o-2']();
+  await switching;
+  assert.equal(feed.trail().orderId, 'o-2');
+  feed.ngOnDestroy();
+});
 
 test('the feed loads orders and cash together as soon as it is shown', async t => {
   const { calls, providers } = feedWith(() => [row({ fillPrice: 225.05 })], () => [deposit]);

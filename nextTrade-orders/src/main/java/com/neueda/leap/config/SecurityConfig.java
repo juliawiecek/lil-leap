@@ -24,9 +24,9 @@ import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    /** {@code /orders/{uuid}} and {@code /orders/{uuid}/status}, with no query string. */
+    /** {@code /orders/{uuid}}, {@code /orders/{uuid}/status} and {@code /orders/{uuid}/events}, with no query string. */
     private static final String ORDER_READ_PATH =
-            "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(/status)?$";
+            "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(/status|/events)?$";
     /** {@code /orders/{uuid}/cancel} (PS-14), with no query string. */
     private static final String ORDER_CANCEL_PATH =
             "^/orders/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/cancel$";

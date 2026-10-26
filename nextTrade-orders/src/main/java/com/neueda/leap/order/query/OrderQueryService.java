@@ -43,4 +43,17 @@ public class OrderQueryService {
     public OrderStatusResponse getStatus(UUID orderId, UUID userId) {
         return repository.findStatus(orderId, userId).orElseThrow(OrderNotFoundException::new);
     }
+
+    /**
+     * Returns the audit trail of one of the caller's orders, oldest step first (BR-15).
+     *
+     * @param orderId persistent order identifier
+     * @param userId authenticated user identifier
+     * @return every recorded status, pricing and settlement step
+     * @throws OrderNotFoundException if the order does not exist or belongs to another user
+     */
+    @Transactional(readOnly = true)
+    public OrderEventsResponse getEvents(UUID orderId, UUID userId) {
+        return repository.findEvents(orderId, userId).orElseThrow(OrderNotFoundException::new);
+    }
 }
