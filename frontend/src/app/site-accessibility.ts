@@ -11,7 +11,7 @@ import { mergeAssistivePreferences, parseAssistivePreferences, type AssistivePre
 import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /** What voice mode says when it is turned on, matching the setting's name. */
-export const VOICE_ON = 'Voice assistance on.';
+export const VOICE_ON = 'Voice mode on.';
 
 @Injectable({ providedIn: 'root' })
 export class SiteAccessibility {

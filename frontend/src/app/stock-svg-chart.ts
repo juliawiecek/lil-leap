@@ -334,10 +334,11 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       this.#observer.observe(svg);
     });
   }
-  ngOnChanges(): void {
+  ngOnChanges(changes: import('@angular/core').SimpleChanges = {}): void {
     this.#zone.runOutsideAngular(() => {
       if (!this.#viewport) return;
-      this.#clearSelection();
+      if (changes['windowSeconds'] || changes['chartType']) this.#clearSelection();
+      else if (this.#selection) return;
       this.#viewport?.setWindowSeconds(this.windowSeconds());
       this.#viewport?.refresh();
     });

@@ -162,7 +162,7 @@ test('Brief says name and value; Detailed adds role, state and the glossary hint
     <button data-glossary="buying-power">Buying power</button>`;
   const hint = (element) => element.closest('[data-glossary]') ? 'Buying power is the cash you can use to buy shares now.' : '';
   const { doc } = controllerFor(t, markup, {}, { hint });
-  const [book, week, , power] = doc.querySelectorAll('button');
+  const [book, week, power] = doc.querySelectorAll('button');
   const checkbox = doc.querySelector('input');
   assert.equal(describeElement(book, false, 'brief'), 'Order book.');
   assert.equal(describeElement(book, false, 'detailed'), 'Order book. button. Expanded.');
@@ -203,6 +203,7 @@ test('moving quickly speaks only the last control, and the same phrase is not sa
   t.mock.timers.tick(200);
   assert.equal(controller.announce('Activity.'), false, 'repeat within 0.5 s');
   assert.equal(spoken.length, 1);
+  buttons[2].dispatchEvent(new browser.PointerEvent('pointerout', { bubbles: true, relatedTarget: doc.body }));
   t.mock.timers.tick(400);
   assert.equal(controller.announce('Activity.'), true, 'after half a second it can be said again');
 });

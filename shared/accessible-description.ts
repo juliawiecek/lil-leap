@@ -27,7 +27,7 @@ export type DescriptionLevel = 'brief' | 'detailed';
  * allows longer content. Fields are said as label and value ("Number of shares, 2", or "empty").
  * Being unavailable or invalid is always said, since it stops the person acting.
  */
-export function describeElement(element: Element, requested = false, level: DescriptionLevel = 'detailed'): string {
+export function describeElement(element: Element, requested = false, level: DescriptionLevel = 'detailed', hint = ''): string {
   if (element.closest('[inert], [aria-hidden="true"], [hidden]')) return '';
   const detailed = level === 'detailed';
   const field = element as HTMLInputElement;
@@ -73,6 +73,7 @@ export function describeElement(element: Element, requested = false, level: Desc
   if (description && (detailed || invalid || role === 'img')) parts.push(description.slice(0, requested ? 1000 : 260));
   if (detailed && role === 'img' && description && !requested) parts.push('Use Explain this chart for details');
   if (detailed && element.closest('nav') && role !== 'heading') parts.push('Navigation');
+  if (detailed && hint) parts.push(hint);
   // Spoken wording can end in its own full stop ("… Select to trade."); never say two.
   return parts.map(part => tidy(part).replace(/[.\s]+$/, '')).filter(Boolean).join('. ') + '.';
 }

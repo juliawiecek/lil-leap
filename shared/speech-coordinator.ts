@@ -21,8 +21,8 @@ export class SpeechCoordinator {
     const synth = this.current();
     if (!synth || !this.supported || !utterance.text) return false;
     // Passive readers never interrupt another channel. Explicit reading/briefing may replace it.
-    if (this.owner && this.owner !== owner && !options.interrupt) return false;
-    if (!this.owner && synth.speaking && !options.interrupt) return false;
+    if (this.owner && this.owner !== owner && !options.interrupt && !options.queue) return false;
+    if (!this.owner && synth.speaking && !options.interrupt && !options.queue) return false;
     if (options.interrupt || (!options.queue && this.owner === owner)) this.stop();
     if (synth.paused) synth.resume?.();
     const preferences = this.preferences();

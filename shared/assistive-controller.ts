@@ -10,6 +10,7 @@ export interface AssistiveOptions {
   scanning?: () => boolean;
   stopScanningSpeech?: () => void;
   format?: (text: string) => string;
+  hint?: (element: Element) => string;
 }
 const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="tab"], [role="img"], [data-a11y-read]';
 const INFORMATION = 'h1, h2, h3, p, dt, dd, td, th, output, [data-a11y-read]';
@@ -132,7 +133,7 @@ export class AssistiveController {
     // Focus and hover are one polite stream: fast moves replace the item being read, so only the
     // last one is heard. Polite speech never cuts in on anything else, such as a playing briefing.
     if (POLITE.includes(owner)) POLITE.filter(other => other !== owner).forEach(other => speech.stop(other));
-    const started = speech.submit(owner, utterance, { interrupt });
+    const started = speech.submit(owner, utterance, { interrupt, queue: !interrupt && owner === 'assist:announce' });
     if (started) { this.lastPhrase = spoken; this.lastPhraseAt = now; }
     if (started && target && this.options.settings().highlightSpeech) {
       this.clearHighlight(); this.highlight = target; target.setAttribute('data-a11y-speaking', '');
@@ -143,7 +144,7 @@ export class AssistiveController {
   }
   private read(element: Element, owner: string, requested = false): void {
     // The level is read per item, so changing it takes effect on the next item.
-    this.say(describeElement(element, requested, this.options.settings().level), owner, element, requested);
+    this.say(describeElement(element, requested, this.options.settings().level, this.options.hint?.(element)), owner, element, requested);
   }
   /**
    * Speaks a message from the app while voice assistance is on: "Voice assistance on.", an order
@@ -152,7 +153,7 @@ export class AssistiveController {
    */
   announce(text: string, urgent = false): boolean {
     if (!this.options.settings().enabled) return false;
-    return this.say(text, urgent ? 'assist:alert' : 'assist:announce', undefined, false, true);
+    return this.say(text, urgent ? 'assist:alert' : 'assist:announce', undefined, false, urgent);
   }
   /** Escape: stops the sentence being read, without a status message, and leaves every setting alone. */
   private hush(): void {
@@ -178,7 +179,7 @@ export class AssistiveController {
     const headings = [...main.querySelectorAll('h1,h2')].filter(visible).map(node => readableText(node, 120)).filter(Boolean);
     const alerts = [...main.querySelectorAll('[role="alert"]')].filter(visible).map(node => readableText(node, 200));
     const figures = [...main.querySelectorAll('[data-a11y-read]')].filter(visible).slice(0, 2)
-      .map(node => describeElement(node, true, this.options.settings().level)).join(' ');
+      .map(node => describeElement(node, true, this.options.settings().level, this.options.hint?.(node))).join(' ');
     const text = `${headings.shift() || this.document.title}. ${headings.length ? 'Sections: ' + headings.slice(0, 10).join('; ') + '.' : ''} ${figures} ${alerts.join('. ')} Use Tab to move through controls, or Read section for details.`;
     this.say(text, 'assist:request', main, true);
   }

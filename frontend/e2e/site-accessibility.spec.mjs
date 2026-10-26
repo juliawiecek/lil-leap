@@ -97,7 +97,7 @@ test('focus speech is opt-in, follows keyboard navigation, preserves typing and 
   await buy.focus(); await buy.hover();
   expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
   const panel = await tools(page);
-  await panel.getByLabel('Enable built-in voice assistance', { exact: true }).check();
+  await panel.getByRole('button', { name: 'Voice mode', exact: true }).click();
   await panel.getByLabel('Speak on keyboard focus', { exact: true }).check();
   await closeTools(page);
   await page.evaluate(() => window.assistiveSpeech.length = 0);
@@ -129,7 +129,7 @@ test('hover speech waits for intent, does not repeat during live updates, and re
   expect(await page.evaluate(() => window.assistiveSpeech.length)).toBe(before);
   await buy.focus();
   const panel = await tools(page);
-  await panel.getByLabel('Enable built-in voice assistance', { exact: true }).uncheck();
+  await panel.getByRole('button', { name: 'Voice mode', exact: true }).uncheck();
   await closeTools(page); await buy.focus(); await page.keyboard.press('Alt+Shift+r');
   await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toMatch(/Buy.*button/);
   await page.keyboard.press('Alt+Shift+Space');
@@ -223,7 +223,7 @@ test('Insights routes, role-specific trade lookup, tab keys and native screen-re
   await page.getByRole('link', { name: 'Reports', exact: true }).click();
   await expect(page.locator('main h1')).toBeFocused();
   const panel = await tools(page);
-  await panel.getByLabel('Enable built-in voice assistance', { exact: true }).check();
+  await panel.getByRole('button', { name: 'Voice mode', exact: true }).click();
   await panel.getByLabel('Speak on keyboard focus', { exact: true }).check();
   await closeTools(page);
   await page.getByRole('link', { name: 'Clients', exact: true }).focus(); await page.keyboard.press('Tab');
