@@ -170,3 +170,10 @@ test('each price on the tape is named by what it shows, and switch control says 
   assert.match(first.getAttribute('aria-label'), /, Price delayed$/);
   assert.match(first.getAttribute('data-speak'), /, price delayed\. Select to trade\.$/);
 });
+
+test('limit order read-back preserves the exact limit and exit prices', () => {
+ const text = orderReadBack({side:'Buy', quantity:2, symbol:'AAPL', name:'Apple Inc.', total:340.5, closedWarning:'', priceDelayed:false, limitPrice:170.25, takeProfit:180.75, stopLoss:160.12});
+ assert.match(text, /Limit price \$170\.25 per share, or better/);
+ assert.match(text, /Take profit at \$180\.75/);
+ assert.match(text, /Stop loss triggers at \$160\.12/);
+});

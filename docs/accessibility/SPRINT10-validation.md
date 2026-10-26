@@ -1,6 +1,6 @@
 # Sprint 10 accessibility integration validation
 
-Validated on 26 October 2026 on `a11y/sprint10-integration`, based on main `f999ae3`.
+Validated on 26 October 2026 on `a11y/sprint10-integration`, originally based on main `f999ae3`, then updated with main `b842a3f` (advanced order tickets and account presets).
 The branches were merged in order: audit fixes, PS-21, PS-22/26, PS-23, then PS-29.
 The switch-engine migration has a separate rename/import-only commit (`214e1a2`).
 
@@ -25,7 +25,7 @@ Regression coverage includes independent hover/focus toast holds, full timer res
 | --- | --- | --- |
 | [PS-21 / NEXT-241](https://lilleap.atlassian.net/browse/NEXT-241) | Order announcements and focus, Price watch/pause, tables, screen-reader briefing, toast audit | AC4 and AC13: NVDA + Chrome and VoiceOver + Safari, including complete briefing order/timing |
 | [PS-22 / NEXT-242](https://lilleap.atlassian.net/browse/NEXT-242) | One pressed-state Voice mode button, shared speed, Brief/Detailed with glossary hints, priorities, private values and sound cues | AC21: real NVDA run with Voice mode off; local-voice intelligibility and sound perception remain manual |
-| [PS-23 / NEXT-243](https://lilleap.atlassian.net/browse/NEXT-243) | Captions, interrupting/edited order read-back, independent Alt+W glossary, spoken keypads and Fast scan behavior | AC2/3: manual 200% zoom/overlay review; AC12: team wording review; AC16: screen-away one-button trade demo. AC6's limit-price clause is unexercised because the current tickets expose market orders only |
+| [PS-23 / NEXT-243](https://lilleap.atlassian.net/browse/NEXT-243) | Captions, interrupting/edited order read-back, independent Alt+W glossary, spoken keypads and Fast scan behavior | AC2/3: manual 200% zoom/overlay review; AC12: team wording review; AC16: screen-away one-button trade demo. AC6 now includes exact limit and optional exit prices after the main update |
 | [PS-26 / NEXT-246](https://lilleap.atlassian.net/browse/NEXT-246) | Point navigation/announcements, D/T/Space, sonification and pitch tests, displayed-series parity | Actual screen-reader and audio listening review remains manual. Explicit Space playback is permitted while reduced motion/live updates are paused; those settings prevent automatic playback |
 | [PS-29 / NEXT-249](https://lilleap.atlassian.net/browse/NEXT-249) | Shared switch implementation, both sign-in pages, full private keypad, Insights charts/structure/filter counts, allocation alternatives and axe | Physical switch checks for AC1/2 and NVDA/VoiceOver checks for AC7 remain manual; automated engine/keypad and browser checks pass |
 

@@ -108,3 +108,8 @@ test('toast actions have 24px targets and stay reachable in a modal', async t =>
  assert.match(Toasts[Object.getOwnPropertyNames(Toasts).find(key => key.endsWith('cmp'))].styles.join(' '), /min-width: 24px; min-height: 24px/);
  dialog.open = false; await new Promise(resolve => setImmediate(resolve)); assert.notEqual(host.parentNode, dialog); dialog.remove();
 });
+
+test('limit reviews name the exact per-share limit and its estimated total', () => {
+ const text = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'', limitPrice:170.25 });
+ assert.match(text, /limit \$170\.25 per share/); assert.match(text, /estimated \$340\.50/); assert.doesNotMatch(text, /fills at up to/);
+});

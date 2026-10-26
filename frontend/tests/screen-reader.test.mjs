@@ -616,3 +616,10 @@ test('the novice holding average cost is masked with hidden balances', async t =
  const {fixture,desk,root} = await noviceTicket(t); desk.showBalance.set(false); fixture.detectChanges();
  assert.equal(root.querySelector('.holdings-table tbody td:nth-child(3)').textContent.trim(), 'Hidden');
 });
+
+test('limit and exit validation links and focuses the corresponding ticket field', async t => {
+ const {fixture,desk,root} = await advancedTicket(t); desk.setOrderType('LIMIT'); desk.limitPrice.set('0'); desk.quantity.set('1'); fixture.detectChanges(); desk.reviewOrder(); fixture.detectChanges(); t.mock.timers.tick(1);
+ const limit = root.querySelector('#pro-limit'); assert.equal(limit.getAttribute('aria-invalid'), 'true'); assert.equal(limit.getAttribute('aria-describedby'), 'pro-limit-error'); assert.ok(browser.document.activeElement === limit);
+ desk.limitPrice.set('100'); desk.takeProfitEnabled.set(true); desk.takeProfit.set('90'); desk.reviewOrder(); fixture.detectChanges(); t.mock.timers.tick(1);
+ const profit = root.querySelector('#pro-profit'); assert.equal(profit.getAttribute('aria-invalid'), 'true'); assert.ok(browser.document.activeElement === profit); assert.equal(root.querySelector('#pro-quantity').getAttribute('aria-invalid'), null);
+});
