@@ -240,7 +240,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     return { key: symbol + '-' + (live?.version ?? 0), dir: live?.direction ?? null };
   }
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
-  readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
+  readonly closedWarning = computed(() => {
+    const status = this.feed.status();
+    if (this.orderType() === 'LIMIT' && status && !status.open) {
+      return `The market is closed. It opens at ${localOpeningTime(status.nextOpen, this.currentTime())}. Your limit order waits for the limit price or better.`;
+    }
+    return closedMarketWarning(status, this.currentTime());
+  });
   /** Corner messages when an order fills or is rejected (PS-15). */
   readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
   declare readonly orderStatusClient: OrderStatusClient;
