@@ -295,3 +295,18 @@ test('an ordinary visit to sign-in shows no sign-out notice', async t => {
   assert.equal(app.signedOutNotice(), '');
   assert.equal(fixture.nativeElement.querySelector('.signed-out-notice'), null);
 });
+
+test('the show-password toggle keeps one name and reports its state in aria-pressed (PS-29)', async t => {
+  const { fixture, app } = await setup(t);
+  app.pageReady.set(true); fixture.detectChanges();
+  const toggle = fixture.nativeElement.querySelector('.password-toggle');
+  const field = fixture.nativeElement.querySelector('#password');
+  assert.equal(toggle.getAttribute('aria-label'), 'Show password');
+  assert.ok(toggle.getAttribute('aria-label').includes(toggle.textContent.trim()), 'the visible word is part of the name (label in name)');
+  assert.equal(toggle.getAttribute('aria-pressed'), 'false');
+  assert.equal(field.type, 'password');
+  toggle.click(); fixture.detectChanges();
+  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(toggle.getAttribute('aria-label'), 'Show password', 'the name does not change with the state');
+  assert.equal(field.type, 'text');
+});

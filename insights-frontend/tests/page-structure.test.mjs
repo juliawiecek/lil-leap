@@ -117,6 +117,15 @@ test('the sign-in page passes the structure checks', async (t) => {
   const login = await render(t, Login, {}, [provideRouter([]), analyst, { provide: AppSessionService, useValue: { start: () => {} } }]);
   assert.deepEqual(structureProblems(login.nativeElement), [], 'Sign in');
   assert.ok(login.nativeElement.querySelector('main#insights-login-main'), 'the sign-in form is the main landmark');
+  const toggle = login.nativeElement.querySelector('.password-toggle');
+  const field = login.nativeElement.querySelector('#password');
+  assert.equal(toggle.getAttribute('aria-label'), 'Show password');
+  assert.ok(toggle.getAttribute('aria-label').includes(toggle.textContent.trim()), 'the visible word is part of the name');
+  assert.equal(toggle.getAttribute('aria-pressed'), 'false');
+  toggle.click(); login.detectChanges();
+  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(toggle.getAttribute('aria-label'), 'Show password', 'the name stays the same; the state changes');
+  assert.equal(field.type, 'text');
 });
 
 test('every page gets its own tab title, which follows navigation', async (t) => {

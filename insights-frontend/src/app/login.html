@@ -103,13 +103,15 @@
               (keyup)="checkCapsLock($event)"
               (blur)="capsLock.set(false)"
             />
+            <!-- A toggle: one stable name that contains its visible word, and the state in aria-pressed (PS-29). -->
             <button
               class="password-toggle"
               type="button"
-              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              aria-label="Show password"
+              [attr.aria-pressed]="passwordVisible()"
               (click)="passwordVisible.set(!passwordVisible())"
             >
-              {{ passwordVisible() ? 'Hide' : 'Show' }}
+              Show
             </button>
           </div>
           @if (passwordError()) {
