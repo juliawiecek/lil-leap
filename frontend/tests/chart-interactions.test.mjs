@@ -105,6 +105,83 @@ test('SVG touch inspection, keyboard navigation, resize and reduced motion retai
   animateFrame(performance.now() + 1000);
 });
 
+test('advanced overview connects sparse history without adding observations or candles in the gap', async (t) => {
+  const env = environment(t);
+  const fixture = await render(t, StockSvgChart, { overview: true });
+  const chart = fixture.componentInstance;
+  const history = [
+    { time: 120, price: 225 }, { time: 180, price: 224 },
+    { time: 1380, price: 226 }, { time: 1440, price: 225 },
+  ];
+  chart.setHistory(history);
+  fixture.detectChanges();
+  const root = fixture.nativeElement;
+  const line = root.querySelector('[data-line]');
+  const area = root.querySelector('[data-area]');
+  const connected = () => {
+    assert.equal((line.getAttribute('d').match(/M/g) ?? []).length, 1);
+    assert.equal((line.getAttribute('d').match(/C/g) ?? []).length, 3);
+    assert.equal((area.getAttribute('d').match(/Z/g) ?? []).length, 1);
+    assert.doesNotMatch(line.getAttribute('d'), /NaN|Infinity/);
+  };
+  connected();
+  assert.deepEqual(chart.accessPoints(), history.map(p => ({ at: p.time * 1000, value: p.price })));
+  const svg = root.querySelector('svg');
+  // The middle of the connected span still inspects an actual quote.
+  svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: 290 }));
+  assert.match(root.querySelector('.tooltip').textContent, /\$224\.00/);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape' }));
+  env.bounds.width = 320;
+  env.observers[0].callback(); animateFrame(performance.now() + 1000);
+  connected();
+  fixture.componentRef.setInput('chartType', 'candlestick'); fixture.detectChanges();
+  assert.equal(root.querySelectorAll('[data-candles] path').length, 4);
+  const candlePositions = () => [...root.querySelectorAll('[data-candles] path')]
+    .map(node => Number(node.getAttribute('d').match(/^M([^,]+)/)[1]));
+  const spaced = () => {
+    const positions = candlePositions();
+    const step = (env.bounds.width - 34) / history.length;
+    positions.slice(1).forEach((x, i) => assert.ok(Math.abs(x - positions[i] - step) < .001));
+  };
+  spaced();
+  assert.match(chart.description(), /evenly spaced; empty time intervals are skipped/);
+  assert.match(chart.dataTable().rows[2][0], /7:23:00 PM EST/);
+  assert.equal(root.querySelector('[data-time="1"]').textContent, '7:23 PM');
+  // Both pointer and keyboard inspection follow the same compressed candle positions.
+  svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: candlePositions()[1] }));
+  assert.match(root.querySelector('.tooltip').textContent, /C \$224\.00/);
+  assert.equal(Number(root.querySelector('[data-marker]').getAttribute('cx')), candlePositions()[1]);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+  assert.match(root.querySelector('.tooltip').textContent, /C \$226\.00/);
+  assert.equal(Number(root.querySelector('[data-marker]').getAttribute('cx')), candlePositions()[2]);
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Escape' }));
+  env.bounds.width = 900;
+  env.observers[0].callback(); animateFrame(performance.now() + 1000);
+  spaced();
+  assert.equal(chart.allData().rows.length, history.length);
+  fixture.componentRef.setInput('chartType', 'line'); fixture.detectChanges();
+  connected();
+});
+
+test('resizing candle intervals keeps inspection attached to the visible candle', async (t) => {
+  const env = environment(t);
+  const fixture = await render(t, StockSvgChart, { overview: true, chartType: 'candlestick' });
+  fixture.componentInstance.setHistory([
+    { time: 120, price: 100 }, { time: 140, price: 110 },
+    { time: 150, price: 120 }, { time: 170, price: 90 },
+    { time: 1440, price: 105 },
+  ]);
+  fixture.detectChanges();
+  const root = fixture.nativeElement;
+  root.querySelector('svg').dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));
+  assert.match(root.querySelector('.tooltip').textContent, /C \$110\.00/);
+  env.bounds.width = 280;
+  env.observers[0].callback(); animateFrame(performance.now() + 1000);
+  assert.match(root.querySelector('.tooltip').textContent, /C \$90\.00/);
+  const firstX = Number(root.querySelector('[data-candles] path').getAttribute('d').match(/^M([^,]+)/)[1]);
+  assert.equal(Number(root.querySelector('[data-marker]').getAttribute('cx')), firstX);
+});
+
 test('stock chart skips browser observers during server rendering', async (t) => {
   const env = environment(t);
   const fixture = await render(t, StockSvgChart, {}, [

@@ -1,6 +1,42 @@
 import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
 
+test('advanced line and candlesticks avoid visual gaps in sparse recorded quotes', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await colourFixture(page, 'ADVANCED');
+  await page.route('**/quotes/history/**', route => route.fulfill({ json: Array.from({ length: 121 }, (_, i) => ({
+    quotedAt: new Date(Date.parse('2026-10-21T13:30:00Z') + i * 60000).toISOString(),
+    midpoint: 200 + Math.sin(i / 7) * 2,
+  })).filter((_, i) => i < 45 || i > 85) }));
+  await page.goto('/dashboard');
+  const card = page.locator('app-retail-stock-dashboard');
+  const line = card.locator('[data-line]');
+  await expect(line).toHaveAttribute('d', /^M/, { timeout: 15000 });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(async () => (await line.getAttribute('d')).match(/M/g)?.length).toBe(1);
+    expect((await card.locator('[data-area]').getAttribute('d')).match(/Z/g)?.length).toBe(1);
+    await card.screenshot({ path: `test-results/advanced-connected-line-${width}.png` });
+  }
+  await card.getByRole('button', { name: 'Candlesticks', exact: true }).click();
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(card.locator('.plot-caption')).toContainText('empty intervals skipped');
+    await expect.poll(async () => card.locator('[data-candles]').evaluate(group => {
+      const positions = [...group.querySelectorAll('path')].map(path => Number(path.getAttribute('d').match(/^M([^,]+)/)[1]));
+      const gaps = positions.slice(1).map((x, i) => x - positions[i]);
+      return Math.max(...gaps) / Math.min(...gaps);
+    })).toBeLessThan(1.001);
+    await card.locator('svg[role="img"]').focus(); await page.keyboard.press('Home');
+    await expect(card.locator('.tooltip')).toContainText('9:30:00 AM EDT');
+    await page.keyboard.press('End');
+    await expect(card.locator('.tooltip')).toContainText('11:30:00 AM EDT');
+    await page.keyboard.press('Escape');
+    await card.screenshot({ path: `test-results/advanced-connected-candles-${width}.png` });
+  }
+});
+
 for (const mode of ['off', 'red-green', 'blue-yellow']) {
   test(`advanced line and candlesticks work with the ${mode} palette`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade');

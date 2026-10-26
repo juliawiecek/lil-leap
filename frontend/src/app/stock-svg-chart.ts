@@ -123,7 +123,7 @@ const TIME = new Intl.DateTimeFormat('en-US', {
     @if (overview()) {
       <div class="plot-caption">
         @if (chartType() === 'candlestick') {
-          <span>{{ intervalLabel() }} candles · recorded quotes</span>
+          <span>{{ intervalLabel() }} candles · empty intervals skipped</span>
           <span class="candle-key"><i class="up"></i>Up / hollow <i class="down"></i>Down / filled</span>
         } @else {
           <span>{{ intervalLabel() }} closing prices</span><span>Hover or use arrow keys to explore</span>
@@ -222,7 +222,7 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     return this.trades().filter(t => points.length && t.at >= points[0].at && t.at <= points.at(-1)!.at);
   });
   readonly description = computed(() => describeSeries(this.accessPoints(), { name: this.label(), currency: this.accessCurrency(), empty: this.emptyLabel(), period: this.windowSeconds() === 86400 ? 'one day' : `last ${this.windowSeconds()} seconds` }) + ' ' + this.performanceText() + '. ' + describeTrades(this.viewTrades(), this.accessPoints().at(-1)?.value, this.averageCost(), this.privateValues())
-    + (this.chartType() === 'candlestick' ? ` ${this.intervalLabel()} candles show the open, high, low and close of recorded quotes, not exchange trades. Hollow bodies rise, filled bodies fall; a horizontal body is unchanged.` : this.overview() ? ` Line shows ${this.intervalLabel()} closing prices; inspection and the table retain recorded quotes.` : ''));
+    + (this.chartType() === 'candlestick' ? ` ${this.intervalLabel()} candles show the open, high, low and close of recorded quotes, not exchange trades. Candles are evenly spaced; empty time intervals are skipped. Labels and inspection show actual recorded times. Hollow bodies rise, filled bodies fall; a horizontal body is unchanged.` : this.overview() ? ` Line shows ${this.intervalLabel()} closing prices; inspection and the table retain recorded quotes.` : ''));
   readonly dataTable = computed<ChartTable>(() => this.chartType() === 'candlestick' ? {
     note: `${this.intervalLabel()} candles from recorded quotes. Open and close are the first and last quote in each interval. Empty intervals are omitted.`,
     grouped: true,
@@ -410,22 +410,18 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     const interval = displayInterval(range.to - range.from, box.right - box.left);
     if (interval !== this.intervalSeconds()) this.#zone.run(() => this.intervalSeconds.set(interval));
     const display = this.overview() ? overviewPoints(visible, interval) : reducePoints(visible, range, (box.right - box.left) / 2);
-    // Break the overview across missing intervals instead of drawing a fictitious smooth bridge.
-    const segments: StockPriceTick[][] = [];
-    display.forEach((point, index) => {
-      if (!index || (this.overview() && point.time - display[index - 1].time > interval * 3)) segments.push([]);
-      segments.at(-1)!.push(point);
-    });
-    const paths = segments.map(segment => chartPaths(segment, range, box));
+    // Connect recorded prices across sparse intervals, matching the novice line chart.
+    // Inspection and candles still use only the observations that actually exist.
+    const paths = chartPaths(display, range, box);
     const candles = this.chartType() === 'candlestick';
-    this.#attr('line', { d: paths.map(p => p.line).join(' '), visibility: candles ? 'hidden' : 'visible' });
-    this.#attr('area', { d: paths.map(p => p.area).join(' '), visibility: candles ? 'hidden' : 'visible', opacity: this.overview() ? .45 : 1 });
+    this.#attr('line', { d: paths.line, visibility: candles ? 'hidden' : 'visible' });
+    this.#attr('area', { d: paths.area, visibility: candles ? 'hidden' : 'visible', opacity: this.overview() ? .45 : 1 });
     this.#attr('grid', { d: this.overview() ? [.25, .5, .75].map(t => `M${box.left},${box.top + (box.bottom - box.top) * t} H${box.right}`).join(' ') : '' });
     this.#candles = candles ? quoteCandles(visible.filter(p => p.time >= range.from && p.time <= Math.min(range.to, range.reveal)), interval) : [];
-    const candleWidth = Math.max(2, Math.min(9, interval / (range.to - range.from) * (box.right - box.left) * .65));
-    this.#nodes.get('candles')!.replaceChildren(...this.#candles.map(candle => {
+    const candleWidth = Math.max(1, Math.min(12, (box.right - box.left) / Math.max(1, this.#candles.length) * .65));
+    this.#nodes.get('candles')!.replaceChildren(...this.#candles.map((candle, index) => {
       const node = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      const x = mapX((candle.time + candle.endTime) / 2, range, box);
+      const x = this.#candleX(index);
       const top = mapY(Math.max(candle.open, candle.close), range, box);
       const bottom = Math.max(top + 1, mapY(Math.min(candle.open, candle.close), range, box));
       const direction = candle.close > candle.open ? 'up' : candle.close < candle.open ? 'down' : 'flat';
@@ -438,7 +434,7 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     this.#attr('clip', {
       x: box.left,
       y: box.top,
-      width: Math.max(0, Math.min(box.right, mapX(range.reveal, range, box) + 4) - box.left),
+      width: candles ? box.right - box.left : Math.max(0, Math.min(box.right, mapX(range.reveal, range, box) + 4) - box.left),
       height: box.bottom - box.top,
     });
     const gradient = svg.querySelector('linearGradient')!;
@@ -453,8 +449,10 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       });
     }
     svg.querySelectorAll<SVGTextElement>('[data-time]').forEach((node, index) => {
-      const time = range.from + ((range.to - range.from) * index) / 2;
-      node.setAttribute('x', String(mapX(time, range, box)));
+      const candleIndex = Math.round((this.#candles.length - 1) * index / 2);
+      const candle = this.#candles[candleIndex];
+      const time = candle ? candle.time : range.from + ((range.to - range.from) * index) / 2;
+      node.setAttribute('x', String(candle ? this.#candleX(candleIndex) : mapX(time, range, box)));
       node.setAttribute('y', String(height - 9));
       node.setAttribute('text-anchor', index === 0 ? 'start' : index === 2 ? 'end' : 'middle');
       node.textContent = CLOCK.format(time * 1000);
@@ -466,7 +464,8 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       node.textContent = this.#format.format(index ? range.min : range.max);
     });
     if (this.#selection) {
-      this.#showSelection(this.#selection);
+      const point = candles ? nearestPoint(this.#inspectable(), this.#selection.time) : this.#selection;
+      if (point) this.#showSelection(point);
     }
   }
   #inspectable(): readonly StockPriceTick[] {
@@ -478,6 +477,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
           lowerBound(this.#points, Math.min(range.to, range.reveal) + 0.0001),
         )
       : [];
+  }
+  #candleX(index: number): number {
+    return this.#box.left + (index + .5) / Math.max(1, this.#candles.length) * (this.#box.right - this.#box.left);
   }
   #selectAt(clientX: number): void {
     if (!this.#range) {
@@ -491,7 +493,10 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     const time =
       this.#range.from +
       ((x - box.left) / (box.right - box.left)) * (this.#range.to - this.#range.from);
-    const point = nearestPoint(this.#inspectable(), time);
+    const points = this.#inspectable();
+    const point = this.chartType() === 'candlestick'
+      ? points[Math.min(points.length - 1, Math.floor((x - box.left) / (box.right - box.left) * points.length))]
+      : nearestPoint(points, time);
     if (!point) {
       return;
     }
@@ -503,8 +508,10 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
       return;
     }
     this.#selection = point;
+    const candleIndex = this.chartType() === 'candlestick'
+      ? this.#candles.findIndex(c => (c.time + c.endTime) / 2 === point.time) : -1;
     const box = this.#box,
-      x = mapX(point.time, this.#range, box),
+      x = candleIndex >= 0 ? this.#candleX(candleIndex) : mapX(point.time, this.#range, box),
       y = mapY(point.price, this.#range, box);
     this.#attr('selection', { visibility: 'visible' });
     this.#attr('marker', { cx: x, cy: y });
