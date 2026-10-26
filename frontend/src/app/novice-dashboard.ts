@@ -38,7 +38,7 @@ import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ShareEvent, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
@@ -326,6 +326,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartPeriod = signal<ChartPeriod>('1D');
   readonly chartSpan = signal<ChartRange | null>(null);
   readonly chartHistory = signal<ValuePoint[]>([]);
+  /** The fills behind the chart, announced as the keyboard cursor reaches them (PS-26). */
+  readonly chartFills = signal<readonly ShareEvent[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
   #portfolioRequest = 0;
@@ -1081,6 +1083,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const complete = ledgerMatches(this.#portfolio, cash, fills);
       const points = complete ? portfolioSeries(range, cash, fills, prices) : [];
       this.chartHistory.set(points);
+      this.chartFills.set(fills);
       this.chartNotice.set(!complete
         ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
         : !points.length || points[0].at > range.start
