@@ -572,6 +572,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const segment = {
         ...row,
         color: SECTOR_COLORS[i],
+        labelX: 21 + 15.9155 * Math.cos((start + share / 2 - 25) * Math.PI / 50),
+        labelY: 21 + 15.9155 * Math.sin((start + share / 2 - 25) * Math.PI / 50),
         share,
         percent: Math.round(share),
         dash: `${length.toFixed(2)} ${(100 - length).toFixed(2)}`,

@@ -567,8 +567,8 @@ export class PortfolioChart implements AfterViewInit, OnDestroy {
     side: f.quantity < 0 ? 'SELL' : 'BUY', quantity: Math.abs(f.quantity), price: f.price, at: f.at, symbol: f.symbol,
   })));
   /** What Space plays: the line shown, with each fill as a click. */
-  readonly sound = (): ChartSound => chartSound(this.plotPoints(), this.balanceHidden() ? [] : this.trades());
-  readonly accessiblePoints = computed(() => this.loading() || this.error() ? [] : this.plotPoints());
+  readonly sound = (): ChartSound => chartSound(this.chartSeries().points.map(p => ({ at: p.time, value: p.value })), this.balanceHidden() ? [] : this.trades());
+  readonly accessiblePoints = computed(() => this.chartSeries().points.map(p => ({ at: p.time, value: p.value })));
   readonly description = computed(() => describeSeries(this.accessiblePoints(), {
     name: this.subject(), period: this.periodDescription(), currency: 'USD', hidden: this.balanceHidden(),
     empty: this.loading() ? 'History is loading.' : this.error() || 'No ' + this.subject().toLowerCase() + ' history is available for this period.',

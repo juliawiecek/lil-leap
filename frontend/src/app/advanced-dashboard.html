@@ -234,13 +234,13 @@
               } @else if (bottomTab() === 'Balances') {
                 <div class="balance-details">
                   <div>
-                    <span>Cash</span><strong>{{ buyingPower() | currency }}</strong>
+                    <span>Cash</span><strong>{{ privateBalance() ? 'Hidden' : (buyingPower() | currency) }}</strong>
                   </div>
                   <div>
-                    <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
+                    <span>Buying Power</span><strong>{{ privateBalance() ? 'Hidden' : (buyingPower() | currency) }}</strong>
                   </div>
-                  <div><span>Invested</span><strong>{{ exposure().equities | currency }}</strong></div>
-                  <div><span>Total Value</span><strong>{{ portfolio() | currency }}</strong></div>
+                  <div><span>Invested</span><strong>{{ privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
+                  <div><span>Total Value</span><strong>{{ privateBalance() ? 'Hidden' : (portfolio() | currency) }}</strong></div>
                 </div>
               } @else {
                 <div class="balance-details">
@@ -389,7 +389,7 @@
                     (click)="choose(q)"
                     aria-describedby="advanced-heatmap-summary"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + q.change + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + (q.change > 0 ? 'up ' : q.change < 0 ? 'down ' : 'unchanged ') + (q.change < 0 ? -q.change : q.change) + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
@@ -576,9 +576,9 @@
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().equities | currency }}</strong></div>
-      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().cash | currency }}</strong></div>
-      <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
+      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
+      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().cash | currency) }}</strong></div>
+      <div><span>Total</span><strong>{{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().total | currency) }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
     <app-keyboard-shortcuts />
