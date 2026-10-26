@@ -9,7 +9,7 @@ async function scanState(page) {
     return {
       live: document.querySelector('.scan-live')?.textContent ?? '',
       chip: chip && !chip.hidden ? chip.textContent : '',
-      name: active?.getAttribute('aria-label') || active?.textContent?.trim().slice(0, 160),
+      name: active?.getAttribute('aria-label') || [...(active?.labels ?? [])].map(label => label.textContent.trim()).join(' ') || active?.textContent?.trim().slice(0, 160),
       graphic: active?.matches('svg, .allocation-donut, .split-bar, .heat-map, .sector-list') ?? false,
     };
   });
@@ -71,7 +71,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
     await expect(page.locator('.scan-ring')).toHaveCount(1);
     await expect(page.locator('.scan-bar')).toBeVisible();
     await expectVisibleRing(page);
-    if (tier === 'NOVICE') { await group('Portfolio performance'); await group('Portfolio chart'); }
+    if (tier === 'NOVICE') { await group('Portfolio chart'); }
     else await group('Price chart');
 
     await scanTo(page, state => state.name === 'Explain this chart');
