@@ -34,7 +34,7 @@ class OrderHistoryRepositoryTest {
         jdbc = new JdbcTemplate(database);
         jdbc.execute("CREATE TABLE accounts(account_id UUID PRIMARY KEY, user_id UUID NOT NULL)");
         jdbc.execute("CREATE TABLE instruments(instrument_id UUID PRIMARY KEY, symbol VARCHAR(20))");
-        jdbc.execute("CREATE TABLE orders(order_id UUID PRIMARY KEY, account_id UUID REFERENCES accounts, instrument_id UUID REFERENCES instruments, side VARCHAR(4), quantity BIGINT, status VARCHAR(20), submitted_at TIMESTAMP WITH TIME ZONE)");
+        jdbc.execute("CREATE TABLE orders(order_id UUID PRIMARY KEY, account_id UUID REFERENCES accounts, instrument_id UUID REFERENCES instruments, side VARCHAR(4), quantity BIGINT, status VARCHAR(20), submitted_at TIMESTAMP WITH TIME ZONE, order_type VARCHAR(20) DEFAULT 'MARKET', limit_price NUMERIC(18,4), take_profit_price NUMERIC(18,4), stop_loss_price NUMERIC(18,4), exit_parent_id UUID)");
         jdbc.execute("CREATE TABLE fills(order_id UUID UNIQUE REFERENCES orders, execution_price NUMERIC(20,8), filled_quantity BIGINT, filled_at TIMESTAMP WITH TIME ZONE)");
         orderRepository = new OrderHistoryRepository(jdbc);
         UUID account = account(userId);
@@ -57,7 +57,7 @@ class OrderHistoryRepositoryTest {
 
     private UUID order(UUID account, String status, String submittedAt) {
         UUID id = UUID.randomUUID();
-        jdbc.update("INSERT INTO orders VALUES (?, ?, ?, 'BUY', 5, ?, ?)", id, account, instrument, status, Timestamp.from(Instant.parse(submittedAt)));
+        jdbc.update("INSERT INTO orders(order_id, account_id, instrument_id, side, quantity, status, submitted_at) VALUES (?, ?, ?, 'BUY', 5, ?, ?)", id, account, instrument, status, Timestamp.from(Instant.parse(submittedAt)));
         return id;
     }
 

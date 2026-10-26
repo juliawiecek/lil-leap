@@ -21,6 +21,10 @@ CREATE TABLE orders (
     instrument_id UUID NOT NULL REFERENCES instruments, client_reference UUID NOT NULL,
     side VARCHAR(10) NOT NULL, quantity BIGINT NOT NULL, order_type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL, submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    limit_price NUMERIC(18,4) CHECK (limit_price > 0),
+    take_profit_price NUMERIC(18,4) CHECK (take_profit_price > 0),
+    stop_loss_price NUMERIC(18,4) CHECK (stop_loss_price > 0),
+    exit_parent_id UUID UNIQUE REFERENCES orders(order_id),
     buffer_percent NUMERIC(5,2), reference_price NUMERIC(18,4), UNIQUE(account_id, client_reference)
 );
 CREATE TABLE fills (fill_id UUID PRIMARY KEY, order_id UUID REFERENCES orders);

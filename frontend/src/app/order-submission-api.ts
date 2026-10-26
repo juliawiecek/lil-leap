@@ -60,6 +60,9 @@ export interface SubmitOrderRequest {
   orderType?: string;
   clientReference: string;
   bufferPercent?: number;
+  limitPrice?: number;
+  takeProfitPrice?: number;
+  stopLossPrice?: number;
 }
 
 /** Response from successful order submission. */
@@ -75,6 +78,9 @@ export interface OrderSubmissionResponse {
   status: string;
   submittedAt: string;
   bufferPercent?: number;
+  limitPrice?: number;
+  takeProfitPrice?: number;
+  stopLossPrice?: number;
 }
 
 /** Anything that can supply the current access token. */
@@ -212,6 +218,9 @@ export class OrderSubmissionClient {
       quantity: request.quantity,
       orderType: request.orderType || 'MARKET',
       clientReference: request.clientReference,
+      ...(request.limitPrice !== undefined && { limitPrice: request.limitPrice }),
+      ...(request.takeProfitPrice !== undefined && { takeProfitPrice: request.takeProfitPrice }),
+      ...(request.stopLossPrice !== undefined && { stopLossPrice: request.stopLossPrice }),
       ...(request.bufferPercent !== undefined && request.bufferPercent !== null && { bufferPercent: request.bufferPercent }),
     };
   }

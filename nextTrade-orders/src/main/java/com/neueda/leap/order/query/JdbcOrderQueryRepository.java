@@ -30,7 +30,7 @@ public class JdbcOrderQueryRepository implements OrderQueryRepository {
         return jdbcTemplate.query("""
                 SELECT o.order_id, o.account_id, o.instrument_id, i.symbol, o.client_reference,
                        o.side, o.quantity, o.order_type, o.status, o.submitted_at, o.accepted_at,
-                       o.updated_at, o.buffer_percent, f.filled_quantity, f.execution_price, f.filled_at
+                       o.updated_at, o.buffer_percent, f.filled_quantity, f.execution_price, f.filled_at, o.limit_price, o.take_profit_price, o.stop_loss_price, o.exit_parent_id
                 FROM orders o
                 JOIN accounts a ON a.account_id = o.account_id
                 JOIN instruments i ON i.instrument_id = o.instrument_id
@@ -68,7 +68,7 @@ public class JdbcOrderQueryRepository implements OrderQueryRepository {
                 rs.getString("status"), instant(rs.getTimestamp("submitted_at")),
                 instant(rs.getTimestamp("accepted_at")), instant(rs.getTimestamp("updated_at")),
                 rs.getBigDecimal("buffer_percent"), rs.getObject("filled_quantity", Long.class),
-                rs.getBigDecimal("execution_price"), instant(rs.getTimestamp("filled_at")));
+                rs.getBigDecimal("execution_price"), instant(rs.getTimestamp("filled_at")), rs.getBigDecimal("limit_price"), rs.getBigDecimal("take_profit_price"), rs.getBigDecimal("stop_loss_price"), rs.getObject("exit_parent_id", UUID.class));
     }
 
     private static Instant instant(Timestamp timestamp) {

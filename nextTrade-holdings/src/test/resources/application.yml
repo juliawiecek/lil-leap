@@ -6,3 +6,9 @@ marketdata:
   quotes:
     generator:
       enabled: false
+# This test resource replaces application.yml; keep its production log levels too.
+logging:
+  level:
+    root: INFO
+    org.springframework.web: WARN
+    org.springframework.jdbc: WARN
