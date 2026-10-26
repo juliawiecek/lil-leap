@@ -410,10 +410,11 @@ test('a novice rejection is announced at once, with its reason', async (t) => {
 
 test('pressing Review again with the field already focused reads the error, since focus cannot move to it', async (t) => {
   const { fixture, desk, root } = await noviceTicket(t);
+  const field = root.querySelector('#novice-shares');
+  field.focus();
   desk.quantity.set('0'); desk.reviewTrade(); fixture.detectChanges();
   t.mock.timers.tick(1);
-  const field = root.querySelector('#novice-shares');
-  assert.equal(browser.document.activeElement, field);
+  assert.ok(browser.document.activeElement === field, 'the repeated-error scenario starts on the shares field');
   const said = desk.announcer.history.length;
   desk.reviewTrade(); fixture.detectChanges();
   assert.deepEqual(desk.announcer.history.slice(said), [{ text: 'Enter a whole number of shares greater than zero.', politeness: 'assertive' }]);

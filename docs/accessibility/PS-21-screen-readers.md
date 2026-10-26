@@ -67,8 +67,10 @@ By hand, with NVDA (Chrome/Firefox) or VoiceOver (Safari):
 
 - **Manual NVDA, JAWS and VoiceOver testing is still required.** The automated tests check the markup, the wording
   and when announcements happen, not how a real screen reader times or interrupts them.
-- While paused, the advanced chart still fetches in the background and only holds what it shows.
+- Pause live updates holds the advanced chart and suspends its REST quote/open/history refreshes after the first price; resuming restarts them on the next tick.
 - The Price watch region sits in `<main>`. While a modal dialog (such as Trade) is open, Chrome hides it, so
   alerts during that time are not heard. Order announcements move into the dialog and are heard.
 - The switch-control voice (`data-speak`, `spokenChange`) still says "up 0.40 percent". Only screen reader text
   changed.
+
+Toast audit: hover/focus pause dismissal independently; open modals hold timers and closing restarts each full duration. Toast actions move inside the top modal and have 24px minimum targets.

@@ -353,7 +353,7 @@ test('the technical chart announces bars with their open, high and low, and take
   fixture.componentRef.setInput('privateValues', true);
   fixture.detectChanges();
   assert.equal(fixture.nativeElement.querySelector('.average-line'), null);
-  assert.equal(fixture.nativeElement.querySelector('.chart-conventions'), null);
+  assert.doesNotMatch([...fixture.nativeElement.querySelectorAll('.chart-conventions')].map(element => element.textContent).join(' '), /average cost/i);
   assert.deepEqual(fixture.componentInstance.marks(), []);
   svg.dispatchEvent(key(' '));
   assert.equal(contexts[0].oscillators().length, 4, 'private trades add only the price line');

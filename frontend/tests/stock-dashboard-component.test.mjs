@@ -10,6 +10,7 @@ import { ApiHttpClient } from './component-helper.mjs';
 const { StockDashboardComponent, STOCK_DASHBOARD_TICKS, provideStockDashboardFeed } =
   await import('../src/app/stock-dashboard.component.ts');
 const { QuoteService } = await import('../src/app/quote.service.ts');
+const { LivePricesService } = await import('../src/app/live-prices.ts');
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const NOW = Date.parse('2026-10-20T16:00:00Z');
 const tick = (price, seconds = 0, openPrice = 100) => ({
@@ -362,6 +363,11 @@ test('the backend adapter requests authenticated quotes, history and the actual 
     'the established opening value survives missing data',
   );
   assert.equal(historyReads, 1, 'history is fetched once and retained across the sample window');
+  const live = TestBed.inject(LivePricesService); const beforePause = requests.length;
+  live.setPaused(true); t.mock.timers.tick(20000);
+  assert.equal(requests.length, beforePause, 'pausing stops chart network refreshes and keeps the adapter alive');
+  live.setPaused(false); t.mock.timers.tick(1000);
+  assert.ok(requests.length > beforePause, 'the next tick resumes network refreshes');
 });
 test('Pause live updates holds the chart on the price shown until resumed (PS-21, WCAG 2.2.2)', async (t) => {
   const { LivePricesService } = await import('../src/app/live-prices.ts');
