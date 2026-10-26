@@ -44,7 +44,6 @@ import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';
 import { OrderAnnouncements } from './order-announcements';
 import { PriceWatch } from './price-watch';
-import { FocusAfterChange } from './focus-after-change';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -116,7 +115,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings, PriceWatch, FocusAfterChange,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings, PriceWatch,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
