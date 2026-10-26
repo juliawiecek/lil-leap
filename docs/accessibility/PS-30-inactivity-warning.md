@@ -41,8 +41,8 @@ the same behaviour.
     the title and message as soon as it opens. The visible "0:42" is hidden from screen
     readers and a visually hidden "42 seconds" is read instead (a clock reads as a time of
     day). The countdown is deliberately not a live region, which would talk every second.
-  - Switch control (`frontend/src/app/switch-scan.ts`, unchanged) already scans an open modal
-    dialog and reads its buttons aloud, so the warning works with switch and speech for free.
+  - An app-provided `SESSION_WARNING_ANNOUNCE` hook stops the briefing and speaks the warning once through the speech coordinator when voice or switch control is on. An assertive live region carries the opening message without narrating each countdown tick. Switch control (`shared/switch-scan.ts`) scans an open modal
+    dialog and reads its buttons aloud, so its choices are available to switch users.
   - Styles use NextTrade's theme tokens, then Insights' `--nt-*` tokens, then system colours,
     so the one shared dialog fits both apps and forced-colours mode with no literal colours.
 - **Both apps** render the warning in `AppRoot`. NextTrade's sign-in page shows "You were

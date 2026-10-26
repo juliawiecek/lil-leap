@@ -1,4 +1,4 @@
-import { ApiHttpClient, SESSION_AUTH } from '@lilleap/session-core/angular';
+import { ApiHttpClient, SESSION_AUTH, SESSION_WARNING_ANNOUNCE } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
 import { inject, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
@@ -19,8 +19,11 @@ import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 
+import { speechCoordinator } from '../../../shared/speech-coordinator';
+
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: SESSION_WARNING_ANNOUNCE, useFactory: () => { const voice = inject(SiteAccessibility); return (text: string) => { speechCoordinator.stop(); if (speechCoordinator.supported && (voice.settings().enabled)) { const utterance = new SpeechSynthesisUtterance(text); speechCoordinator.submit('session-warning', utterance, { interrupt: true, defaultVoice: true }); } }; } },
     { provide: LIVE_REPORTS, useFactory: (): LiveReports => {
       const http = inject(ApiHttpClient);
       return {

@@ -196,25 +196,26 @@
             </section>
           }
           @if (activeTab() === 'Overview' || activeTab() === 'Portfolio') {
-            <section class="panel investments-panel" data-scan-group="Your investments">
+            <section class="panel investments-panel" data-scan-group="Your investments" aria-labelledby="novice-dashboard-heading-1">
               <div class="panel-heading">
-                <h2>Your investments</h2>
+                <h2 id="novice-dashboard-heading-1">Your investments</h2>
                 <button type="button" class="text-link" (click)="navigate('Portfolio')">
                   View all holdings <app-dashboard-icon name="chevron" />
                 </button>
               </div>
-              <div class="investment-tabs" aria-label="Investment view">
+              <div class="investment-tabs" role="tablist" aria-label="Investment view">
                 @for (item of ['Holdings', 'Asset classes']; track item) {
                   <button
                     type="button"
                     [class.selected]="investmentTab() === item"
-                    [attr.aria-pressed]="investmentTab() === item"
+                    role="tab" [id]="'investment-tab-' + $index" aria-controls="investment-panel" [attr.aria-selected]="investmentTab() === item" [tabIndex]="investmentTab() === item ? 0 : -1"
                     (click)="investmentTab.set(item)"
                   >
                     {{ item }}
                   </button>
                 }
               </div>
+              <div id="investment-panel" role="tabpanel" [attr.aria-labelledby]="investmentTab() === 'Holdings' ? 'investment-tab-0' : 'investment-tab-1'">
               @if (investmentTab() === 'Holdings') {
                 <div class="table-scroll" tabindex="0" role="region" aria-label="Holdings table" data-scan-group="Holdings table">
                   <table class="holdings-table">
@@ -306,22 +307,24 @@
                   </div>
                 </div>
               }
+              </div>
             </section>
           }
           @if (activeTab() === 'Overview') {
-            <section class="panel expanded-list activity-panel" data-scan-group="Recent activity">
-              <div class="panel-heading"><h2>Recent activity</h2></div>
+            <section class="panel expanded-list activity-panel" data-scan-group="Recent activity" aria-labelledby="novice-dashboard-heading-2">
+              <div class="panel-heading"><h2 id="novice-dashboard-heading-2">Recent activity</h2></div>
               <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
           }
           @if (activeTab() === 'Activity') {
-            <section class="panel expanded-list" data-scan-group="Activity">
-              <div class="panel-heading"><h2>Orders, deposits and transfers</h2></div>
+            <section class="panel expanded-list" data-scan-group="Activity" aria-labelledby="novice-dashboard-heading-3">
+              <div class="panel-heading"><h2 id="novice-dashboard-heading-3">Orders, deposits and transfers</h2></div>
               <app-activity-feed />
             </section>
           }
           @if (activeTab() === 'Settings') {
-            <section class="settings-page" aria-label="Account settings" data-scan-group="Account settings">
+            <section class="settings-page" aria-labelledby="account-settings-title" data-scan-group="Account settings">
+              <h2 id="account-settings-title">Account settings</h2>
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
@@ -382,9 +385,9 @@
         </div>
         @if (activeTab() === 'Overview') {
           <div class="secondary-column">
-            <section class="panel allocation-panel" data-scan-group="Asset allocation">
+            <section class="panel allocation-panel" data-scan-group="Asset allocation" aria-labelledby="novice-dashboard-heading-4">
               <div class="panel-heading">
-                <h2>Allocation by sector</h2>
+                <h2 id="novice-dashboard-heading-4">Allocation by sector</h2>
                 <button type="button" class="text-link" (click)="openModal('allocation')">
                   View details <app-dashboard-icon name="chevron" />
                 </button>
@@ -433,8 +436,8 @@
                 ><app-dashboard-icon name="chevron" />
               </button>
             </section>
-            <section class="panel trade-panel" data-scan-group="Ready to trade">
-              <h2>Ready to trade?</h2>
+            <section class="panel trade-panel" data-scan-group="Ready to trade" aria-labelledby="novice-dashboard-heading-5">
+              <h2 id="novice-dashboard-heading-5">Ready to trade?</h2>
               <p>Buy or sell shares. You’ll review the details before confirming.</p>
               <div class="trade-actions">
                 <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
@@ -443,9 +446,9 @@
                 </button>
               </div>
             </section>
-            <section class="panel watchlist-panel" data-scan-group="Watchlist">
+            <section class="panel watchlist-panel" data-scan-group="Watchlist" aria-labelledby="novice-dashboard-heading-6">
               <div class="panel-heading">
-                <h2>Watchlist</h2>
+                <h2 id="novice-dashboard-heading-6">Watchlist</h2>
                 <span class="muted-note">Open a stock to add or remove it</span>
               </div>
               <div class="table-scroll" tabindex="0" role="region" aria-label="Watchlist table" data-scan-group="Watchlist table">
