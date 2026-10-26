@@ -503,7 +503,7 @@ test('the sidebar resizes from the keyboard and a double-click on its edge, with
   key('ArrowLeft');
   assert.equal(desk.sidebar.width(), desk.sidebar.min, 'never narrower than the icon strip');
   desk.sidebar.toggle();
-  assert.equal(desk.sidebar.width(), 240, 'the Collapse button and a double-click re-open at the last open width');
+  assert.equal(desk.sidebar.width(), 240, 'a double-click re-opens at the last open width');
   assert.equal(desk.collapsed(), false);
   key('Home');
   assert.equal(desk.collapsed(), true);
