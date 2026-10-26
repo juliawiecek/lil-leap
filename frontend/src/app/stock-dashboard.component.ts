@@ -223,6 +223,7 @@ function currentSessionOpen(
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDestroy {
+  readonly chartType = signal<'line' | 'candlestick'>('line');
   readonly selectedAsset = input<StockAsset | null>(null);
   readonly windowSeconds = input(86400);
   readonly trades = input<readonly TradeMark[]>([]);

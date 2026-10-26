@@ -236,6 +236,42 @@ test('errors retain the chart and teardown removes the subscription', async (t) 
   d.fixture.destroy();
   assert.equal(d.feed.observed, false);
 });
+
+test('chart style toggles retain history and feed, expose candle OHLC to keyboard and table, and clear on asset change', async (t) => {
+  const d = await dashboard(t);
+  d.feed.next({ ...tick(101), history: Array.from({ length: 180 }, (_, i) => ({ time: NOW / 1000 - 360 + i * 2, price: 100 + Math.sin(i) })) });
+  d.sample();
+  const root = d.fixture.nativeElement;
+  const candlesButton = [...root.querySelectorAll('.chart-types button')].find(b => b.textContent.includes('Candlesticks'));
+  const lineButton = [...root.querySelectorAll('.chart-types button')].find(b => b.textContent.includes('Line'));
+  const originalPath = d.line.getAttribute('d');
+  candlesButton.click(); d.fixture.detectChanges();
+  assert.equal(candlesButton.getAttribute('aria-pressed'), 'true');
+  assert.equal(d.line.getAttribute('visibility'), 'hidden');
+  assert.equal(d.feed.observers.length, 1);
+  assert.ok(root.querySelectorAll('[data-candles] path').length > 1);
+  assert.ok(root.querySelector('[data-candles] .up'));
+  assert.ok(root.querySelector('[data-candles] .down'));
+  assert.equal(root.querySelector('[data-candles] .up').getAttribute('fill'), 'var(--candle-hollow)');
+  const svg = root.querySelector('app-stock-svg-chart svg');
+  svg.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'Home' }));
+  assert.match(root.querySelector('.tooltip').textContent, /O \$.*H \$.*L \$.*C \$/);
+  const tableButton = [...root.querySelectorAll('app-chart-access button')].find(b => b.textContent.includes('Show as table'));
+  tableButton.click(); d.fixture.detectChanges();
+  assert.match(root.querySelector('thead').textContent, /TimeOpenHighLowClose/);
+  const rawButton = [...root.querySelectorAll('app-chart-access button')].find(b => b.textContent.includes('Show every observation'));
+  rawButton.click(); d.fixture.detectChanges();
+  assert.equal(root.querySelectorAll('tbody tr').length, 181);
+  lineButton.click(); d.fixture.detectChanges();
+  assert.equal(d.line.getAttribute('visibility'), 'visible');
+  assert.equal(d.line.getAttribute('d'), originalPath);
+  assert.equal(root.querySelectorAll('[data-candles] path').length, 0);
+  candlesButton.click(); d.fixture.detectChanges();
+  d.feed.next({ ...tick(200, 5), symbol: 'MSFT' }); d.sample();
+  assert.equal(root.querySelectorAll('[data-candles] path').length, 1);
+  assert.equal(root.querySelector('.tooltip').hidden, true);
+  assert.match(root.querySelector('app-stock-svg-chart svg').getAttribute('aria-label'), /MSFT/);
+});
 test('a completed source is marked offline instead of claiming a live connection', async (t) => {
   const d = await dashboard(t);
   d.feed.next(tick(101));
