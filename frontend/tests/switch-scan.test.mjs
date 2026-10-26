@@ -521,3 +521,23 @@ test('a component host drawn with display: contents counts as visible through it
   const box = screenBox(doc.querySelector('app-ticket'));
   assert.equal(typeof box.width, 'number');
 });
+
+test('the shared keypad enters email punctuation, repeated dots and uppercase characters, and masks passwords', t => {
+ const engine = setup(t, { speak: false });
+ doc.querySelector('#search').setAttribute('autocomplete', 'current-password');
+ choose(engine, 'group:Trade', 'control:Search');
+ const key = text => [...doc.querySelectorAll('.scan-pad button')].find(button => button.textContent === text).click();
+ for (const text of ['Caps', 'A', '@', '1', '.', '.']) key(text);
+ assert.equal(doc.querySelector('#search').value, 'A@1..');
+ assert.equal(doc.querySelector('.scan-pad output').textContent, '5 characters');
+ assert.doesNotMatch(spokenItem(doc.querySelector('#search')), /A@1/);
+ key('Done'); assert.equal(doc.querySelector('#search').value, 'A@1..');
+});
+test('listbox options are scanned even with tabindex minus one', t => {
+ const engine = setup(t); const list = doc.createElement('div'); list.setAttribute('role', 'listbox'); list.innerHTML = '<div role="option" tabindex="-1">Apple</div><div role="option" tabindex="-1">Microsoft</div>'; doc.body.append(list);
+ assert.ok(engine.items().some(item => item.el?.getAttribute('role') === 'option'));
+});
+test('the switch setting name includes its visible On/Off state', async t => {
+ const fixture = await render(t, SwitchScanSettings); const button = fixture.nativeElement.querySelector('button.scan-toggle');
+ assert.match(button.getAttribute('aria-label'), /Switch control Off/); button.click(); fixture.detectChanges(); assert.match(button.getAttribute('aria-label'), /Switch control On/);
+});

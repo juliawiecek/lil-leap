@@ -37,3 +37,10 @@ body {
   font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
 }
+
+:root {
+ --warning-tone-03: var(--nt-green); --warning-tone-04: var(--nt-green);
+ --surface-raised: var(--nt-panel); --surface-tone-02: var(--nt-border); --surface-tone-03: var(--nt-panel); --surface-tone-48: var(--nt-panel);
+ --text: var(--nt-text); --text-muted: var(--nt-muted); --on-accent: var(--nt-background); --mask-ink: Canvas; --shadow-109: transparent;
+ --font-ui: Inter, sans-serif; --font-mono: monospace;
+}

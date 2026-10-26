@@ -52,9 +52,10 @@
       <div class="charts">
         <figure class="chart">
           <figcaption><b>Allocation</b><span>by cost basis</span></figcaption>
+          <app-insights-chart-access #allocationAccess id="client-allocation" label="Allocation by cost basis" [summary]="allocationSummary()" [table]="allocationTable()" />
           @if (allocation().length) {
             <div class="allocation">
-              <svg viewBox="0 0 148 148" role="img" [attr.aria-label]="'Allocation by cost basis; largest holding ' + percent(largestShare())">
+              <svg viewBox="0 0 148 148" role="img" tabindex="0" aria-label="Allocation by cost basis" aria-describedby="client-allocation-summary" (focus)="allocationAccess.focusSummary()" (blur)="allocationAccess.focused.set(false)">
                 <circle class="track" cx="74" cy="74" [attr.r]="ringRadius" />
                 @for (slice of allocation(); track slice.symbol) {
                   <circle cx="74" cy="74" [attr.r]="ringRadius" [attr.stroke]="slice.color" [attr.stroke-dasharray]="slice.dash" [attr.stroke-dashoffset]="slice.offset" transform="rotate(-90 74 74)" />

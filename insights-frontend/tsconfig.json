@@ -3,6 +3,8 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": ".", "ignoreDeprecations": "6.0",
+    "paths": { "@angular/core": ["./node_modules/@angular/core"] },
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,

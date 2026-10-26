@@ -71,6 +71,7 @@
   }
   <app-skip-link [target]="profileOpen() ? 'profile-main' : 'auth-main'" />
   <main id="auth-main" tabindex="-1" class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+    <app-switch-scan-toggle />
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>
