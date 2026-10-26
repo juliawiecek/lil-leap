@@ -5,7 +5,7 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
 @Component({
   selector: 'app-switch-scan-settings',
   template: `
-    <section class="card" [attr.aria-label]="'Switch control ' + (scan.settings().enabled ? 'On' : 'Off')" data-scan-group="Switch control">
+    <section class="card" aria-labelledby="scan-settings-title" data-scan-group="Switch control">
       <div class="card-top">
         <span class="card-text">
           <b id="scan-settings-title">Switch control</b>

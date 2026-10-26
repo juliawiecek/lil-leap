@@ -7,3 +7,5 @@ Alt+W explains the ringed item, focused item or hovered item, in that order. The
 Order review interrupts a briefing and is read again after editing and reviewing again. It falls back to voice mode when switch speech is off. Numeric keypads say "point" for the decimal separator; pad keys do not add redundant selected messages. Fast scanning advances after 700ms and truncates item phrases, while slower speeds and urgent read-backs wait for speech.
 
 Targeted suites cover captions, glossary, switch scanning and edited order read-back. Full tests/build and browser results are recorded in the integration PR. Manual speech intelligibility, physical switch and screen-reader review remain required.
+
+After integration with the current main, limit-order reviews also read the exact per-share limit and enabled take-profit/stop-loss prices. Their validation errors are linked to the relevant fields, which receive focus. Closed-market limit reviews explain that execution depends on reaching the limit.
