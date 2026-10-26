@@ -125,6 +125,7 @@ test('switch control reaches the shared tools dialog, toggles voice settings and
   await scanTo(page, state => state.live === 'Back'); await press();
   await scanTo(page, state => state.live === 'Visual assistance group'); await press();
   await scanTo(page, state => /Minimum text size/.test(state.name)); await press();
+  await scanTo(page, state => state.live.includes('Extra large') && state.live.endsWith(' group')); await press();
   await scanTo(page, state => /Extra large/.test(state.name)); await press();
   await expect(page.locator('html')).toHaveAttribute('data-a11y-text', 'extra-large');
   await expectVisibleRing(page);
