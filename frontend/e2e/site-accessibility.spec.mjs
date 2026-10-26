@@ -291,6 +291,13 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
    await page.getByRole('button',{name:'Review Order',exact:true}).click();
   }
   await expect(page.locator('dialog[open]')).toHaveCount(1); await audit(page, tier+'-order-review', info); await page.keyboard.press('Escape');
+  if (tier === 'ADVANCED') {
+   await page.getByRole('button', {name:'Limit',exact:true}).click(); await page.getByLabel('Limit price (USD)',{exact:true}).fill('190');
+   await page.getByRole('button', {name:'Take profit Off',exact:true}).click(); await page.getByLabel('Take-profit price (USD)',{exact:true}).fill('210');
+   await page.getByRole('button', {name:'Stop loss Off',exact:true}).click(); await page.getByLabel('Stop-loss price (USD)',{exact:true}).fill('170');
+   await audit(page, 'advanced-limit-ticket', info);
+   await page.getByRole('button',{name:'Review Order',exact:true}).click(); await expect(page.locator('dialog[open]')).toHaveCount(1); await audit(page, 'advanced-limit-review', info); await page.keyboard.press('Escape');
+  }
   for (const name of ['Add account','Transfer funds']) {
    await page.locator('.switcher-trigger').click(); await page.getByRole('button',{name:new RegExp(name)}).click();
    await expect(page.locator('dialog[open]')).toHaveCount(1); await audit(page, tier+'-'+name, info); await page.keyboard.press('Escape');

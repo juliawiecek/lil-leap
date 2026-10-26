@@ -67,7 +67,7 @@ export function orderReviewSummary(review: OrderReview): string {
     ? [`${review.side} ${review.quantity} ${review.symbol}`, `about ${usd(estimate)}`, bound]
     : [`${review.side} ${review.quantity} ${review.symbol}`, `limit ${usd(review.limitPrice)} per share`, `estimated ${usd(estimate)}`, 'remains open until filled or cancelled'];
   if (review.opensAt) {
-    parts.push(`market closed, fills at the open (${review.opensAt})`);
+    parts.push(review.limitPrice === undefined ? `market closed, fills at the open (${review.opensAt})` : `market closed, opens at ${review.opensAt}; execution is not guaranteed`);
   }
   return parts.join(' · ');
 }

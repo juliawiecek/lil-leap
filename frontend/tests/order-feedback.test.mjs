@@ -112,4 +112,6 @@ test('toast actions have 24px targets and stay reachable in a modal', async t =>
 test('limit reviews name the exact per-share limit and its estimated total', () => {
  const text = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'', limitPrice:170.25 });
  assert.match(text, /limit \$170\.25 per share/); assert.match(text, /estimated \$340\.50/); assert.doesNotMatch(text, /fills at up to/);
+ const closed = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'9:30 AM', limitPrice:170.25 });
+ assert.doesNotMatch(closed, /fills at the open/); assert.match(closed, /execution is not guaranteed/);
 });
