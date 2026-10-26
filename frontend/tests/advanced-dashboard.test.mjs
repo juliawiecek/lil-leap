@@ -97,6 +97,11 @@ test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => 
   desk.quantity.set('0');
   desk.reviewOrder();
   assert.equal(said.length, 1, 'an invalid order is not read back');
+  desk.closeModal(); desk.side.set('Sell'); desk.choose(desk.quote('AAPL')); desk.quantity.set('3'); desk.reviewOrder();
+  assert.equal(said.length, 2, 'editing and reviewing again reads the order again');
+  assert.match(said.at(-1)[0], /^You're about to sell 3 shares of Apple for .*Press Confirm sell to place the order\.$/);
+  assert.equal(said.at(-1)[1], true);
+
 });
 
 test('screeners separate gainers and decliners and restore all quotes', t => {

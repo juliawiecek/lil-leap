@@ -254,18 +254,19 @@ test('with reading aloud off, or while the briefing talks, the ring stays quiet'
   assert.deepEqual(busy.said(), [], 'another voice is speaking, so the ring does not cut it off');
 });
 
-test('the timer waits for the ring to finish reading, but never stalls on a stuck speech engine', (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] });
-  t.after(() => t.mock.timers.reset());
-  const { spoken } = withSpeech(t);
-  const engine = setup(t, { autoAdvance: true, intervalMs: 700, speak: true });
-  t.mock.timers.tick(700);
-  assert.equal(describe(engine.current()), 'group:Menu', 'still reading');
-  spoken.at(-1).onend();
-  t.mock.timers.tick(700);
-  assert.equal(describe(engine.current()), 'group:Trade');
-  t.mock.timers.tick(9100);
-  assert.notEqual(describe(engine.current()), 'group:Trade', 'moves on after the speech wait runs out');
+test('Fast truncates ring phrases but always waits for an urgent read-back', t => {
+ t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] });
+ withSpeech(t); const engine = setup(t, { autoAdvance: true, intervalMs: 700, speak: true });
+ t.mock.timers.tick(700); assert.equal(describe(engine.current()), 'group:Trade');
+ engine.say('Review this order carefully before confirming.', true);
+ t.mock.timers.tick(700); assert.equal(describe(engine.current()), 'group:Trade');
+ t.mock.timers.tick(15000); assert.notEqual(describe(engine.current()), 'group:Trade');
+});
+test('Normal waits for speech and urgent read-back interrupts a briefing', t => {
+ t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] }); const { spoken } = withSpeech(t);
+ const engine = setup(t, { autoAdvance: true, intervalMs: 1200, speak: true });
+ t.mock.timers.tick(1200); assert.equal(describe(engine.current()), 'group:Menu');
+ spoken.at(-1).onend(); t.mock.timers.tick(1200); assert.equal(describe(engine.current()), 'group:Trade');
 });
 
 test('the switch key is Space or Enter', () => {
@@ -337,8 +338,8 @@ test('a number field opens a keypad that types into it and fires the events the 
   assert.equal(engine.pickerOpen, true);
   assert.ok(engine.items().every((item) => item.kind === 'group'), 'the pad is scanned row by row');
   choose(engine, 'group:1 to 3', 'control:2');
-  choose(engine, 'group:. to ⌫', 'control:0');
-  choose(engine, 'group:. to ⌫', 'control:Delete');
+  choose(engine, 'group:point to Delete', 'control:0');
+  choose(engine, 'group:point to Delete', 'control:Delete');
   choose(engine, 'group:4 to 6', 'control:5');
   assert.equal(doc.querySelector('.scan-pad-value').textContent, '25');
   choose(engine, 'group:Done or cancel', 'control:Done');
@@ -379,7 +380,7 @@ test('cancelling a keypad puts the old value back', (t) => {
 test('a text field gets a letter keypad', (t) => {
   const engine = setup(t);
   const search = doc.getElementById('search');
-  choose(engine, 'group:Trade', 'control:Search', 'group:A to F', 'control:A', 'group:Y to ⌫', 'control:Space');
+  choose(engine, 'group:Trade', 'control:Search', 'group:A to F', 'control:A', 'group:Y to Delete', 'control:Space');
   assert.equal(search.value, 'a ');
 });
 
@@ -534,4 +535,12 @@ test('a component host drawn with display: contents counts as visible through it
   assert.deepEqual(engine.items().map(describe), ['group:Ticket', 'control:C', 'pause']);
   const box = screenBox(doc.querySelector('app-ticket'));
   assert.equal(typeof box.width, 'number');
+});
+
+test('urgent order read-back replaces another speech owner', async t => {
+ const { speechCoordinator } = await import('../../shared/speech-coordinator.ts');
+ const { spoken } = withSpeech(t); const engine = setup(t, { speak: true });
+ speechCoordinator.submit('briefing', new SpeechSynthesisUtterance('A long briefing.'), { interrupt: true, defaultVoice: true });
+ engine.say('Review this order.', true);
+ assert.equal(speechCoordinator.owner, 'switch'); assert.equal(spoken.at(-1).text, 'Review this order.');
 });
