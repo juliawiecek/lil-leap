@@ -84,7 +84,7 @@ function tradingDesk(t) {
 
 test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => {
   const said = [];
-  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]), settings: () => ({ enabled: false }) };
   const desk = component(t, AdvancedDashboard, [
     { provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith()),
     { provide: SwitchScanService, useValue: scan },

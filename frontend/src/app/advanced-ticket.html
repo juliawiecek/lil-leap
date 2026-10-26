@@ -1,7 +1,8 @@
 <section class="panel order-ticket" aria-labelledby="advanced-ticket-title">
   <h2 class="sr-only" id="advanced-ticket-title">Trade ticket</h2>
   <div class="ticket-body">
-    <form aria-describedby="pro-ticket-message" method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
+    <!-- novalidate + data-a11y-app-validation (PS-21): the ticket's own message is what is shown and read, not the browser's. -->
+    <form aria-describedby="pro-ticket-message" method="post" novalidate data-a11y-app-validation (submit)="$event.preventDefault(); desk().reviewOrder()">
       <div class="side-switch">
         @for (action of ['Buy', 'Sell']; track action) {
           <button
@@ -30,14 +31,19 @@
       <p class="ticket-note">Market order: fills at the live price when the market is open. Final price and total may differ from this estimate.</p>
       <label for="pro-quantity">Quantity</label
       ><input
-        id="pro-quantity" aria-describedby="pro-ticket-message"
+        id="pro-quantity"
         type="number"
         required
         min="1"
         step="1"
         [value]="desk().quantity()"
+        [attr.aria-invalid]="desk().quantityError() ? 'true' : null"
+        [attr.aria-describedby]="desk().quantityError() ? 'pro-quantity-error' : 'pro-ticket-message'"
         (input)="desk().quantity.set($any($event.target).value); desk().message.set('')"
       />
+      @if (desk().quantityError()) {
+        <p id="pro-quantity-error" class="field-error"><span aria-hidden="true">⚠ </span>{{ desk().quantityError() }}</p>
+      }
       <div class="cost-summary">
         <div>
           <span>Live price</span>@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</app-price-flash>}
@@ -78,6 +84,7 @@
       }
       <button class="primary-button review-button" type="submit">Review Order</button>
     </form>
-    <output class="ticket-message" id="pro-ticket-message">{{ desk().message() }}</output>
+    <!-- Read through the live announcer (PS-21), once per message, so this copy stays quiet. -->
+    <output class="ticket-message" id="pro-ticket-message" aria-live="off">{{ desk().ticketStatus() }}</output>
   </div>
 </section>

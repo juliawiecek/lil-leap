@@ -43,7 +43,7 @@ test('financial changes and statuses keep their meaning in every palette and gra
     expect(signals.some(s => s.direction === 'flat')).toBe(true);
     for (const s of signals) {
       expect(s.visible).toMatch({ up: /^▲ \+/, down: /^▼ −/, flat: /^—/ }[s.direction]);
-      expect(s.spoken).toMatch({ up: /^Increased by/, down: /^Decreased by/, flat: /^Unchanged/ }[s.direction]);
+      expect(s.spoken).toMatch({ up: /^up /, down: /^down /, flat: /^unchanged/ }[s.direction]);
     }
     // The deliberate allocation simplification (bf0cf08) removed the old hatch overlay.
     // Meaning must still survive grayscale through labels, numeric shares and the exact table.

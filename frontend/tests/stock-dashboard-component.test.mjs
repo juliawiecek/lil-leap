@@ -363,3 +363,20 @@ test('the backend adapter requests authenticated quotes, history and the actual 
   );
   assert.equal(historyReads, 1, 'history is fetched once and retained across the sample window');
 });
+test('Pause live updates holds the chart on the price shown until resumed (PS-21, WCAG 2.2.2)', async (t) => {
+  const { LivePricesService } = await import('../src/app/live-prices.ts');
+  const d = await dashboard(t);
+  const live = d.fixture.debugElement.injector.get(LivePricesService);
+  t.after(() => live.setPaused(false));
+  live.setPaused(true);
+  d.feed.next(tick(101));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'the first price is still shown');
+  d.feed.next(tick(105, 5));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'held while paused');
+  live.setPaused(false);
+  d.feed.next(tick(106, 10));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 106, 'moves again once resumed');
+});

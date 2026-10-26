@@ -130,6 +130,18 @@ test('shortcuts leave typing alone, stop is available while typing, and form err
   assert.equal(input.hasAttribute('aria-invalid'), false);
 });
 
+test('a form that validates itself keeps its own messages: the browser wording never replaces them (PS-21)', t => {
+  const { doc } = setup(t, '<form novalidate data-a11y-app-validation><label>Quantity<input type="number" min="1" required value="0"></label><button>Review</button></form>');
+  const input = doc.querySelector('input'), form = doc.querySelector('form');
+  let handled = 0; form.addEventListener('submit', () => handled++);
+  form.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true }));
+  assert.equal(handled, 1, "the app's own submit handler still runs");
+  assert.equal(input.hasAttribute('aria-invalid'), false, 'the app, not the controller, marks the field');
+  assert.equal(doc.querySelector('.a11y-field-error'), null);
+  input.dispatchEvent(new browser.Event('invalid', { cancelable: true }));
+  assert.equal(input.hasAttribute('aria-describedby'), false);
+});
+
 test('coordinator queues its channel, prevents passive overlap, configures local voice and releases cancellation callbacks', t => {
   const { synth } = setup(t, ''); const coordinator = new SpeechCoordinator(); let finished = 0;
   coordinator.configure(() => ({ voiceURI: 'local', volume: .5 }));

@@ -58,7 +58,7 @@
         }
       </div>
       <div class="header-actions">
-        <span class="market-status" [class.closed]="!marketOpen()" role="status"><i aria-hidden="true"></i>{{ marketBadge() }}</span>
+        <span class="market-status" [class.closed]="!marketOpen()"><i aria-hidden="true"></i>{{ marketBadge() }}</span>
         <app-briefing [source]="briefingSource" [marketOpen]="marketKnownOpen()" />
         <app-account-switcher />
         <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Advanced · Pro</span>
@@ -91,6 +91,7 @@
       </div>
     </header>
     <main id="main-content" class="pro-content" tabindex="-1">
+      <app-price-watch />
       @if (serviceDown()) {
         <div class="service-banner" role="alert">
           <strong>We can't reach NextTrade right now.</strong>
@@ -545,7 +546,8 @@
     </button>
   </div>
   @if (modal() === 'review') {
-    <p class="review-summary" role="status">{{ reviewSummary() }}</p>
+    <!-- Announced once through the live announcer as the review opens, and focus goes to Confirm (PS-21). -->
+    <p id="pro-review-summary" class="review-summary">{{ reviewSummary() }}</p>
     <p>Market order: final price and total may differ from this estimate.</p>
     @if (closedWarning()) {
       <p class="closed-warning" role="note">{{ closedWarning() }}</p>
@@ -575,7 +577,7 @@
     </div>
     <div class="review-actions">
       <button class="secondary-button" type="button" (click)="closeModal()">Edit</button>
-      <button class="primary-button" type="button" (click)="confirmOrder()">Confirm {{ side() }}</button>
+      <button id="pro-confirm" class="primary-button" type="button" (click)="confirmOrder()">Confirm {{ side() }}</button>
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">

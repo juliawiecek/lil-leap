@@ -47,6 +47,7 @@ import { samplingInterval, type ChartSampleMs } from './stock-chart-stream';
 import type { StockPriceTick } from './stock-price-ticks';
 import { validPrice } from './stock-chart-math';
 import { quoteHistoryPoints } from './chart-data';
+import { LivePricesService } from './live-prices';
 
 export interface StockAsset {
   readonly symbol: string;
@@ -242,6 +243,8 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   readonly #feed = inject(STOCK_DASHBOARD_TICKS, { optional: true });
   readonly #injector = inject(Injector);
   readonly #platform = inject(PLATFORM_ID);
+  /** Pause live updates (PS-21, WCAG 2.2.2) holds the chart on the price already shown. */
+  readonly #livePrices = inject(LivePricesService);
   private readonly chart = viewChild(StockSvgChart);
   #subscription: Subscription | undefined;
   #assetKey = '';
@@ -309,6 +312,7 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
             ),
           { connector: () => new ReplaySubject<StockDashboardTick>(1) },
         ),
+        filter(() => !this.#livePrices.paused() || !this.state().asset),
         distinctUntilChanged((a, b) => QUOTE_FIELDS.every((field) => a[field] === b[field])),
       )
       .subscribe({
