@@ -118,8 +118,8 @@ test('switch control reaches the shared tools dialog, toggles voice settings and
   await page.keyboard.press('Alt+s'); await page.clock.runFor(20);
   const press = async () => { await page.keyboard.press('Space'); await page.clock.runFor(65); };
   await scanTo(page, state => state.live === 'Voice assistance group'); await press();
-  await scanTo(page, state => /Enable built-in voice assistance/.test(state.name)); await press();
-  await expect(dialog.getByRole('button', { name: 'Voice mode', exact: true })).toBeChecked();
+  await scanTo(page, state => /Voice mode/.test(state.name)); await press();
+  await expect(dialog.getByRole('button', { name: 'Voice mode', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await scanTo(page, state => /Speak on keyboard focus/.test(state.name)); await press();
   await expect(dialog.getByLabel('Speak on keyboard focus', { exact: true })).toBeChecked();
   await scanTo(page, state => state.live === 'Back'); await press();

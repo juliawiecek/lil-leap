@@ -109,7 +109,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly range = computed(() => priceRange([
     ...this.visible().flatMap(p => p.candle ? [p.candle.low, p.candle.high] : [p.price]),
     ...this.series().flatMap(s => s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price)),
-    ...this.trades().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price), this.averageCost() ?? 0,
+    ...(this.privateValues() ? [] : this.trades()).filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price), (this.privateValues() ? 0 : this.averageCost() ?? 0),
   ]) ?? { low: 0, high: 1 });
   readonly line = computed(() => pricePath(this.rawTail(), this.viewport(), this.range(), this.width() - 8, HEIGHT));
   readonly paths = computed(() => this.series().map(s => ({ ...s, path: pricePath(s.points, this.viewport(), this.range(), this.width() - 8, HEIGHT), unavailable: s.points.length ? 'No values in this view' : s.unavailable })));
@@ -117,7 +117,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const end = s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).at(-1);
     return end ? [{ name: s.name, token: s.token, dash: s.dash, x: this.x(end.at), y: this.y(end.price), price: end.price, at: end.at }] : [];
   }), HEIGHT, 28));
-  readonly marks = computed(() => plotMarks(this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
+  readonly marks = computed(() => plotMarks(this.privateValues() ? [] : this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
   readonly axes = computed(() => Array.from({ length: 5 }, (_, i) => this.range().high - i * (this.range().high - this.range().low) / 4));
   readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at)));
   readonly maxVolume = computed(() => Math.max(1, ...this.candles().map(p => p.candle!.volume ?? 0)));

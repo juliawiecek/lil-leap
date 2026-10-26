@@ -28,7 +28,7 @@
       @if (hasRawPrices()) { <path class="price-line" transform="translate(4 0)" [attr.d]="line()" /> }
       @for (s of paths(); track s.name) { @if (s.path) { <path class="indicator-line" transform="translate(4 0)" [attr.data-indicator]="s.name" [attr.d]="s.path" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /> } }
       @for (s of labels(); track s.name) { <path class="label-leader" [attr.d]="'M' + s.x + ' ' + s.y + 'L' + width() + ' ' + s.labelY" [attr.stroke]="s.token" /> }
-      @if (averageCost(); as cost) { <line class="average-line" x1="0" [attr.x2]="width()" [attr.y1]="y(cost)" [attr.y2]="y(cost)" /> }
+      @if (!privateValues() && averageCost(); as cost) { <line class="average-line" x1="0" [attr.x2]="width()" [attr.y1]="y(cost)" [attr.y2]="y(cost)" /> }
       @for (mark of marks(); track $index) {
         <path class="trade-marker" [class.sell]="mark.side === 'SELL'" [attr.d]="mark.side === 'BUY' ? 'M' + mark.x + ' ' + mark.y + 'l-5 8h10z' : 'M' + mark.x + ' ' + mark.y + 'l-5 -8h10z'"><title>{{ mark.label }}</title></path>
       }
@@ -41,7 +41,7 @@
   <div class="price-axis" aria-label="Price scale">@if (visible().length) { @for (price of axes(); track $index) { <span>{{ price | number:'1.2-2' }}</span> } }</div>
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
-@if (averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
+@if (!privateValues() && averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
 @if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {

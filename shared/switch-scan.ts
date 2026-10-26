@@ -984,7 +984,7 @@ export class ScanEngine {
       return;
     }
     this.#spokenKey = key;
-    this.#say(text, this.#queueNext);
+    this.#say(text, this.#queueNext && (this.intervalMs > 700 || this.#urgentSpeech));
     this.#queueNext = false;
   }
 

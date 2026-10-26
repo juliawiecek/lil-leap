@@ -7,7 +7,7 @@
   font: 300 11px/1 var(--font-mono, monospace);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text);
 }
 .login-screen .tape-group { justify-content: flex-start; gap: 44px; min-width: 0; padding-right: 44px; }
 .login-screen .tape-track .divider { color: var(--surface-tone-58); }
