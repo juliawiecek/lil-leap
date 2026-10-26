@@ -22,7 +22,7 @@ for (const app of ['NextTrade', 'Insights']) {
   await page.goto('/login?switch=on'); await expect(page.locator('.scan-bar')).toBeVisible();
   await page.keyboard.press('Alt+s'); await expect(page.locator('.scan-bar')).toHaveCount(0);
   const toggle = page.getByRole('button', { name: 'Switch control Off', exact: true });
-  await toggle.click(); await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click(); await expect(page.getByRole('button', { name: 'Switch control On', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.scan-ring')).toHaveCSS('border-top-width', '4px');
  });
 }

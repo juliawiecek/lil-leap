@@ -679,8 +679,8 @@
     </div>
     <h3 class="modal-subhead">By asset class</h3>
     <div class="asset-class-list modal-allocation-list">
-      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '&#8212;' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
-      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '&#8212;' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

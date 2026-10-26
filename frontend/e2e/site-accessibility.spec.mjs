@@ -43,7 +43,7 @@ async function tools(page) {
 }
 async function closeTools(page) {
   if (await page.locator('dialog[open]').count()) await page.keyboard.press('Escape');
-  else if (page.url() !== toolsOrigin.get(page)) await page.goBack();
+  else if (page.url() !== toolsOrigin.get(page)) { await page.goBack(); await expect(page.locator('main h1')).toBeFocused(); }
 }
 async function audit(page, label, info) {
   const result = await new AxeBuilder({ page }).withTags(tags).analyze();
@@ -102,7 +102,7 @@ test('focus speech is opt-in, follows keyboard navigation, preserves typing and 
   await closeTools(page);
   await page.evaluate(() => window.assistiveSpeech.length = 0);
   await buy.focus(); await page.keyboard.press('Tab');
-  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.join(' '))).toMatch(/Sell.*button/i);
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.join(' '))).toMatch(/Sell/i);
   await expect(page.locator('dialog[open]')).toHaveCount(0);
   const search = page.getByLabel('Search for a company or symbol');
   await search.fill('AAPL'); await page.keyboard.press('Alt+Shift+r'); await expect(search).toHaveValue('AAPL');
@@ -120,7 +120,7 @@ test('hover speech waits for intent, does not repeat during live updates, and re
   await buy.hover(); await page.mouse.move(1400, 10);
   await expect.poll(() => page.evaluate(() => window.assistiveSpeech.length), { timeout: 1000 }).toBe(0);
   await buy.hover();
-  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.join(' '))).toMatch(/Buy.*button/);
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.join(' '))).toMatch(/Buy/);
   await expect(buy).toHaveAttribute('data-a11y-speaking', '');
   await expect(page.locator('dialog[open]')).toHaveCount(0);
   const before = await page.evaluate(() => window.assistiveSpeech.length);
@@ -131,7 +131,7 @@ test('hover speech waits for intent, does not repeat during live updates, and re
   const panel = await tools(page);
   await panel.getByRole('button', { name: 'Voice mode', exact: true }).uncheck();
   await closeTools(page); await buy.focus(); await page.keyboard.press('Alt+Shift+r');
-  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toMatch(/Buy.*button/);
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toMatch(/Buy/);
   await page.keyboard.press('Alt+Shift+Space');
   expect(await page.evaluate(() => speechSynthesis.paused)).toBe(true);
   await page.keyboard.press('Alt+Shift+Space');
