@@ -678,6 +678,7 @@ Press `?` anywhere on a dashboard to see this list.
 | `?` | Open the shortcut list (not while typing in a field) |
 | `Alt` + `B` | Play the audio briefing |
 | `Alt` + `S` | Turn switch control on, reading each item aloud, or off |
+| `Alt` + `W` | Explain the ringed, focused or hovered trading term |
 | `Tab` / `Shift` + `Tab` | Move to the next or previous control |
 | `Enter` / `Space` | Activate the focused button or link, or review an order |
 | `Esc` | Close a dialog, clear the search, or stop exploring a chart |
@@ -692,7 +693,7 @@ All paths are under `frontend/src/app/` unless shown otherwise; the tests are in
 | Settings > Accessibility page | `accessibility-settings.ts`; every choice is saved by `accessibility.ts` | `accessibility.test.mjs` |
 | Colour-blind mode | `colour-mode.ts`, `colour-mode-preferences.ts`, `theme-colours.ts`; arrows and signs in `financial-change.ts` | `colour-mode.test.mjs`, `colour-palettes.test.mjs`, `non-colour-signals.test.mjs` |
 | Audio briefing | the sentences in `briefing.ts`; button and speech in `briefing-button.ts`; settings card `briefing-settings.ts` | `briefing.test.mjs` |
-| Switch control | `switch-scan.ts`; settings card `switch-scan-settings.ts`; how text is spoken in `speech-text.ts` and `chart-speech.ts` | `switch-scan.test.mjs`, `spoken-labels.test.mjs` |
+| Switch control | `shared/switch-scan.ts`; settings card `shared/switch-scan-settings.ts`; how text is spoken in `speech-text.ts` and `chart-speech.ts` | `switch-scan.test.mjs`, `spoken-labels.test.mjs` |
 | Order read-back | `order-read-back.ts` | `spoken-labels.test.mjs` |
 | Skip link, page titles, shortcuts | `skip-link.ts`, `app.routes.ts`, `keyboard-shortcuts.ts` | `page-structure.test.mjs` |
 | Inactivity warning | `shared/session-core/src/session-timeout-warning.ts` | `shared/session-core/tests/session-timeout-warning.test.mjs` |
@@ -703,17 +704,21 @@ tests.
 
 ### Checking accessibility
 
-`frontend/e2e/accessibility.spec.mjs` runs axe, an automated accessibility checker, against the
-WCAG 2.2 AA rules on the running app. Start the backend services and the frontend
-(`npx ng serve --port 4320` in `frontend/`), then:
+`npm run test:a11y` in `frontend/` runs mocked API axe checks against both built apps,
+including dashboard routes, order/account dialogs, registration, recovery, reset and Insights.
+Build both applications first; the test runner serves them locally and needs no account password:
 
 ```sh
-cd frontend
-A11Y_PASSWORD=<test password> npm run test:a11y
+npm run build --prefix frontend
+npm run build --prefix insights-frontend
+npm run test:a11y --prefix frontend
 ```
 
-`A11Y_BASE_URL` and `A11Y_EMAIL` are optional. The latest results are in the
-[axe report](docs/accessibility/axe-report.md).
+Optional real-service checks remain in `frontend/e2e/accessibility.spec.mjs`. Start the services
+and a frontend at `A11Y_BASE_URL` (default `http://localhost:4320`), then provide `A11Y_PASSWORD`
+and optionally `A11Y_EMAIL`. Without credentials these two live checks skip. Sprint 10's automated
+results and outstanding manual checks are recorded in `docs/accessibility/SPRINT10-validation.md`.
+
 
 ## Synthetic Quotes
 
