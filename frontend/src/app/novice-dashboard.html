@@ -177,7 +177,7 @@
               <!-- PS-25 owns the chart live region; keep the existing switch-control announcement. -->
               <p class="sr-only" aria-hidden="true">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
-                <div>
+                <div data-glossary="buying-power">
                   <span>Buying power</span
                   ><strong>{{ showBalance() ? (buyingPower() | currency) : '••••••' }}</strong>
                 </div>
@@ -189,7 +189,7 @@
                   <span>Today’s return</span
                   ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
-                <div>
+                <div data-glossary="total-return">
                   <span>Total return</span
                   ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
                 </div>
@@ -225,9 +225,9 @@
                       <tr>
                         <th scope="col">Symbol · Name</th>
                         <th scope="col">Value · Shares</th>
-                        <th scope="col">Avg. price</th>
+                        <th scope="col" data-glossary="average-cost">Avg. price</th>
                         <th scope="col">Today</th>
-                        <th scope="col">Total return</th>
+                        <th scope="col" data-glossary="total-return">Total return</th>
                         <th scope="col"><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
@@ -625,9 +625,9 @@
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
-      <p>Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
+      <p data-glossary="buying-power">Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
       @if (protectionNote()) {
-        <div class="protection-row">
+        <div class="protection-row" data-glossary="price-protection">
           <div class="protection-copy">
             <span>Price protection <b>{{ tolerance() }}%</b></span>
             <small>{{ protectionNote() }}</small>
@@ -661,7 +661,7 @@
           <button id="novice-confirm" class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" appFocusAfterChange>Confirm {{ side().toLowerCase() }}</button>
         </div>
       } @else {
-        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
+        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" data-glossary="market-order">Review {{ side().toLowerCase() }}</button>
       }
       <!-- Read through the live announcer (PS-21), once per message, so this copy stays quiet. -->
       <output id="novice-trade-message" aria-live="off">{{ tradeStatus() }}</output>

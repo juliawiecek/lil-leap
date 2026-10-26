@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { accessibilityStore } from './accessibility';
+import { sayNow } from './captions';
 import { speakable } from './speech-text';
 import { soundCuePlayer } from './sound-cue-player';
 import { speechCoordinator } from '../../../shared/speech-coordinator';
@@ -262,6 +263,7 @@ export class ScanEngine {
   #bar: HTMLElement | null = null;
   /** The ring's own sentence being read, so the ring knows when it is talking and never cuts off the briefing. */
   #utterance: SpeechSynthesisUtterance | null = null;
+  #urgentSpeech = false;
   /** When what the ring is saying should be finished; it waits until then before moving on. */
   #speechUntil = 0;
   /** The item last read out, so a redraw does not read it again. */
@@ -306,6 +308,15 @@ export class ScanEngine {
   /** How many levels deep scanning is; 1 is the page (or the open dialog) itself. */
   get depth(): number {
     return this.#stack.length;
+  }
+
+  /** The control or group the ring is on, for "What's this?" (Alt+W); null on Back, Pause or an offer. */
+  ringed(): HTMLElement | null {
+    if (!this.#running || this.#paused || this.#prompt) {
+      return null;
+    }
+    const item = this.current();
+    return item && 'el' in item ? item.el : null;
   }
 
   start(): void {
@@ -615,7 +626,7 @@ export class ScanEngine {
       this.#resumeAt = el;
       // Confirm first, then click: what the click says (an order read-back, which cuts in) must
       // not be cut off by this confirmation (PS-23).
-      this.#announce(`${scanLabel(el)} selected.`);
+      if (!el.closest('.scan-pad')) this.#announce(`${scanLabel(el)} selected.`);
       el.click();
     }
   }
@@ -640,9 +651,9 @@ export class ScanEngine {
       }
     };
     for (const keys of rows) {
-      const row = this.#padRow(pad, `${keys[0]} to ${keys.at(-1)}`);
+      const row = this.#padRow(pad, `${keys[0] === '.' ? 'point' : keys[0]} to ${keys.at(-1) === '\u232b' ? 'Delete' : keys.at(-1)}`);
       for (const key of keys) {
-        const name = key === '⌫' ? 'Delete' : key;
+        const name = key === '⌫' ? 'Delete' : key === '.' ? 'point' : key;
         this.#padButton(row, key, name, () => {
           if (fresh && key !== '⌫') {
             value = '';
@@ -866,7 +877,8 @@ export class ScanEngine {
     if (!group) {
       chip.style.left = '16px';
       chip.style.top = '';
-      chip.style.bottom = '64px';
+      // Above the status bar, which moves up while a caption shows (captions.scss).
+      chip.style.bottom = 'calc(64px + var(--caption-offset, 0px))';
       return;
     }
     const box = screenBox(group);
@@ -940,7 +952,7 @@ export class ScanEngine {
     if (this.#live) {
       this.#live.textContent = text;
     }
-    this.#say(text, !interrupt);
+    this.#say(text, !interrupt, interrupt);
   }
 
   /** Tells screen readers what happened and, when speaking is on, says it aloud too. */
@@ -966,7 +978,7 @@ export class ScanEngine {
     this.#queueNext = false;
   }
 
-  #say(raw: string, queue: boolean): void {
+  #say(raw: string, queue: boolean, interrupt = false): void {
     const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
     // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
     const text = this.#picker ? raw : speakable(raw);
@@ -974,10 +986,10 @@ export class ScanEngine {
       return;
     }
     // Another voice, such as the market briefing, is talking; the ring stays quiet rather than cut it off.
-    if (synth.speaking && !this.#utterance) {
+    if (!interrupt && synth.speaking && !this.#utterance) {
       return;
     }
-    if (!queue && this.#utterance) {
+    if (!interrupt && !queue && this.#utterance) {
       synth.cancel();
     }
     const utterance = new SpeechSynthesisUtterance(text);
@@ -985,20 +997,22 @@ export class ScanEngine {
     const done = () => {
       if (this.#utterance === utterance) {
         this.#utterance = null;
+        this.#urgentSpeech = false;
       }
     };
     utterance.onend = done;
     utterance.onerror = done;
     this.#utterance = utterance;
+    this.#urgentSpeech = interrupt;
     // A queued sentence starts after the one being read, so the ring waits for both.
     const from = queue ? Math.max(Date.now(), this.#speechUntil) : Date.now();
     this.#speechUntil = from + speechTime(text);
-    synth.speak(utterance);
+    speechCoordinator.submit('switch', utterance, { interrupt, queue, defaultVoice: true });
   }
 
   /** The ring is still reading something out (until the browser says it finished), so it waits. */
   #talking(): boolean {
-    return !!this.#utterance && Date.now() < this.#speechUntil;
+    return (this.intervalMs > 700 || this.#urgentSpeech) && !!this.#utterance && Date.now() < this.#speechUntil;
   }
 
   #restartTimer(): void {
@@ -1088,7 +1102,8 @@ export class SwitchScanService {
 
   /** Says something for the page (a chart summary, an order read-back) while switch control is on. */
   announce(text: string, interrupt = false): void {
-    this.#engine?.say(text, interrupt);
+    if (this.settings().enabled && this.settings().speak) this.#engine?.say(text, interrupt);
+    else if (this.#store.read('voice', value => (value as { enabled?: boolean } | null)?.enabled === true)) sayNow('order-read-back', text);
   }
 
   /** Cuts off the sentence being read without changing any setting (Stop speech, Alt+Shift+X). */

@@ -117,7 +117,7 @@ export class ToastService {
   `,
   styles: [
     `
-      .toasts { position: fixed; z-index: 60; right: 16px; bottom: 16px; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); }
+      .toasts { position: fixed; z-index: 60; right: 16px; bottom: calc(16px + var(--caption-offset, 0px)); display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); }
       .toast { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--gain-tone-22);
         border-left: 4px solid var(--gain); border-radius: 8px; background: var(--surface-tone-09); color: var(--gain-tone-21); box-shadow: 0 16px 40px var(--shadow-40);
         font-size: 12px; animation: enter 0.2s ease-out; }

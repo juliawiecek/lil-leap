@@ -7,7 +7,7 @@
 </div>
 <ul class="indicator-legend" aria-label="Technical indicator legend">
   @for (s of paths(); track s.name) {
-    <li><svg width="24" height="8" aria-hidden="true"><path d="M0 4H24" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /></svg><span>{{ s.name }} @if (!s.path) { <small>{{ s.unavailable }}</small> }</span></li>
+    <li [attr.data-glossary]="s.name === 'VWAP' ? 'vwap' : 'ema'"><svg width="24" height="8" aria-hidden="true"><path d="M0 4H24" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /></svg><span>{{ s.name }} @if (!s.path) { <small>{{ s.unavailable }}</small> }</span></li>
   }
   <!-- Candle and volume direction cues as swatches rather than a sentence. -->
   <li><svg width="10" height="14" aria-hidden="true"><rect class="swatch-up" x="1" y="1" width="8" height="12" /></svg><span>Up</span></li>
@@ -45,7 +45,7 @@
 @if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {
-  <svg class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">
+  <svg data-glossary="volume" class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">
     <defs><pattern [attr.id]="id + '-volume'" width="5" height="5" patternUnits="userSpaceOnUse"><path class="hatch-line" d="M-1 1L1 -1M0 5L5 0M4 6L6 4" /></pattern></defs>
     @for (p of candles(); track p.candle!.time) { @if (p.candle!.volume !== null) { <rect class="volume-bar" [class.up]="p.candle!.close > p.candle!.open" [class.down]="p.candle!.close < p.candle!.open" [class.flat]="p.candle!.close === p.candle!.open" [attr.x]="x(p.at) - bodyWidth() / 2" [attr.width]="bodyWidth()" [attr.y]="44 - p.candle!.volume! / maxVolume() * 42" [attr.height]="p.candle!.volume! / maxVolume() * 42" [attr.fill]="p.candle!.close < p.candle!.open ? 'url(#' + id + '-volume)' : 'none'"><title>{{ candleText(p) }}</title></rect> } }
   </svg>
@@ -57,7 +57,7 @@
 </p>
 @if (rsiLine()) {
   <div class="rsi-wrap">
-    <svg class="rsi-plot" [attr.viewBox]="'0 0 ' + width() + ' 60'" preserveAspectRatio="none" role="img" tabindex="0" [appChartFocus]="rsiAccess" [attr.aria-label]="symbol() + ' relative strength index'">
+    <svg data-glossary="rsi" class="rsi-plot" [attr.viewBox]="'0 0 ' + width() + ' 60'" preserveAspectRatio="none" role="img" tabindex="0" [appChartFocus]="rsiAccess" [attr.aria-label]="symbol() + ' relative strength index'">
       <rect class="rsi-band" x="0" y="18" [attr.width]="width()" height="24" />
       <line class="rsi-guide" x1="0" [attr.x2]="width()" y1="18" y2="18" />
       <line class="rsi-guide" x1="0" [attr.x2]="width()" y1="42" y2="42" />
