@@ -118,7 +118,7 @@ test('route focus follows page navigation, while query/data changes leave focus 
 });
 
 test('shortcuts leave typing alone, stop is available while typing, and form errors are linked and focusable', t => {
-  const { doc, controller, spoken } = setup(t, '<main><h1>Sign in</h1><form novalidate><label>Email<input type="email" required></label><button>Continue</button></form></main>');
+  const { doc, controller, spoken } = setup(t, '<main><h1>Sign in</h1><form><label>Email<input type="email" required></label><button>Continue</button></form></main>');
   const input = doc.querySelector('input'), form = doc.querySelector('form'); input.focus();
   key(doc, 'r', { altKey: true, shiftKey: true }); assert.equal(spoken.length, 0);
   controller.readFocused(); key(doc, 'x', { altKey: true, shiftKey: true }); assert.equal(speechCoordinator.owner, '');
@@ -161,4 +161,14 @@ test('malformed and composition keyboard events leave typing alone; focus takes 
   assert.match(spoken.at(-1).text, /Sell Apple/);
   const count = spoken.length; key(doc, 'r', { altKey: true, shiftKey: true, isComposing: true });
   assert.equal(spoken.length, count);
+});
+
+test('custom validation and hidden native fields never steal registration focus', async t => {
+ const { doc } = setup(t, '<form novalidate><label>Hidden<input required aria-hidden="true"></label><button>Continue</button></form><form><input required aria-hidden="true"><label>Email<input required type="email"></label></form>');
+ const [custom, standard] = doc.querySelectorAll('form'); const button = custom.querySelector('button'); button.focus();
+ custom.querySelector('input').dispatchEvent(new browser.Event('invalid', { cancelable: true }));
+ custom.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve();
+ assert.equal(doc.activeElement, button);
+ standard.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve();
+ assert.equal(doc.activeElement, standard.querySelector('input[type="email"]'));
 });

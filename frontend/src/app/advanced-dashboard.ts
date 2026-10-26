@@ -37,6 +37,7 @@ import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { briefingOrders } from './briefing';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
 import { SwitchScanService } from './switch-scan';
@@ -580,7 +581,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const accountId = this.selectedAccount()?.account_id;
     let orders: OrderHistoryRow[] = [];
     try {
-      orders = await this.orderHistoryClient.list({ accountId });
+      orders = await briefingOrders(this.orderHistoryClient.list({ accountId }));
     } catch {
       // The rest of the briefing is still worth hearing.
     }

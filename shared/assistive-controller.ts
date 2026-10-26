@@ -257,7 +257,7 @@ export class AssistiveController {
   }
   private invalid(event: Event): void {
     const field = event.target as HTMLInputElement;
-    if (!field.setAttribute || !field.validationMessage) return;
+    if (!field.setAttribute || !field.validationMessage || !visible(field) || field.form?.noValidate || field.form?.hasAttribute('data-a11y-custom-validation')) return;
     event.preventDefault();
     let id = field.getAttribute('data-a11y-error');
     if (!id) { id = `a11y-field-error-${++this.errorId}`; field.setAttribute('data-a11y-error', id); }
@@ -275,7 +275,7 @@ export class AssistiveController {
       this.invalidFocusScheduled = true;
       queueMicrotask(() => {
         this.invalidFocusScheduled = false;
-        if (field.isConnected) field.focus();
+        if (field.isConnected && visible(field)) field.focus();
       });
     }
   }
@@ -290,9 +290,10 @@ export class AssistiveController {
   private submit(event: Event): void {
     const form = event.target as HTMLFormElement;
     if (form.tagName !== 'FORM') return;
+    if (form.noValidate || form.hasAttribute('data-a11y-custom-validation')) return;
     if (!form.checkValidity()) {
       event.preventDefault(); event.stopImmediatePropagation();
-      form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(); return;
+      [...form.querySelectorAll<HTMLElement>('[aria-invalid="true"]')].find(visible)?.focus(); return;
     }
     clearTimeout(this.formTimer);
     this.formTimer = setTimeout(() => {

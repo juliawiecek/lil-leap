@@ -154,7 +154,7 @@ test('hidden balances, an empty portfolio, delays and long order lists change th
   const many = Array.from({ length: 5 }, (_, i) => order({ filledAt: new Date(NOW.getTime() - (i + 1) * 60000).toISOString() }));
   const busy = buildBriefing(snapshot({ orders: many, since: new Date(NOW.getTime() - 3600000), gain: -50 }));
   assert.ok(busy.includes('5 orders changed since your last briefing.'));
-  assert.ok(busy.includes('The rest are under Orders.'));
+  assert.ok(busy.includes('The rest are under Activity.'));
   assert.ok(busy.some((line) => /down \$50,/.test(line)));
 });
 
@@ -313,4 +313,11 @@ test('a market open or close triggers a briefing only when repeats are on', asyn
   fixture.componentInstance.service.update({ everyMinutes: 0 });
   fixture.componentRef.setInput('marketOpen', false); fixture.detectChanges();
   assert.equal(plays.mock.callCount(), 1);
+});
+
+ test('history timeout preserves the briefing and handles rejected history', async () => {
+  const { briefingOrders } = await import('../src/app/briefing.ts');
+  assert.deepEqual(await briefingOrders(new Promise(() => {}), 5), []);
+  assert.deepEqual(await briefingOrders(Promise.reject(new Error('offline')), 5), []);
+  assert.deepEqual(await briefingOrders(Promise.resolve([1]), 5), [1]);
 });

@@ -47,6 +47,7 @@ import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
+import { briefingOrders } from './briefing';
 import { SwitchScanService } from './switch-scan';
 import { FocusAfterChange } from './focus-after-change';
 
@@ -1211,7 +1212,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const accountId = this.selectedAccount()?.account_id;
     let orders: OrderHistoryRow[] = [];
     try {
-      orders = await this.orderHistoryClient.list({ accountId });
+      orders = await briefingOrders(this.orderHistoryClient.list({ accountId }));
     } catch {
       // The rest of the briefing is still worth hearing.
     }
