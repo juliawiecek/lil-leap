@@ -121,7 +121,7 @@ class JdbcOrderSubmissionRepositoryLookupTest {
         ArgumentCaptor<RowMapper<OrderSubmissionResponse>> mapper = ArgumentCaptor.forClass(RowMapper.class);
         verify(mocked).query(contains("ON CONFLICT (account_id, client_reference) DO NOTHING"), mapper.capture(),
                 eq(accountId), eq(instrumentId), eq(reference), eq("BUY"), eq(5L), eq("MARKET"),
-                eq(new BigDecimal("1.50")), eq(new BigDecimal("187.25")));
+                eq(new BigDecimal("1.50")), eq(new BigDecimal("187.25")), eq(null), eq(null), eq(null));
 
         UUID orderId = UUID.randomUUID();
         Instant submitted = Instant.parse("2026-10-01T14:30:00Z");

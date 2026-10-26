@@ -103,3 +103,16 @@ test('a signed-out API call sends no Authorization header', async t => {
   request.flush([]);
   assert.deepEqual(await pending, []);
 });
+
+for (const method of ['put', 'delete']) {
+  test(`${method} presets use the authenticated shared transport`, async t => {
+    const f = fixture(t);
+    const url = '/api/v1/orders/presets?accountId=a1';
+    const pending = firstValueFrom(method === 'put' ? f.http.put(url, { name: 'Swing' }) : f.http.delete(url));
+    const request = f.backend.expectOne(url);
+    assert.equal(request.request.method, method.toUpperCase());
+    assert.equal(request.request.headers.get('Authorization'), 'Bearer current-token');
+    request.flush([]);
+    assert.deepEqual(await pending, []);
+  });
+}

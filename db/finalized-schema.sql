@@ -51,7 +51,7 @@ CREATE TABLE users (
     locked_until TIMESTAMPTZ,
 
     -- BR-03: PASSWORD EXPIRY. Identity refuses sign-in once the password is older than its
-    -- maximum age and emails one "expires soon" warning per password (migration 019).
+    -- maximum age and emails one "expires soon" warning per password (migration 020).
     password_changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     password_expiry_warned_at TIMESTAMPTZ,
 
@@ -395,6 +395,11 @@ CREATE TABLE orders (
 
     side VARCHAR(10) NOT NULL,  -- BR-04: BUY or SELL
     quantity BIGINT NOT NULL,
+    price_waits BIGINT NOT NULL DEFAULT 0 CHECK (price_waits >= 0),
+    limit_price NUMERIC(18,4) CHECK (limit_price > 0),
+    take_profit_price NUMERIC(18,4) CHECK (take_profit_price > 0),
+    stop_loss_price NUMERIC(18,4) CHECK (stop_loss_price > 0),
+    exit_parent_id UUID UNIQUE REFERENCES orders(order_id),
     order_type VARCHAR(20) NOT NULL DEFAULT 'MARKET',
     status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED',  -- BR-06: 2-phase: SUBMITTED → ACCEPTED or REJECTED
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -418,7 +423,9 @@ CREATE TABLE orders (
     CONSTRAINT uk_orders_account_client_reference UNIQUE (account_id, client_reference),
     CONSTRAINT chk_order_side CHECK (side IN ('BUY', 'SELL')),
     CONSTRAINT chk_order_quantity CHECK (quantity > 0),
-    CONSTRAINT chk_order_type CHECK (order_type = 'MARKET'),
+    CONSTRAINT chk_limit_price_required CHECK ((order_type = 'LIMIT') = (limit_price IS NOT NULL)),
+    CONSTRAINT chk_exit_prices CHECK (exit_parent_id IS NULL OR (take_profit_price IS NOT NULL OR stop_loss_price IS NOT NULL)),
+    CONSTRAINT chk_order_type CHECK (order_type IN ('MARKET', 'LIMIT')),
     CONSTRAINT chk_order_status CHECK (
         status IN ('SUBMITTED', 'ACCEPTED', 'FILLED', 'REJECTED', 'PENDING', 'DELAYED', 'CANCELLED')
     )
@@ -829,6 +836,18 @@ CREATE OR REPLACE VIEW v_trader_tier_eligibility AS
     ) ct ON a.account_id = ct.account_id;
 
 -- ==========================================================
+CREATE TABLE IF NOT EXISTS account_order_presets (
+    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+    name VARCHAR(40) NOT NULL CHECK (length(trim(name)) > 0),
+    order_type VARCHAR(10) NOT NULL CHECK (order_type IN ('MARKET', 'LIMIT')),
+    quantity BIGINT NOT NULL CHECK (quantity BETWEEN 1 AND 9007199254740991),
+    tolerance NUMERIC NOT NULL CHECK (tolerance BETWEEN 0.1 AND 10),
+    profit_percent NUMERIC CHECK (profit_percent > 0 AND profit_percent < 100),
+    stop_percent NUMERIC CHECK (stop_percent > 0 AND stop_percent < 100),
+    risk_budget NUMERIC CHECK (risk_budget > 0 AND risk_budget <= 99999999999999),
+    PRIMARY KEY (account_id, name)
+);
+
 -- VERIFICATION & TESTING (manual steps)
 -- ==========================================================
 -- \i /full/path/to/finalized-schema.sql

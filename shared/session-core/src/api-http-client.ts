@@ -23,4 +23,12 @@ export class ApiHttpClient {
   post<T>(url: string, body: unknown, options?: ApiHttpOptions): Observable<T> {
     return this.http.post<T>(url, body, options);
   }
+
+  put<T>(url: string, body: unknown, options?: ApiHttpOptions): Observable<T> {
+    return this.http.put<T>(url, body, options);
+  }
+
+  delete<T>(url: string, options?: ApiHttpOptions): Observable<T> {
+    return this.http.delete<T>(url, options);
+  }
 }

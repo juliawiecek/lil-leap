@@ -86,7 +86,7 @@ registration), deletes the token and revokes every refresh token the user holds,
 transaction, then emails a "password changed" notice. Raw tokens are never logged.
 
 **Password expiry (BR-03):** a password is good for `PASSWORD_MAX_AGE_DAYS` (default 90)
-from the moment it is set (`users.password_changed_at`, migration 019). Once an hour
+from the moment it is set (`users.password_changed_at`, migration 020). Once an hour
 (`PASSWORD_EXPIRY_SWEEP_MINUTES`) the service finds ACTIVE users whose password expires within
 `PASSWORD_EXPIRY_WARNING_DAYS` (default 14) and emails each of them one "expires soon" notice,
 recorded in `users.password_expiry_warned_at` and as `PASSWORD_EXPIRY_WARNED` in `audit_log`,
