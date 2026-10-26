@@ -249,3 +249,26 @@ test('Insights reflows with larger text and its mobile navigation supports keybo
   await expect(toggle).toBeFocused(); await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await page.screenshot({ path: 'test-results/site-insights-320.png' });
 });
+
+for (const tier of ['NOVICE', 'ADVANCED']) {
+  test(`${tier} dialogs pass axe and return focus`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
+    await colourFixture(page, tier); await mockSpeech(page); await page.goto('/dashboard');
+    const triggers = tier === 'NOVICE'
+      ? [page.locator('.trade-actions').getByRole('button', { name: 'Buy', exact: true }), page.locator('.allocation-panel').getByRole('button', { name: /View/ })]
+      : [page.getByRole('button', { name: 'Keyboard shortcuts', exact: true }), page.locator('.exposure-panel').getByRole('button', { name: /View/ })];
+    for (const trigger of triggers) {
+      await trigger.click(); await expect(page.locator('dialog[open]')).toHaveCount(1);
+      await audit(page, `${tier}-dialog`, info); await page.keyboard.press('Escape');
+    }
+  });
+}
+test('registration, recovery and reset forms pass axe', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
+  await page.goto('/login'); await audit(page, 'sign-in', info);
+  await page.getByRole('button', { name: /Create account/i }).click();
+  await audit(page, 'registration', info);
+  await page.goto('/login'); await page.getByRole('button', { name: /Forgot password/i }).click();
+  await audit(page, 'forgot-password', info);
+  await page.goto('/reset-password?token=test-token'); await audit(page, 'reset-password', info);
+});

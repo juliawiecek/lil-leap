@@ -1,4 +1,5 @@
-<section class="panel order-ticket" aria-label="Trade ticket">
+<section class="panel order-ticket" aria-labelledby="advanced-ticket-title">
+  <h2 class="sr-only" id="advanced-ticket-title">Trade ticket</h2>
   <div class="ticket-body">
     <form aria-describedby="pro-ticket-message" method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
       <div class="side-switch">

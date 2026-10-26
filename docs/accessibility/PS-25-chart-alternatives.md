@@ -27,7 +27,7 @@ retain their hidden/inert treatment.
 
 Position-weight bars inside the holdings table and allocation-legend meters repeat adjacent
 exact numeric values. These decorative duplicates stay `aria-hidden`; their underlying table
-or allocation alternatives retain the same information. The learning-path progress element is
+or allocation alternatives retain the same information. The former Learn route was removed on main; its progress element was
 a labelled native `<progress>` control with its actual completed/total lessons, not a financial
 chart. Clients, Client Detail, Reports, Trade Lookup, Activity and order-ticket views contain no
 additional standalone data plots. Old exposure-ring/RSI/sparkline styles are not rendered.
@@ -189,3 +189,5 @@ switch device, and check 200%/400% zoom and Windows contrast themes.
 References: [W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/),
 [W3C data tables](https://www.w3.org/WAI/tutorials/tables/),
 [WCAG status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html).
+
+Sprint 10 audit: keyboard inspection and audio use the displayed series; sector allocation uses the sector ring, with loading guards and hidden-balance masking. Real screen-reader verification remains manual.

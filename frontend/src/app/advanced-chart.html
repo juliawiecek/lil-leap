@@ -2,7 +2,8 @@
 <app-retail-stock-dashboard [selectedAsset]="asset()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [privateValues]="desk().privateBalance()" />
 <details class="historical-chart">
 <summary>Trade history and long-range chart</summary>
-<section class="panel chart-panel" aria-label="Stock price chart">
+<section class="panel chart-panel" aria-labelledby="advanced-chart-title">
+  <h2 class="sr-only" id="advanced-chart-title">Price chart</h2>
   <div class="chart-toolbar">
     <span class="chart-company"><b>{{ desk().selected().symbol }}</b>{{ desk().selected().name }}</span
     ><strong class="quote-price">@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</app-price-flash>}</strong

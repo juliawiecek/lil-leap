@@ -99,8 +99,8 @@
         </div>
       }
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
-        <section class="panel summary-panel" data-scan-group="Portfolio summary">
-          <h1>
+        <section aria-labelledby="portfolio-page-title" class="panel summary-panel" data-scan-group="Portfolio summary">
+          <h1 id="portfolio-page-title">
             {{ page() === 'Overview' ? 'Portfolio Summary' : page() }}
             <button
               type="button"
@@ -153,13 +153,14 @@
           <app-advanced-ticket data-scan-group="Trade ticket" [desk]="this" />
         }
         @if (page() === 'Overview' || page() === 'Portfolio') {
-          <section class="panel positions-panel" data-scan-group="Positions">
-            <div class="panel-tabs">
+          <section class="panel positions-panel" data-scan-group="Positions" aria-labelledby="positions-title">
+            <h2 id="positions-title" class="sr-only">Positions</h2>
+            <div class="panel-tabs" role="tablist" aria-label="Portfolio details">
               @for (tab of bottomTabs; track tab) {
                 <button
                   type="button"
                   [class.active]="bottomTab() === tab"
-                  [attr.aria-pressed]="bottomTab() === tab"
+                  role="tab" [id]="'portfolio-tab-' + $index" aria-controls="portfolio-panel" [attr.aria-selected]="bottomTab() === tab" [tabIndex]="bottomTab() === tab ? 0 : -1"
                   (click)="bottomTab.set(tab)"
                 >
                   {{ tab }}
@@ -167,7 +168,7 @@
               }
               <span class="panel-note">{{ positions().length }} positions · {{ privateBalance() ? '••••••' : (exposure().equities | currency) }} invested</span>
             </div>
-            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
+            <div class="table-scroll" tabindex="0" id="portfolio-panel" role="tabpanel" [attr.aria-labelledby]="'portfolio-tab-' + bottomTabs.indexOf(bottomTab())" data-scan-group="Financial table">
               @if (bottomTab() === 'Positions') {
                 <table class="positions-table">
                   <caption class="sr-only">Positions</caption>
@@ -268,13 +269,13 @@
           </section>
         }
         @if (page() === 'Activity') {
-          <section class="panel orders-history-panel" data-scan-group="Activity">
-            <div class="panel-heading"><h2>Activity</h2></div>
+          <section class="panel orders-history-panel" data-scan-group="Activity" aria-labelledby="advanced-dashboard-heading-1">
+            <div class="panel-heading"><h2 id="advanced-dashboard-heading-1">Activity</h2></div>
             <app-activity-feed />
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel watch-panel" data-scan-group="Watchlist">
+          <section class="panel watch-panel" data-scan-group="Watchlist" aria-labelledby="advanced-dashboard-heading-2">
             @if (page() === 'Overview') {
               <div class="list-tabs" role="tablist" aria-label="Watchlist and market lists">
                 @for (tab of ['Watchlist', 'Movers', 'Sectors']; track tab) {
@@ -291,7 +292,7 @@
                 }
               </div>
             } @else {
-              <div class="panel-heading"><h2>Stocks</h2></div>
+              <div class="panel-heading"><h2 id="advanced-dashboard-heading-2">Stocks</h2></div>
             }
             <div id="watch-list-panel" [attr.role]="page() === 'Overview' ? 'tabpanel' : null" [attr.aria-labelledby]="page() === 'Overview' ? 'watch-tab-' + overviewList() : null">
             @if (page() === 'Markets' || overviewList() === 'Watchlist') {
@@ -375,8 +376,8 @@
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel market-panel" data-scan-group="Market overview">
-            <div class="panel-heading"><h2>Market Overview</h2></div>
+          <section class="panel market-panel" data-scan-group="Market overview" aria-labelledby="advanced-dashboard-heading-3">
+            <div class="panel-heading"><h2 id="advanced-dashboard-heading-3">Market Overview</h2></div>
             @if (page() === 'Overview') {
               <div class="heat-map" role="group" tabindex="0" aria-label="Listed stock performance heat map" data-scan-group="Stock performance" [appChartFocus]="heatAccess" [chartScanChildren]="true">
                 @for (q of heatMapQuotes(); track q.symbol) {
@@ -397,11 +398,11 @@
               </div>
               <app-chart-access #heatAccess id="advanced-heatmap" label="Listed stock performance today" [summary]="heatDescription()" [table]="heatTable()" />
             } @else {
-            <div class="market-tabs">
+            <div class="market-tabs" role="tablist" aria-label="Market view">
               @for (tab of ['Sectors', 'Top Movers']; track tab) {
                 <button
                   type="button"
-                  [class.active]="marketTab() === tab"
+                  role="tab" [id]="'market-tab-' + $index" aria-controls="market-panel" [attr.aria-selected]="marketTab() === tab" [tabIndex]="marketTab() === tab ? 0 : -1" [class.active]="marketTab() === tab"
                   (click)="marketTab.set(tab)"
                 >
                   {{ tab }}
@@ -409,6 +410,7 @@
               }
             </div>
             }
+            <div id="market-panel" [attr.role]="page() === 'Markets' ? 'tabpanel' : null" [attr.aria-labelledby]="page() === 'Markets' ? (marketTab() === 'Sectors' ? 'market-tab-0' : 'market-tab-1') : null">
             @if (page() === 'Overview' || marketTab() === 'Sectors') {
               <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
                 @for (s of sectors(); track s.name) {
@@ -436,19 +438,20 @@
                 </button>
               }
             }
+            </div>
           </section>
         }
         @if (page() === 'Overview') {
           <div class="bottom-panels">
-            <section class="panel executions-panel" data-scan-group="Recent activity">
+            <section class="panel executions-panel" data-scan-group="Recent activity" aria-labelledby="advanced-dashboard-heading-4">
               <div class="panel-heading">
-                <h2>Recent Activity</h2>
+                <h2 id="advanced-dashboard-heading-4">Recent Activity</h2>
               </div>
               <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
-            <section class="panel exposure-panel" data-scan-group="Exposure">
+            <section class="panel exposure-panel" data-scan-group="Exposure" aria-labelledby="advanced-dashboard-heading-5">
               <div class="panel-heading">
-                <h2>Portfolio Summary</h2>
+                <h2 id="advanced-dashboard-heading-5">Portfolio exposure</h2>
                 <button type="button" class="text-link" (click)="openModal('exposure')">
                   View details <app-dashboard-icon name="chevron" />
                 </button>
@@ -487,8 +490,8 @@
           </div>
         }
         @if (page() === 'Settings') {
-          <section class="panel settings-panel" data-scan-group="Workspace settings">
-            <h2>Workspace settings</h2>
+          <section class="panel settings-panel" data-scan-group="Workspace settings" aria-labelledby="advanced-dashboard-heading-6">
+            <h2 id="advanced-dashboard-heading-6">Workspace settings</h2>
             @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
             @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
             @if (profile(); as userProfile) {
