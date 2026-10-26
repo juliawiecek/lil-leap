@@ -1,5 +1,24 @@
-<div class="pro-shell" [class.collapsed]="collapsed()">
+<div
+  class="pro-shell resizable"
+  [class.collapsed]="collapsed()"
+  [class.resizing]="sidebar.resizing()"
+  [style.--sidebar-width.px]="sidebar.width()"
+>
   <aside class="pro-sidebar" aria-label="Menu" data-scan-group="Menu">
+    <div
+      class="sidebar-resizer"
+      role="separator"
+      tabindex="0"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      [attr.aria-valuemin]="sidebar.min"
+      [attr.aria-valuemax]="sidebar.max"
+      [attr.aria-valuenow]="sidebar.width()"
+      title="Drag to resize"
+      (pointerdown)="sidebar.start($event)"
+      (keydown)="sidebar.keys($event)"
+      (dblclick)="sidebar.toggle()"
+    ></div>
     <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
       >Next<span>Trade</span><app-dashboard-icon name="arrow"
     /></a>
@@ -23,7 +42,7 @@
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
       ><button
         type="button"
-        (click)="collapsed.set(!collapsed())"
+        (click)="sidebar.toggle()"
         [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
       >
         <app-dashboard-icon name="collapse" /><span>Collapse</span>
@@ -509,7 +528,7 @@
             </div>
             <div>
               <span>Sidebar</span
-              ><button type="button" class="secondary-button" (click)="collapsed.set(!collapsed())">
+              ><button type="button" class="secondary-button" (click)="sidebar.toggle()">
                 {{ collapsed() ? 'Expand' : 'Collapse' }}
               </button>
             </div>

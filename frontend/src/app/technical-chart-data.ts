@@ -1,4 +1,5 @@
 import { chartDate, chartValue, type ChartTable } from '../../../shared/chart-description';
+import { APP_TIME_ZONE } from './app-time';
 import type { PricePoint } from './market-feed-api';
 import type { TradeMark } from './trade-marks';
 import type { Indicator } from './technical-chart-math';
@@ -16,7 +17,7 @@ export function describeTrades(trades: readonly TradeMark[], last: number | unde
 export function technicalTable(points: readonly PricePoint[], series: readonly Indicator[], trades: readonly TradeMark[], group = true, hidden = false, averageCost: number | null = null): ChartTable {
   const grouped = group && points.length > 400;
   const buckets = new Map<string, PricePoint[]>();
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIME_ZONE });
   for (const [index, p] of points.entries()) { const key = grouped ? day.format(p.at) : String(index); const ps = buckets.get(key) ?? []; ps.push(p); buckets.set(key, ps); }
   const number = (n: number | null | undefined) => n !== null && n !== undefined && Number.isFinite(n) ? chartValue(n, { precision: 4 }) : 'Unavailable';
   const values = series.map(s => new Map(s.points.map(p => [p.at, p.price])));
@@ -41,16 +42,16 @@ export function technicalTable(points: readonly PricePoint[], series: readonly I
     if (includedTrades.has(t)) { continue; }
     rows.push([chartDate(t.at), 'Not a price observation', '', '', '', ...series.map(() => ''), '', `${t.side === 'BUY' ? 'Bought' : 'Sold'} ${t.quantity} at ${chartValue(t.price, { currency: 'USD' })}`]);
   } }
-  return { grouped, columns: ['Time (New York)', 'Open (USD)', 'High (USD)', 'Low (USD)', 'Close / price (USD)', ...series.map(s => `${s.name} (USD)`), 'Reported volume (shares)', 'Your trades'], rows,
+  return { grouped, columns: ['Time (Central)', 'Open (USD)', 'High (USD)', 'Low (USD)', 'Close / price (USD)', ...series.map(s => `${s.name} (USD)`), 'Reported volume (shares)', 'Your trades'], rows,
     references: !hidden && averageCost !== null && Number.isFinite(averageCost) ? [{ label: 'Average cost reference', value: chartValue(averageCost, { currency: 'USD' }) }] : [],
-    note: grouped ? `Grouped by New York day from ${points.length} observations. Open is first, high/low retain extremes, close and indicators are last, and volume is summed only when every bar reports it. Trade times are preserved. Choose every observation for exact prices.` : 'Unavailable means the feed did not provide OHLC/volume or the indicator has insufficient data. Trades between observations have their own rows.' };
+    note: grouped ? `Grouped by Central day from ${points.length} observations. Open is first, high/low retain extremes, close and indicators are last, and volume is summed only when every bar reports it. Trade times are preserved. Choose every observation for exact prices.` : 'Unavailable means the feed did not provide OHLC/volume or the indicator has insufficient data. Trades between observations have their own rows.' };
 }
 
 /** Volume bars may aggregate several observations. Preserve missing bars and their intervals. */
 export function volumeTable(points: readonly PricePoint[], aggregated = false): ChartTable {
   return {
     grouped: aggregated,
-    columns: ['Bar start (New York)', 'Bar end (New York)', 'Reported volume (shares)'],
+    columns: ['Bar start (Central)', 'Bar end (Central)', 'Reported volume (shares)'],
     rows: points.map(p => [chartDate(p.candle?.time ?? p.at), chartDate(p.at),
       p.candle?.volume !== null && p.candle?.volume !== undefined && Number.isFinite(p.candle.volume)
         ? chartValue(p.candle.volume, { unit: 'shares' }) : 'Unavailable']),

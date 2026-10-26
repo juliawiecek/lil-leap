@@ -42,7 +42,7 @@ test('OHLC summary uses actual intrabar highs and lows rather than only closing 
 test('daily grouping preserves first, last, extrema, observation counts and exact raw values', () => {
   const ps = Array.from({ length: 1000 }, (_, i) => ({ at: at + i * 600000, value: 100 + i % 11 }));
   const grouped = seriesTable(ps, options);
-  assert.match(grouped.note, /Grouped by New York/);
+  assert.match(grouped.note, /Grouped by Central/);
   assert.equal(grouped.rows.reduce((n, r) => n + Number(r.at(-1)), 0), 1000);
   const raw = seriesTable(ps, options, false);
   assert.equal(raw.rows.length, 1000); assert.equal(raw.rows[0][1], '$100.00');

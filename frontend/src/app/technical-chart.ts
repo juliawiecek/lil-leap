@@ -37,7 +37,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly rsiDescription = computed(() => describeSeries(this.visibleRsi().map(p => ({ at: p.at, value: p.price })), {
     name: this.symbol() + ' RSI ' + this.rsiPeriod(), period: this.period(), empty: `Needs ${this.rsiPeriod() + 1} recorded bars.`,
   }));
-  readonly rsiTable = computed(() => ({ columns: ['Time (New York)', 'RSI ' + this.rsiPeriod()],
+  readonly rsiTable = computed(() => ({ columns: ['Time (Central)', 'RSI ' + this.rsiPeriod()],
     rows: this.visibleRsi().map(p => [chartDate(p.at), chartValue(p.price)]) }));
   readonly chartSeries = computed<readonly ChartSeries[]>(() => [
     { id: this.symbol() + ':price', label: this.symbol() + ' recorded prices', unit: 'USD', points: chartPoints(this.visible(), p => p.at, p => p.price), status: this.visible().length ? 'ready' : 'empty' },
