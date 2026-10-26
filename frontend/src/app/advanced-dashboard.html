@@ -119,7 +119,7 @@
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
                 ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
               </div>
-              <div>
+              <div data-glossary="buying-power">
                 <span>Buying Power</span
                 ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
               </div>
@@ -127,7 +127,7 @@
                 <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></strong
                 ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></b>
               </div>
-              <div>
+              <div data-glossary="total-return">
                 <span>Total Return</span
                 ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
                   ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
@@ -191,7 +191,7 @@
                           <button type="button" (click)="choose(quote(p.symbol))">
                             <b>{{ p.symbol }}</b>
                           </button>
-                          <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
+                          <small class="position-sub" data-glossary="average-cost">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
                         </td>
                         <td>@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</app-price-flash>}</td>
                         <td
@@ -236,7 +236,7 @@
                   <div>
                     <span>Cash</span><strong>{{ buyingPower() | currency }}</strong>
                   </div>
-                  <div>
+                  <div data-glossary="buying-power">
                     <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
                   </div>
                   <div><span>Invested</span><strong>{{ exposure().equities | currency }}</strong></div>
@@ -250,7 +250,7 @@
                       ><app-financial-change [value]="dayGain()" unit="currency" /></strong
                     >
                   </div>
-                  <div>
+                  <div data-glossary="total-return">
                     <span>Total Return</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
                       ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
@@ -456,7 +456,7 @@
               <div class="summary-card">
                 <strong class="summary-total">{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong>
                 <div class="summary-grid">
-                  <div>
+                  <div data-glossary="buying-power">
                     <span>Buying Power</span><b>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</b
                     ><small>Cash {{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</small>
                   </div>
@@ -469,7 +469,7 @@
                     ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></b
                     ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></small>
                   </div>
-                  <div>
+                  <div data-glossary="total-return">
                     <span>Total Return</span
                     ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" unit="currency" /></b
                     ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
@@ -543,7 +543,7 @@
   </div>
   @if (modal() === 'review') {
     <p class="review-summary" role="status">{{ reviewSummary() }}</p>
-    <p>Market order: final price and total may differ from this estimate.</p>
+    <p data-glossary="market-order">Market order: final price and total may differ from this estimate.</p>
     @if (closedWarning()) {
       <p class="closed-warning" role="note">{{ closedWarning() }}</p>
     }
@@ -554,13 +554,13 @@
       <div>
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
       </div>
-      <div>
+      <div data-glossary="market-order">
         <span>Side / Type</span><strong>{{ side() }} / Market</strong>
       </div>
       <div>
         <span>Quantity</span><strong>{{ quantity() }}</strong>
       </div>
-      <div>
+      <div data-glossary="price-protection">
         <span>Price protection</span><strong>{{ tolerance() }}%</strong>
       </div>
       <div>

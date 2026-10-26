@@ -299,6 +299,15 @@ export class ScanEngine {
     return this.#stack.length;
   }
 
+  /** The control or group the ring is on, for "What's this?" (Alt+W); null on Back, Pause or an offer. */
+  ringed(): HTMLElement | null {
+    if (!this.#running || this.#paused || this.#prompt) {
+      return null;
+    }
+    const item = this.current();
+    return item && 'el' in item ? item.el : null;
+  }
+
   start(): void {
     if (this.#running) {
       return;

@@ -36,6 +36,9 @@ is a guard against zero coverage, not a claim that 1% is adequate coverage.
 - `captions.test.mjs`: PS-23 caption strip: each phrase while spoken and 4 s after,
   aria-hidden, dialogs, a stalled speech engine, switch control, the briefing and
   Alt+W captioned through the shared voice, the Captions setting, contrast and layout.
+- `glossary.test.mjs`: PS-23 "What's this?" entries and their wording, lookup by
+  `data-glossary`, the Detailed-level hint for PS-22, Alt+W, which item is explained,
+  speaking and captioning through the shared voice, and the tagged dashboard terms.
 - `spoken-labels.test.mjs`: chart period names and the spoken chart summary,
   price tape items read by company name, cleaned-up speech text, and the PS-23
   order read-back.

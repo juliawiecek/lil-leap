@@ -350,6 +350,20 @@ test('a number field opens a keypad that types into it and fires the events the 
   assert.equal(describe(engine.current()), 'control:Number of shares', 'the ring picks up where it left off');
 });
 
+test('"What\'s this?" explains what the ring is on, and nothing on Back, Pause, an offer, or once stopped (PS-23)', (t) => {
+  const engine = setup(t, { backEveryMs: 0, pauseEveryMs: 0 });
+  assert.equal(engine.ringed()?.getAttribute('data-scan-group'), 'Menu', 'a group');
+  choose(engine, 'group:Trade');
+  assert.equal(engine.ringed()?.id, 'buy', 'a control');
+  waitFor(engine, 'back');
+  assert.equal(engine.ringed(), null);
+  engine.press();
+  waitFor(engine, 'pause');
+  assert.equal(engine.ringed(), null);
+  engine.stop();
+  assert.equal(engine.ringed(), null);
+});
+
 test('cancelling a keypad puts the old value back', (t) => {
   const engine = setup(t);
   const qty = doc.getElementById('qty');

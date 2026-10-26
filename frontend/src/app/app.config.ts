@@ -14,6 +14,7 @@ import { SwitchScanService } from './switch-scan';
 import { PageTitleStrategy } from './page-title';
 import { SiteAccessibility } from './site-accessibility';
 import { CaptionService } from './captions';
+import { listenForGlossary } from './glossary';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,6 +32,11 @@ export const appConfig: ApplicationConfig = {
     provideAccessibilityStartup(() => inject(SiteAccessibility).start()),
     // Everything the app says aloud is captioned on every page (PS-23).
     provideAccessibilityStartup(() => inject(CaptionService).start()),
+    // Alt+W explains the focused or ringed item in plain English, aloud with a caption (PS-23).
+    provideAccessibilityStartup(() => {
+      const scan = inject(SwitchScanService);
+      listenForGlossary(document, () => scan.engine?.ringed() ?? null);
+    }),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },

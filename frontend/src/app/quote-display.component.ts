@@ -43,7 +43,7 @@ import { FormatAgePipe } from './format-age.pipe';
       </div>
 
       <div *ngIf="quote && !isLoading && !hasError" class="quote-content">
-        <div class="price-row">
+        <div class="price-row" data-glossary="bid-ask">
           <div class="price-item">
             <label>Bid</label>
             <span class="price">{{ quote.bid | number: '1.2-8' }}</span>
