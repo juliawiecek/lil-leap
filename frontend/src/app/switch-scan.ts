@@ -854,7 +854,8 @@ export class ScanEngine {
     if (!group) {
       chip.style.left = '16px';
       chip.style.top = '';
-      chip.style.bottom = '64px';
+      // Above the status bar, which moves up while a caption shows (captions.scss).
+      chip.style.bottom = 'calc(64px + var(--caption-offset, 0px))';
       return;
     }
     const box = screenBox(group);

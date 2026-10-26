@@ -13,6 +13,7 @@ import { provideColourMode } from './colour-mode';
 import { SwitchScanService } from './switch-scan';
 import { PageTitleStrategy } from './page-title';
 import { SiteAccessibility } from './site-accessibility';
+import { CaptionService } from './captions';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -28,6 +29,8 @@ export const appConfig: ApplicationConfig = {
     // from any page, sign-in included (PS-19).
     provideAccessibilityStartup(() => inject(SwitchScanService).listenForShortcut()),
     provideAccessibilityStartup(() => inject(SiteAccessibility).start()),
+    // Everything the app says aloud is captioned on every page (PS-23).
+    provideAccessibilityStartup(() => inject(CaptionService).start()),
     provideBrowserGlobalErrorListeners(),
 
     { provide: ErrorHandler, useClass: SafeErrorHandler },
