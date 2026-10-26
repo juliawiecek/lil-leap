@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { component } from './component-helper.mjs';
+const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
 const { SwitchScanService } = await import('../src/app/switch-scan.ts');
@@ -123,10 +124,10 @@ test('choosing a symbol moves the ticket to it and clears stale search and error
   assert.equal(desk.page(), 'Overview');
 });
 
-test('the ticket starts at one share and offers market orders only (PS-06)', t => {
+test('the ticket starts at one share and defaults to market orders (PS-06)', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   assert.equal(desk.quantity(), '1');
-  for (const removed of ['orderType', 'limitPrice', 'tif', 'takeProfit', 'stopLoss', 'fees', 'alerts', 'markets', 'news']) {
+  for (const removed of ['tif', 'fees', 'alerts', 'markets', 'news']) {
     assert.equal(desk[removed], undefined, `${removed} has no backend and is gone`);
   }
 });
@@ -486,4 +487,90 @@ test('missing active account or stale instrument mapping prevents submission', a
   assert.match(desk.message(), /not available to trade/);
   assert.equal(desk.submitting(), false);
   assert.equal(calls, 0);
+});
+
+test('limit orders submit the selected price and both exit thresholds', async t => {
+  const desk = tradingDesk(t);
+  await desk.loadTradingData();
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('170'); desk.quantity.set('2');
+  desk.takeProfitEnabled.set(true); desk.takeProfit.set('190');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('160');
+  let request;
+  desk.orderSubmissionClient.submit = async value => { request = value; return { orderId: 'o1', status: 'SUBMITTED' }; };
+  desk.orderHistoryClient = new ScriptedOrderHistory([]);
+  await desk.confirmOrder();
+  assert.equal(request.orderType, 'LIMIT');
+  assert.equal(request.limitPrice, 170);
+  assert.equal(request.takeProfitPrice, 190);
+  assert.equal(request.stopLossPrice, 160);
+  assert.equal(desk.total(), 340);
+  assert.equal(desk.reward(), 40);
+  assert.equal(desk.risk(), 20);
+});
+
+test('exit validation reverses with sell entries and percentage conversion preserves prices', t => {
+  const desk = tradingDesk(t);
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100');
+  desk.takeProfitEnabled.set(true); desk.takeProfit.set('110');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('90');
+  assert.equal(desk.validate(), '');
+  desk.setExitUnit('percent');
+  assert.equal(desk.takeProfit(), '10.00');
+  assert.equal(desk.exitPrice('loss'), 90);
+  desk.side.set('Sell');
+  assert.equal(desk.exitPrice('profit'), 90);
+  assert.equal(desk.exitPrice('loss'), 110);
+  assert.equal(desk.validate(), '');
+  desk.setExitUnit('price'); desk.stopLoss.set('99');
+  assert.match(desk.validate(), /Stop loss must be above/);
+  desk.stopLossEnabled.set(false); desk.limitPrice.set('0');
+  assert.match(desk.validate(), /limit price/);
+});
+
+async function advancedTicket(t, desk) {
+  const { render } = await import('./dom-helper.mjs');
+  return (await render(t, AdvancedTicket, { desk })).componentInstance;
+}
+
+test('risk sizing explains each disabled state with an actionable reason', async t => {
+  const desk = tradingDesk(t), ticket = await advancedTicket(t, desk);
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100');
+  assert.match(ticket.sizingBlockReason(), /Turn on Stop loss/);
+  desk.stopLossEnabled.set(true);
+  assert.match(ticket.sizingBlockReason(), /Enter a stop-loss/);
+  desk.stopLoss.set('105');
+  assert.match(ticket.sizingBlockReason(), /below.*\$100.00/);
+  desk.stopLoss.set('95');
+  assert.match(ticket.sizingBlockReason(), /risk budget greater than zero/);
+  ticket.riskBudget.set('2');
+  assert.match(ticket.sizingBlockReason(), /\$5.00.*one share/);
+  ticket.riskBudget.set('50');
+  assert.equal(ticket.suggestedQuantity(), 10);
+  desk.buyingPower.set(20);
+  assert.match(ticket.sizingBlockReason(), /buying power cannot cover/);
+  desk.side.set('Sell'); desk.stopLoss.set('105'); desk.positions.set([]);
+  assert.match(ticket.sizingBlockReason(), /do not hold any AAPL/);
+  desk.positions.set([{ symbol: 'AAPL', quantity: 10 }]);
+  desk.feed.now.set(Date.now() + 120000);
+  assert.match(ticket.sizingBlockReason(), /quote is over a minute old/);
+});
+
+test('market ticket uses executable bid/ask and sizes from stop risk with cash and holding caps', async t => {
+  const desk = tradingDesk(t);
+  const ticket = await advancedTicket(t, desk);
+  desk.feed.push([{ symbol: 'AAPL', price: 100, bid: 99, ask: 101 }]);
+  assert.equal(desk.entryPrice(), 101);
+  assert.equal(desk.ticketQuote().spread, 2);
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('96'); ticket.riskBudget.set('100');
+  assert.equal(ticket.suggestedQuantity(), 20);
+  ticket.applyRiskSize(); assert.equal(desk.quantity(), '20');
+  desk.buyingPower.set(500);
+  assert.equal(ticket.suggestedQuantity(), 4);
+  desk.side.set('Sell'); desk.stopLoss.set('104');
+  assert.equal(desk.entryPrice(), 99);
+  assert.equal(ticket.suggestedQuantity(), 20);
+  desk.positions.set([{ symbol: 'AAPL', quantity: 3 }]);
+  assert.equal(ticket.suggestedQuantity(), 3);
+  desk.feed.now.set(Date.now() + 120000);
+  assert.equal(ticket.suggestedQuantity(), 0);
 });

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { ApiHttpClient } from './component-helper.mjs';
+import { By } from '@angular/platform-browser';
+const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 import { render, input, button } from './dom-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
@@ -8,7 +11,7 @@ const { StockDashboardComponent } = await import('../src/app/stock-dashboard.com
 const { OrderSubmissionClient } = await import('../src/app/order-submission-api.ts');
 const REVIEW_DIALOG = 'dialog[aria-labelledby="pro-dialog-title"]';
 
-async function ticket(t, { cash = 1000, side = 'Buy' } = {}) {
+async function ticket(t, { cash = 1000, side = 'Buy', http } = {}) {
   // Isolate the ticket's rendered flow from background loading and execution polling.
   t.mock.method(AdvancedDashboard.prototype, 'ngOnInit', () => {});
   // Canvas rendering is covered by browser tests; these cases exercise the order ticket.
@@ -18,7 +21,7 @@ async function ticket(t, { cash = 1000, side = 'Buy' } = {}) {
     { symbol: 'AAPL', name: 'Apple Inc.', price: 100 },
     { symbol: 'NVDA', name: 'NVIDIA', price: 200 },
   ]);
-  const fixture = await render(t, AdvancedDashboard, {}, [feedProvider(feed)]);
+  const fixture = await render(t, AdvancedDashboard, {}, [feedProvider(feed), ...(http ? [{ provide: ApiHttpClient, useValue: http }] : [])]);
   const desk = fixture.componentInstance;
   desk.accountState.use([{
     account_id: 'acct-1', account_name: 'Trading', account_number: '001',
@@ -51,11 +54,12 @@ for (const side of ['Buy', 'Sell']) {
     input(fixture, '#pro-symbol', 'NVDA', 'change');
     input(fixture, '#pro-quantity', '2');
     const ticketText = root.querySelector('app-advanced-ticket').textContent;
-    assert.match(ticketText, /Market order/);
-    assert.match(ticketText, /Final price and total may differ/);
-    assert.doesNotMatch(ticketText, /Limit|Time in Force|Take Profit|Stop Loss|Fees/i);
+    assert.match(ticketText, /Executes at the next available market price/);
+    assert.match(ticketText, /Final price may differ/);
+    assert.match(ticketText, /Limit/);
+    assert.match(ticketText, /Risk-based sizing/);
     assert.deepEqual([...root.querySelectorAll('app-advanced-ticket select')].map(el => el.id), ['pro-symbol']);
-    assert.deepEqual([...root.querySelectorAll('app-advanced-ticket input')].map(el => el.id), ['pro-quantity']);
+    assert.deepEqual([...root.querySelectorAll('app-advanced-ticket input')].map(el => el.id), ['pro-quantity', 'pro-risk-budget', 'pro-preset-name']);
     assert.equal(desk.total(), 400);
     assert.match(root.querySelector('.cost-summary').textContent, /Estimated total\s*\$400\.00/);
     button(fixture, 'Change for this order');
@@ -113,4 +117,58 @@ test('NEXT-251: ticket and open review follow market cost and confirm revalidate
   await desk.confirmOrder();
   assert.match(desk.message(), /buying power/);
   assert.deepEqual(requests, []);
+});
+
+
+test('account presets save through the API and reload without browser storage', async t => {
+  const saved = new Map();
+  const http = {
+    get: url => of(saved.get(url.split('accountId=')[1]) ?? []),
+    put: (url, preset) => {
+      const key = url.split('accountId=')[1];
+      saved.set(key, [...(saved.get(key) ?? []).filter(p => p.name !== preset.name), preset]);
+      return of(saved.get(key));
+    },
+    delete: url => {
+      const params = new URLSearchParams(url.split('?')[1]);
+      saved.set(params.get('accountId'), (saved.get(params.get('accountId')) ?? []).filter(p => p.name !== params.get('name')));
+      return of(saved.get(params.get('accountId')));
+    },
+  };
+  const { fixture, desk, requests } = await ticket(t, { http });
+  const panel = fixture.debugElement.query(By.directive(AdvancedTicket)).componentInstance;
+  await panel.loadPresets();
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100'); desk.quantity.set('5');
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('98');
+  panel.presetName.set('Swing'); await panel.savePreset();
+  assert.equal(panel.presets()[0].stopPercent, 2);
+  panel.presets.set([]); await panel.loadPresets();
+  assert.equal(panel.presets()[0].quantity, 5);
+  desk.quantity.set('1'); panel.applyPreset(panel.presets()[0]);
+  assert.equal(desk.quantity(), '5');
+  assert.equal(desk.exitUnit(), 'percent');
+  assert.deepEqual(requests, [], 'applying settings never submits a trade');
+  desk.accountState.use([{ account_id: 'acct-2', account_status: 'ACTIVE', trading_enabled: true }]);
+  fixture.detectChanges(); await panel.loadPresets();
+  assert.equal(panel.presets().length, 0);
+  desk.accountState.use([{ account_id: 'acct-1', account_status: 'ACTIVE', trading_enabled: true }]);
+  fixture.detectChanges(); await panel.loadPresets();
+  assert.equal(panel.presets()[0].name, 'Swing');
+  await panel.deletePreset(panel.presets()[0]);
+  assert.deepEqual(panel.presets(), []);
+});
+
+test('late preset responses cannot leak the previous account settings, and failed saves are not claimed successful', async t => {
+  const pending = new Subject();
+  const http = { get: url => url.endsWith('acct-1') ? pending : of([]), put: () => throwError(() => new Error('offline')) };
+  const { fixture, desk } = await ticket(t, { http });
+  const panel = fixture.debugElement.query(By.directive(AdvancedTicket)).componentInstance;
+  desk.accountState.use([{ account_id: 'acct-2', account_status: 'ACTIVE', trading_enabled: true }]);
+  fixture.detectChanges(); await panel.loadPresets();
+  pending.next([{ name: 'Old account', quantity: 1 }]); pending.complete();
+  await Promise.resolve();
+  assert.deepEqual(panel.presets(), []);
+  panel.presetName.set('Default'); await panel.savePreset();
+  assert.match(panel.presetMessage(), /Could not update/);
+  assert.deepEqual(panel.presets(), []);
 });

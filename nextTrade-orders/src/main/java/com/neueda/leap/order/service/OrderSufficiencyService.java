@@ -60,10 +60,10 @@ public class OrderSufficiencyService {
     }
 
     private void validateBuy(SubmitOrderRequest request, UUID instrumentId) {
-        BigDecimal ask = quotes.findLatestByInstrumentId(instrumentId)
+        BigDecimal ask = "LIMIT".equals(request.normalizedOrderType()) ? request.limitPrice() : quotes.findLatestByInstrumentId(instrumentId)
                 .filter(quote -> quote.ask() != null && quote.ask().signum() > 0)
                 .orElseThrow(() -> new OrderSufficiencyException(QUOTE_UNAVAILABLE)).ask();
-        BigDecimal buffer = request.bufferPercent() != null ? request.bufferPercent()
+        BigDecimal buffer = "LIMIT".equals(request.normalizedOrderType()) ? BigDecimal.ZERO : request.bufferPercent() != null ? request.bufferPercent()
                 : balances.executionBufferPercent(request.accountId());
         if (buffer == null || buffer.signum() < 0) {
             throw new IllegalArgumentException("A nonnegative execution buffer is required");

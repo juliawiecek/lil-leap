@@ -51,7 +51,7 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   for (const gone of ['#pro-type', '#pro-limit', '#pro-tif', '#profit-price', '#stop-price']) {
     assert.equal(fixture.nativeElement.querySelector(gone), null, `${gone} has no backend`);
   }
-  assert.match(fixture.nativeElement.textContent, /Market order/);
+  assert.match(fixture.nativeElement.textContent, /Executes at the next available market price/);
   assert.doesNotMatch(fixture.nativeElement.textContent, /Fees|Order Book|Options/);
   const review = t.mock.method(desk, 'openModal', () => {});
   fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));

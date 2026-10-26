@@ -347,3 +347,15 @@ test('UUID generation fails when secure randomness is unavailable', t => {
   t.mock.getter(globalThis, 'crypto', () => undefined);
   assert.throws(() => OrderSubmissionClient.generateClientReference(), /Secure random generator is unavailable/);
 });
+
+
+test('advanced prices are preserved in the submission payload', async () => {
+  const { calls, fetchImpl } = fakeFetch({ status: 201, body: { orderId: 'o1', status: 'SUBMITTED' } });
+  const client = new OrderSubmissionClient({ accessToken: 'token' }, apiHttp(fetchImpl));
+  await client.submit({ accountId: 'a1', instrumentId: 'i1', side: 'BUY', quantity: 2,
+    clientReference: 'advanced', orderType: 'LIMIT', limitPrice: 95, takeProfitPrice: 110, stopLossPrice: 85 });
+  assert.equal(calls[0].body.limitPrice, 95);
+  assert.equal(calls[0].body.takeProfitPrice, 110);
+  assert.equal(calls[0].body.stopLossPrice, 85);
+  assert.equal(calls[0].body.orderType, 'LIMIT');
+});

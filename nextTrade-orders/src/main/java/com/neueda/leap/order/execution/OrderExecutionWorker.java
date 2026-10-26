@@ -52,6 +52,7 @@ public class OrderExecutionWorker {
     private static final String DEFER_SQL = """
             WITH deferred AS (
                 UPDATE orders SET next_execution_at = CURRENT_TIMESTAMP + (? * INTERVAL '1 second'),
+                    price_waits = price_waits + CASE WHEN ? = 'RETRY_WAITING_FOR_PRICE' THEN 1 ELSE 0 END,
                     last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
                 RETURNING order_id, account_id, execution_attempts, next_execution_at, last_execution_error
@@ -87,7 +88,8 @@ public class OrderExecutionWorker {
 
     private static final String REJECT_SQL = """
             WITH rejected AS (
-                UPDATE orders SET status = 'REJECTED', last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
+                UPDATE orders SET status = 'REJECTED', price_waits = price_waits + CASE WHEN ? = 'RETRY_WAITING_FOR_PRICE' THEN 1 ELSE 0 END,
+                    last_execution_error = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE order_id = ? AND execution_attempts = ? AND status = 'PENDING'
                 RETURNING order_id, account_id, execution_attempts
             ), history AS (
@@ -254,7 +256,7 @@ public class OrderExecutionWorker {
             publishTerminalEvent(claim.orderId());
         } catch (RuntimeException failure) {
             // The committed claim survives even if this diagnostic update also fails.
-            if (claim.attempt() >= maxAttempts) {
+            if (jdbc.queryForObject("SELECT execution_attempts - price_waits FROM orders WHERE order_id = ?", Long.class, claim.orderId()) >= maxAttempts) {
                 reject(claim, EXECUTION_FAILED);
             } else {
                 defer(claim, OrderExecutor.Result.RETRY_PREFIX + EXECUTION_FAILED);
@@ -275,7 +277,7 @@ public class OrderExecutionWorker {
     }
 
     private void defer(Claim claim, String reason) {
-        transaction.executeWithoutResult(tx -> jdbc.update(DEFER_SQL, retrySeconds, reason, claim.orderId(), claim.attempt()));
+        transaction.executeWithoutResult(tx -> jdbc.update(DEFER_SQL, retrySeconds, reason, reason, claim.orderId(), claim.attempt()));
     }
 
     /** Keeps the order PENDING until the next session; fenced by attempt like a requeue. */
