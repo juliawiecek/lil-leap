@@ -188,7 +188,7 @@
                     @for (p of positions(); track p.symbol) {
                       <tr>
                         <td>
-                          <button type="button" (click)="choose(quote(p.symbol))">
+                          <button type="button" [attr.data-speak]="spokenRow(quote(p.symbol))" (click)="choose(quote(p.symbol))">
                             <b>{{ p.symbol }}</b>
                           </button>
                           <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
@@ -321,7 +321,7 @@
                   @for (q of page() === 'Markets' ? screened() : quotes(); track q.symbol) {
                     <tr [class.selected]="selected().symbol === q.symbol">
                       <td>
-                        <button type="button" (click)="choose(q)">
+                        <button type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                           <b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ q.sector }}</small>
                         </button>
                       </td>
@@ -344,7 +344,7 @@
             }
             } @else if (overviewList() === 'Movers') {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong
@@ -428,7 +428,7 @@
               <app-chart-access #marketSectorAccess id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             } @else {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong

@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { accessibilityStore } from './accessibility';
 import { speakable } from './speech-text';
+import { soundCuePlayer } from './sound-cue-player';
 import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /**
@@ -132,6 +133,10 @@ export interface ScanEngineOptions {
   onTurnOff?: () => void;
   /** Off in tests, which call next() themselves. */
   autoAdvance?: boolean;
+  /** Called each time the ring moves on (the end of next()), for the ring's sound cue (PS-22). */
+  onMove?: () => void;
+  /** Called when a keypad or option pad opens, for the keypad's sound cue (PS-22). */
+  onPadOpen?: () => void;
 }
 
 const FOCUSABLE =
@@ -240,6 +245,8 @@ export class ScanEngine {
   readonly #isVisible: (el: HTMLElement) => boolean;
   readonly #onTurnOff: () => void;
   readonly #autoAdvance: boolean;
+  readonly #onMove: () => void;
+  readonly #onPadOpen: () => void;
   #stack: HTMLElement[] = [];
   #index = 0;
   #cycles = 0;
@@ -279,6 +286,8 @@ export class ScanEngine {
     this.#isVisible = options.isVisible ?? defaultVisible;
     this.#onTurnOff = options.onTurnOff ?? (() => this.stop());
     this.#autoAdvance = options.autoAdvance ?? true;
+    this.#onMove = options.onMove ?? (() => undefined);
+    this.#onPadOpen = options.onPadOpen ?? (() => undefined);
   }
 
   get running(): boolean {
@@ -424,6 +433,7 @@ export class ScanEngine {
       }
       this.#announce('', false);
       this.#render();
+      this.#onMove();
       return;
     }
     const count = this.items().length;
@@ -441,6 +451,7 @@ export class ScanEngine {
     // A control is announced by taking focus; groups and Back/Pause announce themselves.
     this.#announce('');
     this.#render();
+    this.#onMove();
   }
 
   /** The switch was pressed: act on the highlighted item. */
@@ -724,6 +735,7 @@ export class ScanEngine {
     this.#stack = [];
     this.#index = 0;
     this.#announce(`${scanLabel(field)} keypad.`);
+    this.#onPadOpen();
   }
 
   #closePad(): void {
@@ -1038,6 +1050,7 @@ export class ScanEngine {
 export class SwitchScanService {
   readonly #store = accessibilityStore();
   readonly settings = signal<ScanSettings>(this.#store.read('switchControl', parseScanSettings));
+  readonly #cues = soundCuePlayer();
   #engine: ScanEngine | null = null;
 
   constructor() {
@@ -1113,6 +1126,9 @@ export class SwitchScanService {
     this.#engine = new ScanEngine(document, {
       intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
       onTurnOff: () => this.update({ enabled: false }),
+      // Each ring move ticks and each keypad clicks (PS-22); the ring and the pad show and say the same.
+      onMove: () => this.#cues.play('ring'),
+      onPadOpen: () => this.#cues.play('keypad'),
     });
     this.#engine.start();
   }

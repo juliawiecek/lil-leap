@@ -47,6 +47,7 @@ import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
+import { spokenQuote } from './speech-text';
 import { SwitchScanService } from './switch-scan';
 import { FocusAfterChange } from './focus-after-change';
 
@@ -337,6 +338,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     note: this.chartError() || this.chartNotice() }));
   /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
   readonly spokenStock = spokenCompany;
+  /** A holding or watchlist row as voice mode says it: "Apple, 185 dollars, up 1.2 percent. Select to trade." (PS-22). */
+  spokenRow(name: string, symbol: string, price: number, change: number): string {
+    return spokenQuote(spokenCompany(name, symbol), price, change);
+  }
   /** The last chart summary said aloud, for screen readers (a polite live region). */
   readonly chartAnnouncement = signal('');
   readonly #switchScan = inject(SwitchScanService, { optional: true });
