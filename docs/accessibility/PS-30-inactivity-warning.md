@@ -98,6 +98,5 @@ returns to sign-in with the inactivity message.
 
 - Each browser tab keeps its own timer, as before this story. Input in one tab does not
   dismiss the warning in another.
-- A briefing that is speaking when the warning opens keeps speaking; the screen reader's
-  announcement of the warning may overlap it.
+- Opening the warning stops the current briefing and browser speech. The opening sentence is spoken when voice or switch control is enabled; screen readers receive an assertive live region. The countdown itself is not narrated each second.
 - Automated checks do not replace a manual pass with NVDA/JAWS/VoiceOver and a physical switch.

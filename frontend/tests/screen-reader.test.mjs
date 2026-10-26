@@ -604,3 +604,15 @@ test('switching an active browser-voice briefing to My screen reader silences th
   assert.ok(cancelled > 0);
   assert.equal(new BriefingService().settings().voice, 'screen-reader', 'remembered after a reload');
 });
+
+test('hidden balances redact average cost, account gains, Balances and all Exposure dialog values', async t => {
+ const {fixture,desk,root} = await advancedTicket(t); desk.privateBalance.set(true); fixture.detectChanges();
+ assert.doesNotMatch(root.querySelector('.position-sub').textContent, /\$/);
+ assert.doesNotMatch(root.querySelector('.summary-metrics').textContent, /\$/);
+ desk.bottomTab.set('Balances'); fixture.detectChanges(); assert.doesNotMatch(root.querySelector('.balance-details').textContent, /\$/);
+ desk.openModal('exposure'); fixture.detectChanges(); assert.doesNotMatch(root.querySelector('dialog .review-details').textContent, /\$|%/);
+});
+test('the novice holding average cost is masked with hidden balances', async t => {
+ const {fixture,desk,root} = await noviceTicket(t); desk.showBalance.set(false); fixture.detectChanges();
+ assert.equal(root.querySelector('.holdings-table tbody td:nth-child(3)').textContent.trim(), 'Hidden');
+});

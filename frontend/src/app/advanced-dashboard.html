@@ -118,20 +118,20 @@
             <div class="summary-metrics" data-a11y-read data-a11y-label="Portfolio summary">
               <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
                 <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
+                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">@if (!privateBalance()) { <app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> } @else { Hidden } <small>Today</small></span>
               </div>
               <div data-glossary="buying-power">
                 <span>Buying Power</span
                 ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
               </div>
               <div>
-                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></strong
+                <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">@if (!privateBalance()) { <app-financial-change [value]="dayGain()" unit="currency" /> } @else { Hidden }</strong
                 ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></b>
               </div>
               <div data-glossary="total-return">
                 <span>Total Return</span
                 ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                  ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
+                  >@if (!privateBalance()) { <app-financial-change [value]="totalReturn()" unit="currency" /> } @else { Hidden }</strong
                 ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
                   ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></b
                 >
@@ -193,7 +193,7 @@
                           <button type="button" [attr.data-speak]="spokenRow(quote(p.symbol))" (click)="choose(quote(p.symbol))">
                             <b>{{ p.symbol }}</b>
                           </button>
-                          <small class="position-sub" data-glossary="average-cost">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
+                          <small class="position-sub" data-glossary="average-cost">{{ quote(p.symbol).name }} · avg {{ privateBalance() ? 'Hidden' : (p.cost | currency) }}</small>
                         </td>
                         <td>@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</app-price-flash>}</td>
                         <td
@@ -203,12 +203,12 @@
                           <app-financial-change [value]="quote(p.symbol).change" unit="percent" />
                         </td>
                         <td>{{ p.quantity }}</td>
-                        <td>{{ p.value | currency }}</td>
+                        <td>{{ privateBalance() ? 'Hidden' : (p.value | currency) }}</td>
                         <td [class.gain]="p.day > 0" [class.loss]="p.day < 0">
-                          <app-financial-change [value]="p.day" unit="currency" />
+                          @if (!privateBalance()) { <app-financial-change [value]="p.day" unit="currency" /> } @else { Hidden }
                         </td>
                         <td [class.gain]="p.total > 0" [class.loss]="p.total < 0">
-                          <app-financial-change [value]="p.total" unit="currency" />
+                          @if (!privateBalance()) { <app-financial-change [value]="p.total" unit="currency" /> } @else { Hidden }
                         </td>
                         <td>
                           <span class="weight-cell">{{ p.weight | number: '1.1-1' }}%<span class="weight-bar" aria-hidden="true"><i [style.width.%]="p.weight"></i></span></span>
@@ -249,13 +249,13 @@
                   <div>
                     <span>Day P&amp;L</span
                     ><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"
-                      ><app-financial-change [value]="dayGain()" unit="currency" /></strong
+                      >@if (!privateBalance()) { <app-financial-change [value]="dayGain()" unit="currency" /> } @else { Hidden }</strong
                     >
                   </div>
                   <div data-glossary="total-return">
                     <span>Total Return</span
                     ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
+                      >@if (!privateBalance()) { <app-financial-change [value]="totalReturn()" unit="currency" /> } @else { Hidden }</strong
                     >
                   </div>
                   <div>
@@ -470,12 +470,12 @@
                   </div>
                   <div>
                     <span>Day P&amp;L</span
-                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></b
+                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0">@if (!privateBalance()) { <app-financial-change [value]="dayGain()" unit="currency" /> } @else { Hidden }</b
                     ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></small>
                   </div>
                   <div data-glossary="total-return">
                     <span>Total Return</span
-                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" unit="currency" /></b
+                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0">@if (!privateBalance()) { <app-financial-change [value]="totalReturn()" unit="currency" /> } @else { Hidden }</b
                     ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
                   </div>
                 </div>
@@ -581,8 +581,8 @@
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
-      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().cash | currency) }}</strong></div>
+      <div><span>Equities</span><strong>{{ privateBalance() ? 'Hidden' : allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
+      <div><span>Cash</span><strong>{{ privateBalance() ? 'Hidden' : allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().cash | currency) }}</strong></div>
       <div><span>Total</span><strong>{{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().total | currency) }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
