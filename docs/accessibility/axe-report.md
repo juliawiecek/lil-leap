@@ -74,7 +74,7 @@ below.
   because it already moves group by group.
 - **Page titles.** Each route sets its own title, and the title changes on navigation, Back and
   Forward included: "Sign in · NextTrade", "Overview · NextTrade", "Portfolio · NextTrade",
-  "Activity · NextTrade", "Settings · NextTrade", "Learn · NextTrade", "Markets · NextTrade",
+  "Activity · NextTrade", "Settings · NextTrade", "Markets · NextTrade",
   "Reset password · NextTrade" and "Page not found · NextTrade" (`page-title.ts`, `app.routes.ts`,
   `app.config.ts`). The dashboards switch pages through the router (`PageState`), so the title always
   matches the page on screen.

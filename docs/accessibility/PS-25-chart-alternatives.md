@@ -20,14 +20,13 @@ ECharts or other chart-library API to wrap. The drawing and data pipelines remai
 | Insights activity | `InsightsChart`, `LIVE_REPORTS.activityTrend` | Actual hourly labels and trade counts, description, table, focus narration and stored opt-in. |
 | Insights stock ranking bars | `InsightsPage.top`, `LIVE_REPORTS.topInstruments`, bars scaled to the actual busiest stock | A named, focusable graphic with a linked calculated ranking summary, Explain, and a table of exact stock/count/relative-share values. The original visual layout is retained. |
 
-No RSI chart or financial sparkline is rendered in this checkout. These are not replaced with
-mock data. Future renderers can use `describeSeries` and `ChartAccess`. Landing-page Canvas/SVG
+RSI renders from recorded bars when enough history is available, with its own summary and table. No standalone financial sparkline is rendered or replaced with mock data. Future renderers can use `describeSeries` and `ChartAccess`. Landing-page Canvas/SVG
 candles, icon SVGs, and legend samples are decorative rather than financial observations; they
 retain their hidden/inert treatment.
 
 Position-weight bars inside the holdings table and allocation-legend meters repeat adjacent
 exact numeric values. These decorative duplicates stay `aria-hidden`; their underlying table
-or allocation alternatives retain the same information. Client Detail allocation provides its own explanation and cost-basis table. Old exposure-ring/RSI/sparkline styles are not rendered.
+or allocation alternatives retain the same information. Client Detail allocation provides its own explanation and cost-basis table. Old exposure-ring and standalone sparkline styles are not rendered.
 
 Existing accessibility foundations: PS-17's `AccessibilityStore` and startup hooks, PS-18's
 briefing speed, PS-19's switch scanner and queued speech, PS-27's theme tokens, and PS-28's
@@ -169,8 +168,7 @@ selection from the heat map, original volume observations and shared Insights sp
 The other project combinations intentionally skip. Expanded market-overview and Insights
 screenshots were inspected. Existing CSS-size warnings remain; no thresholds were relaxed.
 
-The audit and acceptance mapping cover the nine Jira criteria. No RSI or standalone sparkline
-is rendered, so none is fabricated. Manual assistive-technology verification below is still a
+The audit and acceptance mapping cover the nine Jira criteria. RSI uses recorded bars and explicit missing-history states. Standalone sparklines are not fabricated. Manual assistive-technology verification below is still a
 release review, not an automated claim of WCAG conformance.
 
 WCAG 2.2 AA considerations include 1.1.1 (text alternatives), 1.3.1 (relationships), 1.4.1
