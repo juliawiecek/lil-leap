@@ -18,7 +18,7 @@ function bars(count = 220, volume = 10) {
 test('financial changes have exact signs/arrows, neutral zeroes, localized precision and meaningful speech', () => {
   assert.deepEqual(describeChange(2.45), { visual: '▲ +2.45%', spoken: 'up 2.45 percent', direction: 'up' });
   assert.equal(describeChange(-1.82).visual, '▼ −1.82%');
-  for (const zero of [0, -0]) assert.deepEqual(describeChange(zero), { visual: '— 0.00%', spoken: 'unchanged at 0.00 percent', direction: 'flat' });
+  for (const zero of [0, -0]) assert.deepEqual(describeChange(zero), { visual: '— 0.00%', spoken: 'unchanged at 0 percent', direction: 'flat' });
   assert.equal(describeChange(-12.5, 'currency').visual, '▼ −$12.50');
   assert.equal(describeChange(1234.5, 'number', 'USD', 'en-US', '1.3-3').visual, '▲ +1,234.500');
   assert.equal(describeChange(100, 'currency', 'JPY').spoken, 'up 100 JPY');

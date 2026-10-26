@@ -343,6 +343,27 @@ test('the activity list is not a live region, so a refresh does not read every r
   assert.match(list, /\[attr\.aria-busy\]="loading\(\)/, 'busy while a refresh is loading');
 });
 
+test('table changes are read as "up 1.2 percent" or "down 3 percent" and shown with ▲ or ▼', async () => {
+  const { describeChange } = await import('../src/app/financial-change.ts');
+  assert.deepEqual(describeChange(1.2), { visual: '▲ +1.20%', spoken: 'up 1.2 percent', direction: 'up' });
+  assert.deepEqual(describeChange(-3), { visual: '▼ −3.00%', spoken: 'down 3 percent', direction: 'down' });
+  assert.equal(describeChange(-12.5, 'currency').spoken, 'down 12.50 USD', 'money keeps its cents');
+});
+
+test('with browser storage blocked, live price and briefing settings start from their defaults and still work', (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new DOMException('blocked', 'SecurityError'); } });
+  t.after(() => (previous ? Object.defineProperty(globalThis, 'localStorage', previous) : delete globalThis.localStorage));
+  const live = new LivePricesService();
+  assert.deepEqual(live.settings(), parseLivePrices(undefined));
+  live.setPaused(true);
+  assert.equal(live.paused(), true, 'paused for this visit, though it cannot be saved');
+  const briefing = new BriefingService();
+  assert.equal(briefing.settings().voice, 'browser');
+  briefing.update({ voice: 'screen-reader' });
+  assert.equal(briefing.screenReader, true);
+});
+
 /** A novice dashboard on fake backends, for order tracking without rendering. */
 async function noviceDesk(t, history) {
   withStorage(t);
@@ -539,6 +560,31 @@ test('with My screen reader chosen, the briefing skips the browser voice and is 
   const voice = fixture.nativeElement.querySelector('select');
   assert.match(voice.closest('label').textContent, /Voice/);
   assert.deepEqual([...voice.options].map((o) => o.textContent.trim()), ['Browser voice', 'My screen reader']);
+});
+
+test('Alt+B with My screen reader reads the whole briefing once, in order, with no browser voice', async (t) => {
+  withStorage(t, { briefing: { rate: 1, everyMinutes: 0, voice: 'screen-reader' } });
+  const before = { synth: globalThis.speechSynthesis, utterance: globalThis.SpeechSynthesisUtterance };
+  const spoken = [];
+  globalThis.speechSynthesis = { speak: (u) => spoken.push(u), cancel() {}, getVoices: () => [] };
+  globalThis.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
+  t.after(() => { globalThis.speechSynthesis = before.synth; globalThis.SpeechSynthesisUtterance = before.utterance; });
+  const now = new Date(2026, 9, 16, 14, 5);
+  const snapshot = {
+    now, market: { open: true, exchangeTimeZone: 'America/New_York', nextOpen: '', nextClose: new Date(now.getTime() + 3600000).toISOString() },
+    balanceHidden: false, total: 1000, gain: 10, gainPercent: 1, buyingPower: 500,
+    holdings: [{ symbol: 'AAPL', name: 'Apple Inc.', dayChangePercent: 1.2 }], orders: [], since: null, pricesDelayed: false, locale: 'en-US',
+  };
+  const fixture = await render(t, BriefingButton, { source: async () => snapshot });
+  const announcer = fixture.debugElement.injector.get(LiveAnnouncer);
+  const said = announcer.history.length;
+  browser.document.dispatchEvent(new browser.KeyboardEvent('keydown', { key: 'b', altKey: true, bubbles: true }));
+  await sleep(ANNOUNCE_DELAY_MS + 20); fixture.detectChanges();
+  const lines = fixture.componentInstance.service.lines();
+  assert.ok(lines.length > 2, 'a full briefing');
+  assert.deepEqual(announcer.history.slice(said), [{ text: lines.join(' '), politeness: 'polite' }], 'every sentence, in order, in one polite message');
+  assert.deepEqual(spoken, [], 'the browser voice stays silent');
+  assert.equal(fixture.nativeElement.querySelectorAll('.briefing-panel li').length, lines.length, 'the transcript is on screen too');
 });
 
 test('switching an active browser-voice briefing to My screen reader silences the browser voice', (t) => {
