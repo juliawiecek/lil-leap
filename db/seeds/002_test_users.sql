@@ -68,10 +68,11 @@ INSERT INTO users (user_id, email, password_hash, user_role) VALUES
     -- Same shared password as the others, so the analyst's hash is reused.
     ('a0000000-0000-4000-8000-000000000004', 'ops@nexttrade.local',
      '{bcrypt}$2a$10$4P5ar9VW2l8fGwc07BF9Oe6icRQ/I36vAbLCbqS60WhgQ2m0vWOmq', 'OPERATIONS')
--- A re-run restores the shared password and clears any lockout, so a test login
--- whose password was changed or that was locked out works again.
+-- A re-run restores the shared password, clears any lockout and restarts the password age,
+-- so a test login whose password was changed, locked out or expired works again.
 ON CONFLICT (user_id) DO UPDATE
-    SET password_hash = EXCLUDED.password_hash, failed_login_attempts = 0, locked_until = NULL;
+    SET password_hash = EXCLUDED.password_hash, failed_login_attempts = 0, locked_until = NULL,
+        password_changed_at = CURRENT_TIMESTAMP, password_expiry_warned_at = NULL;
 
 -- ----------------------------------------------------------
 -- Trader identity and KYC (SSNs are synthetic, stored as digits like auth does)

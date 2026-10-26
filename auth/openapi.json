@@ -68,7 +68,7 @@
       "post": {
         "operationId": "AuthController_login",
         "summary": "Sign in and get an access + refresh token pair",
-        "description": "Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy.",
+        "description": "Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy. A correct password older than the maximum age (90 days by default) is refused with 403 PASSWORD_EXPIRED and a reset link is emailed.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -103,6 +103,16 @@
           },
           "401": {
             "description": "INVALID_CREDENTIALS: same response for an unknown email, incorrect password or active 15-minute lock.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "PASSWORD_EXPIRED: the password is correct but past its maximum age; a one-time reset link has been emailed.",
             "content": {
               "application/json": {
                 "schema": {

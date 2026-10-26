@@ -6,6 +6,7 @@ import { InitialDepositBelowMinimumException } from '../../onboarding/exceptions
 import { InvalidCredentialsException } from '../../user/exceptions/invalid-credentials.exception';
 import { InvalidRefreshTokenException } from '../../user/exceptions/invalid-refresh-token.exception';
 import { UserAlreadyExistsException } from '../../user/exceptions/user-already-exists.exception';
+import { PasswordExpiredException } from '../../user/exceptions/password-expired.exception';
 
 describe('GlobalExceptionFilter', () => {
   const filter = new GlobalExceptionFilter();
@@ -21,8 +22,13 @@ describe('GlobalExceptionFilter', () => {
     [new UserAlreadyExistsException(), 409, 'USER_ALREADY_EXISTS'],
     [new InvalidCredentialsException(), 401, 'INVALID_CREDENTIALS'],
     [new InvalidRefreshTokenException(), 401, 'INVALID_REFRESH_TOKEN'],
+    [new PasswordExpiredException('u1', 'me@example.com'), 403, 'PASSWORD_EXPIRED'],
   ])('maps %p to its status and code', (exception, status, code) => {
     expect(run(exception)).toEqual({ status, body: { error: code, message: exception.message } });
+  });
+
+  it('never puts the expired account identity into the response body', () => {
+    expect(JSON.stringify(run(new PasswordExpiredException('u1', 'me@example.com')).body)).not.toMatch(/u1|me@example.com/);
   });
 
   it('keeps validation errors generic', () => {

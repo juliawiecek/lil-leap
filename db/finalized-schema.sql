@@ -50,6 +50,11 @@ CREATE TABLE users (
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
 
+    -- BR-03: PASSWORD EXPIRY. Identity refuses sign-in once the password is older than its
+    -- maximum age and emails one "expires soon" warning per password (migration 019).
+    password_changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    password_expiry_warned_at TIMESTAMPTZ,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

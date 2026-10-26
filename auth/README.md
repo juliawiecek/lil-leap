@@ -85,6 +85,18 @@ minutes, and emails the link. `reset-password` sets the new password (same rule 
 registration), deletes the token and revokes every refresh token the user holds, in one
 transaction, then emails a "password changed" notice. Raw tokens are never logged.
 
+**Password expiry (BR-03):** a password is good for `PASSWORD_MAX_AGE_DAYS` (default 90)
+from the moment it is set (`users.password_changed_at`, migration 019). Once an hour
+(`PASSWORD_EXPIRY_SWEEP_MINUTES`) the service finds ACTIVE users whose password expires within
+`PASSWORD_EXPIRY_WARNING_DAYS` (default 14) and emails each of them one "expires soon" notice,
+recorded in `users.password_expiry_warned_at` and as `PASSWORD_EXPIRY_WARNED` in `audit_log`,
+so restarts and a second instance never resend it. Changing or resetting the password restarts
+the clock and the warning. Signing in with a correct but expired password is refused with
+`403 PASSWORD_EXPIRED`; the service writes `PASSWORD_EXPIRED_SIGN_IN` to `audit_log` and emails
+a one-time reset link, so the user can get back in from the email without a support call. A
+wrong password for an expired account is still the generic `401`, so expiry never confirms an
+account exists.
+
 **Email (PS-08):** every email goes through one `MailDelivery` interface, chosen by
 `MAIL_DELIVERY`. Emails are sent after the DB commit, and a failed send is logged, not
 returned to the user.
@@ -140,6 +152,9 @@ See the root [env.example](../env.example) for Compose settings. For a native pr
 | `SMTP_HOST`, `SMTP_PORT` | SMTP server when `MAIL_DELIVERY=smtp` (default `localhost:1025`, a local Mailpit) |
 | `MAIL_FROM` | From address (default `NextTrade <no-reply@nexttrade.local>`) |
 | `PASSWORD_RESET_URL` | Reset page the emailed link opens (default `http://localhost:4200/reset-password`) |
+| `PASSWORD_MAX_AGE_DAYS` | Days a password stays valid (default 90) |
+| `PASSWORD_EXPIRY_WARNING_DAYS` | Days before expiry the one "expires soon" email goes out (default 14; must be below the maximum age) |
+| `PASSWORD_EXPIRY_SWEEP_MINUTES` | How often to look for passwords entering that window (default 60; `0` turns the sweep off) |
 | `PORT` | Default 8081 (internal in Compose) |
 
 ## Running it

@@ -9,6 +9,7 @@ import { MAIL_DELIVERY, MailDelivery, MailMessage } from '../mail/mail-message';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { InvalidPasswordResetTokenException } from './invalid-password-reset-token.exception';
 import { passwordChangedEmail, resetLinkEmail } from './password-reset-emails';
+import { passwordExpiredResetEmail } from '../password-expiry/password-expiry-emails';
 
 const TOKEN_BYTES = 32;
 export const RESET_TOKEN_TTL_MINUTES = 20;
@@ -40,7 +41,7 @@ export class PasswordResetService {
    * Sends a reset link if the email is registered. Behaves the same either way, and never throws
    * on a failed delivery, so the caller can't learn whether an account exists.
    */
-  async requestReset(email: string): Promise<void> {
+  async requestReset(email: string, options: { expired?: boolean } = {}): Promise<void> {
     const user = await this.userService.findByEmail(email);
     if (!user) {
       return;
@@ -48,7 +49,11 @@ export class PasswordResetService {
 
     const rawToken = randomBytes(TOKEN_BYTES).toString('base64url');
     await this.replaceToken(user.userId, hashResetToken(rawToken));
-    await this.sendSafely(resetLinkEmail(user.email, resetLink(rawToken), RESET_TOKEN_TTL_MINUTES));
+    const link = resetLink(rawToken);
+    // An expired password gets its own wording: the user did not ask for a reset, their sign-in was refused.
+    await this.sendSafely(options.expired
+      ? passwordExpiredResetEmail(user.email, link, RESET_TOKEN_TTL_MINUTES)
+      : resetLinkEmail(user.email, link, RESET_TOKEN_TTL_MINUTES));
   }
 
   /** Sets the new password, burns the token and signs the user out everywhere -- all or nothing. */
@@ -62,7 +67,11 @@ export class PasswordResetService {
         throw new InvalidPasswordResetTokenException();
       }
 
-      await manager.update(User, { userId: token.userId }, { passwordHash: this.passwordEncoder.encode(newPassword) });
+      await manager.update(User, { userId: token.userId }, {
+        passwordHash: this.passwordEncoder.encode(newPassword),
+        passwordChangedAt: new Date(),
+        passwordExpiryWarnedAt: null,
+      });
       await manager.delete(PasswordResetToken, { resetTokenId: token.resetTokenId });
       await this.refreshTokenService.revokeAllForUser(token.userId, manager);
       const user = await manager.findOne(User, { where: { userId: token.userId } });

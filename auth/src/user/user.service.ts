@@ -7,6 +7,8 @@ import { InvalidCredentialsException } from './exceptions/invalid-credentials.ex
 import { PasswordEncoderService } from '../security/password-encoder.service';
 import { CustomerProfile } from '../onboarding/entities/customer-profile.entity';
 import { LOGIN_LOCK_MINUTES, LOGIN_MAX_FAILURES } from '../security/login-policy';
+import { passwordExpired } from '../security/password-policy';
+import { PasswordExpiredException } from './exceptions/password-expired.exception';
 
 // A valid, cost-10 bcrypt hash to perform equivalent password work for unknown emails.
 // This is not an account credential; a successful comparison can never authenticate anyone.
@@ -38,8 +40,11 @@ export class UserService {
   /**
    * Serializes password checks and counter updates per account, including across service
    * instances. A failed login must commit its counter before returning the generic 401.
+   * A correct password that is past its maximum age clears the counter like any correct
+   * password, then is refused with PASSWORD_EXPIRED instead of a session (BR-03).
    */
   async login(request: LoginRequestDto): Promise<User> {
+    let expired: User | null = null;
     const authenticated = await this.userRepository.manager.transaction(async (manager) => {
       const user = await manager.createQueryBuilder(User, 'user')
         .where('LOWER(user.email) = :email', { email: normalizeEmail(request.email) })
@@ -59,6 +64,10 @@ export class UserService {
       const failures = user.lockedUntil ? 0 : user.failedLoginAttempts;
       if (matches) {
         await manager.update(User, { userId: user.userId }, { failedLoginAttempts: 0, lockedUntil: null });
+        if (passwordExpired(user.passwordChangedAt, new Date(now))) {
+          expired = user;
+          return null;
+        }
         return user;
       }
       const attempts = Math.min(failures + 1, LOGIN_MAX_FAILURES);
@@ -69,6 +78,9 @@ export class UserService {
       return null;
     });
     // Throw outside the transaction; throwing inside would roll back failed-attempt updates.
+    if (expired) {
+      throw new PasswordExpiredException((expired as User).userId, (expired as User).email);
+    }
     if (!authenticated) {
       throw new InvalidCredentialsException();
     }

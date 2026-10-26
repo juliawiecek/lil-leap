@@ -25,6 +25,7 @@ import { PasswordResetService } from './password-reset/password-reset.service';
 import { mailDeliveryProvider } from './mail/mail-delivery.provider';
 import { AccountSettingsController } from './account-settings/account-settings.controller';
 import { AccountSettingsService } from './account-settings/account-settings.service';
+import { PasswordExpiryService } from './password-expiry/password-expiry.service';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AccountSettingsService } from './account-settings/account-settings.serv
     AccessTokenGuard,
     PasswordResetService,
     AccountSettingsService,
+    PasswordExpiryService,
     // MAIL_DELIVERY=outbox (default, the VM) writes .eml files; smtp sends to Mailpit on dev laptops.
     mailDeliveryProvider,
   ],
