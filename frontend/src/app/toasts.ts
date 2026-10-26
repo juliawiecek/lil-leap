@@ -1,5 +1,6 @@
 import { Component, ElementRef, Injectable, inject, output, signal } from '@angular/core';
 import { StatusBadge } from './status-badge';
+import { soundCuePlayer } from './sound-cue-player';
 
 export type ToastKind = 'filled' | 'rejected' | 'info';
 
@@ -21,6 +22,7 @@ export class ToastService {
   readonly toasts = signal<Toast[]>([]);
   #nextId = 1;
   readonly #timers = new Map<number, ReturnType<typeof setTimeout>>();
+  readonly #cues = soundCuePlayer();
 
   readonly #held = new Map<number, Set<string>>();
   #observer?: MutationObserver;
@@ -74,6 +76,10 @@ export class ToastService {
     const toast = { id, kind, title, detail };
     this.toasts.update(list => [...list, toast]);
     this.#start(toast);
+    // A chime for a fill, a low tone for a rejection (PS-22); the toast is the written message.
+    if (kind !== 'info') {
+      this.#cues.play(kind === 'filled' ? 'fill' : 'reject');
+    }
     return id;
   }
 

@@ -10,6 +10,7 @@ export interface AssistiveOptions {
   scanning?: () => boolean;
   stopScanningSpeech?: () => void;
   format?: (text: string) => string;
+  hint?: (element: Element) => string;
 }
 const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="tab"], [role="img"], [data-a11y-read]';
 const INFORMATION = 'h1, h2, h3, p, dt, dd, td, th, output, [data-a11y-read]';
@@ -19,6 +20,10 @@ const editable = (element: Element | null) => !!element?.matches('input, textare
  * its fields (aria-invalid, aria-describedby), so the browser's wording never replaces the app's.
  */
 const appValidated = (form: HTMLFormElement | null | undefined) => !!form?.noValidate && form.hasAttribute('data-a11y-app-validation');
+/** Automatic (polite) reading: focus and hover. */
+const POLITE = ['assist:focus', 'assist:hover'];
+/** The same phrase is not said again within this time. */
+const REPEAT_GAP_MS = 500;
 const visible = (element: Element) => !element.closest('[hidden], [inert], [aria-hidden="true"]') &&
   element.ownerDocument.defaultView?.getComputedStyle(element).display !== 'none';
 
@@ -37,6 +42,8 @@ export class AssistiveController {
   private previousPath: string | undefined;
   private previousUrl = '';
   private errorId = 0;
+  private lastPhrase = '';
+  private lastPhraseAt = 0;
   private invalidFocusScheduled = false;
   private disposers: (() => void)[] = [];
   private dialogTriggers = new WeakMap<Element, HTMLElement>();
@@ -113,26 +120,50 @@ export class AssistiveController {
       if (element.isConnected && this.hovered === element && visible(element)) this.read(element, 'assist:hover');
     }, settings.hoverDelay);
   }
-  private say(text: string, owner: string, target?: Element, requested = false): void {
-    if (!text) { this.options.status('There is no readable content selected.'); return; }
-    if (!speech.supported) { this.options.status('Speech is unavailable in this browser. Native screen readers and keyboard navigation still work.'); return; }
+  private say(text: string, owner: string, target?: Element, requested = false, interrupt = requested): boolean {
+    if (!text) { if (requested) this.options.status('There is no readable content selected.'); return false; }
+    if (!speech.supported) { if (requested) this.options.status('Speech is unavailable in this browser. Native screen readers and keyboard navigation still work.'); return false; }
     const voices = globalThis.speechSynthesis?.getVoices?.();
     if (voices && !voices.some(voice => voice.localService)) {
       if (requested) this.options.status('A local voice is not available yet. Install a local system voice or try again when voices have loaded.');
-      return;
+      return false;
     }
-    const utterance = new SpeechSynthesisUtterance(this.options.format?.(text) ?? text);
+    const spoken = this.options.format?.(text) ?? text;
+    // A redraw, or focus and hover landing on the same item, never says one phrase twice in a row.
+    const now = Date.now();
+    if (!requested && spoken === this.lastPhrase && now - this.lastPhraseAt < REPEAT_GAP_MS) return false;
+    const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.rate = this.options.settings().rate;
     if (requested) this.cancelPending();
-    const started = speech.submit(owner, utterance, { interrupt: requested });
+    // Focus and hover are one polite stream: fast moves replace the item being read, so only the
+    // last one is heard. Polite speech never cuts in on anything else, such as a playing briefing.
+    if (POLITE.includes(owner)) POLITE.filter(other => other !== owner).forEach(other => speech.stop(other));
+    const started = speech.submit(owner, utterance, { interrupt, queue: !interrupt && owner === 'assist:announce' });
+    if (started) { this.lastPhrase = spoken; this.lastPhraseAt = now; }
     if (started && target && this.options.settings().highlightSpeech) {
       this.clearHighlight(); this.highlight = target; target.setAttribute('data-a11y-speaking', '');
     }
     // Automatic speech does not duplicate a live-region/screen-reader focus announcement.
     if (requested) this.options.status(started ? 'Reading. Use Stop speech at any time.' : 'Another reading is in progress.');
+    return started;
   }
   private read(element: Element, owner: string, requested = false): void {
-    this.say(describeElement(element, requested), owner, element, requested);
+    // The level is read per item, so changing it takes effect on the next item.
+    this.say(describeElement(element, requested, this.options.settings().level, this.options.hint?.(element)), owner, element, requested);
+  }
+  /**
+   * Speaks a message from the app while voice assistance is on: "Voice assistance on.", an order
+   * fill or rejection. `urgent` cuts in on whatever is being read, since a trade outcome cannot
+   * wait; otherwise it waits its turn like other reading. Silent while voice assistance is off.
+   */
+  announce(text: string, urgent = false): boolean {
+    if (!this.options.settings().enabled) return false;
+    return this.say(text, urgent ? 'assist:alert' : 'assist:announce', undefined, false, urgent);
+  }
+  /** Escape: stops the sentence being read, without a status message, and leaves every setting alone. */
+  private hush(): void {
+    this.cancelPending(); this.options.stopScanningSpeech?.(); speech.stop();
+    this.clearHighlight(); this.options.state(false, false);
   }
   readFocused(): void {
     const element = this.lastTarget;
@@ -153,7 +184,7 @@ export class AssistiveController {
     const headings = [...main.querySelectorAll('h1,h2')].filter(visible).map(node => readableText(node, 120)).filter(Boolean);
     const alerts = [...main.querySelectorAll('[role="alert"]')].filter(visible).map(node => readableText(node, 200));
     const figures = [...main.querySelectorAll('[data-a11y-read]')].filter(visible).slice(0, 2)
-      .map(node => describeElement(node, true)).join(' ');
+      .map(node => describeElement(node, true, this.options.settings().level, this.options.hint?.(node))).join(' ');
     const text = `${headings.shift() || this.document.title}. ${headings.length ? 'Sections: ' + headings.slice(0, 10).join('; ') + '.' : ''} ${figures} ${alerts.join('. ')} Use Tab to move through controls, or Read section for details.`;
     this.say(text, 'assist:request', main, true);
   }
@@ -192,6 +223,9 @@ export class AssistiveController {
     if (typeof event.key !== 'string' || event.isComposing) return;
     const element = event.target as HTMLElement;
     if (!element?.closest) return;
+    // Escape stops the current speech while voice assistance is on (or reading it started), then
+    // still does its usual job of closing a dialog or popup.
+    if (event.key === 'Escape' && speech.speaking && (this.options.settings().enabled || speech.owner.startsWith('assist:'))) this.hush();
     if (event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.repeat) {
       const action = ({ r: () => this.readFocused(), p: () => this.readPage(), x: () => this.stop(), a: () => this.openSettings(), ' ': () => this.pause() } as Record<string, (() => void) | undefined>)[event.key.toLowerCase()];
       if (action && (!editable(element) || event.key.toLowerCase() === 'x')) { event.preventDefault(); action(); return; }

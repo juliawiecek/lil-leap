@@ -14,7 +14,7 @@
     @if (desk().tradeMarks().length) {
       <p class="trade-summary">
         Your trades: {{ desk().tradeMarks().length }}
-        @if (desk().averageCost(); as cost) {
+        @if (!desk().privateBalance() && desk().averageCost(); as cost) {
           · average cost <b>{{ cost | currency }}</b>
         }
         @if (desk().tradesOutsidePeriod()) {

@@ -190,7 +190,7 @@
                     @for (p of positions(); track p.symbol) {
                       <tr>
                         <td>
-                          <button type="button" (click)="choose(quote(p.symbol))">
+                          <button type="button" [attr.data-speak]="spokenRow(quote(p.symbol))" (click)="choose(quote(p.symbol))">
                             <b>{{ p.symbol }}</b>
                           </button>
                           <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
@@ -236,13 +236,13 @@
               } @else if (bottomTab() === 'Balances') {
                 <div class="balance-details">
                   <div>
-                    <span>Cash</span><strong>{{ buyingPower() | currency }}</strong>
+                    <span>Cash</span><strong>{{ privateBalance() ? 'Hidden' : (buyingPower() | currency) }}</strong>
                   </div>
                   <div>
-                    <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
+                    <span>Buying Power</span><strong>{{ privateBalance() ? 'Hidden' : (buyingPower() | currency) }}</strong>
                   </div>
-                  <div><span>Invested</span><strong>{{ exposure().equities | currency }}</strong></div>
-                  <div><span>Total Value</span><strong>{{ portfolio() | currency }}</strong></div>
+                  <div><span>Invested</span><strong>{{ privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
+                  <div><span>Total Value</span><strong>{{ privateBalance() ? 'Hidden' : (portfolio() | currency) }}</strong></div>
                 </div>
               } @else {
                 <div class="balance-details">
@@ -323,7 +323,7 @@
                   @for (q of page() === 'Markets' ? screened() : quotes(); track q.symbol) {
                     <tr [class.selected]="selected().symbol === q.symbol">
                       <td>
-                        <button type="button" (click)="choose(q)">
+                        <button type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                           <b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ q.sector }}</small>
                         </button>
                       </td>
@@ -346,7 +346,7 @@
             }
             } @else if (overviewList() === 'Movers') {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong
@@ -391,7 +391,7 @@
                     (click)="choose(q)"
                     aria-describedby="advanced-heatmap-summary"
                   >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + q.change + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
+                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + (q.change > 0 ? 'up ' : q.change < 0 ? 'down ' : 'unchanged ') + (q.change < 0 ? -q.change : q.change) + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
                   </button>
                 } @empty {
                   <p class="empty-note">Loading prices…</p>
@@ -431,7 +431,7 @@
               <app-chart-access #marketSectorAccess id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             } @else {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong
@@ -581,9 +581,9 @@
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().equities | currency }}</strong></div>
-      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().cash | currency }}</strong></div>
-      <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
+      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().equities | currency) }}</strong></div>
+      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().cash | currency) }}</strong></div>
+      <div><span>Total</span><strong>{{ !allocationReady() ? 'Unavailable' : privateBalance() ? 'Hidden' : (exposure().total | currency) }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
     <app-keyboard-shortcuts />

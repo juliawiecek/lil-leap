@@ -45,6 +45,8 @@ import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';
 import { OrderAnnouncements } from './order-announcements';
 import { PriceWatch } from './price-watch';
+import { spokenCompany } from './briefing';
+import { spokenQuote } from './speech-text';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -426,6 +428,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
 
   quote(symbol: string): Quote {
     return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
+  }
+  /** A watchlist, mover or position row as voice mode says it: "Apple, 185 dollars, up 1.2 percent. Select to trade." (PS-22). */
+  spokenRow(q: Pick<Quote, 'name' | 'symbol' | 'price' | 'change'>): string {
+    return spokenQuote(spokenCompany(q.name, q.symbol), q.price, q.change);
   }
   choose(quote: Quote): void {
     this.symbol.set(quote.symbol);

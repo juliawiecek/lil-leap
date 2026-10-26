@@ -4,7 +4,10 @@ import { accessibilityStore } from './accessibility';
 import { speechCoordinator } from '../../../shared/speech-coordinator';
 import { liveAnnouncer } from './live-announcer';
 
-/** Voice speed and how often the briefing repeats on its own (0 = only when asked). */
+/**
+ * Voice speed and how often the briefing repeats on its own (0 = only when asked). The speed is
+ * the same setting as voice assistance's speech speed (PS-22): changing either changes both.
+ */
 export interface BriefingSettings {
   rate: number;
   everyMinutes: number;
@@ -23,6 +26,8 @@ export const BRIEFING_RATES = [
   { value: 1, label: 'Normal' },
   { value: 1.25, label: 'Fast' },
   { value: 1.5, label: 'Faster' },
+  // Voice assistance shares this speed (PS-22), so the briefing offers its fastest speed too.
+  { value: 2, label: 'Fastest' },
 ];
 /**
  * Every repeat must fit inside the 10-minute inactivity sign-out, or it can never play: a

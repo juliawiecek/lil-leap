@@ -38,7 +38,7 @@ import type { UserProfile } from './auth-api';
 import { CashActivityClient, formatMoney } from './activity-api';
 import { PortfolioChart } from './portfolio-chart';
 import {
-  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
+  CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ShareEvent, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
 } from './portfolio-history';
 import { centralDay, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
@@ -48,6 +48,7 @@ import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { briefingOrders } from './briefing';
+import { spokenQuote } from './speech-text';
 import { SwitchScanService } from './switch-scan';
 import { FocusAfterChange } from './focus-after-change';
 import { liveAnnouncer } from './live-announcer';
@@ -330,6 +331,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly chartPeriod = signal<ChartPeriod>('1D');
   readonly chartSpan = signal<ChartRange | null>(null);
   readonly chartHistory = signal<ValuePoint[]>([]);
+  /** The fills behind the chart, announced as the keyboard cursor reaches them (PS-26). */
+  readonly chartFills = signal<readonly ShareEvent[]>([]);
   readonly chartLoading = signal(false);
   readonly chartError = signal('');
   #portfolioRequest = 0;
@@ -342,6 +345,10 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     note: this.chartError() || this.chartNotice() }));
   /** A stock as it is said aloud: "Google", not "GOOGL" (shown as the symbol and full name). */
   readonly spokenStock = spokenCompany;
+  /** A holding or watchlist row as voice mode says it: "Apple, 185 dollars, up 1.2 percent. Select to trade." (PS-22). */
+  spokenRow(name: string, symbol: string, price: number, change: number): string {
+    return spokenQuote(spokenCompany(name, symbol), price, change);
+  }
   /** The last chart summary said aloud, for screen readers (a polite live region). */
   readonly chartAnnouncement = signal('');
   readonly #switchScan = inject(SwitchScanService, { optional: true });
@@ -582,6 +589,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const segment = {
         ...row,
         color: SECTOR_COLORS[i],
+        labelX: 21 + 15.9155 * Math.cos((start + share / 2 - 25) * Math.PI / 50),
+        labelY: 21 + 15.9155 * Math.sin((start + share / 2 - 25) * Math.PI / 50),
         share,
         percent: Math.round(share),
         dash: `${length.toFixed(2)} ${(100 - length).toFixed(2)}`,
@@ -1125,6 +1134,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const complete = ledgerMatches(this.#portfolio, cash, fills);
       const points = complete ? portfolioSeries(range, cash, fills, prices) : [];
       this.chartHistory.set(points);
+      this.chartFills.set(fills);
       this.chartNotice.set(!complete
         ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
         : !points.length || points[0].at > range.start

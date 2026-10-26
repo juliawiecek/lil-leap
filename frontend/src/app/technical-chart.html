@@ -15,7 +15,7 @@
   <li><svg width="10" height="14" aria-hidden="true"><path class="swatch-flat" d="M1 7H9M5 2V12" /></svg><span>Flat</span></li>
 </ul>
 <div class="chart-layout">
-  <svg #plot class="technical-plot" [attr.viewBox]="'0 0 ' + width() + ' ' + height" preserveAspectRatio="none" role="img" tabindex="0" [attr.aria-label]="symbol() + ' ' + period() + ' recorded prices and technical indicators'" [appChartFocus]="access" (pointermove)="inspectPointer($event)" (pointerleave)="inspected.set(null)" (keydown)="inspectKey($event)" (blur)="inspected.set(null)">
+  <svg #plot class="technical-plot" [attr.viewBox]="'0 0 ' + width() + ' ' + height" preserveAspectRatio="none" role="img" tabindex="0" [attr.aria-label]="symbol() + ' ' + period() + ' recorded prices and technical indicators'" [appChartFocus]="access" [chartSound]="sound" (pointermove)="inspectPointer($event)" (pointerleave)="inspected.set(null)" (keydown)="inspectKey($event)" (blur)="inspected.set(null)">
     <defs><clipPath [attr.id]="id + '-clip'"><rect [attr.width]="width()" [attr.height]="height" /></clipPath></defs>
     <g [attr.clip-path]="'url(#' + id + '-clip)'">
       @for (p of candles(); track p.candle!.time) {
@@ -42,7 +42,7 @@
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
 @if (averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
-@if (inspected(); as p) { <p class="candle-detail" role="status">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
+@if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {
   <svg class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">

@@ -102,7 +102,7 @@
     </div>
   </div>
   <app-stock-svg-chart
-    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()"
+    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()" [asset]="asset() ?? selectedAsset()"
     [windowSeconds]="windowSeconds()"
     [chartType]="chartType()" [overview]="true"
     [label]="(asset()?.symbol || selectedAsset()?.symbol || 'Stock') + (windowSeconds() === 86400 ? ' one-day stock price' : ' stock price over the last ' + windowSeconds() + ' seconds')"

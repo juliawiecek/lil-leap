@@ -8,6 +8,7 @@ import { marketBadgeText } from './market-status-api';
 import { spokenCompany } from './briefing';
 import { spokenChange } from './chart-speech';
 import { LivePricesService } from './live-prices';
+import { spokenQuote } from './speech-text';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -171,16 +172,12 @@ export class MarketTicker implements OnDestroy {
   }
 
   /**
-   * What switch control says aloud (data-speak): the company and the move in words, "Apple,
-   * $224.52, up 0.40 percent". Kept apart from the button's name above, which must match the screen.
+   * What voice mode and switch control say aloud (data-speak, PS-22): the company, the price
+   * rounded to whole dollars and the move in words, "Apple, 225 dollars, up 0.4 percent. Select to
+   * trade." Kept apart from the button's name above, which must match the screen.
    */
   spokenWords(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
-    const company = spokenCompany(quote.name, quote.symbol);
-    if (!quote.price) {
-      return `${company}, price not available yet`;
-    }
-    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
-    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
+    return spokenQuote(spokenCompany(quote.name, quote.symbol), quote.price, quote.change, this.delayed(quote.quotedAt));
   }
 
   /** Stops or restarts the scrolling tape and price refresh (WCAG 2.2.2); resuming fetches prices at once. */

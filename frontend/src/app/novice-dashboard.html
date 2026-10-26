@@ -163,7 +163,7 @@
               @if (showBalance()) {
                 <app-portfolio-chart
                   data-scan-group="Portfolio chart"
-                  [points]="chartPoints()"
+                  [points]="chartPoints()" [fills]="chartFills()"
                   [range]="chartSpan()"
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"
@@ -238,7 +238,7 @@
                             <button
                               class="holding-symbol"
                               type="button"
-                              [attr.data-speak]="spokenStock(holding.name, holding.symbol)"
+                              [attr.data-speak]="spokenRow(holding.name, holding.symbol, holding.shares ? holding.value / holding.shares : 0, holding.change)"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
                               <span class="company-logo" [class]="'company-logo ' + holding.logo">
@@ -411,6 +411,12 @@
                           [attr.stroke-dashoffset]="sector.offset"
                         />
                       }
+                      @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
+                        <text class="sector-label" [attr.x]="sector.labelX" [attr.y]="sector.labelY" text-anchor="middle" dominant-baseline="central" font-size="3" fill="var(--text)" stroke="var(--surface)" stroke-width="0.8" paint-order="stroke">{{ $index + 1 }}</text>
+                      }
+                      @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
+                        <text class="sector-label" [attr.x]="sector.labelX" [attr.y]="sector.labelY" text-anchor="middle" dominant-baseline="central" font-size="3" fill="var(--text)" stroke="var(--surface)" stroke-width="0.8" paint-order="stroke">{{ $index + 1 }}</text>
+                      }
                     </svg>
                     <div class="donut-center"><strong>{{ allocationReady() ? (showBalance() ? (alloc.invested | currency) : '••••••') : '—' }}</strong><span>Invested</span></div>
                   </div>
@@ -418,7 +424,7 @@
                     @for (sector of allocationReady() ? alloc.sectors : []; track sector.name) {
                       <div class="allocation-item">
                         <i class="asset-dot" [style.background]="sector.color" aria-hidden="true"></i><span class="allocation-label"
-                          >{{ sector.name }}<small>{{ sector.symbols.join(', ') }} · {{ showBalance() ? (sector.value | currency) : '••••••' }}</small></span
+                          >{{ $index + 1 }}. {{ sector.name }}<small>{{ sector.symbols.join(', ') }} · {{ showBalance() ? (sector.value | currency) : '••••••' }}</small></span
                         ><b>{{ sector.percent }}%</b>
                         <span class="allocation-meter" aria-hidden="true"><span [style.width.%]="sector.share" [style.background]="sector.color"></span></span>
                       </div>
@@ -466,7 +472,7 @@
                   @for (quote of watchlist(); track quote.symbol) {
                     <tr>
                       <td>
-                        <button type="button" (click)="openTrade('Buy', quote.symbol)">
+                        <button type="button" [attr.data-speak]="spokenRow(quote.name, quote.symbol, quote.price, quote.change)" (click)="openTrade('Buy', quote.symbol)">
                           {{ quote.symbol }}
                         </button>
                       </td>
@@ -673,8 +679,8 @@
     </div>
     <h3 class="modal-subhead">By asset class</h3>
     <div class="asset-class-list modal-allocation-list">
-      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
-      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '&#8212;' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '&#8212;' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

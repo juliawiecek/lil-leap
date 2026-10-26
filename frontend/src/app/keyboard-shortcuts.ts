@@ -22,8 +22,12 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   { keys: ['Enter'], action: 'Activate the focused button or link, or review an order.' },
   { keys: ['Space'], action: 'Press the focused button or switch.' },
   { keys: ['Esc'], action: 'Close a dialog, clear the search, or stop exploring a chart.' },
-  { keys: ['←', '→'], action: 'On a focused chart, step back or forward through its prices.' },
+  { keys: ['←', '→'], action: 'On a focused chart, step back or forward through its prices. Each step reads the date, value, change and any trade you made there.' },
   { keys: ['Home', 'End'], action: 'On a focused chart, jump to its first or latest price.' },
+  { keys: ['Page Up', 'Page Down'], action: 'On a focused chart, jump a tenth of the way later or earlier.' },
+  { keys: ['D'], action: 'On a focused chart, read its summary, as Explain this chart does.' },
+  { keys: ['T'], action: 'On a focused chart, show or hide its data table. Focus stays on the chart.' },
+  { keys: ['Space'], action: 'On a focused chart, play it as sound in about 3 seconds: higher pitch for higher prices, clicks for your trades. Press again to stop.' },
   { keys: ['Tab', 'Enter'], action: 'Focus Explain this chart or Show as table, then activate it. In a tablist, use arrows and Home/End to move; Enter or Space selects.' },
 ];
 
