@@ -12,6 +12,7 @@ import { PasswordResetController } from '../password-reset/password-reset.contro
 import { PasswordResetService } from '../password-reset/password-reset.service';
 import { AccountSettingsController } from '../account-settings/account-settings.controller';
 import { AccountSettingsService } from '../account-settings/account-settings.service';
+import { PasswordExpiryService } from '../password-expiry/password-expiry.service';
 
 /**
  * The real controllers with their services stubbed out: enough to generate the
@@ -22,7 +23,7 @@ import { AccountSettingsService } from '../account-settings/account-settings.ser
   controllers: [AuthController, PasswordResetController, AccountSettingsController, RulesController, HealthController],
   providers: [
     AccessTokenGuard,
-    ...[RegistrationService, UserService, JwtService, RefreshTokenService, TierService, PasswordResetService, AccountSettingsService].map((provide) => ({
+    ...[RegistrationService, UserService, JwtService, RefreshTokenService, TierService, PasswordResetService, AccountSettingsService, PasswordExpiryService].map((provide) => ({
       provide,
       useValue: {},
     })),

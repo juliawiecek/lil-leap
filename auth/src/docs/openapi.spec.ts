@@ -65,7 +65,7 @@ describe('OpenAPI docs (NEXT-152)', () => {
     const statuses = (path: string, method: 'get' | 'post') => Object.keys(spec.paths[path][method]!.responses).sort();
 
     expect(statuses('/auth/register', 'post')).toEqual(['201', '400', '409', '422']);
-    expect(statuses('/auth/login', 'post')).toEqual(['200', '400', '401']);
+    expect(statuses('/auth/login', 'post')).toEqual(['200', '400', '401', '403']);
     expect(statuses('/auth/refresh', 'post')).toEqual(['200', '400', '401']);
     expect(statuses('/auth/logout', 'post')).toEqual(['204', '400']);
     expect(statuses('/rules/tier-eligibility', 'get')).toEqual(['200', '401', '404']);

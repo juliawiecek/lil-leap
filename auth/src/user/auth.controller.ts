@@ -30,6 +30,8 @@ import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { AccessTokenGuard, AuthenticatedRequest } from '../security/access-token.guard';
 import { ProfileAccessDeniedException } from './exceptions/profile-access-denied.exception';
 import { ProfileNotFoundException } from './exceptions/profile-not-found.exception';
+import { PasswordExpiredException } from './exceptions/password-expired.exception';
+import { PasswordExpiryService } from '../password-expiry/password-expiry.service';
 
 /** Auth REST surface: register, login, refresh, logout. One endpoint per operation for both roles. */
 @ApiTags('auth')
@@ -41,6 +43,7 @@ export class AuthController {
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly tierService: TierService,
+    private readonly passwordExpiry: PasswordExpiryService,
   ) {}
 
   /** Creates the account; does not issue tokens -- signing in is a separate step. */
@@ -74,13 +77,24 @@ export class AuthController {
   @ApiOperation({
     summary: 'Sign in and get an access + refresh token pair',
     description: 'Three consecutive failed passwords lock the account for 15 minutes. A successful sign-in resets the counter. ' +
-      'Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy.',
+      'Unknown emails, incorrect passwords and locked accounts receive the same generic 401 including the lockout policy. ' +
+      'A correct password older than the maximum age (90 days by default) is refused with 403 PASSWORD_EXPIRED and a reset link is emailed.',
   })
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBadRequestResponse({ type: ErrorResponseDto, description: 'INVALID_REQUEST: email or password missing.' })
   @ApiUnauthorizedResponse({ type: ErrorResponseDto, description: 'INVALID_CREDENTIALS: same response for an unknown email, incorrect password or active 15-minute lock.' })
+  @ApiForbiddenResponse({ type: ErrorResponseDto, description: 'PASSWORD_EXPIRED: the password is correct but past its maximum age; a one-time reset link has been emailed.' })
   async login(@Body() request: LoginRequestDto): Promise<LoginResponseDto> {
-    const user = await this.userService.login(request);
+    let user;
+    try {
+      user = await this.userService.login(request);
+    } catch (error) {
+      // The password was right, so the mailbox owner is the person locked out: send them the way back in.
+      if (error instanceof PasswordExpiredException) {
+        await this.passwordExpiry.handleExpiredSignIn(error.userId, error.email);
+      }
+      throw error;
+    }
 
     const traderLevel = await this.tierService.findTraderLevel(user.userId);
     const riskProfile = await this.tierService.findRiskProfile(user.userId);

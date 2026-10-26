@@ -98,6 +98,7 @@ test('maps error codes to fixed messages and never echoes the server message', a
       { status: 401, body: { error: 'INVALID_CREDENTIALS', message: 'x' } },
       'Invalid email or password, or sign-in is locked. After 3 failed attempts, wait 15 minutes and try again.',
     ],
+    [{ status: 403, body: { error: 'PASSWORD_EXPIRED', message: 'x' } }, /password has expired.*emailed you a link/],
     [{ status: 409, body: { error: 'USER_ALREADY_EXISTS', message: 'x' } }, /already exists/],
     [
       { status: 400, body: { error: 'INVALID_REQUEST', message: 'x' } },
