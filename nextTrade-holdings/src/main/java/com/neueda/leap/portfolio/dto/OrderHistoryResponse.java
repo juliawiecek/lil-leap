@@ -20,5 +20,10 @@ import java.util.UUID;
  */
 public record OrderHistoryResponse(UUID orderId, String symbol, String side, Long quantity, String status,
                                    Instant submittedAt, BigDecimal fillPrice, Long filledQuantity,
-                                   Instant filledAt) {
+                                   Instant filledAt, String orderType, BigDecimal limitPrice,
+                                   BigDecimal takeProfitPrice, BigDecimal stopLossPrice, UUID exitParentId) {
+    public OrderHistoryResponse(UUID orderId, String symbol, String side, Long quantity, String status,
+                                Instant submittedAt, BigDecimal fillPrice, Long filledQuantity, Instant filledAt) {
+        this(orderId, symbol, side, quantity, status, submittedAt, fillPrice, filledQuantity, filledAt, "MARKET", null, null, null, null);
+    }
 }

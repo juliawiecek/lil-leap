@@ -2,6 +2,7 @@
   "/auth/**": { "target": "http://localhost:8081", "secure": false },
   "/rules/**": { "target": "http://localhost:8081", "secure": false },
   "/api/v1/orders": { "target": "http://localhost:8082", "secure": false },
+  "/api/v1/orders/**": { "target": "http://localhost:8082", "secure": false },
   "/api/v1/market/**": { "target": "http://localhost:8082", "secure": false },
   "/api/v1/accounts": { "target": "http://localhost:8080", "secure": false },
   "/api/v1/cash": { "target": "http://localhost:8080", "secure": false },

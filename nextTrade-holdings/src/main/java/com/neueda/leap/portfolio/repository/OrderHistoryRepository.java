@@ -16,7 +16,7 @@ import java.util.UUID;
 public class OrderHistoryRepository {
     private static final String HISTORY_SQL = """
             SELECT o.order_id, i.symbol, o.side, o.quantity, o.status, o.submitted_at,
-                   f.execution_price, f.filled_quantity, f.filled_at
+                   f.execution_price, f.filled_quantity, f.filled_at, o.order_type, o.limit_price, o.take_profit_price, o.stop_loss_price, o.exit_parent_id
             FROM orders o JOIN accounts a ON a.account_id = o.account_id
             JOIN instruments i ON i.instrument_id = o.instrument_id
             LEFT JOIN fills f ON f.order_id = o.order_id
@@ -26,7 +26,7 @@ public class OrderHistoryRepository {
             """;
     private static final String ACCOUNT_HISTORY_SQL = """
             SELECT o.order_id, i.symbol, o.side, o.quantity, o.status, o.submitted_at,
-                   f.execution_price, f.filled_quantity, f.filled_at
+                   f.execution_price, f.filled_quantity, f.filled_at, o.order_type, o.limit_price, o.take_profit_price, o.stop_loss_price, o.exit_parent_id
             FROM orders o JOIN accounts a ON a.account_id = o.account_id
             JOIN instruments i ON i.instrument_id = o.instrument_id
             LEFT JOIN fills f ON f.order_id = o.order_id
@@ -78,7 +78,8 @@ public class OrderHistoryRepository {
                             rs.getString("symbol"), rs.getString("side"), rs.getLong("quantity"),
                             rs.getString("status"), rs.getTimestamp("submitted_at").toInstant(),
                             rs.getBigDecimal("execution_price"), rs.getObject("filled_quantity", Long.class),
-                            filledAt == null ? null : filledAt.toInstant());
+                            filledAt == null ? null : filledAt.toInstant(), rs.getString("order_type"), rs.getBigDecimal("limit_price"),
+                            rs.getBigDecimal("take_profit_price"), rs.getBigDecimal("stop_loss_price"), rs.getObject("exit_parent_id", UUID.class));
                 });
     }
 }

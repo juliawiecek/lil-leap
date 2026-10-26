@@ -65,6 +65,9 @@ public class SecurityConfig {
                         .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.POST, ORDER_CANCEL_PATH))
                             .access(traderWithoutParameters())
                         .requestMatchers(HttpMethod.GET, "/orders/quote-preview").hasRole("TRADER")
+                        .requestMatchers(HttpMethod.GET, "/orders/presets").hasRole("TRADER")
+                        .requestMatchers(HttpMethod.PUT, "/orders/presets").hasRole("TRADER")
+                        .requestMatchers(HttpMethod.DELETE, "/orders/presets").hasRole("TRADER")
                         // Market open/closed is not account data: any signed-in user may read it.
                         .requestMatchers(HttpMethod.GET, "/market/status").authenticated()
                         .anyRequest().denyAll())

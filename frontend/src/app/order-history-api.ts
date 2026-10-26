@@ -9,6 +9,11 @@ import type { ApiHttpClient } from '@lilleap/session-core/angular';
 /** One order as returned by the Holdings service. Fill fields are null until the order fills. */
 export interface OrderHistoryRow {
   orderId: string;
+  orderType?: string;
+  limitPrice?: number | null;
+  takeProfitPrice?: number | null;
+  stopLossPrice?: number | null;
+  exitParentId?: string | null;
   symbol: string;
   side: string;
   quantity: number;
@@ -36,7 +41,7 @@ export interface OrderTrail {
 }
 
 /** Statuses after which an order no longer changes. */
-export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED']);
+export const FINAL_ORDER_STATUSES: ReadonlySet<string> = new Set(['FILLED', 'REJECTED', 'CANCELLED']);
 /** How often, and for how long, a dashboard re-reads a just-submitted order while it executes. */
 export const ORDER_TRACK_INTERVAL_MS = 2000;
 export const ORDER_TRACK_LIMIT_MS = 300000;

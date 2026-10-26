@@ -32,10 +32,23 @@ public record SubmitOrderRequest(
         @NotNull UUID clientReference,
         @NotBlank @Pattern(regexp = "(?i)BUY|SELL") String side,
         @Positive long quantity,
-        @Pattern(regexp = "(?i)MARKET") String orderType,
+        @Pattern(regexp = "(?i)MARKET|LIMIT") String orderType,
         @DecimalMin("0.1") @DecimalMax("10.0") @Digits(integer = 2, fraction = 2) BigDecimal bufferPercent,
-        UUID instrumentId
+        UUID instrumentId,
+        @DecimalMin("0.0001") @Digits(integer = 14, fraction = 4) BigDecimal limitPrice,
+        @DecimalMin("0.0001") @Digits(integer = 14, fraction = 4) BigDecimal takeProfitPrice,
+        @DecimalMin("0.0001") @Digits(integer = 14, fraction = 4) BigDecimal stopLossPrice
 ) {
+    public SubmitOrderRequest(UUID accountId, String symbol, UUID clientReference, String side,
+            long quantity, String orderType, BigDecimal bufferPercent, UUID instrumentId) {
+        this(accountId, symbol, clientReference, side, quantity, orderType, bufferPercent, instrumentId, null, null, null);
+    }
+
+    @AssertTrue(message = "Limit orders require a limit price; market orders cannot have one")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isLimitValid() {
+        return "LIMIT".equals(normalizedOrderType()) ? limitPrice != null : limitPrice == null;
+    }
     /**
      * Retains the symbol-based submission constructor.
      * @param accountId caller-owned account
