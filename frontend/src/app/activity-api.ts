@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiHttpClient } from '@lilleap/session-core/angular';
 import type { AccessTokenSource, OrderEvent, OrderHistoryRow } from './order-history-api';
 import { rejectionMessage } from './order-feedback';
+import { centralTimestamp } from './app-time';
 
 /** A deposit, withdrawal, transfer or other non-trade cash movement. Amount is signed USD. */
 export interface CashMovement {
@@ -63,16 +64,9 @@ export function formatMoney(value: number, signed = false): string {
   return value > 0 ? `+${text}` : `−${text}`;
 }
 
-/** "16 Oct 2026, 14:32 GMT+1": local date and time with the zone shown, so nobody guesses which clock. */
-export function formatLocalTime(iso: string, locale?: string, timeZone?: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    hour12: false, timeZoneName: 'short', timeZone,
-  }).format(date);
+/** "Oct 16, 2026, 2:32 PM CT": every time in the app is Central on a 12-hour clock, so nobody guesses which clock. */
+export function formatLocalTime(iso: string): string {
+  return centralTimestamp(iso);
 }
 
 /** An order as a feed row: what was traded, how it ended, and the cash it moved once filled. */

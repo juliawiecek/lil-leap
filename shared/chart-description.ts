@@ -12,10 +12,10 @@ export function chartPeriodLabel(period: string): string {
   return ({ '1D': 'one day', '1W': 'one week', '1M': 'one month', '3M': 'three months', '6M': 'six months', '1Y': 'one year', '5Y': 'five years', ALL: 'all recorded history', All: 'all recorded history' } as Record<string, string>)[period] ?? period;
 }
 const DATE = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York', year: 'numeric', month: 'short', day: 'numeric',
+  timeZone: 'America/Chicago', year: 'numeric', month: 'short', day: 'numeric',
   hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
 });
-const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+const DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' });
 export const chartDate = (at: number): string => DATE.format(at);
 export function chartValue(value: number, options: SeriesOptions = {}): string {
   return new Intl.NumberFormat('en-US', options.currency

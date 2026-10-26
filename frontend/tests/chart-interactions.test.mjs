@@ -145,8 +145,8 @@ test('advanced overview connects sparse history without adding observations or c
   };
   spaced();
   assert.match(chart.description(), /evenly spaced; empty time intervals are skipped/);
-  assert.match(chart.dataTable().rows[2][0], /7:23:00 PM EST/);
-  assert.equal(root.querySelector('[data-time="1"]').textContent, '7:23 PM');
+  assert.match(chart.dataTable().rows[2][0], /6:23:00 PM CST/);
+  assert.equal(root.querySelector('[data-time="1"]').textContent, '6:23 PM');
   // Both pointer and keyboard inspection follow the same compressed candle positions.
   svg.dispatchEvent(new browser.PointerEvent('pointermove', { clientX: candlePositions()[1] }));
   assert.match(root.querySelector('.tooltip').textContent, /C \$224\.00/);

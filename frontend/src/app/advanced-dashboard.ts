@@ -1,5 +1,6 @@
 import { ChartAccess, ChartFocus } from './chart-access';
 import { allocation, type ChartSeries } from './chart-data';
+import { centralClock, centralTime } from './app-time';
 import { categoryDescription, categoryTable, comparisonDescription, comparisonTable } from '../../../shared/chart-description';
 import { PriceFlash } from './price-flash';
 import { FinancialChange } from './financial-change';
@@ -184,13 +185,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly formattedTime = computed(() => {
     const now = this.currentTime();
     return {
-      time: now.toLocaleTimeString('en-US', { hour12: false }),
-      date: now.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }),
+      time: centralClock(now, true),
+      date: centralTime(now, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
     };
   });
   /** Live prices and market status shared by every view (TS-14.7, PS-02). */
@@ -930,7 +926,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
 function toOrder(row: OrderHistoryRow): Order {
   return {
     id: row.orderId,
-    time: new Date(row.submittedAt).toLocaleTimeString('en-US', { hour12: false }),
+    time: centralClock(new Date(row.submittedAt)),
     symbol: row.symbol,
     side: titleCase(row.side),
     quantity: row.quantity,

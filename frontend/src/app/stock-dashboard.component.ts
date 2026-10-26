@@ -1,5 +1,6 @@
 import type { TradeMark } from './trade-marks';
 import { FinancialChange } from './financial-change';
+import { APP_TIME_ZONE } from './app-time';
 import { CurrencyPipe, DecimalPipe, NgClass, isPlatformBrowser } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -165,13 +166,15 @@ const QUOTE_FIELDS = [
   'currency',
   'history',
 ] as const;
+// Shown to the user, so Central like the rest of the app.
 const EXCHANGE_TIME = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
+  timeZone: APP_TIME_ZONE,
   hour: 'numeric',
   minute: '2-digit',
   second: '2-digit',
   timeZoneName: 'short',
 });
+// Exchange calendar for session logic (9:30 opens are an Eastern-time fact); never displayed.
 const EXCHANGE_DATE = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   year: 'numeric',

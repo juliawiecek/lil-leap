@@ -277,8 +277,9 @@ test('greeting, diversification and loading states come from the real data (PS-0
   const fresh = component(t, NoviceDashboard, [feedProvider(feedWith())]);
   assert.equal(fresh.portfolioLoaded(), false);
   assert.equal(fresh.diversification().title, 'No investments yet');
-  for (const [hour, greeting] of [[9, 'Good Morning'], [14, 'Good Afternoon'], [20, 'Good Evening']]) {
-    fresh.marketClock.set(new Date(2026, 9, 16, hour));
+  // The greeting follows the Central clock, not the viewer's: these are 9 AM, 2 PM and 8 PM CDT.
+  for (const [hour, greeting] of [[14, 'Good Morning'], [19, 'Good Afternoon'], [1, 'Good Evening']]) {
+    fresh.marketClock.set(new Date(Date.UTC(2026, 9, hour === 1 ? 17 : 16, hour)));
     assert.equal(fresh.greeting(), greeting);
   }
   const { desk } = await tradingDesk(t);

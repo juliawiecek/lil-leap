@@ -108,7 +108,9 @@ test('money and times are formatted the same way everywhere, with the time zone 
   assert.equal(formatMoney(-25, true), '−$25.00');
   assert.equal(formatMoney(-25), '−$25.00');
   assert.equal(formatMoney(0, true), '$0.00');
-  assert.match(formatLocalTime('2026-10-16T13:05:00Z', 'en-GB', 'Europe/Dublin'), /^16 Oct 2026, 14:05 (IST|GMT\+1)$/);
+  // Central time on a 12-hour clock, whatever the viewer's zone (13:05 UTC in October is 8:05 AM CDT).
+  assert.match(formatLocalTime('2026-10-16T13:05:00Z'), /^Oct 16, 2026, 8:05\sAM CT$/u);
+  assert.match(formatLocalTime('2026-01-16T13:05:00Z'), /^Jan 16, 2026, 7:05\sAM CT$/u, 'standard time in winter');
   assert.equal(formatLocalTime('not a date'), '');
 });
 
