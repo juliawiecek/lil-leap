@@ -41,7 +41,8 @@
       }
     </p>
   } @else {
-    <ol class="activity-list" [class.refreshing]="loading()" aria-live="off" aria-label="Activity, newest first">
+    <!-- Not a live region (PS-21): a refresh would read the whole list again. Order steps are announced once by the dashboards. -->
+    <ol class="activity-list" [class.refreshing]="loading()" [attr.aria-busy]="loading() ? 'true' : null" aria-live="off" aria-label="Activity, newest first">
       @for (item of items(); track item.id) {
         <li class="activity-item" [class.cash]="item.kind === 'cash'">
           <time [attr.datetime]="item.at">{{ when(item.at) }}</time>

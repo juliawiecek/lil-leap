@@ -49,6 +49,10 @@ import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { SwitchScanService } from './switch-scan';
 import { FocusAfterChange } from './focus-after-change';
+import { liveAnnouncer } from './live-announcer';
+import { speakable } from './speech-text';
+import { OrderAnnouncements } from './order-announcements';
+import { PriceWatch } from './price-watch';
 
 /** How often the portfolio-value chart re-reads its history. */
 export const CHART_REFRESH_MS = 60000;
@@ -124,7 +128,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   imports: [
     FinancialChange,
     CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, FocusAfterChange, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, FocusAfterChange, AccountSettings, PriceWatch,
   ],
   templateUrl: './novice-dashboard.html',
 
@@ -481,6 +485,18 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly quantity = signal('');
   readonly reviewing = signal(false);
   readonly tradeMessage = signal('');
+  /** The last check's complaint about the share count, shown under the field while it is the message (PS-21). */
+  readonly #validationError = signal('');
+  /** The share count's error, linked to the field with aria-describedby; empty once anything changes. */
+  readonly quantityError = computed(() => {
+    const error = this.#validationError();
+    return error && this.tradeMessage() === error ? error : '';
+  });
+  /** Everything else the ticket says, such as "Order sent"; a field error is shown by its field instead. */
+  readonly tradeStatus = computed(() => (this.quantityError() ? '' : this.tradeMessage()));
+  /** Screen reader announcements (PS-21). */
+  readonly announcer = liveAnnouncer();
+  readonly #orderNews = new OrderAnnouncements(this.announcer);
   readonly submitting = signal(false);
   /** Idempotency key for the order being reviewed; a retried confirm reuses it. */
   readonly clientReference = signal('');
@@ -830,10 +846,40 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const startingReview = !this.reviewing();
 
     this.tradeMessage.set(error);
+    this.#validationError.set(error);
     this.reviewing.set(!error);
-    if (!error && startingReview) {
+    if (error) {
+      this.#showInvalid(error);
+    } else if (startingReview) {
       this.clientReference.set(OrderSubmissionClient.generateClientReference());
       this.#readBack();
+      // Screen readers hear the order once; Confirm takes focus as it appears (appFocusAfterChange).
+      this.announcer.announce(speakable(this.reviewSummary()));
+    }
+  }
+
+  /**
+   * Shows a trade message and reads it to screen readers (PS-21): once when it changes, or every
+   * time with `repeat` for the answer to a button press. Order steps are said by #orderNews instead,
+   * so the dialog's own copy of them stays quiet.
+   */
+  #tell(text: string, repeat = false): void {
+    if (repeat || text !== this.tradeMessage()) {
+      this.announcer.announce(text);
+    }
+    this.tradeMessage.set(text);
+  }
+
+  /**
+   * A failed check (PS-21): the field says what is wrong (aria-invalid, aria-describedby) and focus
+   * goes there, which reads it. Already on the field (Enter pressed in it), the error is announced.
+   */
+  #showInvalid(error: string): void {
+    const field = this.dialog()?.nativeElement.querySelector<HTMLElement>('#novice-shares');
+    if (field && field !== field.ownerDocument.activeElement && !this.#switchScan?.settings().enabled) {
+      setTimeout(() => field.focus(), 0);
+    } else {
+      this.announcer.announce(error, 'assertive');
     }
   }
 
@@ -867,15 +913,15 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const account = this.selectedAccount();
     const instrument = this.instruments().find((i) => i.symbol === quote.symbol);
     if (!account) {
-      this.tradeMessage.set('We could not find an active trading account for you.');
+      this.#tell('We could not find an active trading account for you.', true);
       return;
     }
     if (!canTrade(account)) {
-      this.tradeMessage.set('This account is not open for trading yet. Switch accounts at the top of the page.');
+      this.#tell('This account is not open for trading yet. Switch accounts at the top of the page.', true);
       return;
     }
     if (!instrument) {
-      this.tradeMessage.set(`${quote.symbol} is not available to trade yet.`);
+      this.#tell(`${quote.symbol} is not available to trade yet.`, true);
       return;
     }
     this.submitting.set(true);
@@ -892,14 +938,13 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       this.reviewing.set(false);
       this.orderTolerance.set(null);
       this.editingTolerance.set(false);
+      this.#orderNews.say(response.orderId, 'sent', { side: this.side(), quantity: Number(this.quantity()), symbol: quote.symbol });
       this.quantity.set('');
       this.tradeMessage.set('Order sent. Waiting for it to fill…');
       void this.trackOrder(response.orderId);
       this.#scheduleOrderWatch();
     } catch (error) {
-      this.tradeMessage.set(
-        error instanceof OrderSubmissionError ? error.userMessage : 'Your order could not be sent. Please try again.',
-      );
+      this.#tell(error instanceof OrderSubmissionError ? error.userMessage : 'Your order could not be sent. Please try again.', true);
     } finally {
       this.submitting.set(false);
     }
@@ -912,7 +957,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     try {
       row = (await this.orderHistoryClient.list()).find((r) => r.orderId === orderId);
     } catch (error) {
-      this.tradeMessage.set(error instanceof Error ? error.message : 'Could not check your order.');
+      this.#tell(error instanceof Error ? error.message : 'Could not check your order.');
       return;
     }
     if (row && FINAL_ORDER_STATUSES.has(row.status)) {
@@ -924,19 +969,22 @@ export class NoviceDashboard implements OnInit, OnDestroy {
         const shares = row.filledQuantity ?? row.quantity;
         this.tradeMessage.set(`${action} ${shares} ${row.symbol} at $${row.fillPrice?.toFixed(2)}. You can see it under Activity.`);
         this.toasts.show('filled', `Order filled: ${shares} ${row.symbol} at $${row.fillPrice?.toFixed(2)}`);
+        this.#orderNews.say(orderId, 'filled', { side: row.side, quantity: shares, symbol: row.symbol, fillPrice: row.fillPrice });
         return;
       }
       const reason = await this.#rejectionReason(orderId);
       this.tradeMessage.set(`Your order was not filled. ${reason}`);
       this.toasts.show('rejected', `Order rejected: ${row.quantity} ${row.symbol}`, reason);
+      this.#orderNews.say(orderId, 'rejected', { side: row.side, quantity: row.quantity, symbol: row.symbol, reason });
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
-      this.tradeMessage.set('Your order is still being processed. Check Activity for its status.');
+      this.#tell('Your order is still being processed. Check Activity for its status.');
       return;
     }
     if (row?.status === 'ACCEPTED') {
       this.tradeMessage.set('Order accepted. Waiting for it to fill…');
+      this.#orderNews.say(orderId, 'accepted', { side: row.side, quantity: row.quantity, symbol: row.symbol });
     }
     if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
@@ -948,7 +996,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     ], () => {
       const quote = this.quotes().find(q => q.symbol === this.symbol());
       if (quote) { this.tradeQuote.set(quote); }
-      else if (this.quotes().length) { this.tradeMessage.set('That symbol is unavailable.'); }
+      else if (this.quotes().length) { this.#tell('That symbol is unavailable.'); }
       else {
         // Prices have not loaded yet; the feed opens the linked stock once it is listed.
       }

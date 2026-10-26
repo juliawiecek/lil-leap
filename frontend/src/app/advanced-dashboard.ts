@@ -40,6 +40,11 @@ import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
 import { SwitchScanService } from './switch-scan';
+import { liveAnnouncer } from './live-announcer';
+import { speakable } from './speech-text';
+import { OrderAnnouncements } from './order-announcements';
+import { PriceWatch } from './price-watch';
+import { FocusAfterChange } from './focus-after-change';
 import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
 
 interface Quote {
@@ -71,6 +76,8 @@ const DAY_MS = 24 * HOUR_MS;
 /** Fewest bars that still draw a readable line. */
 const MIN_CHART_BARS = 24;
 const BAR_WIDTH_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
+/** The one ticket check that is not about the quantity field. */
+const NO_PRICE_ERROR = 'There is no live price for this stock yet. Try again in a moment.';
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -109,7 +116,7 @@ interface Order {
   selector: 'app-advanced-dashboard',
   imports: [FinancialChange, PriceFlash, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings, PriceWatch, FocusAfterChange,
   ],
   templateUrl: './advanced-dashboard.html',
   styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
@@ -208,6 +215,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
   readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
   readonly #switchScan = inject(SwitchScanService, { optional: true });
+  /** Screen reader announcements (PS-21). */
+  readonly announcer = liveAnnouncer();
+  readonly #orderNews = new OrderAnnouncements(this.announcer);
+  /** The last check's complaint about the quantity, shown under the field while it is the message (PS-21). */
+  readonly #validationError = signal('');
+  /** The quantity's error, linked to the field with aria-describedby; empty once anything changes. */
+  readonly quantityError = computed(() => {
+    const error = this.#validationError();
+    return error && this.message() === error ? error : '';
+  });
+  /** Everything else the ticket says, such as "Order submitted"; a field error is shown by its field instead. */
+  readonly ticketStatus = computed(() => (this.quantityError() ? '' : this.message()));
   /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
   tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
     const live = this.feed.quotes().find((q) => q.symbol === symbol);
@@ -558,6 +577,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   async #announce(order: Order): Promise<void> {
     if (order.status === 'Filled') {
       this.toasts.show('filled', `Order filled: ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)}`);
+      this.#orderNews.say(order.id, 'filled', { ...order, fillPrice: order.price });
       return;
     }
     let reason = rejectionReason(null);
@@ -567,6 +587,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       // The generic reason still tells the client where to look.
     }
     this.toasts.show('rejected', `Order rejected: ${order.quantity} ${order.symbol}`, reason);
+    this.#orderNews.say(order.id, 'rejected', { ...order, reason });
   }
   /** Opens the orders list from a toast. */
   viewOrders(): void {
@@ -646,7 +667,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return 'Enter a whole number of shares greater than zero.';
     }
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
-      return 'There is no live price for this stock yet. Try again in a moment.';
+      return NO_PRICE_ERROR;
     }
     if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';
@@ -661,8 +682,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   reviewOrder(): void {
     this.message.set(this.validate());
+    this.#showInvalid(this.message());
     if (!this.message()) {
       this.openModal('review');
+      // Screen readers hear the order once, then land on Confirm (PS-21).
+      this.announcer.announce(speakable(this.reviewSummary()));
+      this.#focusSoon('pro-confirm');
       // Says the order aloud before it can be confirmed (PS-23), cutting in on switch control.
       const quote = this.selected();
       this.#switchScan?.announce(orderReadBack({
@@ -676,22 +701,62 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       }), true);
     }
   }
+  /**
+   * A failed check (PS-21): a quantity problem is shown by the field, marked invalid, and focus
+   * goes there, which reads the error as the field's description. Already on the field (Enter
+   * pressed in it), or with no field to fix (no live price), the error is announced instead.
+   */
+  #showInvalid(error: string): void {
+    const quantity = error && error !== NO_PRICE_ERROR ? error : '';
+    this.#validationError.set(quantity);
+    if (!error) {
+      return;
+    }
+    const field = globalThis.document?.getElementById('pro-quantity');
+    if (quantity && field && field !== globalThis.document.activeElement) {
+      this.#focusSoon('pro-quantity');
+    } else {
+      this.announcer.announce(error, 'assertive');
+    }
+  }
+
+  /**
+   * Shows a ticket message and reads it to screen readers (PS-21): once when it changes, or every
+   * time with `repeat` for the answer to a button press. Order steps are said by #orderNews instead,
+   * so the ticket's own copy of them stays quiet.
+   */
+  #tell(text: string, repeat = false): void {
+    if (repeat || text !== this.message()) {
+      this.announcer.announce(text);
+    }
+    this.message.set(text);
+  }
+
+  /** Focuses an element by id once the page has drawn the change, unless switch control is steering focus. */
+  #focusSoon(id: string): void {
+    if (this.#switchScan?.settings().enabled) {
+      return;
+    }
+    setTimeout(() => globalThis.document?.getElementById(id)?.focus(), 0);
+  }
+
   async confirmOrder(): Promise<void> {
     const error = this.validate();
     const quote = this.selected();
     if (error) {
       this.message.set(error);
       this.closeModal();
+      this.#showInvalid(error);
       return;
     }
     // Check data is loaded before submitting
     if (!this.dataReady()) {
-      this.message.set('Loading accounts and instruments. Please wait.');
+      this.#tell('Loading accounts and instruments. Please wait.', true);
       return;
     }
     const instrument = this.instruments().find((item) => item.symbol === quote.symbol);
     if (!instrument) {
-      this.message.set(`${quote.symbol} is not available to trade yet.`);
+      this.#tell(`${quote.symbol} is not available to trade yet.`, true);
       return;
     }
     // Prevent double-click while submission is in flight
@@ -703,12 +768,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       const count = Number(this.quantity());
       const account = this.selectedAccount();
       if (!account || !canTrade(account)) {
-        this.message.set('No active account selected.');
+        this.#tell('No active account selected.', true);
         return;
       }
       // Some listed quotes have no backend instrument yet; the server would reject them.
       if (!this.instruments().some((i) => i.instrumentId === quote.instrumentId)) {
-        this.message.set(`${quote.symbol} is not available to trade yet.`);
+        this.#tell(`${quote.symbol} is not available to trade yet.`, true);
         return;
       }
       const response = await this.orderSubmissionClient.submit({
@@ -724,6 +789,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.editingTolerance.set(false);
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
+      this.#orderNews.say(response.orderId, 'sent', { side: this.side(), quantity: count, symbol: quote.symbol });
       this.message.set(
         `Order ${response.orderId} submitted. Status: ${response.status}. Awaiting execution.`
       );
@@ -733,7 +799,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       void this.trackOrder(response.orderId);
     } catch (error) {
       const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
-      this.message.set(msg);
+      this.#tell(msg, true);
     } finally {
       this.submitting.set(false);
     }
@@ -751,7 +817,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
     } catch (error) {
       if (request !== this.#orderRequest || this.#destroyed) { return false; }
-      this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
+      this.#tell(error instanceof Error ? error.message : 'Could not load your orders.');
       return false;
     }
     if (request !== this.#orderRequest || this.#destroyed) { return false; }
@@ -775,7 +841,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     } catch (error) {
       if (request !== this.#portfolioRequest || this.#destroyed) { return; }
       this.serviceDown.set(true);
-      this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
+      this.#tell(error instanceof Error ? error.message : 'Could not load your balances.');
     }
   }
   /** Shows a loaded portfolio, valued at the latest bids already known. */
@@ -821,13 +887,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (order.status === 'Filled') {
         await this.refreshPortfolio();
       }
+      // Said as "Filled: …" or "Rejected: …" by #announce, so the ticket's own copy stays quiet (PS-21).
       this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       await this.#announce(order);
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
-      this.message.set('Order is still processing. Status updates continue in Activity.');
+      this.#tell('Order is still processing. Status updates continue in Activity.');
       return;
+    }
+    if (order?.status === 'Accepted') {
+      this.#orderNews.say(order.id, 'accepted', order);
     }
     if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
@@ -854,7 +924,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       const quote = this.quote(this.symbol());
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
       void this.#loadHistory(this.selected(), this.period());
-      if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
+      if (quote.symbol !== this.symbol()) { this.#tell('That symbol is unavailable.'); }
     });
     Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
@@ -908,7 +978,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.accountState.use(await this.orderSubmissionClient.getAccounts());
     } catch (error) {
       console.error('Failed to load accounts:', error);
-      this.message.set('Failed to load accounts.');
+      this.#tell('Failed to load accounts.');
     } finally {
       this.loadingAccounts.set(false);
     }
@@ -919,7 +989,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.instruments.set(instrumentsData);
     } catch (error) {
       console.error('Failed to load instruments:', error);
-      this.message.set('Failed to load instruments.');
+      this.#tell('Failed to load instruments.');
     } finally {
       this.loadingInstruments.set(false);
     }

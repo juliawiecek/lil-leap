@@ -2,12 +2,21 @@ import { Component, DestroyRef, Injectable, effect, inject, input, signal } from
 import { BriefingSnapshot, buildBriefing } from './briefing';
 import { accessibilityStore } from './accessibility';
 import { speechCoordinator } from '../../../shared/speech-coordinator';
+import { liveAnnouncer } from './live-announcer';
 
 /** Voice speed and how often the briefing repeats on its own (0 = only when asked). */
 export interface BriefingSettings {
   rate: number;
   everyMinutes: number;
+  /** Who reads the briefing (PS-21): the browser's own voice, or the user's screen reader. */
+  voice: BriefingVoice;
 }
+
+export type BriefingVoice = 'browser' | 'screen-reader';
+export const BRIEFING_VOICES: { value: BriefingVoice; label: string }[] = [
+  { value: 'browser', label: 'Browser voice' },
+  { value: 'screen-reader', label: 'My screen reader' },
+];
 
 export const BRIEFING_RATES = [
   { value: 0.8, label: 'Slow' },
@@ -29,7 +38,7 @@ export const BRIEFING_REPEATS = [
 /** The 15, 30 and 60 minute repeats saved before PS-30 become the longest one that can still play. */
 const LONGEST_REPEAT = Math.max(...BRIEFING_REPEATS.map((r) => r.value));
 const LEGACY_REPEATS = [15, 30, 60];
-const DEFAULT_SETTINGS: BriefingSettings = { rate: 1, everyMinutes: 0 };
+const DEFAULT_SETTINGS: BriefingSettings = { rate: 1, everyMinutes: 0, voice: 'browser' };
 /** How often the repeat timer checks whether a briefing is due. */
 export const BRIEFING_TICK_MS = 30000;
 
@@ -39,6 +48,7 @@ export function parseBriefingSettings(saved: unknown): BriefingSettings {
   return {
     rate: BRIEFING_RATES.some((r) => r.value === s.rate) ? s.rate! : DEFAULT_SETTINGS.rate,
     everyMinutes: savedRepeat(s.everyMinutes),
+    voice: BRIEFING_VOICES.some((v) => v.value === s.voice) ? s.voice! : DEFAULT_SETTINGS.voice,
   };
 }
 
@@ -73,6 +83,7 @@ export function parseLastBriefings(saved: unknown): Record<string, string> {
 @Injectable({ providedIn: 'root' })
 export class BriefingService {
   readonly #store = accessibilityStore();
+  readonly #announcer = liveAnnouncer();
   readonly settings = signal<BriefingSettings>(this.#store.read('briefing', parseBriefingSettings));
   readonly lines = signal<string[]>([]);
   /** Index of the sentence being read, or -1. */
@@ -82,6 +93,11 @@ export class BriefingService {
   /** When the last briefing played (any account), which paces the repeat timer. */
   lastAt: Date | null = latest(Object.values(this.#lastBriefings));
 
+  /** The user's screen reader reads the briefing instead of the browser's voice (PS-21). */
+  get screenReader(): boolean {
+    return this.settings().voice === 'screen-reader';
+  }
+
   get supported(): boolean {
     return !!globalThis.speechSynthesis && typeof globalThis.SpeechSynthesisUtterance === 'function';
   }
@@ -89,6 +105,10 @@ export class BriefingService {
   update(change: Partial<BriefingSettings>): void {
     this.settings.set(parseBriefingSettings({ ...this.settings(), ...change }));
     this.#save();
+    if (this.screenReader && this.speaking()) {
+      // Handing the briefing to the screen reader silences the browser's voice at once.
+      this.stop();
+    }
   }
 
   /**
@@ -111,6 +131,11 @@ export class BriefingService {
     if (accountId) {
       this.#lastBriefings = { ...this.#lastBriefings, [accountId]: now.toISOString() };
       this.#save();
+    }
+    if (this.screenReader) {
+      // No speech engine: the whole transcript goes to one polite live region, read once, in order.
+      this.#announcer.announce(lines.join(' '));
+      return;
     }
     if (!this.supported) {
       return;
@@ -202,7 +227,9 @@ export type BriefingSource = () => Promise<Omit<BriefingSnapshot, 'since'> & { a
           } @else if (error()) {
             <p class="note" role="alert">{{ error() }}</p>
           } @else {
-            @if (!service.supported) {
+            @if (service.screenReader) {
+              <p class="note">Sent to your screen reader.</p>
+            } @else if (!service.supported) {
               <p class="note">This browser cannot read aloud, so the briefing is shown as text.</p>
             }
             <ol>
@@ -212,6 +239,14 @@ export type BriefingSource = () => Promise<Omit<BriefingSnapshot, 'since'> & { a
             </ol>
           }
           <div class="controls">
+            <label
+              >Voice
+              <select (change)="service.update({ voice: $any($event.target).value })">
+                @for (v of voices; track v.value) {
+                  <option [value]="v.value" [selected]="v.value === service.settings().voice">{{ v.label }}</option>
+                }
+              </select></label
+            >
             <label
               >Voice speed
               <select (change)="service.update({ rate: +$any($event.target).value })">
@@ -272,6 +307,7 @@ export class BriefingButton {
   readonly error = signal('');
   readonly rates = BRIEFING_RATES;
   readonly repeats = BRIEFING_REPEATS;
+  readonly voices = BRIEFING_VOICES;
   #lastMarketOpen: boolean | null = null;
 
   constructor() {

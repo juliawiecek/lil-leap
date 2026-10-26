@@ -25,7 +25,8 @@ export function describeChange(value: number | null, unit: ChangeUnit = 'percent
   const measure = unit === 'percent' ? ' percent' : unit === 'currency' ? ` ${currency}` : '';
   const precision = unit === 'currency' ? getNumberOfCurrencyDigits(currency) : 2;
   const spokenAmount = formatNumber(Math.abs(value), locale, digits ?? `1.${precision}-${precision}`);
-  const verb = direction === 'flat' ? 'Unchanged at' : direction === 'up' ? 'Increased by' : 'Decreased by';
+  // Read as "up 1.20 percent" / "down 3.00 percent" (PS-21), the way people say a move aloud.
+  const verb = direction === 'flat' ? 'unchanged at' : direction;
   return {
     visual: symbol + amount + (unit === 'percent' ? '%' : ''),
     spoken: arrow

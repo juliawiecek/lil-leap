@@ -7,6 +7,7 @@ import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
 import { spokenCompany } from './briefing';
 import { spokenChange } from './chart-speech';
+import { LivePricesService } from './live-prices';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -18,13 +19,27 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
   selector: 'app-market-ticker',
   imports: [FinancialChange, PriceFlash, CurrencyPipe],
   template: `
-    <div class="ticker" aria-label="Live prices" aria-live="off">
-      <span class="badge" [class.closed]="!feed.status()?.open" role="status">
+    <!-- Not a live region (PS-21): prices change every few seconds, so nothing here is read out on its own. Price watch speaks instead. -->
+    <div class="ticker" role="region" aria-label="Live prices" aria-live="off">
+      <span class="badge" [class.closed]="!feed.status()?.open">
         <i aria-hidden="true"></i>{{ badge() }}
       </span>
+      <button type="button" class="pause" [attr.aria-pressed]="live.paused()" (click)="togglePause()">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @if (live.paused()) {
+            <path d="M5 3.5v9l7-4.5z" fill="currentColor" />
+          } @else {
+            <path d="M5 3.5v9M11 3.5v9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+          }
+        </svg>
+        Pause<span class="sr-only"> live updates</span>
+      </button>
+      @if (live.paused()) {
+        <span class="paused-note">Prices paused</span>
+      }
       <!-- The list is drawn twice so the tape can scroll in a seamless loop; the copy is hidden from assistive tech. -->
       <div class="tape-window">
-        <div class="tape" [class.moving]="feed.quotes().length > 0" [style.animation-duration.s]="feed.quotes().length * 6">
+        <div class="tape" [class.moving]="feed.quotes().length > 0 && !live.paused()" [style.animation-duration.s]="feed.quotes().length * 6">
           <ul>
             @for (quote of feed.quotes(); track quote.symbol + '-' + quote.version) {
               <li>
@@ -114,6 +129,11 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
       .change.down { color: var(--loss); }
       .muted, .change { color: var(--muted, var(--text-muted)); }
       .delayed { padding: 0 5px; border-radius: 4px; background: var(--surface-tone-14); color: var(--warning); font-style: normal; font-size: 12px; }
+      .pause { flex: none; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--surface-tone-02); color: var(--text); font-weight: 600; }
+      .pause svg { width: 12px; height: 12px; }
+      .pause[aria-pressed='true'] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+      .pause:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+      .paused-note { flex: none; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
       .flash-up { animation: flash-up 1.2s ease-out; }
       .flash-down { animation: flash-down 1.2s ease-out; }
       @keyframes flash-up { from { background: var(--gain-wash-20); } to { background: transparent; } }
@@ -124,6 +144,8 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
 })
 export class MarketTicker implements OnDestroy {
   readonly feed = inject(MarketFeed);
+  /** Pause live updates (PS-21), shared with Settings > Accessibility. */
+  readonly live = inject(LivePricesService, { optional: true }) ?? new LivePricesService();
   /** A stock was clicked; dashboards open it. */
   readonly pick = output<string>();
   readonly badge = computed(() => marketBadgeText(this.feed.status(), new Date(this.feed.now())));
@@ -159,6 +181,15 @@ export class MarketTicker implements OnDestroy {
     }
     const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
     return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
+  }
+
+  /** Stops or restarts the scrolling tape and price refresh (WCAG 2.2.2); resuming fetches prices at once. */
+  togglePause(): void {
+    const paused = !this.live.paused();
+    this.live.setPaused(paused);
+    if (!paused) {
+      void this.feed.refreshQuotes();
+    }
   }
 
   ngOnDestroy(): void {

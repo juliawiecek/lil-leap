@@ -115,6 +115,7 @@
       </div>
     }
     <main id="main-content" class="novice-content" tabindex="-1">
+      <app-price-watch />
       <div class="page-heading">
         <div>
           @if (activeTab() === 'Overview') {
@@ -134,7 +135,7 @@
           }
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
+          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketClock() | date: 'EEE, MMM d, y' }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
@@ -543,7 +544,8 @@
         {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
       </button>
     </div>
-    <form class="trade-form" method="post" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+    <!-- novalidate + data-a11y-app-validation (PS-21): the trade's own message is what is shown and read, not the browser's. -->
+    <form class="trade-form" method="post" novalidate data-a11y-app-validation (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
       <label id="novice-stock-label" for="novice-stock">Stock</label>
       <div class="stock-picker" (focusout)="stockMenuOpen.set(false)">
         <button
@@ -595,17 +597,22 @@
       </div>
       <label for="novice-shares">Number of shares</label
       ><input
-        id="novice-shares" aria-describedby="novice-trade-message"
+        id="novice-shares"
         type="number"
         min="1"
         step="1"
         required
         placeholder="0"
         [value]="quantity()"
+        [attr.aria-invalid]="quantityError() ? 'true' : null"
+        [attr.aria-describedby]="quantityError() ? 'novice-shares-error' : 'novice-trade-message'"
         (input)="
           quantity.set($any($event.target).value); reviewing.set(false); tradeMessage.set('')
         "
       />
+      @if (quantityError()) {
+        <p id="novice-shares-error" class="field-error"><span aria-hidden="true">⚠ </span>{{ quantityError() }}</p>
+      }
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
@@ -638,15 +645,17 @@
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
       @if (reviewing()) {
-        <p class="review-confirmation review-summary" role="status" appFocusAfterChange>{{ reviewSummary() }}</p>
+        <!-- Announced once through the live announcer as the review opens, and focus goes to Confirm (PS-21). -->
+        <p id="novice-review-summary" class="review-confirmation review-summary">{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
-          <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
+          <button id="novice-confirm" class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" appFocusAfterChange>Confirm {{ side().toLowerCase() }}</button>
         </div>
       } @else {
         <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
       }
-      <output id="novice-trade-message">{{ tradeMessage() }}</output>
+      <!-- Read through the live announcer (PS-21), once per message, so this copy stays quiet. -->
+      <output id="novice-trade-message" aria-live="off">{{ tradeStatus() }}</output>
     </form>
     </div>
     </div>
