@@ -100,6 +100,93 @@ class OrderLifecyclePostgresTest {
     private String status(UUID id) { return jdbc.queryForObject("SELECT status FROM orders WHERE order_id=?", String.class, id); }
     private int count(String table) { return jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class); }
 
+    private UUID advanced(String side, BigDecimal limit, BigDecimal profit, BigDecimal stop) {
+        return submissions.submit(user, new SubmitOrderRequest(account, "AAPL", UUID.randomUUID(), side, 2,
+                limit == null ? "MARKET" : "LIMIT", null, null, limit, profit, stop)).order().orderId();
+    }
+
+    private void quoteAt(String bid, String ask) {
+        jdbc.update("INSERT INTO quotes(instrument_id,bid,ask,quoted_at,source) VALUES (?,?,?,CURRENT_TIMESTAMP,'TEST')",
+                instrument, new BigDecimal(bid), new BigDecimal(ask));
+    }
+
+    private void due(UUID id) {
+        jdbc.update("UPDATE orders SET next_execution_at = CURRENT_TIMESTAMP WHERE order_id = ?", id);
+    }
+
+    @Test void limitWaitsWithoutConsumingFailuresAndCreatesExactlyOneExit() {
+        UUID entry = advanced("BUY", new BigDecimal("95"), new BigDecimal("110"), new BigDecimal("85"));
+        OrderExecutionWorker.Claim stale = worker.claimNext();
+        worker.execute(stale);
+        for (int n = 0; n < 12; n++) { due(entry); worker.execute(worker.claimNext()); }
+        assertThat(status(entry)).isEqualTo("PENDING");
+        assertThat(count("fills")).isZero();
+        assertThat(jdbc.queryForObject("SELECT price_waits FROM orders WHERE order_id=?", Long.class, entry)).isEqualTo(13L);
+        quoteAt("93", "94"); due(entry);
+        worker.execute(stale);
+        assertThat(count("fills")).isZero();
+        worker.execute(worker.claimNext());
+        assertThat(status(entry)).isEqualTo("FILLED");
+        UUID exit = jdbc.queryForObject("SELECT order_id FROM orders WHERE exit_parent_id=?", UUID.class, entry);
+        worker.execute(worker.claimNext());
+        assertThat(status(exit)).isEqualTo("PENDING");
+        quoteAt("110", "111"); due(exit);
+        var claim = worker.claimNext(); worker.execute(claim); worker.execute(claim);
+        assertThat(status(exit)).isEqualTo("FILLED");
+        assertThat(count("fills")).isEqualTo(2);
+        assertThat(count("orders")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT balance FROM cash_balances", BigDecimal.class)).isEqualByComparingTo("10032");
+    }
+
+    @Test void stopLossExecutesThroughAGapAndDoesNotCreateAnotherExit() {
+        UUID entry = advanced("BUY", null, null, new BigDecimal("90"));
+        worker.execute(worker.claimNext());
+        UUID exit = jdbc.queryForObject("SELECT order_id FROM orders WHERE exit_parent_id=?", UUID.class, entry);
+        quoteAt("80", "81"); worker.execute(worker.claimNext());
+        assertThat(status(exit)).isEqualTo("FILLED");
+        assertThat(count("orders")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT execution_price FROM fills WHERE order_id=?", BigDecimal.class, exit)).isEqualByComparingTo("80");
+    }
+
+    @Test void cancellingEntryCreatesNoExitAndCancellingExitPreventsExecution() {
+        UUID cancelled = advanced("BUY", new BigDecimal("95"), new BigDecimal("110"), null);
+        cancellations.cancel(cancelled, user);
+        assertThat(worker.claimNext()).isNull();
+        UUID entry = advanced("BUY", null, new BigDecimal("110"), null);
+        worker.execute(worker.claimNext());
+        UUID exit = jdbc.queryForObject("SELECT order_id FROM orders WHERE exit_parent_id=?", UUID.class, entry);
+        var claim = worker.claimNext(); cancellations.cancel(exit, user);
+        quoteAt("115", "116"); worker.execute(claim);
+        assertThat(status(exit)).isEqualTo("CANCELLED");
+        assertThat(count("fills")).isEqualTo(1);
+    }
+
+    @Test void sellLimitWaitsThenBuysBackAtProfitTarget() {
+        submit("BUY", 2); worker.execute(worker.claimNext());
+        UUID entry = advanced("SELL", new BigDecimal("105"), new BigDecimal("95"), new BigDecimal("115"));
+        worker.execute(worker.claimNext());
+        assertThat(status(entry)).isEqualTo("PENDING");
+        quoteAt("106", "107"); due(entry); worker.execute(worker.claimNext());
+        assertThat(status(entry)).isEqualTo("FILLED");
+        UUID exit = jdbc.queryForObject("SELECT order_id FROM orders WHERE exit_parent_id=?", UUID.class, entry);
+        quoteAt("94", "95"); worker.execute(worker.claimNext());
+        assertThat(status(exit)).isEqualTo("FILLED");
+        assertThat(jdbc.queryForObject("SELECT side FROM orders WHERE order_id=?", String.class, exit)).isEqualTo("BUY");
+        assertThat(jdbc.queryForObject("SELECT quantity FROM holdings", Long.class)).isEqualTo(2);
+    }
+
+    @Test void changedAdvancedTermsConflictOnRetry() {
+        UUID reference = UUID.randomUUID();
+        var request = new SubmitOrderRequest(account, "AAPL", reference, "BUY", 2, "LIMIT", null, null,
+                new BigDecimal("95"), new BigDecimal("110"), null);
+        submissions.submit(user, request);
+        assertThat(submissions.submit(user, request).created()).isFalse();
+        assertThatThrownBy(() -> submissions.submit(user, new SubmitOrderRequest(account, "AAPL", reference, "BUY", 2, "LIMIT", null, null,
+                new BigDecimal("96"), new BigDecimal("110"), null)))
+                .isInstanceOf(com.neueda.leap.order.submission.service.IdempotencyConflictException.class);
+    }
+
     @Test
     void apiDocumentationExposesOnlyTheCanonicalOrderRoute() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -484,4 +571,51 @@ class OrderLifecyclePostgresTest {
                 SELECT payload->>'result' FROM audit_log WHERE event_type='RULE_CHECKED' AND related_order_id=?
                 """, String.class, id)).hasSize(7).containsOnly("PASS");
     }
+    @Autowired com.neueda.leap.order.presets.OrderPresetService presets;
+
+    private com.neueda.leap.order.presets.OrderPreset preset(String name, long quantity) {
+        return new com.neueda.leap.order.presets.OrderPreset(name, "LIMIT", quantity,
+                new BigDecimal("2"), new BigDecimal("5"), new BigDecimal("2"), new BigDecimal("100"));
+    }
+
+    @Test
+    void presetsPersistAcrossSessionsAndRejectOtherUsers() throws Exception {
+        String first = "Bearer " + tokens.issueToken(user, "trader@example.test");
+        String second = "Bearer " + tokens.issueToken(user, "trader@example.test");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/orders/presets")
+                .contextPath("/api/v1").param("accountId", account.toString()).header("Authorization", first)
+                .contentType("application/json")
+                .content("{\"name\":\"Swing\",\"orderType\":\"LIMIT\",\"quantity\":5,\"tolerance\":2,\"stopPercent\":2}"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mvc.perform(get("/api/v1/orders/presets").contextPath("/api/v1")
+                .param("accountId", account.toString()).header("Authorization", second))
+                .andExpect(MockMvcResultMatchers.status().isOk()).andExpect(jsonPath("$[0].name").value("Swing"));
+        UUID stranger = UUID.randomUUID();
+        assertThatThrownBy(() -> presets.list(stranger, account)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> presets.save(stranger, account, preset("Stolen", 1))).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThatThrownBy(() -> presets.delete(stranger, account, "Swing")).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/orders/presets")
+                .contextPath("/api/v1").param("accountId", account.toString()).header("Authorization", first)
+                .contentType("application/json").content("{\"name\":\"Bad\",\"orderType\":\"LIMIT\",\"quantity\":0,\"tolerance\":2}"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+        assertThat(presets.list(user, account)).hasSize(1);
+        assertThat(presets.delete(user, account, "Swing")).isEmpty();
+    }
+
+    @Test
+    void concurrentPresetWritesRespectTheCapAndAllowReplacingAtCapacity() throws Exception {
+        for (int i=0; i<9; i++) presets.save(user, account, preset("Preset " + i, 1));
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var a = pool.submit(() -> { try { presets.save(user, account, preset("A", 1)); return true; }
+                catch (org.springframework.web.server.ResponseStatusException e) { return false; } });
+            var b = pool.submit(() -> { try { presets.save(user, account, preset("B", 1)); return true; }
+                catch (org.springframework.web.server.ResponseStatusException e) { return false; } });
+            assertThat(a.get() ^ b.get()).isTrue();
+        } finally { pool.shutdownNow(); }
+        assertThat(presets.list(user, account)).hasSize(10);
+        presets.save(user, account, preset("Preset 0", 7));
+        assertThat(presets.list(user, account).stream().filter(p -> p.name().equals("Preset 0")).findFirst().orElseThrow().quantity()).isEqualTo(7);
+    }
+
 }

@@ -32,6 +32,7 @@ CREATE TABLE orders (
     client_reference UUID NOT NULL,
     side VARCHAR(10) NOT NULL,
     quantity BIGINT NOT NULL,
+    limit_price NUMERIC(18,4), take_profit_price NUMERIC(18,4), stop_loss_price NUMERIC(18,4), exit_parent_id UUID,
     order_type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL,
     submitted_at TIMESTAMP NOT NULL,

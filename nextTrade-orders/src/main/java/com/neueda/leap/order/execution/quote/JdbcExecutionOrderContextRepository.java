@@ -29,7 +29,7 @@ public class JdbcExecutionOrderContextRepository implements ExecutionOrderContex
         return jdbc
                 .query(
                         """
-                        SELECT order_id, instrument_id, execution_attempts FROM orders
+                        SELECT order_id, instrument_id, execution_attempts - price_waits AS execution_attempts FROM orders
                         WHERE order_id=? AND status='PENDING' AND accepted_at IS NOT NULL
                         """,
                         (rs, n) ->

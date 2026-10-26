@@ -36,11 +36,21 @@ test('startup upgrades preserve old and fresh databases, serialize repeat runs a
 
     // Simulate the previous release's persistent volume: populated users but no status column.
     await sql(database, 'ALTER TABLE users DROP COLUMN user_status');
+    await sql(database, `DROP TABLE account_order_presets;
+      ALTER TABLE orders DROP COLUMN price_waits, DROP COLUMN limit_price,
+        DROP COLUMN take_profit_price, DROP COLUMN stop_loss_price, DROP COLUMN exit_parent_id`);
     await Promise.all([upgrade(database), upgrade(database)]);
     assert.equal(await sql(database, "SELECT user_status || ':' || password_hash FROM users WHERE email='preserved@example.com'"),
       'ACTIVE:unchanged-test-hash');
     assert.equal(await sql(database, "SELECT count(*) FROM v_trade_clients WHERE email='preserved@example.com'"), '1');
     await assert.rejects(sql(database, "UPDATE users SET user_status='INVALID'"));
+    assert.equal(await sql(database, "SELECT count(*) FROM information_schema.columns WHERE table_name='orders' AND column_name IN ('limit_price','take_profit_price','stop_loss_price','exit_parent_id','price_waits')"), '5');
+    await sql(database, `INSERT INTO accounts(user_id,account_number,account_name)
+      SELECT user_id,'UPGRADE-TEST','Trading' FROM users WHERE email='preserved@example.com';
+      INSERT INTO account_order_presets(account_id,name,order_type,quantity,tolerance)
+      SELECT account_id,'Swing','LIMIT',3,2 FROM accounts WHERE account_number='UPGRADE-TEST'`);
+    await upgrade(database);
+    assert.equal(await sql(database, "SELECT name || ':' || quantity FROM account_order_presets"), 'Swing:3');
   } finally {
     await sql('postgres', `DROP DATABASE "${database}" WITH (FORCE)`);
   }

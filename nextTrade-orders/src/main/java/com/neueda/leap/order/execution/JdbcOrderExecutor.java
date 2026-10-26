@@ -59,10 +59,10 @@ public class JdbcOrderExecutor implements OrderExecutor {
     @Transactional(propagation = Propagation.MANDATORY)
     public Result execute(UUID orderId) {
         var order = jdbc.queryForObject("""
-                SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent, reference_price
+                SELECT account_id, instrument_id, side, quantity, execution_attempts, buffer_percent, reference_price, limit_price, take_profit_price, stop_loss_price, exit_parent_id
                 FROM orders WHERE order_id = ?
                 """, (rs, n) -> new Trade(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
-                rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6), rs.getBigDecimal(7)), orderId);
+                rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getBigDecimal(6), rs.getBigDecimal(7), rs.getBigDecimal(8), rs.getBigDecimal(9), rs.getBigDecimal(10), rs.getObject(11, UUID.class)), orderId);
         if (order == null) throw new IllegalArgumentException("Order not found");
 
         Account account = lockAccount(order.account());
@@ -98,7 +98,29 @@ public class JdbcOrderExecutor implements OrderExecutor {
                                           'executionPrice', CAST(? AS numeric), 'cashDelta', CAST(? AS numeric))
                 FROM (VALUES ('ORDER_FILLED'), ('SETTLEMENT_COMPLETED')) events(event_type)
                 """, order.account(), orderId, settlement.fillId(), order.quantity(), quoteContext.price(), cashChange);
+        createExit(orderId, order);
         return Result.filled();
+    }
+
+    /** One conditional opposite-side order implements mutually exclusive exits, in the fill transaction. */
+    private void createExit(UUID orderId, Trade order) {
+        if (order.parent() != null || (order.profit() == null && order.stop() == null)) return;
+        jdbc.update("""
+                WITH created AS (
+                    INSERT INTO orders(account_id, instrument_id, client_reference, side, quantity, order_type,
+                                       status, take_profit_price, stop_loss_price, exit_parent_id)
+                    VALUES (?, ?, ?, ?, ?, 'MARKET', 'SUBMITTED', ?, ?, ?)
+                    ON CONFLICT (exit_parent_id) DO NOTHING
+                    RETURNING order_id, account_id
+                ), history AS (
+                    INSERT INTO order_status_history(order_id, status, reason_code)
+                    SELECT order_id, 'SUBMITTED', 'SUBMISSION_VALIDATED' FROM created
+                )
+                INSERT INTO audit_log(account_id, related_order_id, actor_type, event_type, payload)
+                SELECT account_id, order_id, 'SYSTEM', 'ORDER_SUBMITTED',
+                       jsonb_build_object('parentOrderId', CAST(? AS uuid), 'automaticExit', true) FROM created
+                """, order.account(), order.instrument(), UUID.randomUUID(), "BUY".equals(order.side()) ? "SELL" : "BUY",
+                order.quantity(), order.profit(), order.stop(), orderId, orderId);
     }
 
     private Result rejectIfNotExecutable(UUID orderId, Trade order, Account account) {
@@ -120,6 +142,12 @@ public class JdbcOrderExecutor implements OrderExecutor {
         var quote = decision.quote();
         boolean buy = "BUY".equals(order.side());
         BigDecimal price = buy ? quote.ask() : quote.bid();
+        if (order.limit() != null || order.parent() != null) {
+            boolean eligible = AdvancedOrderPrices.eligible(buy, price, order.limit(), order.profit(), order.stop(), order.parent() != null);
+            if (!eligible) return new QuoteContext(quote, buy, price, Result.requeue("WAITING_FOR_PRICE"));
+            auditQuoteDecision(orderId, quote, new Protection(null, null, order.limit(), price));
+            return new QuoteContext(quote, buy, price, null);
+        }
         BigDecimal tolerance = resolveBuffer(order, account);
         if (order.reference() != null) {
             // PS-12: a buy may fill up to reference + tolerance, a sell down to reference - tolerance.
@@ -271,7 +299,7 @@ public class JdbcOrderExecutor implements OrderExecutor {
     }
 
     private record Trade(UUID account, UUID instrument, String side, long quantity, long attempts, BigDecimal buffer,
-                         BigDecimal reference) {}
+                         BigDecimal reference, BigDecimal limit, BigDecimal profit, BigDecimal stop, UUID parent) {}
     private record Protection(BigDecimal reference, BigDecimal tolerance, BigDecimal limit, BigDecimal actual) {}
     private record Account(String status, boolean enabled, BigDecimal buffer, BigDecimal minimum) {}
     private record Position(long quantity, BigDecimal cost) {}

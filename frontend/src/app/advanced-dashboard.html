@@ -546,9 +546,9 @@
     </button>
   </div>
   @if (modal() === 'review') {
-    <!-- Announced once through the live announcer as the review opens, and focus goes to Confirm (PS-21). -->
+    <!-- Announced once by the live announcer; Confirm takes focus. -->
     <p id="pro-review-summary" class="review-summary">{{ reviewSummary() }}</p>
-    <p data-glossary="market-order">Market order: final price and total may differ from this estimate.</p>
+    <p [attr.data-glossary]="orderType() === 'LIMIT' ? 'limit-price' : 'market-order'">{{ orderType() === 'LIMIT' ? 'Limit order: remains open until filled or cancelled.' : 'Market order: final price and total may differ from this estimate.' }}</p>
     @if (closedWarning()) {
       <p class="closed-warning" role="note">{{ closedWarning() }}</p>
     }
@@ -559,15 +559,17 @@
       <div>
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
       </div>
-      <div data-glossary="market-order">
-        <span>Side / Type</span><strong>{{ side() }} / Market</strong>
+      <div [attr.data-glossary]="orderType() === 'LIMIT' ? 'limit-price' : 'market-order'">
+        <span>Side / Type</span><strong>{{ side() }} / {{ orderType() === 'LIMIT' ? 'Limit' : 'Market' }}</strong>
       </div>
       <div>
         <span>Quantity</span><strong>{{ quantity() }}</strong>
       </div>
-      <div data-glossary="price-protection">
-        <span>Price protection</span><strong>{{ tolerance() }}%</strong>
-      </div>
+      @if (orderType() === 'MARKET') { <div data-glossary="price-protection"><span>Price protection</span><strong>{{ tolerance() }}%</strong></div> }
+      @else { <div data-glossary="limit-price"><span>Limit price</span><strong>{{ entryPrice() | currency }}</strong></div> }
+      @if (takeProfitEnabled()) { <div data-glossary="take-profit"><span>Take profit</span><strong>{{ exitPrice('profit') | currency }}</strong></div> }
+      @if (stopLossEnabled()) { <div data-glossary="stop-loss"><span>Stop loss</span><strong>{{ exitPrice('loss') | currency }}</strong></div> }
+      @if (takeProfitEnabled() || stopLossEnabled()) { <p>After this order fills, one opposite-side order activates at either exit level. It closes once, stays open until filled or cancelled, and requires available cash or shares.</p> }
       <div>
         <span>Live price</span><strong>{{ selected().price | currency }}</strong>
       </div>
@@ -575,9 +577,10 @@
         <span>Estimated Total</span><strong>{{ total() | currency }}</strong>
       </div>
     </div>
+    @if (message()) { <p role="alert">{{ message() }}</p> }
     <div class="review-actions">
       <button class="secondary-button" type="button" (click)="closeModal()">Edit</button>
-      <button id="pro-confirm" class="primary-button" type="button" (click)="confirmOrder()">Confirm {{ side() }}</button>
+      <button id="pro-confirm" class="primary-button" type="button" [disabled]="submitting()" (click)="confirmOrder()">Confirm {{ side() }}</button>
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">

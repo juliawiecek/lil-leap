@@ -421,3 +421,29 @@ h2 {
 /* The quantity's error under its field (PS-21); the warning sign repeats what the words say. */
 .field-error { margin: 6px 0 0; color: var(--loss); font-size: 13px; font-weight: 600; line-height: 1.5; }
 input[aria-invalid='true'] { border-color: var(--loss); }
+.option-switch, .size-presets { display: flex; gap: 6px; }
+.option-switch button, .size-presets button { flex: 1; min-height: 34px; padding: 6px; border: 1px solid var(--surface-tone-28); border-radius: 4px; background: var(--surface-tone-04); color: var(--muted); font-size: 12px; }
+.option-switch button.active { border-color: var(--gain); background: var(--gain-wash-02); color: var(--gain); }
+.exit-toggles button { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.exit-toggles span { font-size: 10px; text-transform: uppercase; }
+.size-presets { margin-top: 8px; }
+.size-presets button:hover { color: var(--text); border-color: var(--muted); }
+.protection-row { flex-wrap: wrap; }
+.quote-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.quote-strip > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.quote-strip span, .quote-strip small { color: var(--muted); font-size: 11px; }
+.quote-strip strong { font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.advanced-tools { border-top: 1px solid var(--surface-tone-28); margin-top: 12px; padding-top: 12px; }
+.advanced-tools summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.advanced-tools summary span { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.advanced-tools summary:focus-visible { outline: 2px solid var(--gain); outline-offset: 3px; }
+.advanced-tools label { display: block; margin: 12px 0 5px; color: var(--muted); font-size: 12px; }
+.sizing-result { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; font-size: 12px; }
+.tool-action { width: 100%; margin-top: 8px; }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+.preset-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.preset-apply { flex: 1; min-width: 0; padding: 10px 0; text-align: left; overflow-wrap: anywhere; }
+.preset-apply small { display: block; margin-top: 4px; color: var(--muted); }
+.preset-apply:hover { color: var(--gain); }
+.preset-remove { font-size: 11px; color: var(--muted); }
+.preset-status { display: block; }

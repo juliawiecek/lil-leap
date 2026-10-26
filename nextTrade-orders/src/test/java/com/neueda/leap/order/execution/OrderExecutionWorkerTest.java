@@ -106,19 +106,20 @@ class OrderExecutionWorkerTest {
 
         worker(3).execute(claim);
 
-        verify(jdbcTemplate).update(contains("ORDER_REQUEUED"), eq(30), eq("RETRY_STALE_QUOTE"),
+        verify(jdbcTemplate).update(contains("ORDER_REQUEUED"), eq(30), eq("RETRY_STALE_QUOTE"), eq("RETRY_STALE_QUOTE"),
             eq(claim.orderId()), eq(1L));
     }
 
     @Test
     @DisplayName("Unexpected failure requeues as RETRY_EXECUTION_FAILED below the attempt limit")
     void unexpectedFailureRequeuesBelowTheLimit() {
+        when(jdbcTemplate.queryForObject(contains("execution_attempts - price_waits"), eq(Long.class), any(UUID.class))).thenReturn(2L);
         var claim = lockedClaim(2);
         when(orderExecutor.execute(claim.orderId())).thenThrow(new IllegalStateException("database blip"));
 
         worker(3).execute(claim);
 
-        verify(jdbcTemplate).update(contains("ORDER_REQUEUED"), eq(30), eq("RETRY_EXECUTION_FAILED"),
+        verify(jdbcTemplate).update(contains("ORDER_REQUEUED"), eq(30), eq("RETRY_EXECUTION_FAILED"), eq("RETRY_EXECUTION_FAILED"),
             eq(claim.orderId()), eq(2L));
         verify(jdbcTemplate, never()).update(contains("ORDER_REJECTED"), any(Object[].class));
     }
@@ -126,6 +127,7 @@ class OrderExecutionWorkerTest {
     @Test
     @DisplayName("Unexpected failure at the attempt limit rejects as EXECUTION_FAILED")
     void unexpectedFailureAtTheLimitRejects() {
+        when(jdbcTemplate.queryForObject(contains("execution_attempts - price_waits"), eq(Long.class), any(UUID.class))).thenReturn(3L);
         var claim = lockedClaim(3);
         when(orderExecutor.execute(claim.orderId())).thenReturn(null);
 

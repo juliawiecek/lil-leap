@@ -43,6 +43,7 @@ export interface OrderReview {
   tolerancePercent: number;
   /** Empty while the market is open; otherwise when it opens, e.g. "14:30". */
   opensAt: string;
+  limitPrice?: number;
 }
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -57,12 +58,14 @@ export function usd(amount: number): string {
  * fills at the open (14:30)". A sell names the least it will fill for.
  */
 export function orderReviewSummary(review: OrderReview): string {
-  const estimate = review.quantity * review.price;
+  const estimate = review.quantity * (review.limitPrice ?? review.price);
   const moved = estimate * (review.tolerancePercent / 100);
   const bound = review.side === 'Buy'
     ? `fills at up to ${usd(estimate + moved)}`
     : `fills at no less than ${usd(Math.max(0, estimate - moved))}`;
-  const parts = [`${review.side} ${review.quantity} ${review.symbol}`, `about ${usd(estimate)}`, bound];
+  const parts = review.limitPrice === undefined
+    ? [`${review.side} ${review.quantity} ${review.symbol}`, `about ${usd(estimate)}`, bound]
+    : [`${review.side} ${review.quantity} ${review.symbol}`, `limit ${usd(review.limitPrice)} per share`, `estimated ${usd(estimate)}`, 'remains open until filled or cancelled'];
   if (review.opensAt) {
     parts.push(`market closed, fills at the open (${review.opensAt})`);
   }
