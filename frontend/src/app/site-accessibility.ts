@@ -1,9 +1,10 @@
+import { glossaryHint } from './glossary';
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { AccessibilityStore } from './accessibility';
 import { BRIEFING_RATES, BriefingService } from './briefing-button';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { ToastService } from './toasts';
 import { voiceText } from './speech-text';
 import { AssistiveController } from '../../../shared/assistive-controller';
@@ -45,7 +46,7 @@ export class SiteAccessibility {
     // leave a switch user with a silent ring until they found the setting again (PS-19).
     stopScanningSpeech: () => this.scan.hush(),
     // $, %, + and marks such as ★ and × are said as words or left out, never read literally.
-    format: voiceText,
+    format: voiceText, hint: glossaryHint,
   });
   private started = false;
   constructor() {

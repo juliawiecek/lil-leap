@@ -49,7 +49,7 @@ import { orderReadBack } from './order-read-back';
 import { spokenCompany } from './briefing';
 import { briefingOrders } from './briefing';
 import { spokenQuote } from './speech-text';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { FocusAfterChange } from './focus-after-change';
 import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';

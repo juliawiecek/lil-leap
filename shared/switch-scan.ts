@@ -1,9 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { accessibilityStore } from './accessibility';
-import { sayNow } from './captions';
-import { speakable } from './speech-text';
-import { soundCuePlayer } from './sound-cue-player';
-import { speechCoordinator } from '../../../shared/speech-coordinator';
+import { scanStore, scanFormat, scanCues, scanSayNow } from './switch-scan-options';
+import { speechCoordinator } from './speech-coordinator';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff
@@ -121,6 +118,7 @@ export type ScanItem =
   | { kind: 'pause' };
 
 export interface ScanEngineOptions {
+  format?: (text: string) => string;
   intervalMs?: number;
   key?: ScanKey;
   /** Read each item aloud as the ring reaches it. */
@@ -141,7 +139,7 @@ export interface ScanEngineOptions {
 }
 
 const FOCUSABLE =
-  'button, a[href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+  '[role="option"], button, a[href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
 const CLICKED_INPUTS = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'image', 'color', 'range', 'file']);
 const NUMBER_ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']];
 const LETTER_ROWS = [
@@ -150,6 +148,11 @@ const LETTER_ROWS = [
   ['M', 'N', 'O', 'P', 'Q', 'R'],
   ['S', 'T', 'U', 'V', 'W', 'X'],
   ['Y', 'Z', 'Space', '⌫'],
+  ['0', '1', '2', '3', '4'],
+  ['5', '6', '7', '8', '9'],
+  ['@', '.', '-', '_', '!', '#'],
+  ['$', '%', '&', '*', '+', '='],
+  ['?', '/', ':', ';', String.fromCharCode(39), '~'],
 ];
 
 /** Component hosts styled `display: contents` draw no box of their own; their children do. */
@@ -219,6 +222,7 @@ function shownText(el: HTMLElement): string {
 export function spokenItem(el: HTMLElement): string {
   const label = el.getAttribute('data-speak') || scanLabel(el, Number.POSITIVE_INFINITY);
   const field = el as HTMLInputElement;
+  if (el.matches('input[type="password"], [autocomplete="current-password"], [autocomplete="new-password"]')) return `${label}, ${field.value.length} characters`;
   if (el.tagName === 'INPUT' && field.type === 'checkbox') {
     return `${label}, ${field.checked ? 'on' : 'off'}`;
   }
@@ -242,6 +246,7 @@ export class ScanEngine {
   speak: boolean;
   backEveryMs: number;
   pauseEveryMs: number;
+  readonly #format: (text: string) => string;
   readonly #doc: Document;
   readonly #isVisible: (el: HTMLElement) => boolean;
   readonly #onTurnOff: () => void;
@@ -279,6 +284,7 @@ export class ScanEngine {
   #frame: number | undefined;
 
   constructor(doc: Document, options: ScanEngineOptions = {}) {
+    this.#format = options.format ?? (text => text);
     this.#doc = doc;
     this.intervalMs = options.intervalMs ?? DEFAULT_SCAN.intervalMs;
     this.key = options.key ?? DEFAULT_SCAN.key;
@@ -638,12 +644,15 @@ export class ScanEngine {
     // Like a selected field: the first key replaces what was there instead of adding to it.
     let fresh = original !== '';
     const numeric = field.type === 'number';
+    const secret = field.type === 'password' || ['current-password', 'new-password'].includes(field.autocomplete);
+    let caps = false;
+    const displayValue = () => secret ? `${value.length} characters` : value || ' ';
     const pad = this.#makePad(scanLabel(field));
     const display = pad.querySelector('output')!;
-    display.textContent = value || ' ';
+    display.textContent = displayValue();
     const write = (next: string) => {
       value = next;
-      display.textContent = value || ' ';
+      display.textContent = displayValue();
       // A number field drops a value like "1." it cannot parse, so wait for the next digit.
       if (!numeric || !value.endsWith('.')) {
         field.value = value;
@@ -661,18 +670,19 @@ export class ScanEngine {
           fresh = false;
           if (key === '⌫') {
             write(value.slice(0, -1));
-          } else if (key === '.' && value.includes('.')) {
+          } else if (numeric && key === '.' && value.includes('.')) {
             return;
           } else {
-            write(value + (key === 'Space' ? ' ' : numeric ? key : key.toLowerCase()));
+            write(value + (key === 'Space' ? ' ' : numeric || caps ? key : key.toLowerCase()));
           }
-          this.#announce(value ? `${value.split('').join(' ')}` : 'Empty');
+          this.#announce(secret ? `${value.length} characters` : value ? `${value.split('').join(' ')}` : 'Empty');
         });
       }
     }
+    if (!numeric) this.#padButton(this.#padRow(pad, 'Letter case'), 'Caps', 'Caps', () => { caps = !caps; this.#announce(caps ? 'Caps on' : 'Caps off'); });
     const finish = this.#padRow(pad, 'Done or cancel');
     this.#padButton(finish, 'Done', 'Done', () => {
-      field.value = value.replace(/\.$/, '');
+      field.value = numeric ? value.replace(/\.$/, '') : value;
       field.dispatchEvent(new Event('input', { bubbles: true }));
       field.dispatchEvent(new Event('change', { bubbles: true }));
       this.#closePad();
@@ -981,7 +991,7 @@ export class ScanEngine {
   #say(raw: string, queue: boolean, interrupt = false): void {
     const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
     // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
-    const text = this.#picker ? raw : speakable(raw);
+    const text = this.#picker ? raw : this.#format(raw);
     if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
       return;
     }
@@ -1062,9 +1072,11 @@ export class ScanEngine {
  */
 @Injectable({ providedIn: 'root' })
 export class SwitchScanService {
-  readonly #store = accessibilityStore();
+  readonly #store = scanStore();
+  readonly #format = scanFormat();
   readonly settings = signal<ScanSettings>(this.#store.read('switchControl', parseScanSettings));
-  readonly #cues = soundCuePlayer();
+  readonly #cues = scanCues();
+  readonly #sayNow = scanSayNow();
   #engine: ScanEngine | null = null;
 
   constructor() {
@@ -1103,7 +1115,7 @@ export class SwitchScanService {
   /** Says something for the page (a chart summary, an order read-back) while switch control is on. */
   announce(text: string, interrupt = false): void {
     if (this.settings().enabled && this.settings().speak) this.#engine?.say(text, interrupt);
-    else if (this.#store.read('voice', value => (value as { enabled?: boolean } | null)?.enabled === true)) sayNow('order-read-back', text);
+    else if (this.#store.read('voice', value => (value as { enabled?: boolean } | null)?.enabled === true)) this.#sayNow('order-read-back', text);
   }
 
   /** Cuts off the sentence being read without changing any setting (Stop speech, Alt+Shift+X). */
@@ -1117,6 +1129,7 @@ export class SwitchScanService {
    * function that stops listening.
    */
   listenForShortcut(doc: Document = document): () => void {
+    if (new URL(doc.URL).searchParams.get('switch') === 'on') this.update({ enabled: true, speak: true });
     const onKey = (event: KeyboardEvent) => {
       if (!isSwitchControlShortcut(event)) {
         return;
@@ -1133,13 +1146,15 @@ export class SwitchScanService {
     return () => doc.removeEventListener('keydown', onKey, true);
   }
 
+  ngOnDestroy(): void { this.#engine?.stop(); this.#engine = null; }
+
   #start(): void {
     if (typeof document === 'undefined') {
       return;
     }
     const { intervalMs, key, speak, backEverySec, pauseEverySec } = this.settings();
     this.#engine = new ScanEngine(document, {
-      intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
+      format: this.#format, intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
       onTurnOff: () => this.update({ enabled: false }),
       // Each ring move ticks and each keypad clicks (PS-22); the ring and the pad show and say the same.
       onMove: () => this.#cues.play('ring'),

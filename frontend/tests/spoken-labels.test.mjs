@@ -5,7 +5,7 @@ import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { PERIOD_NAMES, chartSummary, spokenChange } = await import('../src/app/chart-speech.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
 const { STOCK_NAMES, speakable, spokenQuote, stockName, voiceText } = await import('../src/app/speech-text.ts');
-const { speechTime, spokenItem } = await import('../src/app/switch-scan.ts');
+const { speechTime, spokenItem } = await import('../../shared/switch-scan.ts');
 const { orderReadBack } = await import('../src/app/order-read-back.ts');
 
 test('an order is read back with side, shares, company, total and how to place it', () => {

@@ -1,4 +1,7 @@
-<section class="glance" aria-label="Today at a glance" [attr.aria-busy]="loading()">
+<!-- Busy only until the first figures arrive: the page re-reads every few seconds, and a region that keeps going busy is skipped by screen readers. -->
+<section class="glance" aria-label="Today at a glance" [attr.aria-busy]="loading() && !summary()" data-scan-group="Today at a glance">
+  <!-- New activity is announced politely, at most once a minute, never on every refresh (PS-29). -->
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ refreshAnnouncement() }}</p>
   <div class="glance-head">
     <div>
       <h1>{{ greeting().split(' ')[0] }} <span class="accent">{{ greeting().split(' ')[1] }}</span></h1>
@@ -68,7 +71,7 @@
 </section>
 
 @if (ranked().length) {
-  <div class="tape" aria-label="Most traded today">
+  <div class="tape">
     <span class="tape-live"><i aria-hidden="true"></i>Most traded</span>
     <div class="tape-window" tabindex="0" role="region" aria-label="Most traded stocks ticker" [class.still]="ranked().length < 4">
       <div class="tape-track" [class.still]="ranked().length < 4">
@@ -85,7 +88,7 @@
 }
 
 <div class="sections">
-  <section class="area" aria-labelledby="trend-title">
+  <section class="area" aria-labelledby="trend-title" data-scan-group="Trades by hour">
     <div class="area-heading">
       <h2 id="trend-title">Trades by hour</h2>
       <span class="muted">{{ count(tradesToday()) }} {{ plural(tradesToday(), 'trade') }} · Central time</span>
@@ -111,14 +114,15 @@
     <app-insights-chart-access #hourlyAccess id="insights-hourly" label="Trades per hour today, Central time" [summary]="hourlyDescription()" [table]="hourlyTable()" [context]="summary()?.date ?? ''" />
   </section>
 
-  <section class="area" aria-labelledby="top-title">
+  <section class="area" aria-labelledby="top-title" data-scan-group="Top traded today">
     <div class="area-heading">
       <h2 id="top-title">Top traded today</h2>
       <span class="muted">Share of today’s trades</span>
     </div>
-    <div class="top-body ranking-graphic" role="img" tabindex="0" aria-label="Most traded stocks today" aria-describedby="insights-top-summary" (focus)="rankingAccess.focusSummary()" (blur)="rankingAccess.focused.set(false)">
+    <!-- Not one role="img": that would hide the table and its scroll region inside it from screen readers. The ring is the picture; the table is read as a table. -->
+    <div class="top-body">
       @if (ranked().length) {
-        <div class="ring" aria-hidden="true">
+        <div class="ring ranking-graphic" role="img" tabindex="0" [attr.aria-label]="'Most traded stocks today: the top ' + arcs().length + ' hold ' + topShare() + ' percent of trades.'" aria-describedby="insights-top-summary" (focus)="rankingAccess.focusSummary()" (blur)="rankingAccess.focused.set(false)">
           <svg viewBox="0 0 42 42">
             <circle class="ring-track" cx="21" cy="21" r="15.9155" />
             @for (arc of arcs(); track $index) {
@@ -129,14 +133,14 @@
         </div>
       }
       <div class="table-wrap" tabindex="0" role="region" aria-label="Most traded stocks table">
-        <table aria-hidden="true">
+        <table>
           <caption class="sr-only">Most traded stocks today</caption>
           <thead>
             <tr>
-              <th scope="col">#</th>
+              <th scope="col"><span aria-hidden="true">#</span><span class="sr-only">Rank</span></th>
               <th scope="col">Stock</th>
               <th scope="col" class="numeric">Trades</th>
-              <th scope="col" class="share-cell"><span class="sr-only">Share of today's trades</span></th>
+              <th scope="col" class="share-cell"><span class="sr-only">Share bar</span></th>
               <th scope="col" class="numeric">Share</th>
             </tr>
           </thead>
@@ -144,9 +148,9 @@
             @for (row of ranked(); track row.instrument; let i = $index) {
               <tr>
                 <td class="muted mono">{{ i + 1 }}</td>
-                <td><i class="swatch" [style.background]="row.color"></i><strong>{{ row.instrument }}</strong></td>
+                <td><i class="swatch" [style.background]="row.color" aria-hidden="true"></i><strong>{{ row.instrument }}</strong></td>
                 <td class="numeric mono">{{ count(row.tradeCount) }}</td>
-                <td class="share-cell"><span class="share-bar"><i [style.width.%]="(row.tradeCount / topMax()) * 100" [style.background]="row.color"></i></span></td>
+                <td class="share-cell"><span class="share-bar" aria-hidden="true"><i [style.width.%]="(row.tradeCount / topMax()) * 100" [style.background]="row.color"></i></span></td>
                 <td class="numeric mono muted">{{ row.share.toFixed(1) }}%</td>
               </tr>
             } @empty {

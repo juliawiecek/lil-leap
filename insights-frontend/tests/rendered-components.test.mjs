@@ -23,7 +23,8 @@ test('chart renders empty state, binds points, and exposes values on keyboard fo
   assert.match(fixture.nativeElement.textContent, /No observations/);
   fixture.componentRef.setInput('points', [{ label: '2026-09-01', value: 1234 }, { label: '2026-09-02', value: 2500 }]);
   fixture.componentRef.setInput('label', 'Filtered volume'); fixture.detectChanges();
-  assert.equal(fixture.nativeElement.querySelector('svg').getAttribute('aria-label'), 'Filtered volume');
+  assert.match(fixture.nativeElement.querySelector('svg').getAttribute('aria-label'),
+    /^Filtered volume\. Line chart, 2 points from 2026-09-01 to 2026-09-02, lowest \$1,234\.00, highest \$2,500\.00\./);
   const svg = fixture.nativeElement.querySelector('svg');
   const points = fixture.nativeElement.querySelectorAll('circle[aria-hidden="true"]'); assert.equal(points.length, 2);
   assert.equal(fixture.nativeElement.querySelectorAll('circle[tabindex]').length, 0, 'one chart focus stop avoids descendants hidden by role=img');

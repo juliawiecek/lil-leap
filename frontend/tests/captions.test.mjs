@@ -7,7 +7,7 @@ const { CAPTION_HOLD_MS, CaptionBar, CaptionService, captionTime, parseCaptionSe
 const { CaptionSettingsCard } = await import('../src/app/caption-settings.ts');
 const { AccessibilitySettings } = await import('../src/app/accessibility-settings.ts');
 const { SpeechCoordinator, speechCoordinator } = await import('../../shared/speech-coordinator.ts');
-const { ScanEngine } = await import('../src/app/switch-scan.ts');
+const { ScanEngine } = await import('../../shared/switch-scan.ts');
 const { BriefingService } = await import('../src/app/briefing-button.ts');
 const { ACCESSIBILITY_STORAGE_KEY } = await import('../src/app/accessibility.ts');
 

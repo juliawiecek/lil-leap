@@ -93,6 +93,18 @@ export class ClientsPage {
     const first = page.page * page.size + 1;
     return `${COUNT.format(first)}–${COUNT.format(first + page.content.length - 1)} of ${COUNT.format(page.totalElements)}`;
   });
+  /** The result count read out after each search or filter (PS-29), e.g. "Showing 1–25 of 312 accounts." */
+  readonly resultsAnnouncement = computed(() => {
+    const page = this.result();
+    if (this.loading() || !page) {
+      return '';
+    }
+    if (!page.totalElements) {
+      return this.filtered() ? 'No accounts match these filters.' : 'No client accounts yet.';
+    }
+    const noun = page.totalElements === 1 ? 'account' : 'accounts';
+    return page.totalPages > 1 ? `Showing ${this.range()} ${noun}.` : `${this.count(page.totalElements)} ${noun}.`;
+  });
   private request = 0;
   private searchTimer?: ReturnType<typeof setTimeout>;
   private destroyed = false;

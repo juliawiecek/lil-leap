@@ -1,7 +1,7 @@
 import { ChartVoice } from './chart-voice';
 import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
-import { SwitchScanSettings } from './switch-scan-settings';
+import { SwitchScanSettings } from '../../../shared/switch-scan-settings';
 import { ColourModeStore } from './colour-mode';
 import { AssistiveSettings } from './assistive-tools';
 import { LivePricesSettingsCard } from './live-prices-settings';

@@ -1,3 +1,5 @@
+import { SWITCH_SCAN_STORE } from '../../../shared/switch-scan-options';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
@@ -15,11 +17,12 @@ function saved(): { voice?: unknown; visual?: unknown } {
 }
 @Injectable({ providedIn: 'root' })
 export class SiteAccessibility {
-  private readonly values = signal(saved());
+  private readonly store = inject(SWITCH_SCAN_STORE);
+  private readonly scan = inject(SwitchScanService);
   private readonly router = inject(Router, { optional: true });
   private readonly destroy = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
-  readonly settings = computed(() => parseAssistivePreferences(this.values().voice, this.values().visual));
+  readonly settings = computed(() => parseAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v)));
   readonly status = signal('');
   readonly loginPage = signal(false);
   readonly speaking = signal(false);
@@ -31,7 +34,7 @@ export class SiteAccessibility {
   readonly controller = new AssistiveController(this.document, {
     settings: () => this.settings(), status: text => this.status.set(text),
     state: (active, paused) => { this.speaking.set(active); this.paused.set(paused); },
-    voices: voices => this.voices.set(voices),
+    voices: voices => this.voices.set(voices), scanning: () => this.scan.settings().enabled, stopScanningSpeech: () => this.scan.hush(),
   });
   private started = false;
   constructor() { effect(() => { this.settings(); this.controller.apply(); }); }
@@ -51,9 +54,8 @@ export class SiteAccessibility {
   }
   openSettings(): void { void this.router?.navigate(['/settings']); }
   update(patch: Partial<AssistivePreferences>): void {
-    const next = mergeAssistivePreferences(this.values().voice, this.values().visual, patch);
-    this.values.set({ ...this.values(), ...next });
-    try { globalThis.localStorage?.setItem(INSIGHTS_ACCESSIBILITY_KEY, JSON.stringify(this.values())); } catch {}
+    const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
+    this.store.write('voice', next.voice); this.store.write('visual', next.visual);
     if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) { speechCoordinator.stop(owner); } }
   }
 }

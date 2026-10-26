@@ -40,7 +40,7 @@ import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { briefingOrders } from './briefing';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';
 import { OrderAnnouncements } from './order-announcements';

@@ -52,9 +52,10 @@
       <div class="charts">
         <figure class="chart">
           <figcaption><b>Allocation</b><span>by cost basis</span></figcaption>
+          <app-insights-chart-access #allocationAccess id="client-allocation" label="Allocation by cost basis" [summary]="allocationSummary()" [table]="allocationTable()" />
           @if (allocation().length) {
             <div class="allocation">
-              <svg viewBox="0 0 148 148" role="img" [attr.aria-label]="'Allocation by cost basis; largest holding ' + percent(largestShare())">
+              <svg viewBox="0 0 148 148" role="img" tabindex="0" aria-label="Allocation by cost basis" aria-describedby="client-allocation-summary" (focus)="allocationAccess.focusSummary()" (blur)="allocationAccess.focused.set(false)">
                 <circle class="track" cx="74" cy="74" [attr.r]="ringRadius" />
                 @for (slice of allocation(); track slice.symbol) {
                   <circle cx="74" cy="74" [attr.r]="ringRadius" [attr.stroke]="slice.color" [attr.stroke-dasharray]="slice.dash" [attr.stroke-dashoffset]="slice.offset" transform="rotate(-90 74 74)" />
@@ -84,7 +85,7 @@
           } @else if (flows().length) {
             <div class="flows">
               @for (row of flows(); track row.symbol) {
-                <div class="flow" [attr.aria-label]="row.symbol + ': bought ' + money(row.bought) + ', sold ' + money(row.sold)">
+                <div class="flow" role="img" [attr.aria-label]="row.symbol + ': bought ' + money(row.bought) + ', sold ' + money(row.sold)">
                   <b>{{ row.symbol }}</b>
                   <span class="side sell"><i [style.width.%]="row.soldWidth"></i></span>
                   <span class="side buy"><i [style.width.%]="row.boughtWidth"></i></span>
@@ -106,7 +107,7 @@
           <h2 id="holdings-title">Holdings</h2>
           <span>Average cost of the shares still held</span>
         </div>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Holdings table">
           <table>
             <caption class="sr-only">Stocks this account holds</caption>
             <thead>
@@ -161,7 +162,7 @@
           <span class="balance-bar" aria-hidden="true"><i class="buy" [style.flex-grow]="b.bought"></i><i class="sell" [style.flex-grow]="b.sold"></i></span>
         }
       }
-      <form class="order-tools" role="search" method="get" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
+      <form class="order-tools" role="search" aria-label="Find an order" method="get" data-scan-group="Find an order" (submit)="$event.preventDefault(); filterOrders({ search: $any(orderSearch).value })">
         <label class="search"
           ><span class="sr-only">Find an order</span
           ><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg
@@ -185,7 +186,7 @@
       }
       <section class="order-list" aria-labelledby="orders-title" [attr.aria-busy]="ordersLoading()">
         <h2 id="orders-title" class="sr-only">Filled orders</h2>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Filled orders table">
           <table>
             <caption class="sr-only">Orders for account {{ d.account.accountNumber }}, newest first</caption>
             <thead>

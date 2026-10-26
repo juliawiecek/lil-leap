@@ -501,7 +501,7 @@ test('choosing a chart period says where the portfolio started and where it is n
 });
 
 test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
-  const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+  const { SwitchScanService } = await import('../../shared/switch-scan.ts');
   const said = [];
   const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
   const { desk } = await tradingDesk(t, { providers: [{ provide: SwitchScanService, useValue: scan }] });

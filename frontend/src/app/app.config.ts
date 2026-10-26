@@ -9,20 +9,28 @@ import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, ErrorHandler, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { SafeErrorHandler } from './safe-error-handler';
 import { provideAccessibility, provideAccessibilityStartup } from './accessibility';
+import { AccessibilityStore } from './accessibility';
+import { speakable } from './speech-text';
+import { SWITCH_SCAN_STORE, SWITCH_SCAN_FORMAT, SWITCH_SCAN_CUES, SWITCH_SCAN_SAY_NOW } from '../../../shared/switch-scan-options';
 import { provideColourMode } from './colour-mode';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { PageTitleStrategy } from './page-title';
 import { SiteAccessibility } from './site-accessibility';
-import { CaptionService } from './captions';
+import { SoundCuePlayer } from './sound-cue-player';
+import { CaptionService, sayNow } from './captions';
 import { listenForGlossary } from './glossary';
 
 import { speechCoordinator } from '../../../shared/speech-coordinator';
 import { BriefingService } from './briefing-button';
-import { SwitchScanService as WarningScanner } from './switch-scan';
+import { SwitchScanService as WarningScanner } from '../../../shared/switch-scan';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: SESSION_WARNING_ANNOUNCE, useFactory: () => { const voice = inject(SiteAccessibility); const briefing = inject(BriefingService); const scan = inject(WarningScanner); return (text: string) => { briefing.stop(); speechCoordinator.stop(); if (speechCoordinator.supported && (voice.settings().enabled || scan.settings().enabled)) { const utterance = new SpeechSynthesisUtterance(text); speechCoordinator.submit('session-warning', utterance, { interrupt: true, defaultVoice: true }); } }; } },
+    { provide: SWITCH_SCAN_CUES, useExisting: SoundCuePlayer },
+    { provide: SWITCH_SCAN_SAY_NOW, useValue: sayNow },
+    { provide: SWITCH_SCAN_STORE, useExisting: AccessibilityStore },
+    { provide: SWITCH_SCAN_FORMAT, useValue: speakable },
     { provide: SESSION_AUTH, useExisting: AuthService },
     provideRouter(routes),
     // Every page sets its own tab title, "Portfolio · NextTrade" (PS-20).
