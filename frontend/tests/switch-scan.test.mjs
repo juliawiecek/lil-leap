@@ -563,3 +563,20 @@ test('the switch setting name includes its visible On/Off state', async t => {
  const fixture = await render(t, SwitchScanSettings); const button = fixture.nativeElement.querySelector('button.scan-toggle');
  assert.match(button.getAttribute('aria-label'), /Switch control Off/); button.click(); fixture.detectChanges(); assert.match(button.getAttribute('aria-label'), /Switch control On/);
 });
+
+test('one switch can enter email and password through the keypad and submit sign-in', t => {
+ const engine = setup(t); doc.body.innerHTML = '<form><label>Email<input type="email"></label><label>Password<input type="password"></label><button type="button">Sign in</button></form>';
+ let signedIn; doc.querySelector('button').onclick = () => signedIn = [...doc.querySelectorAll('input')].map(field => field.value);
+ const type = (name, text) => {
+  choose(engine, 'control:' + name);
+  for (const char of text) {
+   const key = [...doc.querySelectorAll('.scan-pad button')].find(button => button.textContent.toLowerCase() === char);
+   const row = key.closest('[data-scan-group]').getAttribute('data-scan-group');
+   choose(engine, 'group:' + row, 'control:' + key.getAttribute('aria-label'));
+   choose(engine, 'back');
+  }
+  choose(engine, 'group:Done or cancel', 'control:Done');
+ };
+ type('Email', 'a@b.co'); type('Password', 'a1!'); choose(engine, 'control:Sign in');
+ assert.deepEqual(signedIn, ['a@b.co', 'a1!']);
+});

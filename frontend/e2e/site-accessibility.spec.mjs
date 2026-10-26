@@ -272,3 +272,28 @@ test('registration, recovery and reset forms pass axe', async ({ page }, info) =
   await audit(page, 'forgot-password', info);
   await page.goto('/reset-password?token=test-token'); await audit(page, 'reset-password', info);
 });
+
+for (const tier of ['NOVICE', 'ADVANCED']) {
+ test(`${tier} order reviews and account dialogs pass axe`, async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
+  await colourFixture(page, tier); await mockSpeech(page);
+  await page.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname.endsWith('/accounts')) return route.fulfill({json:[uuid, '00000000-0000-4000-8000-000000000002'].map((id,i)=>({account_id:id, account_name:i?'Savings':'Trading',account_status:'ACTIVE',trading_enabled:true,trader_level:tier,available_cash:4500}))});
+    await route.fallback();
+  });
+  await page.goto('/dashboard');
+  if (tier === 'NOVICE') {
+   await page.locator('.trade-actions').getByRole('button',{name:'Buy',exact:true}).click();
+   await page.getByLabel('Number of shares', {exact:true}).fill('1');
+   await page.getByRole('button',{name:'Review buy',exact:true}).click();
+  } else {
+   await page.getByLabel('Quantity',{exact:true}).fill('1');
+   await page.getByRole('button',{name:'Review Order',exact:true}).click();
+  }
+  await expect(page.locator('dialog[open]')).toHaveCount(1); await audit(page, tier+'-order-review', info); await page.keyboard.press('Escape');
+  for (const name of ['Add account','Transfer funds']) {
+   await page.locator('.switcher-trigger').click(); await page.getByRole('button',{name:new RegExp(name)}).click();
+   await expect(page.locator('dialog[open]')).toHaveCount(1); await audit(page, tier+'-'+name, info); await page.keyboard.press('Escape');
+  }
+ });
+}
