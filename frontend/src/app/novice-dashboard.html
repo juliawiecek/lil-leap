@@ -155,7 +155,7 @@
                     }
                   </div>
                   <div class="portfolio-gain" [class.up]="chartChangeAvailable() && headerChange().amount > 0" [class.down]="chartChangeAvailable() && headerChange().amount < 0">
-                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Change unavailable } } @else { •••••• }</strong
+                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { @if (showBalance()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Hidden } } @else { Change unavailable } } @else { •••••• }</strong
                     ><span>{{ chartChangeAvailable() ? headerChange().label : (chartLoading() ? 'Loading history' : '') }}</span>
                   </div>
                 </div>
@@ -187,11 +187,11 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
+                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { @if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { Hidden } } @else { •••••• }</strong>
                 </div>
                 <div data-glossary="total-return">
                   <span>Total return</span
-                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
+                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { @if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { Hidden } } @else { •••••• }</strong>
                 </div>
               </div>
             </section>
@@ -264,14 +264,14 @@
                             </button>
                           </td>
                           <td>
-                            <span class="cell-main">{{ holding.value | currency }}</span><span class="cell-sub">{{ holding.shares | number: '1.3-3' }} shares</span>
+                            <span class="cell-main">{{ showBalance() ? (holding.value | currency) : 'Hidden' }}</span><span class="cell-sub">{{ holding.shares | number: '1.3-3' }} shares</span>
                           </td>
-                          <td>{{ holding.average | currency }}</td>
+                          <td>{{ showBalance() ? (holding.average | currency) : 'Hidden' }}</td>
                           <td [class.positive]="holding.today > 0" [class.negative]="holding.today < 0">
-                            <app-financial-change [value]="holding.today" unit="currency" /><span><app-financial-change [value]="holding.change" unit="percent" /></span>
+                            @if (showBalance()) { <app-financial-change [value]="holding.today" unit="currency" /> } @else { Hidden }<span><app-financial-change [value]="holding.change" unit="percent" /></span>
                           </td>
                           <td [class.positive]="holding.total > 0" [class.negative]="holding.total < 0">
-                            <app-financial-change [value]="holding.total" unit="currency" /><span
+                            @if (showBalance()) { <app-financial-change [value]="holding.total" unit="currency" /> } @else { Hidden }<span
                               ><app-financial-change [value]="holding.totalPercent" unit="percent" /></span
                             >
                           </td>
@@ -526,7 +526,7 @@
       <div class="trade-chart-price">
         <div class="trade-chart-value">{{ stockChartPrice() | currency }}</div>
         <div class="portfolio-gain" [class.up]="stockChartChange().amount > 0" [class.down]="stockChartChange().amount < 0">
-          <strong>@if (stockChartChangeAvailable()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Change unavailable }</strong
+          <strong>@if (stockChartChangeAvailable()) { @if (showBalance()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Hidden } } @else { Change unavailable }</strong
           ><span>{{ stockChartChange().label }}</span>
         </div>
       </div>
