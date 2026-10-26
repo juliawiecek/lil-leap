@@ -137,7 +137,7 @@ export class ToastService {
 export class Toasts {
   readonly service = inject(ToastService);
   readonly view = output<void>();
-  readonly #host = inject(ElementRef<HTMLElement>, { optional: true });
+  readonly #host: ElementRef<HTMLElement> | null = inject(ElementRef, { optional: true });
   #anchor?: Comment;
   #observer?: MutationObserver;
   leaveFocus(event: FocusEvent, id: number): void {
@@ -154,7 +154,7 @@ export class Toasts {
       this.service.modalChanged();
     };
     const Observer = host.ownerDocument.defaultView!.MutationObserver;
-    this.#observer = new Observer(move); this.#observer.observe(host.ownerDocument, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] }); move();
+    const observer = new Observer(move); this.#observer = observer; observer.observe(host.ownerDocument, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] }); move();
   }
   ngOnDestroy(): void { this.#observer?.disconnect(); this.#anchor?.remove(); }
 

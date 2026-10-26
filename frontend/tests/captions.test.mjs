@@ -209,7 +209,7 @@ test('the strip passes AA contrast in every colour mode, grows with zoom and cle
   }
   assert.match(css, /html\.has-captions dialog:modal \{[^}]*bottom: var\(--caption-offset/);
   assert.match(css, /html\.has-captions :is\(app-novice-dashboard, app-advanced-dashboard\) \{[^}]*padding-bottom: var\(--caption-offset/);
-  const scan = readFileSync(new URL('../src/switch-scan.scss', import.meta.url), 'utf8');
+  const scan = readFileSync(new URL('../../shared/switch-scan.scss', import.meta.url), 'utf8');
   assert.match(scan, /\.scan-bar \{[^}]*bottom: calc\(16px \+ var\(--caption-offset, 0px\)\)/);
   assert.match(scan, /\.scan-pad \{[^}]*bottom: calc\(24px \+ var\(--caption-offset, 0px\)\)/);
   const toasts = readFileSync(new URL('../src/app/toasts.ts', import.meta.url), 'utf8');

@@ -266,7 +266,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
 test('registration, recovery and reset forms pass axe', async ({ page }, info) => {
   test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
   await page.goto('/login'); await audit(page, 'sign-in', info);
-  await page.getByRole('button', { name: /Create account/i }).click();
+  await page.getByRole('tab', { name: /Create account/i }).click();
   await audit(page, 'registration', info);
   await page.goto('/login'); await page.getByRole('button', { name: /Forgot password/i }).click();
   await audit(page, 'forgot-password', info);
