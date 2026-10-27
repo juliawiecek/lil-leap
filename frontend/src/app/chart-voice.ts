@@ -1,8 +1,23 @@
 import { Injectable, computed, effect, inject } from '@angular/core';
 import { AccessibilityStore } from './accessibility';
-import { SwitchScanService } from './switch-scan';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { ChartNarrator } from '../../../shared/chart-narrator';
 import { speakable } from './speech-text';
+
+/**
+ * Whether charts show their Explain this chart and Show as table buttons. Off until turned on in
+ * Settings > Accessibility, so the dashboards stay uncluttered; every chart still has its summary
+ * for screen readers, and D and T on a focused chart still explain it and show its table.
+ */
+@Injectable({ providedIn: 'root' })
+export class ChartTools {
+  readonly #store = inject(AccessibilityStore);
+  readonly shown = computed(() => this.#store.read('charts', value => (value as { tools?: unknown } | null)?.tools === true));
+  setShown(shown: boolean): void {
+    const saved = this.#store.read('charts', v => v && typeof v === 'object' ? v : {});
+    this.#store.write('charts', { ...saved, tools: shown });
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class ChartVoice {
@@ -42,7 +57,7 @@ export class ChartVoice {
     const navigationVoice = this.#store.read('voice', v => v as { enabled?: boolean; focus?: boolean; rate?: number } | null);
     if (!requested && navigationVoice?.enabled && navigationVoice.focus) { return; }
     this.#owner = owner;
-    const rate = navigationVoice?.enabled ? navigationVoice.rate || 1 : this.#store.read('briefing', v => Number((v as { rate?: number } | null)?.rate) || 1);
+    const rate = this.#store.read('briefing', v => Number((v as { rate?: number } | null)?.rate) || navigationVoice?.rate || 1);
     this.narrator.speak(speakable(text), owner, rate);
   }
   stop(owner: string): void {

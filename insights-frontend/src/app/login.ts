@@ -1,3 +1,4 @@
+import { SwitchScanToggle } from '../../../shared/switch-scan-toggle';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { signedOutMessage } from '@lilleap/session-core/core';
@@ -10,6 +11,7 @@ import { homePath } from './roles';
 /** Insights sign-in, laid out like the NextTrade sign-in; only analyst and operations staff get in. */
 @Component({
   selector: 'app-insights-login',
+  imports: [SwitchScanToggle],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })

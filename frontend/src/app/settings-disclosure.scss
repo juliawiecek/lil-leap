@@ -1,0 +1,14 @@
+// The caret that tucks a Settings > Accessibility card's fine-tuning away, so each card shows only its main choice.
+details.more > summary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
+  color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; list-style: none;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before {
+  content: ''; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg); transition: transform .15s;
+}
+details.more[open] > summary { margin-bottom: 10px; }
+details.more[open] > summary::before { transform: rotate(45deg); }
+details.more > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { details.more > summary::before { transition: none; } }

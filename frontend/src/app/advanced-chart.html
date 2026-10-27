@@ -1,8 +1,9 @@
 <div class="live-stock-panel">
-<app-retail-stock-dashboard [selectedAsset]="asset()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [privateValues]="desk().privateBalance()" />
+<app-retail-stock-dashboard [selectedAsset]="asset()" [trades]="desk().tradeMarks()" [averageCost]="desk().privateBalance() ? null : desk().averageCost()" [privateValues]="desk().privateBalance()" />
 <details class="historical-chart">
 <summary>Trade history and long-range chart</summary>
-<section class="panel chart-panel" aria-label="Stock price chart">
+<section class="panel chart-panel" aria-labelledby="advanced-chart-title">
+  <h2 class="sr-only" id="advanced-chart-title">Price chart</h2>
   <div class="chart-toolbar">
     <span class="chart-company"><b>{{ desk().selected().symbol }}</b>{{ desk().selected().name }}</span
     ><strong class="quote-price">@for (t of [desk().tickOf(desk().selected().symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ desk().selected().price | currency }}</app-price-flash>}</strong
@@ -13,7 +14,7 @@
     @if (desk().tradeMarks().length) {
       <p class="trade-summary">
         Your trades: {{ desk().tradeMarks().length }}
-        @if (desk().averageCost(); as cost) {
+        @if (!desk().privateBalance() && desk().averageCost(); as cost) {
           · average cost <b>{{ cost | currency }}</b>
         }
         @if (desk().tradesOutsidePeriod()) {
@@ -36,7 +37,7 @@
   </div>
   @if (desk().historyLoading()) { <p class="chart-note" role="status">Loading recorded prices...</p> }
   @if (desk().historyError()) { <p class="chart-note" role="status">{{ desk().historyError() }}</p> }
-  <app-technical-chart [privateValues]="desk().privateBalance()" [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
+  <app-technical-chart [privateValues]="desk().privateBalance()" [points]="desk().priceHistory()" [window]="desk().chartWindow()" [trades]="desk().tradeMarks()" [averageCost]="desk().privateBalance() ? null : desk().averageCost()" [symbol]="desk().selected().symbol" [period]="desk().period()" [chartKey]="desk().selected().symbol + '|' + desk().period()" />
   @if (!desk().priceLine()) { <p class="chart-note">Collecting recorded prices for {{ desk().selected().symbol }}.</p> }
 
 </section>

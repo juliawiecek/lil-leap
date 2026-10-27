@@ -1,4 +1,4 @@
-import { describeSeries, seriesPoints, seriesTable, type SeriesPoint, type ChartTable } from '../../../../shared/chart-description';
+import { chartValue, describeSeries, seriesPoints, seriesTable, type SeriesPoint, type ChartTable } from '../../../../shared/chart-description';
 import { InsightsChartAccess } from './insights-chart-access';
 import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -18,7 +18,7 @@ export interface ChartPoint {
   selector: 'app-insights-chart',
   imports: [DecimalPipe, InsightsChartAccess],
   template: ` @if (plotPoints().length) {
-      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [style.height.px]="height()" role="img" [attr.aria-label]="label()" tabindex="0" [attr.aria-describedby]="id + '-summary'" (focus)="focusSummary()" (blur)="blurChart()" (keydown)="inspectKey($event)">
+      <svg [attr.viewBox]="'0 0 ' + width() + ' ' + height()" [style.height.px]="height()" role="img" [attr.aria-label]="accessibleName()" tabindex="0" [attr.aria-describedby]="id + '-summary'" (focus)="focusSummary()" (blur)="blurChart()" (keydown)="inspectKey($event)">
         @for (tick of yTicks(); track tick) {
           <line x1="54" [attr.x2]="right()" [attr.y1]="y(tick)" [attr.y2]="y(tick)" stroke="var(--line)" />
           <text x="44" [attr.y]="y(tick) + 4" text-anchor="end">
@@ -71,7 +71,10 @@ export interface ChartPoint {
           />
         }
       </svg>
-      <div class="chart-readout" aria-live="polite">
+      <!-- Everything inside an svg with role="img" is hidden from screen readers, so the point the
+           arrow keys land on is read out here instead, and only for keyboard moves, not hovering. -->
+      <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ pointAnnouncement() }}</p>
+      <div class="chart-readout" aria-hidden="true">
         @if (active() !== null && plotPoints()[active()!]; as p) {
           <span>{{ p.label }}</span>
           @if (p.note) {
@@ -108,14 +111,7 @@ export interface ChartPoint {
       line {
         opacity: 0.65;
       }
-      /* No browser focus box: clicking a point would draw a square over the line. Keyboard focus gets a round ring. */
-      circle:focus {
-        outline: none;
-      }
-      circle:focus-visible {
-        stroke: var(--accent);
-        stroke-width: 2px;
-      }
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
       .chart-readout {
         min-height: 28px;
         display: flex;
@@ -169,16 +165,41 @@ export class InsightsChart {
     return { ...table, columns: [...table.columns, 'Order details'],
       rows: table.rows.map((row, index) => [...row, this.plotPoints()[index]?.note ?? '']) };
   }
+  /** A value as it is read out: "$1,524.46", "12 trades", or a bare count after the value label. */
+  spokenValue(value: number, withUnit = !this.valueLabel()): string {
+    const { currency, unit } = this.valueOptions();
+    return chartValue(value, { currency, unit: withUnit ? unit : undefined, precision: 2 });
+  }
+  /**
+   * The chart's accessible name (PS-29): what it shows, how many points it has, their span and
+   * range, and how to explore it. The title alone ("Orders placed today") says nothing about the data.
+   */
+  readonly accessibleName = computed(() => {
+    const points = this.plotPoints();
+    if (!points.length) { return this.label(); }
+    const first = points[0], last = points.at(-1)!;
+    const values = points.map(p => p.value);
+    const span = points.length === 1
+      ? `1 point, ${first.label}: ${this.spokenValue(first.value, true)}`
+      : `${points.length} points from ${first.label} to ${last.label}, lowest ${this.spokenValue(Math.min(...values), true)}, highest ${this.spokenValue(Math.max(...values), true)}`;
+    return `${this.label()}. Line chart, ${span}. Use the arrow keys to read each point.`;
+  });
+  /** What the arrow keys last landed on; read out by the status region beside the chart. */
+  readonly pointAnnouncement = signal('');
   focusSummary(): void { this.access()?.focusSummary(); }
-  blurChart(): void { this.active.set(null); this.access()?.focused.set(false); }
+  blurChart(): void { this.active.set(null); this.pointAnnouncement.set(''); this.access()?.focused.set(false); }
   inspectKey(event: KeyboardEvent): void {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) { return; }
     event.preventDefault();
-    if (event.key === 'Escape') { this.active.set(null); return; }
+    if (event.key === 'Escape') { this.active.set(null); this.pointAnnouncement.set(''); return; }
     const last = this.plotPoints().length - 1;
     if (last < 0) { return; }
     const current = this.active() ?? (event.key === 'ArrowLeft' ? last + 1 : -1);
-    this.active.set(event.key === 'Home' ? 0 : event.key === 'End' ? last : Math.max(0, Math.min(last, current + (event.key === 'ArrowLeft' ? -1 : 1))));
+    const index = event.key === 'Home' ? 0 : event.key === 'End' ? last : Math.max(0, Math.min(last, current + (event.key === 'ArrowLeft' ? -1 : 1)));
+    this.active.set(index);
+    const p = this.plotPoints()[index];
+    const value = this.valueLabel() ? `${this.valueLabel()}: ${this.spokenValue(p.value)}` : this.spokenValue(p.value);
+    this.pointAnnouncement.set(`Point ${index + 1} of ${last + 1}. ${p.label}${p.note ? `, ${p.note}` : ''}. ${value}.`);
   }
 
 

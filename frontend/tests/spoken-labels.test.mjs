@@ -4,8 +4,8 @@ import { render } from './dom-helper.mjs';
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 const { PERIOD_NAMES, chartSummary, spokenChange } = await import('../src/app/chart-speech.ts');
 const { MarketTicker } = await import('../src/app/market-ticker.ts');
-const { STOCK_NAMES, speakable, stockName } = await import('../src/app/speech-text.ts');
-const { speechTime, spokenItem } = await import('../src/app/switch-scan.ts');
+const { STOCK_NAMES, speakable, spokenQuote, stockName, voiceText } = await import('../src/app/speech-text.ts');
+const { speechTime, spokenItem } = await import('../../shared/switch-scan.ts');
 const { orderReadBack } = await import('../src/app/order-read-back.ts');
 
 test('an order is read back with side, shares, company, total and how to place it', () => {
@@ -47,6 +47,36 @@ test('symbols, arrows and bullets are not read literally', () => {
   assert.equal(speakable('Price protection 2%'), 'Price protection 2%');
   assert.equal(speakable('Loading…'), 'Loading');
   assert.equal(speakable('Open · Closes 3:00 PM CT'), 'Open, Closes 3:00 PM CT', 'other capitals are left alone');
+});
+
+test('a hidden balance is said as hidden, never as the end of an account number', () => {
+  assert.equal(speakable('Total portfolio value ••••••••'), 'Total portfolio value hidden');
+  assert.equal(speakable('3 positions · •••••• invested'), '3 positions, hidden invested');
+  assert.equal(speakable('account ••B3B9'), 'account, ending in B3B9', 'an account ending is unchanged');
+});
+
+test('voice mode says $, %, + and marks such as ★ and × as words or leaves them out (PS-22)', () => {
+  assert.equal(voiceText('AAPL +1.20%'), 'Apple up 1.20 percent');
+  assert.equal(voiceText('Today −$4.10 (−0.52%)'), 'Today down 4 dollars and 10 cents (down 0.52 percent)');
+  assert.equal(voiceText('Buying power $24,550.68'), 'Buying power 24,550 dollars and 68 cents');
+  assert.equal(voiceText('Total $185.00'), 'Total 185 dollars');
+  assert.equal(voiceText('Price protection 2%'), 'Price protection 2 percent');
+  assert.equal(voiceText('★ Saved'), 'Saved');
+  assert.equal(voiceText('Close ×'), 'Close');
+  assert.equal(voiceText('+ Add account'), 'Add account');
+  assert.equal(voiceText('Level +2'), 'Level plus 2');
+  assert.equal(voiceText('Pay-as-you-go 3-5 days'), 'Pay-as-you-go 3-5 days', 'hyphens inside words and ranges stay');
+  for (const text of ['AAPL $224.52 +0.40%', 'Buy 2 GOOGL · about $450.09', '★ Saved × Close + more %']) {
+    assert.doesNotMatch(voiceText(text), /[$%+★×]/, text);
+  }
+});
+
+test('a stock in a list is said as its name, rounded price and change, then what selecting does', () => {
+  assert.equal(spokenQuote('Apple', 185.2, 1.23), 'Apple, 185 dollars, up 1.2 percent. Select to trade.');
+  assert.equal(spokenQuote('Broadcom', 1234.56, -0.04), 'Broadcom, 1,235 dollars, unchanged. Select to trade.');
+  assert.equal(spokenQuote('Penny', 4.567, -2), 'Penny, 4.57 dollars, down 2.0 percent. Select to trade.');
+  assert.equal(spokenQuote('Apple', 185, 1, true), 'Apple, 185 dollars, up 1.0 percent, price delayed. Select to trade.');
+  assert.equal(spokenQuote('New Listing', 0, 0), 'New Listing, price not available yet.');
 });
 
 test('if the speech engine never says it finished, the ring still moves on, later for longer sentences', () => {
@@ -125,17 +155,25 @@ test('each price on the tape is named by what it shows, and switch control says 
     const shown = [...button.querySelectorAll('strong, .price, .change [aria-hidden="true"]')].map((el) => el.textContent).join(' ');
     assert.equal(bare(labels[i]), bare(shown));
   });
-  // Switch control's voice reads data-speak: company names and the move in words.
+  // Voice mode and switch control read data-speak: company names, rounded prices and the move in
+  // words, then what selecting does (PS-22).
   assert.deepEqual(buttons.map((b) => b.getAttribute('data-speak')), [
-    'Apple, $224.52, up 0.40 percent',
-    'Boeing, $214.93, down 1.25 percent',
-    'Coca-Cola, $61.20, unchanged',
-    'New Listing, price not available yet',
+    'Apple, 225 dollars, up 0.4 percent. Select to trade.',
+    'Boeing, 215 dollars, down 1.3 percent. Select to trade.',
+    'Coca-Cola, 61 dollars, unchanged. Select to trade.',
+    'New Listing, price not available yet.',
   ]);
-  assert.equal(spokenItem(buttons[0]), 'Apple, $224.52, up 0.40 percent');
+  assert.equal(spokenItem(buttons[0]), 'Apple, 225 dollars, up 0.4 percent. Select to trade.');
   feed.quotes.set(feed.quotes().map((q) => ({ ...q, quotedAt: new Date(Date.now() - 10 * 60000).toISOString() })));
   fixture.detectChanges();
   const first = fixture.nativeElement.querySelector('ul button');
   assert.match(first.getAttribute('aria-label'), /, Price delayed$/);
-  assert.match(first.getAttribute('data-speak'), /, price delayed$/);
+  assert.match(first.getAttribute('data-speak'), /, price delayed\. Select to trade\.$/);
+});
+
+test('limit order read-back preserves the exact limit and exit prices', () => {
+ const text = orderReadBack({side:'Buy', quantity:2, symbol:'AAPL', name:'Apple Inc.', total:340.5, closedWarning:'', priceDelayed:false, limitPrice:170.25, takeProfit:180.75, stopLoss:160.12});
+ assert.match(text, /Limit price \$170\.25 per share, or better/);
+ assert.match(text, /Take profit at \$180\.75/);
+ assert.match(text, /Stop loss triggers at \$160\.12/);
 });

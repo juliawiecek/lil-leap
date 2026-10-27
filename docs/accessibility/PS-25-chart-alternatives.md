@@ -9,28 +9,24 @@ ECharts or other chart-library API to wrap. The drawing and data pipelines remai
 
 | Surface | Data and renderer | Alternative |
 | --- | --- | --- |
-| Novice portfolio | `PortfolioChart`, `ValuePoint[]`, real portfolio-history reconstruction and `SvgRangeAnimation` | Summary and table use `displayPoints`, including the recent-hour/full-day choice. Loading/error states have no stale numbers. |
+| Novice portfolio | `PortfolioChart`, `ValuePoint[]`, real portfolio-history reconstruction and `SvgRangeAnimation` | Summary and table use `chartSeries().points`, matching the displayed `plotPoints`, including the recent-hour/full-day choice. Loading/error states have no stale numbers. |
 | Advanced live price and reusable realtime chart | `StockSvgChart`, `StockChartViewport`, authenticated price/history stream | The visible, revealed recorded ticks feed the summary and table. Animation interpolation and pixel reduction do not create observations. |
 | Historical price, candles and indicators | `TechnicalChart`, real `PricePoint[]`, OHLC metadata, EMA 50/200 and bar VWAP | Current viewport prices, genuine high/low, indicators, average-cost comparison and fills. Each trade retains its exact timestamp, including fills between bars. |
 | Historical volume | Native SVG volume bars, display OHLC aggregation | A separate description/table uses the actual displayed volume bars and their start/end times, with an option for every original observation. Missing bars remain explicitly unavailable, distinct from reported zeroes. |
-| Allocation donut | Actual holdings value and cash from `assetAllocation` | Stocks/cash values and percentages; focusable named image, explanation and category table. |
+| Allocation donut | Actual invested holdings grouped by sector from `sectorAllocation` | Sector values and invested percentages; cash is stated separately; focusable named image, explanation and category table. |
 | Exposure graphic | The current UI uses a split bar, not the old ring CSS | Actual equities/cash values and percentages; same alternatives as allocation. |
 | Sector bars (Overview list, Market Overview and Markets) | `AdvancedDashboard.sectors`, equal averages of current listed-stock changes, scaled CSS bars | Per-instance named/focusable graphics, calculated category explanations and exact return tables. These describe comparisons, not a fictional time trend between sectors. |
 | Market performance heat map | First nine current `quotes` in `heatMapQuotes`, native stock-selection buttons and CSS intensity | A named interactive group with linked summary, Explain and table. Each tile's financial graphic has `role="img"` and a linked description. Native button semantics and stock selection are retained. |
 | Insights activity | `InsightsChart`, `LIVE_REPORTS.activityTrend` | Actual hourly labels and trade counts, description, table, focus narration and stored opt-in. |
 | Insights stock ranking bars | `InsightsPage.top`, `LIVE_REPORTS.topInstruments`, bars scaled to the actual busiest stock | A named, focusable graphic with a linked calculated ranking summary, Explain, and a table of exact stock/count/relative-share values. The original visual layout is retained. |
 
-No RSI chart or financial sparkline is rendered in this checkout. These are not replaced with
-mock data. Future renderers can use `describeSeries` and `ChartAccess`. Landing-page Canvas/SVG
+RSI renders from recorded bars when enough history is available, with its own summary and table. No standalone financial sparkline is rendered or replaced with mock data. Future renderers can use `describeSeries` and `ChartAccess`. Landing-page Canvas/SVG
 candles, icon SVGs, and legend samples are decorative rather than financial observations; they
 retain their hidden/inert treatment.
 
 Position-weight bars inside the holdings table and allocation-legend meters repeat adjacent
 exact numeric values. These decorative duplicates stay `aria-hidden`; their underlying table
-or allocation alternatives retain the same information. The learning-path progress element is
-a labelled native `<progress>` control with its actual completed/total lessons, not a financial
-chart. Clients, Client Detail, Reports, Trade Lookup, Activity and order-ticket views contain no
-additional standalone data plots. Old exposure-ring/RSI/sparkline styles are not rendered.
+or allocation alternatives retain the same information. Client Detail allocation provides its own explanation and cost-basis table. Old exposure-ring and standalone sparkline styles are not rendered.
 
 Existing accessibility foundations: PS-17's `AccessibilityStore` and startup hooks, PS-18's
 briefing speed, PS-19's switch scanner and queued speech, PS-27's theme tokens, and PS-28's
@@ -38,14 +34,12 @@ financial formatter, shapes, indicator dashes, hatching, keyboard inspection and
 
 Jira NEXT-244 / PS-24 is the real-data prerequisite, titled **Feed every chart from real data**;
 the story does not define Voice Mode. This branch already supplies its real history/quote/bar,
-holdings and report data. No dedicated full Voice Mode service is present in this checkout.
+holdings and report data. PS-22 supplies Voice mode with Brief/Detailed levels, speech priorities and a shared briefing speed.
 PS-25 integrates the existing `voice` settings section, briefing rate, speech formatter and switch
-scanner, and exposes a stored chart-speech opt-in. It honors a future `voice.enabled` setting
+scanner, and exposes a stored chart-speech opt-in. It honors the current `voice.enabled` setting
 when no explicit chart override exists, without overwriting other voice settings.
 
-The current allocation visuals deliberately removed their old hatch overlay in `bf0cf08`.
-That design is retained. Two stale PS-28 browser assertions are updated to test the visible
-category labels, exact values/shares and native table, plus the retained system-colour arc and
+Sector allocation uses numbered slice labels matched to its legend. PS-28 browser checks cover visible category labels, exact values/shares and the native table, plus the retained system-colour arc and
 legend borders in forced colours. The historical chart's hollow/filled candles, indicator dashes
 and reported-volume hatching remain unchanged and are covered by the existing regression tests.
 The portfolio geometry check also retains the existing loss-state dashed stroke instead of
@@ -148,7 +142,7 @@ The optional native Windows checks observe actual speech start/end events withou
 the speech engine or advancing a fake clock. Both Novice and Advanced completed speech and
 advanced the ring with the installed Windows voices on 22 October 2026. The scanner source,
 settings, styles and startup match `origin/main` (`8c25538`); chart alternatives remain additive.
-If `ng serve` was already running before the main merge added `src/switch-scan.scss` to
+If `ng serve` was already running before the main merge added `shared/switch-scan.scss` to
 `angular.json`, restart it once so the new global stylesheet enters its build. A stale server
 can create the scanner DOM without any visible border. Switch browser checks now assert
 fixed positioning, a painted 4px border and viewport intersection, beyond DOM visibility.
@@ -174,8 +168,7 @@ selection from the heat map, original volume observations and shared Insights sp
 The other project combinations intentionally skip. Expanded market-overview and Insights
 screenshots were inspected. Existing CSS-size warnings remain; no thresholds were relaxed.
 
-The audit and acceptance mapping cover the nine Jira criteria. No RSI or standalone sparkline
-is rendered, so none is fabricated. Manual assistive-technology verification below is still a
+The audit and acceptance mapping cover the nine Jira criteria. RSI uses recorded bars and explicit missing-history states. Standalone sparklines are not fabricated. Manual assistive-technology verification below is still a
 release review, not an automated claim of WCAG conformance.
 
 WCAG 2.2 AA considerations include 1.1.1 (text alternatives), 1.3.1 (relationships), 1.4.1
@@ -189,3 +182,5 @@ switch device, and check 200%/400% zoom and Windows contrast themes.
 References: [W3C complex images](https://www.w3.org/WAI/tutorials/images/complex/),
 [W3C data tables](https://www.w3.org/WAI/tutorials/tables/),
 [WCAG status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html).
+
+Sprint 10 audit: keyboard inspection and audio use the displayed series; sector allocation uses the sector ring, with loading guards and hidden-balance masking. Real screen-reader verification remains manual.

@@ -7,6 +7,8 @@ import { isDelayed } from './market-feed-api';
 import { marketBadgeText } from './market-status-api';
 import { spokenCompany } from './briefing';
 import { spokenChange } from './chart-speech';
+import { LivePricesService } from './live-prices';
+import { spokenQuote } from './speech-text';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -18,13 +20,15 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
   selector: 'app-market-ticker',
   imports: [FinancialChange, PriceFlash, CurrencyPipe],
   template: `
-    <div class="ticker" aria-label="Live prices" aria-live="off">
-      <span class="badge" [class.closed]="!feed.status()?.open" role="status">
+    <!-- Not a live region (PS-21): prices change every few seconds, so nothing here is read out on its own. Price watch speaks instead. -->
+    <!-- data-a11y-no-hover: voice mode never reads the moving tape under the pointer; keyboard focus still reads each stock. -->
+    <div class="ticker" role="region" aria-label="Live prices" aria-live="off" data-a11y-no-hover>
+      <span class="badge" [class.closed]="!feed.status()?.open">
         <i aria-hidden="true"></i>{{ badge() }}
       </span>
       <!-- The list is drawn twice so the tape can scroll in a seamless loop; the copy is hidden from assistive tech. -->
       <div class="tape-window">
-        <div class="tape" [class.moving]="feed.quotes().length > 0" [style.animation-duration.s]="feed.quotes().length * 6">
+        <div class="tape" [class.moving]="feed.quotes().length > 0 && !live.paused()" [style.animation-duration.s]="feed.quotes().length * 6">
           <ul>
             @for (quote of feed.quotes(); track quote.symbol + '-' + quote.version) {
               <li>
@@ -124,6 +128,8 @@ const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
 })
 export class MarketTicker implements OnDestroy {
   readonly feed = inject(MarketFeed);
+  /** Pause live updates (PS-21), set in Settings > Accessibility > Live prices. */
+  readonly live = inject(LivePricesService, { optional: true }) ?? new LivePricesService();
   /** A stock was clicked; dashboards open it. */
   readonly pick = output<string>();
   readonly badge = computed(() => marketBadgeText(this.feed.status(), new Date(this.feed.now())));
@@ -149,16 +155,12 @@ export class MarketTicker implements OnDestroy {
   }
 
   /**
-   * What switch control says aloud (data-speak): the company and the move in words, "Apple,
-   * $224.52, up 0.40 percent". Kept apart from the button's name above, which must match the screen.
+   * What voice mode and switch control say aloud (data-speak, PS-22): the company, the price
+   * rounded to whole dollars and the move in words, "Apple, 225 dollars, up 0.4 percent. Select to
+   * trade." Kept apart from the button's name above, which must match the screen.
    */
   spokenWords(quote: { symbol: string; name: string; price: number; change: number; quotedAt: string }): string {
-    const company = spokenCompany(quote.name, quote.symbol);
-    if (!quote.price) {
-      return `${company}, price not available yet`;
-    }
-    const delayed = this.delayed(quote.quotedAt) ? ', price delayed' : '';
-    return `${company}, ${USD.format(quote.price)}, ${spokenChange(quote.change)}${delayed}`;
+    return spokenQuote(spokenCompany(quote.name, quote.symbol), quote.price, quote.change, this.delayed(quote.quotedAt));
   }
 
   ngOnDestroy(): void {

@@ -67,3 +67,6 @@ html[data-a11y-contrast] body :is(button, input, select, textarea, .panel, dialo
   [data-a11y-speaking] { outline-color: Highlight !important; }
   .a11y-field-error { color: CanvasText; }
 }
+
+[data-a11y-nav-focus] { outline: 3px solid var(--a11y-focus, Highlight); outline-offset: 3px; }
+[data-a11y-nav-focus][data-a11y-interacting] { outline-style: dashed; }

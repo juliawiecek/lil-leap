@@ -10,6 +10,8 @@ import { ApiHttpClient } from './component-helper.mjs';
 const { StockDashboardComponent, STOCK_DASHBOARD_TICKS, provideStockDashboardFeed } =
   await import('../src/app/stock-dashboard.component.ts');
 const { QuoteService } = await import('../src/app/quote.service.ts');
+const { LivePricesService } = await import('../src/app/live-prices.ts');
+const { ChartTools } = await import('../src/app/chart-voice.ts');
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const NOW = Date.parse('2026-10-20T16:00:00Z');
 const tick = (price, seconds = 0, openPrice = 100) => ({
@@ -56,7 +58,8 @@ async function dashboard(t, sampleMs = 5000) {
   });
   TestBed.configureTestingModule({
     imports: [StockDashboardComponent],
-    providers: [{ provide: STOCK_DASHBOARD_TICKS, useValue: feed }],
+    // Show chart tools on, so Show as table is there to press.
+    providers: [{ provide: STOCK_DASHBOARD_TICKS, useValue: feed }, { provide: ChartTools, useValue: { shown: () => true, setShown() {} } }],
   });
   const fixture = TestBed.createComponent(StockDashboardComponent);
   fixture.componentRef.setInput('sampleMs', sampleMs);
@@ -368,4 +371,26 @@ test('the backend adapter requests authenticated quotes, history and the actual 
     'the established opening value survives missing data',
   );
   assert.equal(historyReads, 1, 'history is fetched once and retained across the sample window');
+  const live = TestBed.inject(LivePricesService); const beforePause = requests.length;
+  live.setPaused(true); t.mock.timers.tick(20000);
+  assert.equal(requests.length, beforePause, 'pausing stops chart network refreshes and keeps the adapter alive');
+  live.setPaused(false); t.mock.timers.tick(1000);
+  assert.ok(requests.length > beforePause, 'the next tick resumes network refreshes');
+});
+test('Pause live updates holds the chart on the price shown until resumed (PS-21, WCAG 2.2.2)', async (t) => {
+  const { LivePricesService } = await import('../src/app/live-prices.ts');
+  const d = await dashboard(t);
+  const live = d.fixture.debugElement.injector.get(LivePricesService);
+  t.after(() => live.setPaused(false));
+  live.setPaused(true);
+  d.feed.next(tick(101));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'the first price is still shown');
+  d.feed.next(tick(105, 5));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'held while paused');
+  live.setPaused(false);
+  d.feed.next(tick(106, 10));
+  d.sample();
+  assert.equal(d.fixture.componentInstance.asset().price, 106, 'moves again once resumed');
 });

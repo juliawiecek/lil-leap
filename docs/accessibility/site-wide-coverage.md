@@ -22,7 +22,6 @@ and role guards, backend authorization, and explicit financial confirmations are
 | Portfolio, both tiers | Holdings/positions table, financial change text | Scrollable table keyboard access, row/column headers, retained focus |
 | Activity (orders/history redirects) | Filter buttons/dates, statuses, cancellation confirmation | Avoid full-list live announcements on polling; labelled errors/read sections |
 | Markets (watchlist/screeners redirects) | Search, stock selection, heat map, sector alternatives | Search arrow/Escape behavior; tablist navigation; concise quote reading |
-| Learn (Novice) | Native lesson/quiz buttons, ranges, details/summary, progress | Read selected lesson/section; selected states and focus at larger text sizes |
 | Settings/profile, both tiers | Accessibility store, briefing, scanner, palettes | Shared voice/visual settings; immediate application and saved restoration |
 | 404 | Main/h1 and return link | Global tools and route focus |
 | Stock details/embedded stock dashboard | Price/change text, chart keys, retry/status | Read current stock; focus/hover metadata; no tick-by-tick speech |

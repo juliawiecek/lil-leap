@@ -11,9 +11,9 @@
       </dl>
     }
   </div>
-  <form class="filters" role="search" method="get" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
+  <form class="filters" role="search" aria-label="Filter accounts" method="get" data-scan-group="Filter accounts" (submit)="$event.preventDefault(); update({ search: $any(searchBox).value })">
     <label class="search"
-      ><span class="sr-only">Search</span
+      ><span class="sr-only">Search accounts</span
       ><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg
       ><input
         #searchBox
@@ -38,18 +38,20 @@
     @if (filtered()) {
       <button type="button" class="clear" (click)="clear()">Clear filters</button>
     }
-    <span class="range" aria-live="polite">{{ loading() ? 'Loading…' : range() }}</span>
+    <span class="range" aria-hidden="true">{{ loading() ? 'Loading…' : range() }}</span>
+    <!-- Read out once the results arrive, including when nothing matches; not "Loading…" on every keystroke. -->
+    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ resultsAnnouncement() }}</span>
   </form>
 </section>
 
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
-<section class="accounts" aria-labelledby="clients-title" [attr.aria-busy]="loading()">
+<section class="accounts" aria-labelledby="clients-title" [attr.aria-busy]="loading()" data-scan-group="Trading accounts">
   <h2 id="clients-title" class="sr-only">Trading accounts</h2>
   @if (result(); as page) {
     @if (page.content.length) {
-      <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable data table">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Trading accounts table">
         <table>
           <caption class="sr-only">Trading accounts; select a column heading to sort</caption>
           <thead>

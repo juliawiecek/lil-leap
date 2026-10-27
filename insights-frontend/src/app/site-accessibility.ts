@@ -1,3 +1,5 @@
+import { SWITCH_SCAN_STORE } from '../../../shared/switch-scan-options';
+import { SwitchScanService } from '../../../shared/switch-scan';
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
@@ -15,21 +17,26 @@ function saved(): { voice?: unknown; visual?: unknown } {
 }
 @Injectable({ providedIn: 'root' })
 export class SiteAccessibility {
-  private readonly values = signal(saved());
+  private readonly store = inject(SWITCH_SCAN_STORE);
+  private readonly scan = inject(SwitchScanService);
   private readonly router = inject(Router, { optional: true });
   private readonly destroy = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
-  readonly settings = computed(() => parseAssistivePreferences(this.values().voice, this.values().visual));
+  readonly settings = computed(() => parseAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v)));
   readonly status = signal('');
   readonly loginPage = signal(false);
   readonly speaking = signal(false);
   readonly paused = signal(false);
   readonly voices = signal<SpeechSynthesisVoice[]>([]);
   readonly supported = speechCoordinator.supported;
+  /** Insights plays no sound cues, so the shared settings leave out the Sound cues switch (PS-22). */
+  readonly soundCuesOffered = false;
   readonly controller = new AssistiveController(this.document, {
     settings: () => this.settings(), status: text => this.status.set(text),
     state: (active, paused) => { this.speaking.set(active); this.paused.set(paused); },
-    voices: voices => this.voices.set(voices),
+    voices: voices => this.voices.set(voices), scanning: () => this.scan.settings().enabled, stopScanningSpeech: () => this.scan.hush(),
+    toggleVoice: () => this.update({ enabled: !this.settings().enabled }),
+    toggleNavigation: () => this.toggleArrowNavigation(),
   });
   private started = false;
   constructor() { effect(() => { this.settings(); this.controller.apply(); }); }
@@ -48,10 +55,17 @@ export class SiteAccessibility {
     this.destroy.onDestroy(() => { subscription?.unsubscribe(); this.controller.destroy(); });
   }
   openSettings(): void { void this.router?.navigate(['/settings']); }
+  toggleArrowNavigation(): void {
+    const enabled = !this.settings().arrowNavigation;
+    this.update({ arrowNavigation: enabled });
+    if (enabled) this.controller.beginArrowNavigation();
+  }
   update(patch: Partial<AssistivePreferences>): void {
-    const next = mergeAssistivePreferences(this.values().voice, this.values().visual, patch);
-    this.values.set({ ...this.values(), ...next });
-    try { globalThis.localStorage?.setItem(INSIGHTS_ACCESSIBILITY_KEY, JSON.stringify(this.values())); } catch {}
-    if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request']) { speechCoordinator.stop(owner); } }
+    if (patch.arrowNavigation === true && this.scan.settings().enabled) this.scan.update({ enabled: false });
+    const wasOn = this.settings().enabled;
+    const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
+    this.store.write('voice', next.voice); this.store.write('visual', next.visual);
+    if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request', 'assist:announce', 'assist:alert']) { speechCoordinator.stop(owner); } }
+    else if (patch.enabled === true && !wasOn) { this.controller.announce('Voice mode on.'); }
   }
 }

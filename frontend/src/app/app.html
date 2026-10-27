@@ -71,6 +71,7 @@
   }
   <app-skip-link [target]="profileOpen() ? 'profile-main' : 'auth-main'" />
   <main id="auth-main" tabindex="-1" class="auth-shell" [class.signup-layout]="authMode() === 'signup'" [style.display]="profileOpen() ? 'none' : null" [attr.inert]="!pageReady() || profileOpen() ? '' : null" [attr.aria-hidden]="!pageReady() || profileOpen()">
+    <app-switch-scan-toggle />
     <header class="auth-header">
       <div class="secure-status">Secure connection</div>
     </header>
@@ -120,7 +121,8 @@
             </div>
             <div class="input-wrap">
               <input #password id="password" name="password" [type]="passwordVisible() ? 'text' : 'password'" [attr.autocomplete]="choosingPassword() ? 'new-password' : 'current-password'" [attr.minlength]="choosingPassword() ? 12 : null" [attr.aria-describedby]="choosingPassword() && passwordStarted() ? 'password-requirements' : capsLock() ? 'caps-hint' : null" placeholder="Enter your password" [required]="authMode() !== 'forgot'" (input)="updatePassword($any($event.target).value)" (keydown)="checkCapsLock($event)" (keyup)="checkCapsLock($event)" (blur)="capsLock.set(false)" />
-              <button class="password-toggle" type="button" [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'" (click)="togglePassword()">{{ passwordVisible() ? 'Hide' : 'Show' }}</button>
+              <!-- A toggle: one stable name that contains its visible word, and the state in aria-pressed (PS-29). -->
+              <button class="password-toggle" type="button" aria-label="Show password" [attr.aria-pressed]="passwordVisible()" (click)="togglePassword()">Show</button>
             </div>
             @if (capsLock() && !choosingPassword()) {
               <p id="caps-hint" class="field-hint" aria-live="polite">Caps Lock is on</p>

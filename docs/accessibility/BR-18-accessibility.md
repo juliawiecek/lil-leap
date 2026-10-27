@@ -38,13 +38,17 @@ browser (one settings store, PS-17).
 | Story | Feature | Status |
 |---|---|---|
 | PS-17 | Accessibility section in Settings; Keyboard Shortcuts on both dashboards, also opened with `?` | Built |
-| PS-18 | Audio market briefing (Alt+B): market, portfolio, biggest mover, recent orders | Prototype, merging |
-| PS-19 | Switch control: scan the page with one button; keypads for number and text fields | Prototype, merging |
-| PS-20 | Page structure and an automated axe accessibility check | Planned |
-| PS-23 | Switch control reads each item aloud; order read-back | Read-aloud prototyped |
+| PS-18 | Audio market briefing (Alt+B): market, portfolio, biggest mover, recent orders | Built; Sprint 10 hardening on integration branch |
+| PS-19 | Switch control: scan the page with one button; keypads for number and text fields | Built; Sprint 10 hardening on integration branch |
+| PS-20 | Page structure and an automated axe accessibility check | Built; validation recorded in the Sprint 10 PR |
+| PS-23 | Switch control reads each item aloud; order read-back | Built: read-back, captions and Alt+W glossary |
+| PS-21 | Screen reader announcements and live-price pause | Built; manual NVDA/VoiceOver pass remains |
+| PS-22 | Voice levels and speech priorities | Built; manual voice review remains |
+| PS-26 | Keyboard chart inspection and sound | Built; manual sound review remains |
+| PS-29 | Insights and sign-in accessibility | Built; manual switch-device review remains |
 | PS-25 | Every chart explained in words and as a table | [Built: chart alternatives and opt-in focus speech](PS-25-chart-alternatives.md); manual assistive-technology review remains |
-| PS-27, PS-28 | Colour-blind palette; arrows and signs so colour is never the only clue | In progress |
-| PS-30 | Warning before the inactivity sign-out | Planned |
+| PS-27, PS-28 | Colour-blind palette; arrows and signs so colour is never the only clue | Built; sector-ring audit included in Sprint 10 |
+| PS-30 | Warning before the inactivity sign-out | Built; validation recorded in the Sprint 10 PR |
 
 Update the Status column as stories merge.
 

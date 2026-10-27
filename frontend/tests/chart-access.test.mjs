@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { render, browser, button } from './dom-helper.mjs';
 const { ChartAccess } = await import('../src/app/chart-access.ts');
-const { ChartVoice } = await import('../src/app/chart-voice.ts');
+const { ChartTools, ChartVoice } = await import('../src/app/chart-voice.ts');
 const { technicalTable, describeTrades, volumeTable } = await import('../src/app/technical-chart-data.ts');
 const { displayCandles } = await import('../src/app/technical-chart-math.ts');
 const { AccessibilityStore } = await import('../src/app/accessibility.ts');
-const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+const { SwitchScanService } = await import('../../shared/switch-scan.ts');
 const { seriesTable } = await import('../../shared/chart-description.ts');
 const table = { columns: ['Time', 'Price'], rows: [['Today', '$12.34']] };
 test('explanations and native tables keep focus, IDs, captions and scoped headers', async t => {
@@ -134,6 +134,24 @@ test('chart voice uses the shared preference, rejects corrupt flags, and preserv
   assert.equal(voice.enabled(), false);
   store.write('voice', { enabled: true, chartSummaries: 'invalid' });
   assert.equal(voice.enabled(), true);
+});
+
+test('Explain this chart and Show as table only show once chart tools are on, while D and T still work', async t => {
+  const store = new AccessibilityStore();
+  const fixture = await render(t, ChartAccess, { id: 'tools', label: 'Prices', summary: 'Prices rose.', table }, [
+    { provide: AccessibilityStore, useValue: store },
+    { provide: ChartTools, useClass: ChartTools },
+    { provide: ChartVoice, useValue: { stop() {}, speak() {} } },
+  ]);
+  const root = fixture.nativeElement;
+  assert.equal(root.querySelector('.actions'), null, 'no chart buttons for a new user');
+  assert.equal(root.querySelector('#tools-summary').textContent, 'Prices rose.', 'the summary is still there for screen readers');
+  fixture.componentInstance.toggleTable(); fixture.detectChanges();
+  assert.ok(root.querySelector('table'), 'T still shows the table');
+  fixture.componentInstance.tools.setShown(true); fixture.detectChanges();
+  assert.deepEqual(store.read('charts', v => v), { tools: true });
+  assert.ok(root.querySelector('.actions'));
+  assert.ok(button(fixture, 'Explain this chart'));
 });
 
 test('main scanner owns focus speech and explicit explanations queue after its selection confirmation', async t => {
