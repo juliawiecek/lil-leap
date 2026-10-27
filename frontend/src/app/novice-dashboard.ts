@@ -173,6 +173,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #ordersTimer: ReturnType<typeof setTimeout> | undefined;
   #chartTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Account and period the drawn history belongs to; a refresh of the same keeps the line on screen. */
+  #chartDrawnFor = '';
   /** Increments per chart load, so a slow earlier load never replaces a newer one. */
   #chartRequest = 0;
   #portfolio: Portfolio = { cash: 0, holdings: [] };
@@ -1063,7 +1065,11 @@ export class NoviceDashboard implements OnInit, OnDestroy {
     const account = this.selectedAccount();
     const period = this.chartPeriod();
     const filters = account ? { accountId: account.account_id } : {};
-    this.chartLoading.set(true);
+    const drawing = `${account?.account_id ?? ''}|${period}`;
+    // "Loading" only for a first load, another period or another account; the minute refresh keeps the line.
+    if (drawing !== this.#chartDrawnFor || !this.chartHistory().length) {
+      this.chartLoading.set(true);
+    }
     try {
       const [movements, orders] = await Promise.all([this.cashActivityClient.list(filters), this.orderHistoryClient.list(filters)]);
       if (request !== this.#chartRequest || this.destroyed) { return; }
@@ -1078,6 +1084,7 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       const complete = ledgerMatches(this.#portfolio, cash, fills);
       const points = complete ? portfolioSeries(range, cash, fills, prices) : [];
       this.chartHistory.set(points);
+      this.#chartDrawnFor = drawing;
       this.chartNotice.set(!complete
         ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
         : !points.length || points[0].at > range.start

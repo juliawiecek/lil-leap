@@ -73,6 +73,24 @@ const DAY_MS = 24 * HOUR_MS;
 /** Fewest bars that still draw a readable line. */
 const MIN_CHART_BARS = 24;
 const BAR_WIDTH_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
+interface BarAnswer { interval: string; bars: number; points: PricePoint[] }
+/**
+ * The coarsest bar size that draws a readable line, from answers ordered coarsest first. A finer
+ * size reaches less far back, so it is not taken once it would cut off older prices already in hand.
+ */
+function pickBars(answers: readonly BarAnswer[], now: number): BarAnswer {
+  let chosen = answers[0];
+  for (const answer of answers) {
+    if (chosen.points.length && chosen.points[0].at < now - (BAR_WIDTH_MS[answer.interval] ?? 0) * answer.bars) {
+      break;
+    }
+    chosen = answer;
+    if (answer.points.length >= MIN_CHART_BARS) {
+      break;
+    }
+  }
+  return chosen;
+}
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -137,6 +155,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   #historySymbol = '';
   /** The stock and period of the loaded bars, so neither reloads needlessly. */
   #historyKey = '';
+  /** The bar size that last drew each period readably, so a refresh is one request. */
+  readonly #readableSize: Record<string, string> = {};
   #historyRequest = 0;
   /** Width of the loaded bars in ms; 0 when the line is raw quotes. */
   #barMs = 0;
@@ -554,18 +574,22 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     let points: PricePoint[] = [];
     let barMs = 0;
     try {
-      for (const [interval, bars] of CHART_BARS[period] ?? CHART_BARS['1D']) {
-        // A finer size reaches less far back; stop before it would cut off older prices.
-        if (points.length && points[0].at < Date.now() - (BAR_WIDTH_MS[interval] ?? 0) * bars) {
-          break;
-        }
-        // Indicators are initialized from earlier bars, then clipped to the selected view.
-        // This avoids pretending the visible window's first bar is an established EMA.
-        points = await this.feed.client.closes(quote.instrumentId, interval, Math.min(500, bars + 200));
-        barMs = BAR_WIDTH_MS[interval] ?? 0;
-        if (!current() || points.length >= MIN_CHART_BARS) {
-          break;
-        }
+      const sizes = CHART_BARS[period] ?? CHART_BARS['1D'];
+      // Indicators are initialized from earlier bars, then clipped to the selected view.
+      // This avoids pretending the visible window's first bar is an established EMA.
+      const load = (tried: typeof sizes) => Promise.all(tried.map(async ([interval, bars]) =>
+        ({ interval, bars, points: await this.feed.client.closes(quote.instrumentId, interval, Math.min(500, bars + 200)) })));
+      // Every bar size at once, so a month loads as fast as a day; a size known to draw the
+      // period readably is asked for alone, and the full set is tried again only if it falls short.
+      const known = this.#readableSize[period];
+      let chosen = pickBars(await load(known ? sizes.filter(([interval]) => interval === known) : sizes), Date.now());
+      if (known && chosen.points.length < MIN_CHART_BARS && current()) {
+        chosen = pickBars(await load(sizes), Date.now());
+      }
+      points = chosen.points;
+      barMs = BAR_WIDTH_MS[chosen.interval] ?? 0;
+      if (points.length >= MIN_CHART_BARS) {
+        this.#readableSize[period] = chosen.interval;
       }
       if (current() && points.length < MIN_CHART_BARS) {
         const recent = await this.feed.client.history(quote.instrumentId);

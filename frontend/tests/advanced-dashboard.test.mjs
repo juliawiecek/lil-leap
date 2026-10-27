@@ -599,16 +599,36 @@ test('market ticket uses executable bid/ask and sizes from stop risk with cash a
 test('the chart starts loading as soon as the stock list is known, before the first prices arrive', async t => {
   const feed = fakeFeed([]);
   const requested = [];
-  feed.client = { closes: async (id) => { requested.push(id); return Array.from({ length: 30 }, (_, i) => ({ at: Date.now() - (30 - i) * 300000, price: 176 + i / 10 })); }, history: async () => [] };
+  feed.client = { closes: async (id, interval) => { requested.push(interval); return Array.from({ length: 30 }, (_, i) => ({ at: Date.now() - (30 - i) * 300000, price: 176 + i / 10 })); }, history: async () => [] };
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
   feed.push(LISTED.map(([symbol]) => ({ symbol, name: NAMES[symbol], price: 0, change: 0 })));
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(requested, ['aapl-uuid'], 'one candle request for the linked stock');
+  assert.deepEqual(requested, ['5m', '1m'], 'both 1D bar sizes at once for the linked stock');
   assert.equal(desk.quotes().length, 0, 'the market view keeps "Loading prices" rather than $0.00 rows');
   assert.equal(desk.priceHistory().length, 30);
   feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(desk.selected().symbol, 'AAPL');
   assert.equal(desk.quotes().length, 5);
-  assert.deepEqual(requested, ['aapl-uuid'], 'the priced tick reuses the loaded chart');
+  assert.deepEqual(requested, ['5m', '1m'], 'the priced tick reuses the loaded chart');
+});
+
+test('a month loads as fast as a day: every bar size is asked for at once, and a refresh asks for the one that worked', async t => {
+  const feed = fakeFeed(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
+  const requested = [];
+  const bars = (count, width) => Array.from({ length: count }, (_, i) => ({ at: Date.now() - (count - i) * width, price: 100 + i }));
+  feed.client = {
+    closes: async (id, interval) => { requested.push(interval); return interval === '1d' ? bars(4, 86400000) : interval === '1h' ? bars(100, 3600000) : bars(500, 60000); },
+    history: async () => [],
+  };
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
+  await new Promise((resolve) => setImmediate(resolve));
+  requested.length = 0;
+  desk.setPeriod('1M');
+  assert.deepEqual(requested, ['1d', '1h', '15m', '1m'], 'all four sizes requested before any answer arrives');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(desk.priceHistory().length >= 100 && desk.priceHistory().length <= 101, 'the coarsest readable size, hourly bars, draws the month (plus the live tick)');
+  requested.length = 0;
+  desk.choose(desk.quote('MSFT'));
+  assert.deepEqual(requested, ['1h'], 'another stock on the same period asks only for the size that worked');
 });

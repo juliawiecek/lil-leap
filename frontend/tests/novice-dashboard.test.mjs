@@ -759,3 +759,29 @@ test('the Ready to trade card heads the right column above the allocation, and l
   fixture.componentInstance.navigate('Portfolio'); fixture.detectChanges();
   assert.equal(card(), null, 'other pages have no trade card');
 });
+
+test('the minute refresh of the overview chart keeps the line on screen; a new period shows Loading until it is ready', async t => {
+  const now = Date.now();
+  const { desk, feed } = await tradingDesk(t, { history: [[]], portfolios: [{ cash: 500, holdings: [{ ...holding('AAPL', 5, 100), instrumentId: 'aapl-id' }] }], chart: true });
+  desk.accountState.use([{ account_id: 'acct-1', account_status: 'ACTIVE', trading_enabled: true, created_at: new Date(now - 10 * 3600000).toISOString() }]);
+  desk.cashActivityClient = { list: async () => [{ transactionId: 't1', accountId: 'acct-1', accountName: 'Main', type: 'DEPOSIT', amount: 1000, settlementStatus: 'SETTLED', occurredAt: new Date(now - 10 * 3600000).toISOString() }] };
+  desk.orderHistoryClient = { list: async () => [historyRow('FILLED', { quantity: 5, fillPrice: 100, filledQuantity: 5, filledAt: new Date(now - 8 * 3600000).toISOString() })] };
+  let release;
+  feed.client = { closes: async () => { await new Promise((resolve) => { release = resolve; }); return [{ at: now - 4 * 3600000, price: 110 }]; } };
+  desk.chartPeriod.set('1W');
+  const first = desk.loadChart();
+  assert.equal(desk.chartLoading(), true, 'the first load shows Loading');
+  await flush(); release(); await first;
+  assert.equal(desk.chartLoading(), false);
+  assert.equal(desk.chartHistory().length, 2);
+  const refresh = desk.loadChart();
+  assert.equal(desk.chartLoading(), false, 'the same period refreshing keeps its line');
+  assert.equal(desk.chartHistory().length, 2);
+  await flush(); release(); await refresh;
+  desk.chartPeriod.set('1M');
+  const switched = desk.loadChart();
+  assert.equal(desk.chartLoading(), true, 'another period hides the old line until its own is ready');
+  await flush(); release(); await switched;
+  assert.equal(desk.chartLoading(), false);
+  desk.ngOnDestroy();
+});
