@@ -478,7 +478,7 @@ test('reviewing an advanced order announces the review once and focuses Confirm;
   assert.equal(root.querySelector('#pro-quantity').getAttribute('aria-invalid'), 'true');
   for (const th of root.querySelectorAll('table th')) assert.equal(th.getAttribute('scope'), 'col');
   for (const table of root.querySelectorAll('table')) assert.ok(table.querySelector('caption'));
-  assert.equal(root.querySelector('.market-status').getAttribute('role'), null);
+  assert.equal(root.querySelector('.heading-status .status-pill').getAttribute('role'), null);
 });
 
 test('an advanced order is announced as sent, accepted and filled once each, and a rejection cuts in', async (t) => {
@@ -507,7 +507,7 @@ test('an advanced order is announced as sent, accepted and filled once each, and
     'Order accepted: buy 2 shares of Apple. Waiting for it to fill.',
     'Filled: bought 2 shares of Apple at $100.00.',
   ]);
-  assert.equal(desk.message(), 'Order o1 filled.', 'the ticket shows the step it has already said');
+  assert.equal(desk.message(), 'Bought 2 AAPL at $100.00. You can see it under Activity.', 'the ticket keeps the revamp wording for the announced fill');
   desk.orderHistoryClient = { list: async () => [row('REJECTED', { orderId: 'o2' })] };
   desk.orderStatusClient = { status: async () => { throw new Error('down'); } };
   await desk.trackOrder('o2');
@@ -599,12 +599,15 @@ test('switching an active browser-voice briefing to My screen reader silences th
   assert.equal(new BriefingService().settings().voice, 'screen-reader', 'remembered after a reload');
 });
 
-test('hidden balances redact average cost, account gains, Balances and all Exposure dialog values', async t => {
- const {fixture,desk,root} = await advancedTicket(t); desk.privateBalance.set(true); fixture.detectChanges();
- assert.doesNotMatch(root.querySelector('.position-sub').textContent, /\$/);
- assert.doesNotMatch(root.querySelector('.summary-metrics').textContent, /\$/);
- desk.bottomTab.set('Balances'); fixture.detectChanges(); assert.doesNotMatch(root.querySelector('.balance-details').textContent, /\$/);
- desk.openModal('exposure'); fixture.detectChanges(); assert.doesNotMatch(root.querySelector('dialog .review-details').textContent, /\$|%/);
+test('the revamped advanced dashboard keeps balances visible without a hide-balances control', async t => {
+ const {fixture,desk,root} = await advancedTicket(t); fixture.detectChanges();
+ assert.equal(root.querySelector('[aria-label="Hide balances"], [aria-label="Show balances"]'), null);
+ assert.match(root.querySelector('.holding-id .company-name').textContent, /\$90\.00/);
+ assert.match(root.querySelector('.summary-metrics').textContent, /\$/);
+ desk.openModal('exposure'); fixture.detectChanges();
+ const exposure = root.querySelector('dialog .review-details').textContent;
+ assert.doesNotMatch(exposure, /Hidden/);
+ assert.match(exposure, desk.allocationReady() ? /\$/ : /Unavailable/);
 });
 test('the novice holding average cost is masked with hidden balances', async t => {
  const {fixture,desk,root} = await noviceTicket(t); desk.showBalance.set(false); fixture.detectChanges();

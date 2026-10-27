@@ -9,6 +9,8 @@ export interface Toast {
   kind: ToastKind;
   title: string;
   detail: string;
+  /** The trade's side, when the toast is about one; lets a dashboard colour sells differently. */
+  side?: 'buy' | 'sell';
 }
 
 /** Fills disappear quickly; rejections stay longer so the reason can be read (PS-15). */
@@ -69,11 +71,11 @@ export class ToastService {
     this.#timers.forEach(clearTimeout); this.#timers.clear();
   }
 
-  show(kind: ToastKind, title: string, detail = ''): number {
+  show(kind: ToastKind, title: string, detail = '', side?: 'buy' | 'sell'): number {
     this.#watch();
     const id = this.#nextId++;
     for (const old of this.toasts().slice(0, Math.max(0, this.toasts().length - MAX_TOASTS + 1))) this.dismiss(old.id);
-    const toast = { id, kind, title, detail };
+    const toast = { id, kind, title, detail, ...(side ? { side } : {}) };
     this.toasts.update(list => [...list, toast]);
     this.#start(toast);
     // A chime for a fill, a low tone for a rejection (PS-22); the toast is the written message.
@@ -100,9 +102,9 @@ export class ToastService {
     <section class="toasts" aria-label="Order updates">
       @for (toast of service.toasts(); track toast.id) {
         <div class="toast" (mouseenter)="service.hold(toast.id, 'hover')" (mouseleave)="service.release(toast.id, 'hover')"
-          (focusin)="service.hold(toast.id, 'focus')" (focusout)="leaveFocus($event, toast.id)" [class.rejected]="toast.kind === 'rejected'">
+          (focusin)="service.hold(toast.id, 'focus')" (focusout)="leaveFocus($event, toast.id)" [class.sell]="toast.side === 'sell'" [class.rejected]="toast.kind === 'rejected'">
           <div>
-            <strong><app-status-badge [value]="toast.kind" /> · {{ toast.title }}</strong>
+            <strong><app-status-badge [value]="toast.kind" /><span class="sep"> · </span><span class="title">{{ toast.title }}</span></strong>
             @if (toast.detail) {
               <p>{{ toast.detail }}</p>
             }

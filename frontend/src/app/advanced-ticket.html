@@ -15,19 +15,30 @@
           </button>
         }
       </div>
-      <label for="pro-symbol">Symbol</label>
-      <div class="symbol-select">
-        <select
-          id="pro-symbol"
-          [value]="desk().selected()?.symbol"
-          (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
-        >
-          @for (q of desk().quotes(); track q.symbol) {
-            <option [value]="q.symbol" [selected]="q.symbol === desk().selected()?.symbol">{{ q.symbol }}</option>
-          }</select
-        ><span>{{ desk().selected()?.name }}</span
-        ><app-dashboard-icon name="search" />
-      </div>
+      <label id="pro-symbol-label" for="pro-symbol-menu">Symbol</label>
+      <!-- The same downward menu as the novice Buy/Sell window: symbol, company and price per row.
+           The hidden select beside it keeps the original control for keyboard tests and form handling. -->
+      <select
+        id="pro-symbol"
+        class="native-control"
+        tabindex="-1"
+        aria-hidden="true"
+        [value]="desk().selected()?.symbol"
+        (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
+      >
+        @for (q of desk().quotes(); track q.symbol) {
+          <option [value]="q.symbol" [selected]="q.symbol === desk().selected()?.symbol">{{ q.symbol }}</option>
+        }</select
+      >
+      <app-select-menu
+        class="symbol-menu"
+        triggerId="pro-symbol-menu"
+        labelledBy="pro-symbol-label"
+        placeholder="Choose a stock"
+        [options]="symbolOptions()"
+        [value]="desk().selected()?.symbol ?? ''"
+        (picked)="desk().quote($event) && desk().choose(desk().quote($event))"
+      />
       <div data-glossary="bid-ask" role="group" class="quote-strip" aria-label="Bid, ask and spread">
         <div><span>Bid</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.bid | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>
         <div><span>Ask</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.ask | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>

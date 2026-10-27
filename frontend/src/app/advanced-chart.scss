@@ -434,3 +434,23 @@ select:focus-visible {
 @media (max-width: 1200px) { :host { grid-column: 1 / 8; } }
 @media (max-width: 950px) { :host { grid-column: 1 / -1; } }
 @media (max-width: 760px) { :host { width: 100%; order: 2; } }
+
+/* Novice look (Oct 2026), loads last: a rounded card, the price set like the novice portfolio value,
+   and the period buttons as the novice segmented picker (off-white when chosen). Look only. */
+.panel { border: 1px solid var(--surface-tone-13); border-radius: 20px; background: var(--surface); box-shadow: none; }
+.chart-toolbar { padding: 22px 24px 4px; }
+.chart-company { color: var(--text-muted); font-size: 13px; font-weight: 600; }
+.chart-company b { color: var(--text); font-size: 15px; font-weight: 800; }
+.quote-price { font-size: 34px; font-weight: 800; letter-spacing: -0.035em; }
+.chart-periods { gap: 2px; padding: 4px; border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-16); }
+.chart-periods button { min-width: 40px; min-height: 32px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--text-subtle); font-size: 13px; font-weight: 700; }
+.chart-periods button:hover { background: transparent; color: var(--text); }
+.chart-periods .active, .chart-periods .active:hover { background: var(--accent); color: var(--on-accent); }
+.technical-chart { padding: 12px 24px 18px; }
+.avg-cost-label, .price-axis b { border-radius: 6px; }
+
+/* Fill the grid row exactly, so the chart card's foot lines up with the activity card below. */
+.live-stock-panel { height: 100%; }
+:host ::ng-deep app-retail-stock-dashboard { display: block; height: 100%; }
+:host ::ng-deep app-retail-stock-dashboard .dashboard-shell { height: 100%; display: flex; flex-direction: column; }
+:host ::ng-deep app-retail-stock-dashboard .dashboard-footer { margin-top: auto; }

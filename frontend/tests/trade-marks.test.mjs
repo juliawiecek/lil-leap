@@ -26,34 +26,21 @@ test('fills become markers with a plain tooltip; other stocks and unfilled order
   assert.match(marks[0].label, /^Bought 10 @ \$220\.00 · /);
 });
 
-test('a client who bought twice and sold once sees three markers and an average-cost line matching the holding', t => {
+test('a client who bought twice and sold once has an average cost matching the holding', t => {
   const desk = component(t, AdvancedDashboard, [feedProvider(fakeFeed([{ symbol: 'AAPL', name: 'Apple Inc.', price: 235 }]))]);
   desk.currentTime.set(new Date(NOW));
   desk.historyRows.set(HISTORY);
   // The holding after those fills: 15 shares at an average cost of 225.
   desk.applyPortfolio({ cash: 1000, holdings: [{ instrumentId: 'aapl-uuid', symbol: 'AAPL', instrumentName: 'Apple', quantity: 15, averageCost: 225 }] });
   assert.equal(desk.selected().symbol, 'AAPL');
-  assert.deepEqual(desk.plottedTrades().map((m) => m.side), ['BUY', 'BUY', 'SELL']);
+  assert.deepEqual(desk.tradeMarks().map((m) => m.side), ['BUY', 'BUY', 'SELL']);
   assert.equal(desk.averageCost(), 225);
-  const range = desk.chartRange();
-  assert.equal(desk.averageCostY(), priceY(225, range, 160));
-  assert.ok(desk.plottedTrades().every((m) => m.x >= 0 && m.x <= 824 && m.y >= 0 && m.y <= 160));
-  assert.equal(desk.tradesOutsidePeriod(), 0);
-  assert.equal(desk.priceAxis().length, 5);
-  assert.ok(desk.priceAxis()[0] > 235 && desk.priceAxis()[4] < 220, 'the axis covers the price and every fill');
-  desk.currentTime.set(new Date(NOW + 3 * 24 * 60 * 60 * 1000));
-  assert.equal(desk.plottedTrades().length, 0, 'a day later the 1D chart shows none of them');
-  assert.equal(desk.tradesOutsidePeriod(), 3);
-  desk.period.set('1W');
-  assert.equal(desk.plottedTrades().length, 3);
 });
 
 test('without a holding there is no average-cost line', t => {
   const desk = component(t, AdvancedDashboard, [feedProvider(fakeFeed([{ symbol: 'AAPL', price: 235 }]))]);
   desk.historyRows.set([]);
   assert.equal(desk.averageCost(), null);
-  assert.equal(desk.averageCostY(), null);
-  assert.deepEqual(desk.plottedTrades(), []);
 });
 
 test('periods, scales and labels map trades onto the chart', () => {

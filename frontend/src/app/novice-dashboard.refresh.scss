@@ -183,10 +183,10 @@ th { color: var(--text-subtle); font-weight: 600; }
 .diversification small { font-size: 12.5px; font-weight: 500; }
 .shield-icon { border-radius: 10px; background: var(--surface-tone-85); color: var(--text-tone-19); }
 .shield-icon app-dashboard-icon { width: 16px; height: 16px; }
-/* The "Ready to trade?" card heads the right column, above the allocation, with big Buy and Sell buttons. */
 .trade-panel {
   padding: 24px;
-  border-color: var(--surface-tone-10); border-radius: 22px;
+  border-color: var(--surface-tone-10);
+  border-radius: 22px;
   background: radial-gradient(90% 80% at 100% 0%, var(--text-wash-59), transparent 60%), var(--surface-tone-84);
 }
 .trade-panel h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
@@ -194,7 +194,7 @@ th { color: var(--text-subtle); font-weight: 600; }
 .trade-actions { display: flex; gap: 12px; margin-top: 18px; }
 .trade-actions button { flex: 1; }
 .trade-actions > :last-child { grid-column: auto; }
-.trade-actions button { min-height: 52px; min-width: 132px; padding: 0 32px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; border-radius: 14px; white-space: nowrap; }
+.trade-actions button { min-height: 52px; min-width: 132px; padding: 0 24px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; border-radius: 14px; white-space: nowrap; }
 .green-button, .secondary-button, .outline-button { border-radius: 12px; font-weight: 700; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
 .period-picker button.selected, .green-button { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); box-shadow: none; }
 .green-button:hover { background: var(--white); box-shadow: 0 10px 30px var(--text-wash-20); }
@@ -372,9 +372,10 @@ th { color: var(--text-subtle); font-weight: 600; }
 /* Large monitors: content stops at 1600px and sits centered; top bar and ticker line up with it. */
 .novice-content { max-width: 1600px; margin-inline: auto; }
 @media (min-width: 1351px) {
-  .novice-topbar,
-  app-market-ticker { padding-inline: max(32px, calc((100% - 1600px) / 2 + 32px)); }
+  .novice-topbar { padding-inline: max(32px, calc((100% - 1600px) / 2 + 32px)); }
 }
+/* The live price strip runs the full width of the page, edge to edge, on every screen size. */
+@media (min-width: 901px) { app-market-ticker { padding-inline: 24px; } }
 @media (max-width: 900px) {
   .novice-shell.resizable { grid-template-columns: 64px minmax(0, 1fr); }
 }

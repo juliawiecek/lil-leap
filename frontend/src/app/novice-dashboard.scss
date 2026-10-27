@@ -751,6 +751,18 @@ th {
   height: 22px;
   width: 22px;
 }
+.trade-panel {
+  padding: 22px;
+}
+.trade-panel h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.trade-panel p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
 .trade-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

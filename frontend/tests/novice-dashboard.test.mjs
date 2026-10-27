@@ -759,13 +759,13 @@ test('the stock list without its first prices does not show $0.00 rows', t => {
   assert.equal(desk.quotes().length, 5);
 });
 
-test('the Ready to trade card heads the right column above the allocation, and leaves with the Overview', async (t) => {
+test('the Ready to trade card sits beside the Overview and leaves with it', async (t) => {
   const fixture = await render(t, NoviceDashboard, {}, [feedProvider(feedWith())]);
   const root = fixture.nativeElement;
   const card = () => root.querySelector('.secondary-column > .trade-panel');
-  assert.ok(card(), 'the card is in the right column');
-  assert.equal(card().previousElementSibling, null, 'first in the column');
-  assert.equal(card().nextElementSibling.classList.contains('allocation-panel'), true, 'right above Allocation by sector');
+  assert.ok(card(), 'the card sits in the side column');
+  assert.equal(card().parentElement.firstElementChild, card(), 'first in the side column');
+  assert.equal(card().nextElementSibling.classList.contains('allocation-panel'), true, 'above the asset allocation card');
   assert.deepEqual([...card().querySelectorAll('.trade-actions button')].map((b) => b.textContent.trim()), ['Buy', 'Sell']);
   card().querySelector('.trade-actions button:last-child').click(); fixture.detectChanges();
   assert.equal(fixture.componentInstance.modal(), 'trade');
