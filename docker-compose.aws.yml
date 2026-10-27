@@ -1,0 +1,85 @@
+# Single-host AWS stack: the app containers on one EC2 instance, databases on RDS.
+#   docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d --build
+# Values come from a root .env on the instance (never committed); every secret is required here,
+# so a missing one stops startup instead of falling back to a dev default.
+x-rds-primary: &rds-primary
+  DB_HOST: ${RDS_PRIMARY_HOST:?RDS_PRIMARY_HOST is required}
+  DB_PORT: 5432
+  DB_NAME: nexttrade
+  DB_APP_USERNAME: app_user
+  DB_APP_PASSWORD: ${DB_APP_PASSWORD:?DB_APP_PASSWORD is required}
+  APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET is required}
+# Rotated container logs, so the instance disk cannot fill up.
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+# Without a limit each JVM sizes its heap from the whole instance; cap it per container.
+x-jvm: &jvm
+  restart: unless-stopped
+  logging: *logging
+  mem_limit: 1g
+
+services:
+  gateway:
+    restart: unless-stopped
+    logging: *logging
+  frontend:
+    restart: unless-stopped
+    logging: *logging
+  insights-frontend:
+    restart: unless-stopped
+    logging: *logging
+
+  auth:
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 512m
+    depends_on: !reset []
+    environment:
+      <<: *rds-primary
+      SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?SSN_ENCRYPTION_KEY is required}
+      NEXTTRADE_SECURITY_SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:?SSN_ENCRYPTION_KEY is required}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:?PASSWORD_RESET_URL is required}
+      # RDS requires SSL; node-postgres only uses it when asked. Encrypted, without CA verification.
+      PGSSLMODE: no-verify
+
+  holdings:
+    <<: *jvm
+    depends_on: !reset []
+    environment:
+      <<: *rds-primary
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+
+  orders:
+    <<: *jvm
+    depends_on: !reset []
+    environment:
+      <<: *rds-primary
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+      # No broker on this host yet; publishing is best-effort, so turn it off instead of timing out.
+      ORDERS_KAFKA_ENABLED: "false"
+
+  insights:
+    <<: *jvm
+    depends_on: !reset []
+    environment:
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?APP_JWT_SECRET is required}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+      # BR-16: Insights reads the RDS read replica as the read-only reporting role.
+      DB_HOST: ${RDS_REPLICA_HOST:?RDS_REPLICA_HOST is required}
+      DB_PORT: 5432
+      DB_NAME: nexttrade
+      DB_APP_USERNAME: reporting_user
+      DB_APP_PASSWORD: ${REPORTING_DB_PASSWORD:?REPORTING_DB_PASSWORD is required}
+      SPRING_KAFKA_LISTENER_AUTO_STARTUP: "false"
+
+  # RDS replaces the local primary, its migrations and the hand-built replica. A profile that is
+  # never enabled keeps them from starting.
+  db:
+    profiles: [local-db]
+  db-migrate:
+    profiles: [local-db]
+  reporting-setup:
+    profiles: [local-db]
+  reporting-db:
+    profiles: [local-db]
