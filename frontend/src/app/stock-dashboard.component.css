@@ -68,3 +68,46 @@ h2, p, dl, dd { margin: 0; }
   .chart-types button[aria-pressed="true"] { background: Highlight; color: HighlightText; }
   .chart-types button { border: 1px solid ButtonText; }
 }
+
+/* Novice look (Oct 2026), loads last: the advanced dashboard's live stock card in the novice dashboard's
+   style -- Plus Jakarta Sans, a 20px rounded card, sentence-case heading, a bold price and an off-white
+   selected chart type. Look only. */
+:host { font-family: var(--font-ui); }
+.dashboard-shell { border-color: var(--surface-tone-13); border-radius: 20px; background: var(--surface); }
+.eyebrow { color: var(--text); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; text-transform: none; }
+.feed-status { font-size: 12px; font-weight: 600; }
+.asset-monogram { border-radius: 12px; }
+.asset-identity h2 { font-size: 16px; font-weight: 800; }
+.asset-identity p { font-size: 12.5px; }
+.current-price { font-size: clamp(36px, 4vw, 48px); font-weight: 800; letter-spacing: -0.045em; }
+.performance-badge { padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.comparison-label, .open-metric dt { font-size: 12.5px; }
+.open-metric dd { font-size: 15px; font-weight: 700; }
+.chart-title { color: var(--text); font-size: 14px; font-weight: 800; }
+.chart-types { padding: 4px; gap: 2px; border-color: var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-16); }
+.chart-types button { border-radius: 9px; font-size: 12.5px; font-weight: 700; }
+.chart-types button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.dashboard-footer { font-size: 11.5px; }
+.feed-notice { border-radius: 12px; }
+
+/* Market overview header, tidied: the price reads in white (the change pill carries the colour),
+   the currency sits as a small tag beside the company, and the session open is a labelled figure
+   set off by a hairline and aligned to the bottom of the price block. */
+.asset-heading { margin-bottom: 20px; }
+.currency-label { margin-left: 2px; align-self: center; padding: 3px 8px; border: 1px solid var(--surface-tone-08); border-radius: 999px; color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.hero-metrics { align-items: stretch; justify-content: flex-start; gap: 0; }
+.hero-metrics > div:first-child { flex: 1 1 auto; min-width: 0; padding-right: 24px; }
+.current-price.text-market-up, .current-price.text-market-down, .current-price { color: var(--text); font-size: 44px; letter-spacing: -0.035em; line-height: 1.05; }
+.performance-row { margin-top: 12px; gap: 10px; }
+.open-metric { display: flex; flex-direction: column; justify-content: flex-end; min-width: 140px; padding: 0 0 4px 24px; border-left: 1px solid var(--surface-tone-13); text-align: left; }
+.open-metric dt { margin-bottom: 6px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+.open-metric dd { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+@media (max-width: 560px) {
+  .hero-metrics { gap: 16px; }
+  .open-metric { padding-left: 0; border-left: 0; }
+}
+
+/* Live: just the dot, a little larger, with a soft pulse so it reads as "updating". */
+.status-dot.live { width: 8px; height: 8px; animation: live-pulse 2.4s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@media (prefers-reduced-motion: reduce) { .status-dot.live { animation: none; } }

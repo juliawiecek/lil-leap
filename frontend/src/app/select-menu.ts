@@ -3,6 +3,10 @@ import { Component, computed, input, output, signal } from '@angular/core';
 export interface MenuOption {
   readonly value: string;
   readonly label: string;
+  /** Optional muted text after the label, e.g. a company name. */
+  readonly detail?: string;
+  /** Optional text on the right of the row, e.g. a price. */
+  readonly meta?: string;
 }
 
 /**
@@ -33,7 +37,9 @@ export interface MenuOption {
         (click)="toggle()"
         (keydown)="key($event)"
       >
-        <span class="menu-value">{{ selected()?.label || placeholder() }}</span>
+        <span class="menu-value"
+          >@if (selected(); as option) {<b>{{ option.label }}</b>@if (option.detail) {<span class="menu-detail">{{ option.detail }}</span>}} @else {{{ placeholder() }}}</span
+        >
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
       @if (open()) {
@@ -47,7 +53,8 @@ export interface MenuOption {
               (mousedown)="$event.preventDefault()"
               (mouseenter)="index.set(i)"
               (click)="pick(option.value)"
-            >{{ option.label }}</li>
+              [class.rich]="!!option.detail || !!option.meta"
+            ><b>{{ option.label }}</b>@if (option.detail) {<span class="menu-detail">{{ option.detail }}</span>}@if (option.meta) {<em>{{ option.meta }}</em>}</li>
           }
         </ul>
       }
@@ -67,7 +74,10 @@ export interface MenuOption {
       .menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       .menu-trigger.invalid { border-color: color-mix(in srgb, var(--loss) 55%, transparent); }
       .menu-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
-      .menu-value { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .menu-value { display: flex; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .menu-value b, .menu-list li b { font-weight: inherit; }
+      .menu-detail { min-width: 0; overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+      .menu-trigger:has(.menu-detail) .menu-value > b { font-weight: 800; }
       .menu-trigger svg { flex: none; width: 16px; height: 16px; fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
       .menu-trigger[aria-expanded='true'] svg { transform: rotate(180deg); }
       .menu-list {
@@ -77,6 +87,10 @@ export interface MenuOption {
       }
       .menu-list li { padding: 10px 12px; border-radius: 8px; color: var(--text); font-size: 14px; cursor: pointer; }
       .menu-list li.active { background: var(--text-wash-07); }
+      /* Rows with a name and a price: symbol, name, then the price on the right, as in the novice stock menu. */
+      .menu-list li.rich { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+      .menu-list li.rich b { font-weight: 800; }
+      .menu-list li em { color: var(--text-muted); font-style: normal; font-variant-numeric: tabular-nums; }
       .menu-list li[aria-selected='true'] { font-weight: 700; }
     `,
   ],

@@ -1,0 +1,560 @@
+/* ==========================================================================
+   Advanced dashboard in the novice dashboard's look (Oct 2026). Look and feel only:
+   same markup, data and behaviour. Loads last. The page sits on the novice grid
+   background; every section is a rounded card with roomy padding and a bold,
+   sentence-case heading; tabs are underlined; colour is kept for prices and
+   gains/losses; buttons and pills match the novice ones.
+   ========================================================================== */
+@keyframes nt-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes nt-pulse {
+  0% { box-shadow: 0 0 0 0 var(--gain-wash-06); }
+  70% { box-shadow: 0 0 0 6px var(--gain-wash-01); }
+  100% { box-shadow: 0 0 0 0 var(--gain-wash-01); }
+}
+
+:host {
+  --line: var(--surface-tone-08);
+  background-color: var(--background);
+  background-image: radial-gradient(ellipse at center, var(--surface-wash-57), transparent 75%),
+    radial-gradient(60% 40% at 70% 0%, var(--text-wash-62), transparent 70%),
+    linear-gradient(to right, var(--text-wash-21) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, var(--text-wash-21) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 52px 52px, 52px 52px;
+  font-size: 13px;
+}
+h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; text-transform: none; }
+
+/* Sidebar: as on the novice dashboard */
+.pro-shell { background: none; }
+.pro-sidebar { padding: 22px 14px 18px; border-right-color: var(--surface-tone-13); background: var(--surface-wash-90); }
+.pro-logo { margin: 0 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.pro-sidebar nav { gap: 2px; margin-top: 32px; }
+.pro-sidebar nav button { height: 40px; padding: 0 12px; gap: 12px; border: 0; border-radius: 10px; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: background-color 0.15s ease, color 0.15s ease; }
+.pro-sidebar nav button:hover { background: var(--surface-tone-89); color: var(--text); }
+.pro-sidebar nav button.active { border: 0; background: var(--surface-raised); color: var(--text); font-weight: 700; }
+.pro-sidebar nav app-dashboard-icon { width: 18px; height: 18px; }
+.sidebar-help { border-top-color: var(--surface-tone-13); }
+.sidebar-help button { min-height: 42px; padding: 0 12px; border-radius: 10px; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+.sidebar-help button:hover { background: var(--surface-tone-89); color: var(--text); }
+
+/* Header: frosted bar, rounded controls, market status as a pill */
+.pro-topbar {
+  height: 66px; padding: 0 32px; border-bottom: 1px solid var(--text-wash-14);
+  background: var(--surface-wash-56); -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+}
+.pro-search { flex: 0 1 480px; width: auto; min-width: 200px; height: 42px; padding: 0 14px; border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-07); }
+.pro-search input { font-size: 14px; }
+.pro-search input::placeholder { color: var(--text-subtle); }
+.search-results { top: 48px; border-radius: 14px; background: var(--surface-tone-03); box-shadow: 0 18px 40px var(--shadow-92); overflow: hidden; }
+.header-actions { gap: 10px; }
+.market-status {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px;
+  background: var(--status-wash); color: var(--status-accent); font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.market-status i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
+.market-status.closed { background: var(--loss-wash-01); color: var(--loss); }
+.market-status.closed i { animation: none; }
+.header-actions .tier-badge { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 1px solid var(--surface-tone-10); border-radius: 999px; background: var(--surface-tone-84); color: var(--text-tone-19); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.notification-button { width: 42px; height: 42px; border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-07); color: var(--text-muted); }
+.notification-button:hover { color: var(--text); background: var(--surface-raised); }
+.notification-button i { top: 9px; right: 10px; width: 7px; height: 7px; background: var(--accent); box-shadow: 0 0 0 2px var(--surface-tone-51); }
+.notification-popover { top: 50px; border-radius: 14px; background: var(--surface-tone-03); }
+.avatar { width: 42px; height: 42px; background: var(--accent); color: var(--on-accent); font-size: 15px; font-weight: 800; }
+.avatar:hover { background: var(--white); }
+:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger { height: 42px; padding-inline: 12px; border: 1px solid var(--surface-tone-08); border-radius: 12px; background: var(--surface-wash-07); }
+:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger:hover,
+:host ::ng-deep .pro-topbar app-account-switcher .switcher-trigger[aria-expanded='true'] { border-color: var(--surface-tone-10); }
+:host ::ng-deep .pro-topbar app-account-switcher .account-menu { border-radius: 14px; }
+:host ::ng-deep .pro-topbar app-account-switcher .account-row,
+:host ::ng-deep .pro-topbar app-account-switcher .menu-action { border-radius: 10px; }
+
+/* Page and cards */
+.pro-content { padding: 28px 32px 64px; }
+.pro-grid, .bottom-panels { gap: 20px; }
+.panel {
+  border: 1px solid var(--surface-tone-13); border-radius: 20px; background: var(--surface); box-shadow: none;
+  animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; transition: border-color 0.2s ease;
+}
+.panel:hover { border-color: var(--surface-tone-10); }
+.panel-heading, .market-panel .panel-heading, .bottom-panels .panel-heading {
+  height: auto; min-height: 0; padding: 22px 24px 14px; border-bottom: 0;
+}
+.panel-heading h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; text-transform: none; }
+.panel-note { color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+.text-link { gap: 4px; color: var(--text-tone-19); font-size: 13px; font-weight: 700; transition: color 0.15s ease; }
+.text-link:hover { color: var(--white); }
+.empty-note { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+.service-banner { border-radius: 14px; }
+
+/* Portfolio summary: one hero card -- big value with a change pill, then the other figures
+   in a row split by hairlines (no boxes inside the card), like the novice portfolio card. */
+.summary-panel { padding: 26px 28px 24px; }
+.summary-panel h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.summary-panel h1 .icon-button { width: 28px; height: 28px; border-radius: 8px; color: var(--text-muted); }
+.summary-metrics { display: grid; grid-template-columns: minmax(260px, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 0; align-items: end; margin-top: 8px; }
+.summary-metrics > div,
+.summary-metrics > div:first-child,
+.summary-metrics > div:last-child {
+  min-width: 0; padding: 4px 20px; border: 0; border-left: 1px solid var(--text-wash-14); border-radius: 0; background: none;
+}
+.summary-metrics > div:first-child { padding-left: 0; border-left: 0; }
+.summary-metrics > div:hover { border-color: var(--text-wash-14); }
+.summary-metrics > div > span { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.summary-metrics strong { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.summary-metrics b, .summary-metrics small { font-size: 12.5px; font-weight: 600; }
+.summary-metrics small { color: var(--text-muted); }
+.summary-metrics .main-value strong { font-size: 48px; line-height: 1.05; font-weight: 800; letter-spacing: -0.045em; }
+.summary-metrics .main-value > span,
+.summary-metrics .main-value > span.gain,
+.summary-metrics .main-value > span.loss {
+  display: inline-flex; align-items: center; gap: 8px; width: max-content; margin-top: 12px; padding: 5px 11px;
+  border-radius: 999px; background: var(--text-wash-11); font-size: 14px; font-weight: 700;
+}
+.summary-metrics .main-value > span.gain { background: var(--gain-wash-07); }
+.summary-metrics .main-value > span.loss { background: var(--loss-wash-01); }
+.summary-metrics .main-value > span small { color: var(--text-muted); font-weight: 500; }
+
+/* Tabs: underlined, like the novice investment tabs */
+.panel-tabs, .list-tabs, .market-tabs { gap: 4px; margin: 0; padding: 0 24px; border-bottom: 1px solid var(--surface-tone-13); background: none; }
+.panel-tabs button, .list-tabs button, .market-tabs button {
+  height: auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none;
+  color: var(--text-muted); font-size: 13px; font-weight: 700;
+}
+.panel-tabs button:hover, .list-tabs button:hover, .market-tabs button:hover { color: var(--text); }
+.panel-tabs .active, .list-tabs .active, .market-tabs .active,
+.list-tabs [aria-selected='true'] { border-bottom-color: var(--accent); background: none; color: var(--text); }
+
+/* Tables: quiet headers, roomy rows, a soft hover */
+th { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.positions-table th, .watch-table th { height: 42px; border-bottom: 1px solid var(--surface-tone-13); background: none; }
+.positions-table td, .watch-table td { height: 56px; border-top-color: var(--surface-tone-15); font-size: 13.5px; }
+.positions-table th:first-child, .positions-table td:first-child,
+.watch-table th:first-child, .watch-table td:first-child { padding-left: 24px; }
+.positions-table th:last-child, .positions-table td:last-child,
+.watch-table th:last-child, .watch-table td:last-child { padding-right: 24px; }
+.positions-table tbody tr, .watch-table tbody tr { transition: background-color 0.15s ease; }
+.positions-table tbody tr:hover, .watch-table tbody tr:hover { background: var(--surface-raised); }
+.watch-table tr.selected { background: var(--surface-raised); box-shadow: inset 2px 0 0 var(--accent); }
+.positions-table td b, .watch-table td b { font-size: 14px; font-weight: 800; }
+.position-sub, .watch-sector { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.weight-bar { height: 4px; border-radius: 999px; background: var(--surface-tone-13); }
+.weight-bar i, .weight-bar > * { border-radius: 999px; background: var(--accent); }
+
+/* Market overview: rounded tiles on the card surface. The tint still grows with the size of the move
+   (it is a heat map), but softer, so the colours sit with the rest of the page. */
+.heat-map { gap: 8px; padding: 4px 24px 8px; }
+.heat-tile { min-height: 62px; padding: 12px 14px; border: 1px solid var(--surface-tone-13); border-radius: 14px; background: var(--surface-raised); text-align: left; }
+.heat-tile::before { border-radius: inherit; opacity: clamp(0.06, calc(var(--heat, 0) * 0.12 + 0.05), 0.26); }
+.heat-tile:hover { transform: none; filter: none; border-color: var(--surface-tone-10); }
+.heat-tile b { font-size: 14px; font-weight: 800; }
+.heat-tile.gain span { color: var(--gain); }
+.heat-tile.loss span { color: var(--loss); }
+.sector-list { padding: 4px 24px; }
+.sector-list > div { padding: 10px 0; border-bottom: 1px solid var(--surface-tone-15); font-size: 13.5px; font-weight: 600; }
+.sector-list > div:last-child { border-bottom: 0; }
+.sector-bar { height: 6px; border-radius: 999px; background: var(--surface-tone-13); }
+.sector-bar i { border-radius: 999px; background: var(--gain); }
+.sector-bar i.negative-bar { background: var(--loss); }
+.market-panel > .empty-note, .watch-panel .empty-note { padding: 0 24px; }
+.mover-row { padding: 12px 24px; border-bottom: 1px solid var(--surface-tone-15); font-size: 13.5px; }
+.mover-row:hover { background: var(--surface-raised); }
+
+/* Portfolio summary card at the bottom */
+.summary-card { padding: 4px 24px 24px; }
+.summary-total { font-size: 34px; font-weight: 800; letter-spacing: -0.035em; }
+.summary-grid { gap: 18px 24px; margin-top: 16px; }
+.summary-grid span { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; }
+.summary-grid b { font-size: 16px; font-weight: 800; }
+.split-bar { height: 8px; margin-top: 22px; border-radius: 999px; background: var(--surface-tone-13); overflow: hidden; }
+.split-bar .equities { background: var(--accent); }
+.split-bar .cash { background: var(--text-tone-60); }
+.split-legend { margin-top: 10px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+
+/* Buttons: as on the novice dashboard */
+.primary-button { min-height: 44px; border: 1px solid var(--accent); border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 800; box-shadow: none; }
+.primary-button:hover { background: var(--white); box-shadow: none; }
+.secondary-button { min-height: 40px; border: 1px solid var(--surface-tone-58); border-radius: 12px; background: transparent; color: var(--text); font-weight: 700; }
+.secondary-button:hover { border-color: var(--surface-tone-49); color: var(--white); }
+.icon-button { border-radius: 10px; }
+
+/* Secondary pages and settings */
+.settings-panel { padding: 28px; }
+.settings-panel > div { border-bottom-color: var(--surface-tone-13); }
+.orders-history-panel, .positions-panel, .watch-panel, .market-panel, .executions-panel, .exposure-panel { overflow: hidden; }
+
+/* Dialogs */
+.detail-dialog, dialog { border: 1px solid var(--surface-tone-10); border-radius: 22px; background: var(--surface); box-shadow: 0 40px 100px var(--shadow-33); }
+.dialog-heading h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+
+/* "Explain this chart" / "Show as table" sit inside the card's padding, under what they describe. */
+.panel > app-chart-access, .summary-card app-chart-access, .watch-panel app-chart-access { padding: 6px 24px 18px; }
+.summary-card app-chart-access { padding-inline: 0; }
+
+/* Watchlist / Movers / Sectors: underlined tabs like the others, not a filled pill row. */
+.list-tabs { display: flex; grid-template-columns: none; margin: 18px 0 0; padding: 0 24px; border: 0; border-bottom: 1px solid var(--surface-tone-13); border-radius: 0; background: none; }
+.list-tabs button { min-height: 0; padding: 10px 12px; border-radius: 0; }
+.list-tabs button.active { border-bottom-color: var(--accent); background: none; color: var(--text); }
+/* The small Portfolio Summary card keeps its heading on one line. */
+.exposure-panel .panel-heading h2 { font-size: 16px; white-space: nowrap; }
+.summary-panel h1 { margin-bottom: 4px; }
+
+/* Markets page: the market overview and the stock list were both placed in the same grid row and
+   overlapped. Stack them: overview first, then the full stock list. */
+.secondary-page .market-panel { grid-row: 1; max-width: none; }
+.secondary-page .watch-panel { grid-row: 2; }
+.market-tabs { display: flex; width: auto; margin: 0 24px; padding: 0; border: 0; border-bottom: 1px solid var(--surface-tone-13); border-radius: 0; }
+
+/* The bottom Portfolio Summary card was removed; Recent Activity takes the whole bottom row. */
+.bottom-panels { grid-template-columns: minmax(0, 1fr); }
+/* Its "Explain this chart" / "Show as table" now sit under the figures in the top summary card. */
+.summary-panel > app-chart-access.summary-access { margin-top: 18px; padding: 0; }
+
+/* Overview without the Market Overview card: positions take the full width, and the watchlist and
+   recent activity share the row beneath. The card's chart buttons now sit at the foot of the watchlist. */
+.pro-grid:not(.secondary-page) .positions-panel { grid-column: 1 / -1; }
+.pro-grid:not(.secondary-page) .watch-panel { grid-row: 4; }
+.watch-access { display: grid; gap: 14px; padding: 16px 24px 20px; border-top: 1px solid var(--surface-tone-13); }
+.watch-access-label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+/* The watchlist card has a fixed height: its list scrolls inside, and the chart buttons stay at the foot. */
+.pro-grid:not(.secondary-page) .watch-panel { display: flex; flex-direction: column; }
+.pro-grid:not(.secondary-page) .watch-panel > #watch-list-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.pro-grid:not(.secondary-page) .watch-panel > .watch-access { flex: none; }
+/* Compact: each pair on one line with its label, so the list keeps most of the card. */
+.watch-access { gap: 8px; padding: 12px 24px 14px; }
+.watch-access > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.watch-access-label { margin: 0; }
+.pro-grid:not(.secondary-page) .watch-panel, .pro-grid:not(.secondary-page) .bottom-panels { height: 560px; }
+
+/* Wordmark: the novice logo exactly -- "Next" in white, "Trade" in green, and the small white trend
+   arrow drawn as a line (it was the green arrow icon). */
+.pro-logo { margin: 0 6px; color: var(--text); font-size: 21px; font-weight: 650; letter-spacing: -0.8px; }
+.pro-logo > span { color: var(--gain); }
+.wordmark-trend { width: 19px; height: 15px; margin-left: 5px; overflow: visible; color: var(--text); }
+.wordmark-trend path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.collapsed .pro-logo { margin: 0; font-size: 0; justify-content: center; }
+.collapsed .wordmark-trend { width: 23px; height: 18px; margin: 0; }
+@media (max-width: 760px) { .pro-logo { margin: 0; font-size: 0; justify-content: center; } .wordmark-trend { margin: 0; } }
+
+/* Recent Activity card: the list sits inside the card's padding and scrolls inside it (no scrollbar
+   on the card's edge); each row has the date and description on the left and, on the right, the
+   amount and its Details button side by side. */
+.executions-panel { display: flex; flex-direction: column; }
+.executions-panel > app-activity-feed { flex: 1 1 auto; min-height: 0; padding: 0 24px 16px; overflow-y: auto; scrollbar-width: thin; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-filters { margin: 0 0 10px; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-item {
+  grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 16px; row-gap: 2px;
+  margin: 0 -12px; padding: 14px 12px; border-radius: 12px;
+}
+:host ::ng-deep .executions-panel app-activity-feed .activity-item > time { grid-column: 1; grid-row: 1; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-item > .what { grid-column: 1; grid-row: 2; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-item > .amount { grid-column: 2; grid-row: 1 / 3; justify-self: end; font-size: 14px; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-item > .actions { grid-column: 3; grid-row: 1 / 3; margin: 0; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-item .actions button { min-height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+/* Markets > Stocks: the filter tabs sit straight under the card heading. */
+.stock-filter { margin-top: 0; }
+
+/* Activity page: the list inside the card's padding, filters in one tidy row with rounded dark date fields,
+   and each entry on a single line -- date, description, status, amount, then Details. */
+.orders-history-panel > app-activity-feed { display: block; padding: 0 24px 20px; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-filters { align-items: flex-end; gap: 12px 16px; margin: 0 0 12px; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-filters label { color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-filters input {
+  height: 38px; padding: 0 12px; border: 1px solid var(--surface-tone-08); border-radius: 10px; background: var(--background); color: var(--text); color-scheme: dark;
+}
+:host ::ng-deep .orders-history-panel app-activity-feed .kind-switch { height: 38px; align-items: center; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item {
+  grid-template-columns: 190px minmax(0, 1fr) 110px 130px auto; align-items: center; column-gap: 20px;
+  margin: 0 -12px; padding: 14px 12px; border-radius: 12px;
+}
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > time { grid-column: 1; grid-row: 1; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .what { grid-column: 2; grid-row: 1; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .status { grid-column: 3; grid-row: 1; justify-self: start; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .amount { grid-column: 4; grid-row: 1; justify-self: end; font-size: 14px; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .actions { grid-column: 5; grid-row: 1; margin: 0; }
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item .actions button { min-height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+/* Entries without a Details button keep the same columns. */
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item:not(:has(> .actions))::after { content: ''; grid-column: 5; width: 72px; }
+@media (max-width: 900px) {
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item { grid-template-columns: minmax(0, 1fr) auto auto; }
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item > time { grid-column: 1 / -1; }
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .what { grid-column: 1; grid-row: 2; }
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .status { display: none; }
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .amount { grid-column: 2; grid-row: 2; }
+  :host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .actions { grid-column: 3; grid-row: 2; }
+}
+
+:host ::ng-deep .orders-history-panel app-activity-feed .activity-item > .trail { grid-column: 1 / -1; grid-row: auto; }
+
+/* Summary hero only on Overview: secondary pages start straight with their content */
+.pro-grid.secondary-page > * { grid-row: auto; }
+.pro-grid.secondary-page > .market-panel { grid-row: 1; }
+.pro-grid.secondary-page > .watch-panel { grid-row: 2; }
+
+/* Live ticker under the top bar and the Overview greeting, carried over from novice. */
+:host ::ng-deep app-market-ticker {
+  position: sticky; top: 66px; z-index: 5; margin: 0; padding: 0 32px;
+  border-bottom: 1px solid var(--text-wash-21); background: var(--surface-wash-56);
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+}
+.page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 24px; }
+.greeting-title { margin: 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; word-spacing: 0.12em; }
+.day-summary { margin: 4px 0 0; color: var(--text-muted); font-size: 15px; font-weight: 500; }
+.day-summary b { color: var(--text); font-weight: 700; }
+.day-summary .positive { color: var(--gain); }
+.day-summary .negative { color: var(--loss); }
+.heading-status { display: flex; align-items: center; gap: 14px; color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+.heading-status .status-pill { display: inline-flex; align-items: center; gap: 9px; padding: 6px 12px; border-radius: 999px; background: var(--status-wash); color: var(--status-accent); font-weight: 700; }
+.heading-status .status-pill.closed { background: var(--loss-wash-01); color: var(--loss); }
+.heading-status .status-pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: nt-pulse 2.4s ease-out infinite; }
+.heading-status .status-pill.closed i { animation: none; }
+@media (max-width: 900px) {
+  .page-heading { flex-direction: column; align-items: flex-start; }
+  .greeting-title { font-size: 24px; }
+  :host ::ng-deep app-market-ticker { position: static; padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .heading-status .status-pill i { animation: none; } }
+
+/* Novice's portfolio graph inside the summary card. */
+.summary-panel app-portfolio-chart { display: block; margin-top: 22px; }
+.exposure-access { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--surface-tone-13); }
+.exposure-access > app-chart-access.summary-access { margin: 0; padding: 0; }
+
+/* Overview layout (wide screens): two balanced columns, then full-width tables.
+   Left: portfolio summary + graph, then the stock chart. Right: the trade ticket, then the watchlist,
+   which grows to meet the bottom of the stock chart so both columns end on the same line.
+   Below: positions, then recent activity, each across the full width. */
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) { grid-template-rows: auto auto auto auto auto; align-items: stretch; }
+  .pro-grid:not(.secondary-page) > .summary-panel { grid-column: 1 / 9; grid-row: 1; }
+  .pro-grid:not(.secondary-page) > app-advanced-chart { grid-column: 1 / 9; grid-row: 2 / 4; }
+  :host ::ng-deep .pro-grid:not(.secondary-page) .order-ticket { grid-column: 9 / -1; grid-row: 1 / 3; align-self: stretch; }
+  .pro-grid:not(.secondary-page) > .watch-panel { grid-column: 9 / -1; grid-row: 3; height: auto; min-height: 560px; align-self: stretch; contain: size; }
+  .pro-grid:not(.secondary-page) > .positions-panel { grid-column: 1 / -1; grid-row: 4; }
+  .pro-grid:not(.secondary-page) > .bottom-panels { grid-column: 1 / -1; grid-row: 5; height: 460px; }
+
+  /* Summary at two-thirds width: the big value on its own line, the five figures in a row beneath. */
+  .pro-grid:not(.secondary-page) .summary-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); row-gap: 22px; }
+  .pro-grid:not(.secondary-page) .summary-metrics > .main-value { grid-column: 1 / -1; padding: 0; border-left: 0; }
+  .pro-grid:not(.secondary-page) .summary-metrics > .main-value + div { padding-left: 0; border-left: 0; }
+}
+
+/* Spacing pass: every card uses the same 24px inset, and rows inside cards line up. */
+.summary-panel { padding: 24px; }
+.summary-panel h1 { margin: 0 0 6px; padding: 0; transform: none; text-indent: 0; }
+/* Figures under the big value: one baseline, separated from the value by a hairline. */
+.pro-grid:not(.secondary-page) .summary-metrics { align-items: start; }
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) .summary-metrics { row-gap: 20px; }
+  .pro-grid:not(.secondary-page) .summary-metrics > .main-value { padding-bottom: 20px; border-bottom: 1px solid var(--surface-tone-13); }
+  .pro-grid:not(.secondary-page) .summary-metrics > div:not(.main-value) { padding-top: 0; padding-bottom: 0; }
+}
+/* Graph: clear space above, and its own buttons sit just under it. */
+.summary-panel app-portfolio-chart { margin-top: 28px; }
+:host ::ng-deep .summary-panel app-portfolio-chart app-chart-access .actions { margin: 16px 0 0; }
+/* Cash vs. invested: one tidy row — label left, buttons right, centred on each other. */
+.exposure-access { margin-top: 20px; padding-top: 16px; align-items: center; }
+:host ::ng-deep .exposure-access app-chart-access .actions,
+:host ::ng-deep .watch-access app-chart-access .actions { margin: 0; }
+.watch-access { gap: 12px; padding: 16px 24px; }
+/* Recent activity: the list scrolls inside the card, so the heading and rows share the same edges. */
+.pro-grid:not(.secondary-page) .bottom-panels .panel { overflow: hidden; display: flex; flex-direction: column; }
+.pro-grid:not(.secondary-page) .bottom-panels .panel > app-activity-feed { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.summary-panel h1 { position: static; margin: 0 0 8px; }
+/* Watchlist footer at one-third width: each label sits directly above its two buttons. */
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) .watch-access > div { display: grid; justify-content: stretch; gap: 8px; }
+  :host ::ng-deep .pro-grid:not(.secondary-page) .watch-access app-chart-access .actions { justify-content: flex-start; }
+}
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) .watch-access > div > app-chart-access { justify-self: start; margin: 0; padding: 0; }
+}
+/* The ticker is a flat strip under the top bar (no rounded corners or side borders from the scan-group card style). */
+:host ::ng-deep app-market-ticker { border: 0; border-bottom: 1px solid var(--text-wash-21); border-radius: 0; box-shadow: none; outline: 0; }
+
+/* Overview layout v2 (wide screens): the stock chart sits right beside the trade ticket, so the
+   stock you pick to buy or sell is always the one charted next to it.
+   Row 1: portfolio summary + graph | watchlist (pick a stock here).
+   Row 2: stock chart | trade ticket (the ticket runs down beside recent activity too).
+   Row 3: recent activity under the chart.
+   Row 4: positions across the full width. */
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) > .summary-panel { grid-column: 1 / 9; grid-row: 1; }
+  .pro-grid:not(.secondary-page) > .watch-panel { grid-column: 9 / -1; grid-row: 1; min-height: 0; height: auto; contain: size; }
+  .pro-grid:not(.secondary-page) > app-advanced-chart { grid-column: 1 / 9; grid-row: 2; }
+  :host ::ng-deep .pro-grid:not(.secondary-page) .order-ticket { grid-column: 9 / -1; grid-row: 2 / 4; align-self: stretch; }
+  .pro-grid:not(.secondary-page) > .bottom-panels { grid-column: 1 / 9; grid-row: 3; height: auto; min-height: 380px; contain: size; }
+  .pro-grid:not(.secondary-page) > .positions-panel { grid-column: 1 / -1; grid-row: 4; }
+}
+@media (min-width: 1201px) { .pro-grid:not(.secondary-page) { grid-template-rows: none; } }
+
+/* Sign out turns red on hover, as in novice. */
+.sidebar-help .sign-out:hover { color: var(--loss); }
+/* Recent activity takes exactly the room left beside the trade ticket, so the ticket never
+   stretches with empty space at its foot (it grows as the ticket grows, e.g. limit orders). */
+@media (min-width: 1201px) {
+  .pro-grid:not(.secondary-page) > .bottom-panels { min-height: 260px; }
+}
+/* Recent Activity: the title gets the same breathing room as the other cards' titles,
+   with a clear gap before the All / Orders / Cash filter and another before the list. */
+.bottom-panels .executions-panel > .panel-heading { flex: none; height: auto; min-height: 0; padding: 24px 24px 16px; align-items: center; }
+.bottom-panels .executions-panel > .panel-heading h2 { margin: 0; line-height: 1.2; }
+:host ::ng-deep .executions-panel app-activity-feed .activity-filters { margin: 0 0 12px; }
+
+/* Positions card in the novice "Your investments" style: title + note, underlined tabs, roomy
+   two-line rows with a letter logo, and a Trade pill. All the advanced figures are kept. */
+.positions-panel { display: block; padding: 22px 0 0; }
+.positions-panel > .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: auto; padding: 0 24px; border: 0; }
+.positions-panel > .panel-heading h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.025em; }
+.positions-panel .panel-note { color: var(--text-muted); font-size: 13px; font-weight: 600; }
+.positions-panel .investment-tabs { display: flex; gap: 5px; margin: 12px 0 0; padding: 0 24px; border-bottom: 1px solid var(--surface-tone-13); }
+.positions-panel .investment-tabs button { padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+.positions-panel .investment-tabs button:hover { color: var(--text); }
+.positions-panel .investment-tabs button.selected { border-bottom-color: var(--accent); color: var(--text); }
+.positions-panel .table-scroll { max-height: none; overflow-x: auto; }
+.positions-panel .holdings-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.positions-panel .holdings-table th { height: 42px; padding: 0 12px; border: 0; background: none; color: var(--text-muted); font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.positions-panel .holdings-table th:first-child { width: 30%; padding-left: 24px; text-align: left; }
+.positions-panel .holdings-table th:last-child { width: 96px; padding-right: 24px; }
+.positions-panel .holdings-table td { height: 68px; padding: 10px 12px; border-top: 1px solid var(--surface-tone-15); font-size: 14px; vertical-align: middle; }
+.positions-panel .holdings-table td:first-child { padding-left: 24px; }
+.positions-panel .holdings-table td:last-child { padding-right: 24px; }
+.positions-panel .holdings-table tbody tr { transition: background-color 0.15s ease; }
+.positions-panel .holdings-table tbody tr:hover { background: var(--surface-raised); }
+.positions-panel .holdings-table th:nth-child(n + 2), .positions-panel .holdings-table td:nth-child(n + 2) { text-align: right; }
+.positions-panel .holding-symbol { display: flex; align-items: center; gap: 14px; padding: 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.positions-panel .company-logo { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--text-wash-14); color: var(--text); font-size: 15px; font-weight: 800; }
+.positions-panel .holding-id { display: grid; min-width: 0; }
+.positions-panel .holding-id b { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.positions-panel .holding-id .company-name { margin-top: 3px; overflow: hidden; color: var(--text-muted); font-size: 12.5px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.positions-panel .cell-main { display: block; font-weight: 700; }
+.positions-panel .cell-sub { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+.positions-panel .cell-sub.gain { color: var(--gain); }
+.positions-panel .cell-sub.loss { color: var(--loss); }
+.positions-panel td.gain .cell-sub, .positions-panel td.loss .cell-sub { color: inherit; }
+.positions-panel .weight-cell { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 6px; font-weight: 700; }
+.positions-panel .weight-bar { display: block; width: 72px; }
+.positions-panel .holding-actions { min-width: 64px; height: 32px; padding: 0 12px; border: 1px solid var(--surface-tone-87); border-radius: 8px; background: transparent; color: var(--text-tone-19); font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.positions-panel .holding-actions:hover, .positions-panel .holding-actions:focus-visible { background: var(--surface-tone-83); border-color: var(--surface-tone-86); color: var(--text); }
+.positions-panel .empty-row { height: 88px; color: var(--text-muted); text-align: center !important; }
+.positions-panel .asset-class-list { padding: 0 0 4px; }
+.positions-panel .asset-class-list > div { display: grid; grid-template-columns: 1fr 80px 140px; align-items: center; gap: 24px; padding: 16px 24px; border-bottom: 1px solid var(--surface-tone-15); font-size: 14px; }
+.positions-panel .asset-class-list > div:last-child { border-bottom: 0; }
+.positions-panel .asset-class-list > div > :not(:first-child) { text-align: right; }
+.positions-panel .asset-class-list > div > span:first-child { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; }
+.positions-panel .asset-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.positions-panel .asset-dot.stocks { background: linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); }
+.positions-panel .asset-dot.cash { background: var(--allocation-cash); }
+.positions-panel .asset-class-list strong { font-weight: 800; }
+.positions-panel .asset-class-list > div > span:last-child { color: var(--text-muted); }
+
+.page-greeting { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+.positions-panel .asset-dot.stocks { background: linear-gradient(135deg, var(--buy-deep), var(--buy-light)); }
+.positions-panel .asset-dot.cash { background: var(--surface-tone-91); }
+.positions-panel { min-height: 0; }
+.pro-grid .positions-panel.panel { min-height: 0; height: auto; }
+
+/* Activity page in the novice style: page heading above, then one card titled
+   "Orders, deposits and transfers" with the same 24px inset and title size as novice. */
+.orders-history-panel { padding: 24px 0 8px; }
+.orders-history-panel > .panel-heading { height: auto; min-height: 0; padding: 0 24px 18px; border: 0; }
+.orders-history-panel > .panel-heading h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.025em; }
+.orders-history-panel > app-activity-feed { padding: 0 24px 16px; }
+:host ::ng-deep .orders-history-panel app-activity-feed .kind-switch button.active { background: var(--text); color: var(--background); }
+
+/* Markets page in the same style as Portfolio and Activity: page heading, 20px card titles,
+   novice underlined tabs, and roomy stock rows with a letter logo and the company name. */
+.secondary-page .market-panel, .secondary-page .watch-panel { padding: 24px 0 0; }
+.secondary-page .market-panel > .panel-heading, .secondary-page .watch-panel > .panel-heading { height: auto; min-height: 0; padding: 0 24px; border: 0; }
+.secondary-page .market-panel > .panel-heading h2, .secondary-page .watch-panel > .panel-heading h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.025em; }
+.secondary-page .market-panel .market-tabs,
+.secondary-page .watch-panel .stock-filter { display: flex; gap: 5px; margin: 12px 0 0; padding: 0 24px; border: 0; border-bottom: 1px solid var(--surface-tone-13); border-radius: 0; background: none; }
+.secondary-page .market-panel .market-tabs button,
+.secondary-page .watch-panel .stock-filter button { height: auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; box-shadow: none; color: var(--text-muted); font-size: 13px; font-weight: 700; }
+.secondary-page .market-panel .market-tabs button:hover,
+.secondary-page .watch-panel .stock-filter button:hover { color: var(--text); }
+.secondary-page .market-panel .market-tabs button.active,
+.secondary-page .watch-panel .stock-filter button.active { border-bottom-color: var(--accent); background: none; color: var(--text); }
+.secondary-page .market-panel .sector-list { padding: 16px 24px 4px; }
+.secondary-page .market-panel > .empty-note { margin: 0; padding: 4px 24px 0; color: var(--text-muted); font-size: 12.5px; }
+.secondary-page .market-panel > app-chart-access { display: block; padding: 0 24px 20px; }
+.secondary-page .market-panel .mover-row { padding-inline: 24px; }
+/* Stocks table: same rows as Your holdings. */
+.secondary-page .watch-table th { height: 42px; padding: 0 12px; border: 0; background: none; color: var(--text-muted); font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.secondary-page .watch-table th:first-child, .secondary-page .watch-table td:first-child { padding-left: 24px; }
+.secondary-page .watch-table th:last-child, .secondary-page .watch-table td:last-child { padding-right: 24px; }
+.secondary-page .watch-table td { height: 68px; padding: 10px 12px; border-top: 1px solid var(--surface-tone-15); font-size: 14px; font-weight: 700; vertical-align: middle; }
+.secondary-page .watch-table tbody tr { transition: background-color 0.15s ease; }
+.secondary-page .watch-table tbody tr:hover { background: var(--surface-raised); }
+.secondary-page .watch-table td:first-child button { display: grid; grid-template-columns: 40px auto; grid-template-rows: auto auto; column-gap: 14px; align-items: center; padding: 0; border: 0; background: none; color: var(--text); text-align: left; }
+.secondary-page .watch-table .company-logo { grid-row: 1 / 3; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--text-wash-14); color: var(--text); font-size: 15px; font-weight: 800; }
+.secondary-page .watch-table td:first-child b { align-self: end; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.secondary-page .watch-table .watch-sector { display: block; align-self: start; margin-top: 3px; color: var(--text-muted); font-size: 12.5px; font-weight: 500; }
+.secondary-page .watch-table td.muted { color: var(--text-muted); font-weight: 500; }
+/* Clear the sticky top bar and price strip when a Trade button scrolls the ticket into view. */
+:host ::ng-deep .order-ticket { scroll-margin-top: 128px; }
+
+/* Review dialog summary line, as in novice: a plain neutral panel (no green outline or tint). */
+dialog .review-summary { margin: 4px 0 10px; padding: 12px 14px; border: 0; border-radius: 12px; background: var(--surface-tone-13); color: var(--text); font-size: 14px; font-weight: 700; line-height: 1.4; }
+
+/* Order pop-ups in the dashboard's card style: dark rounded card with a hairline border, the
+   status as a small coloured pill, the message in white, and View as a quiet outlined button. */
+:host ::ng-deep app-toasts .toasts { right: 20px; bottom: 20px; gap: 12px; width: min(380px, calc(100vw - 40px)); }
+:host ::ng-deep app-toasts .toast {
+  align-items: flex-start; gap: 14px; padding: 14px 14px 14px 16px;
+  border: 1px solid var(--surface-tone-13); border-radius: 16px;
+  background: var(--surface); color: var(--text); box-shadow: 0 18px 44px var(--shadow-92);
+  font-size: 13px;
+}
+:host ::ng-deep app-toasts .toast.rejected { border-color: var(--surface-tone-13); background: var(--surface); }
+:host ::ng-deep app-toasts .toast strong { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: var(--text); font-size: 14px; font-weight: 700; line-height: 1.35; }
+:host ::ng-deep app-toasts .toast strong app-status-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px;
+  background: var(--gain-wash-07); color: var(--gain); font-size: 11.5px; font-weight: 700;
+}
+:host ::ng-deep app-toasts .toast.rejected strong app-status-badge { background: var(--loss-wash-01); color: var(--loss); }
+:host ::ng-deep app-toasts .toast p { margin-top: 6px; color: var(--text-muted); font-size: 12.5px; }
+:host ::ng-deep app-toasts .toast .actions { align-items: center; gap: 4px; }
+:host ::ng-deep app-toasts .toast .view {
+  height: 30px; padding: 0 12px; border: 1px solid var(--surface-tone-87); border-radius: 8px;
+  color: var(--text-tone-19); font-size: 12.5px; font-weight: 600;
+}
+:host ::ng-deep app-toasts .toast .view:hover { background: var(--surface-tone-83); color: var(--text); }
+:host ::ng-deep app-toasts .toast.rejected .view { color: var(--text-tone-19); }
+:host ::ng-deep app-toasts .toast .close { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; font-size: 18px; }
+:host ::ng-deep app-toasts .toast .close:hover { background: var(--surface-tone-83); color: var(--text); }
+:host ::ng-deep app-toasts .toast strong .sep { display: none; }
+/* Brighter: a soft wash of the side's colour (blue for Buy, red for Sell), like the Buy/Sell buttons. */
+dialog .review-summary { border: 1px solid color-mix(in srgb, var(--buy) 35%, transparent); background: color-mix(in srgb, var(--buy) 14%, var(--surface)); color: var(--text); }
+dialog .review-summary.sell { border-color: color-mix(in srgb, var(--loss) 35%, transparent); background: color-mix(in srgb, var(--loss) 12%, var(--surface)); }
+dialog .review-summary { border-color: color-mix(in srgb, var(--buy) 45%, transparent); background: color-mix(in srgb, var(--buy) 22%, var(--surface)); }
+dialog .review-summary.sell { border-color: color-mix(in srgb, var(--loss) 45%, transparent); background: color-mix(in srgb, var(--loss) 18%, var(--surface)); }
+/* Stand out from the cards behind: a lifted surface tinted with the outcome colour, a clearer
+   border in that colour, and a deeper shadow. */
+:host ::ng-deep app-toasts .toast {
+  border-color: color-mix(in srgb, var(--gain) 45%, transparent);
+  background: color-mix(in srgb, var(--gain) 12%, var(--surface-raised));
+  box-shadow: 0 0 0 1px var(--shadow-40), 0 22px 50px var(--shadow-92);
+}
+:host ::ng-deep app-toasts .toast.rejected {
+  border-color: color-mix(in srgb, var(--loss) 45%, transparent);
+  background: color-mix(in srgb, var(--loss) 12%, var(--surface-raised));
+}
+/* Solid (not see-through): an opaque card colour with the tint laid over it. */
+:host ::ng-deep app-toasts .toast { background: var(--surface); box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--gain) 13%, transparent), 0 22px 50px var(--shadow-92); }
+:host ::ng-deep app-toasts .toast.rejected { background: var(--surface); box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--loss) 13%, transparent), 0 22px 50px var(--shadow-92); }
+/* A filled sell is shown in red (money out of a holding), a filled buy in green. */
+:host ::ng-deep app-toasts .toast.sell:not(.rejected) { border-color: color-mix(in srgb, var(--loss) 45%, transparent); box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--loss) 13%, transparent), 0 22px 50px var(--shadow-92); }
+:host ::ng-deep app-toasts .toast.sell:not(.rejected) strong app-status-badge { background: var(--loss-wash-01); color: var(--loss); }
+
+/* Entrance animation (as in novice): every card rises in on load, including the cards that live in
+   child components (stock chart and trade ticket), with a slight top-to-bottom stagger. */
+.page-heading { animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+:host ::ng-deep app-advanced-chart .dashboard-shell,
+:host ::ng-deep .order-ticket { animation: nt-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pro-grid > .summary-panel, .pro-grid > .watch-panel { animation-delay: 0.04s; }
+:host ::ng-deep app-advanced-chart .dashboard-shell, :host ::ng-deep .order-ticket { animation-delay: 0.1s; }
+.pro-grid > .bottom-panels .panel { animation-delay: 0.16s; }
+.pro-grid > .positions-panel, .pro-grid > .market-panel, .pro-grid > .orders-history-panel { animation-delay: 0.2s; }
+@media (prefers-reduced-motion: reduce) {
+  .page-heading, :host ::ng-deep app-advanced-chart .dashboard-shell, :host ::ng-deep .order-ticket { animation: none; }
+}

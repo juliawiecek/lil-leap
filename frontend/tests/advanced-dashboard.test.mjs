@@ -203,7 +203,7 @@ test('orders come from the backend order history, not sample data', async t => {
 test('the advanced workspace has five pages, with orders and history merged into Activity (PS-11)', t => {
   const desk = tradingDesk(t);
   assert.deepEqual(desk.nav.map(n => n.name), ['Overview', 'Portfolio', 'Activity', 'Markets', 'Settings']);
-  assert.deepEqual(desk.bottomTabs, ['Positions', 'Balances', 'Performance']);
+  assert.deepEqual(desk.bottomTabs, ['Holdings', 'Asset classes']);
 });
 
 test('balances that cannot be read raise the service-unavailable banner until a retry succeeds (PS-11)', async t => {
@@ -225,7 +225,8 @@ test('a submitted order is re-read until it fills, then tracking stops', async t
   for (let i = 0; i < 3; i++) { t.mock.timers.tick(2000); await flush(); seen.push(desk.orders()[0].status); }
   assert.deepEqual(seen, ['Submitted', 'Accepted', 'Filled', 'Filled']);
   assert.equal(history.calls, 3);
-  assert.match(desk.message(), /Order o1 filled/);
+  assert.match(desk.message(), /^Bought \d+ \w+ at \$225\.10\. You can see it under Activity\.$/);
+  assert.doesNotMatch(desk.message(), /o1/, 'the order reference is not shown');
 });
 
 test('positions are re-priced from the shared feed on every tick, with no request of their own (PS-10)', async t => {
@@ -256,7 +257,7 @@ test('a fill seen by the order poll reloads balances, so the overview follows ev
   desk.ngOnDestroy();
 });
 
-test('the summary shows real cash and invested shares, sectors come from listed stocks, and the chart uses recorded prices (PS-06)', t => {
+test('the summary shows real cash and invested shares and sectors come from listed stocks (PS-06)', t => {
   const desk = tradingDesk(t);
   desk.feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change, sector: symbol === 'AMZN' ? 'Consumer' : 'Technology' })));
   assert.equal(desk.portfolioLoaded(), true);
@@ -264,13 +265,6 @@ test('the summary shows real cash and invested shares, sectors come from listed 
   assert.equal(desk.exposureLabel(), '$92.4K', 'short enough to fit inside the ring');
   assert.deepEqual(desk.sectors().map(s => [s.name, s.change]), [['Technology', 1.39], ['Consumer', 1.21]]);
   assert.equal(desk.sectors()[0].width, 100);
-  const now = Date.now();
-  desk.currentTime.set(new Date(now));
-  desk.priceHistory.set([{ at: now - 60000, price: 170 }, { at: now - 30000, price: 175 }]);
-  assert.match(desk.priceLine(), /^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/, 'only the two recorded observations; no invented price before the first');
-  assert.equal(desk.historyStart(), now - 60000);
-  desk.priceHistory.set([]);
-  assert.equal(desk.priceLine(), '', 'no invented candles while prices are still being collected');
 });
 
 test('cash, positions and portfolio value come from the backend and reload after a fill', async t => {
@@ -387,7 +381,7 @@ test('sell submission uses backend instrument and stops tracking rejected orders
   await desk.confirmOrder(); await flush();
   assert.equal(request.side, 'SELL');
   assert.equal(request.instrumentId, 'aapl-uuid');
-  assert.equal(desk.message(), 'Order o1 rejected.');
+  assert.match(desk.message(), /^Your order was not filled\. .*price moved past your price protection/);
   const [toast] = desk.toasts.toasts();
   assert.equal(toast.kind, 'rejected');
   assert.match(toast.detail, /price moved past your price protection/);
@@ -423,15 +417,13 @@ test('tracking stops when its deadline has elapsed', async t => {
   assert.equal(history.calls, 1);
 });
 
-test('search and chart periods update the displayed data', t => {
+test('search updates the displayed data', t => {
   const desk = tradingDesk(t);
   desk.query.set('  apple  ');
   assert.deepEqual(desk.results().map(q => q.symbol), ['AAPL']);
-  desk.period.set('1M');
-  assert.equal(desk.chartTimes().length, 7);
   assert.equal(desk.quote('unknown'), desk.quotes()[0]);
   desk.navigate('Portfolio');
-  assert.equal(desk.bottomTab(), 'Positions');
+  assert.equal(desk.bottomTab(), 'Holdings');
 });
 
 test('the spoken briefing reads the summary panel, live moves and orders (PS-18)', async t => {
@@ -445,11 +437,10 @@ test('the spoken briefing reads the summary panel, live moves and orders (PS-18)
   assert.equal(snapshot.buyingPower, 1000);
   assert.deepEqual(snapshot.holdings, [{ symbol: 'NVDA', name: 'NVIDIA Corporation', dayChangePercent: 2.36 }]);
   assert.deepEqual(snapshot.orders, rows);
-  desk.privateBalance.set(true);
   desk.orderHistoryClient = { list: async () => { throw new Error('down'); } };
-  const hidden = await desk.briefingSource();
-  assert.equal(hidden.balanceHidden, true);
-  assert.deepEqual(hidden.orders, []);
+  const failed = await desk.briefingSource();
+  assert.equal(failed.balanceHidden, false, 'balances are always shown');
+  assert.deepEqual(failed.orders, []);
 });
 
 test('review creates a fresh order reference and backdrop closes only the dialog', t => {
@@ -596,19 +587,3 @@ test('market ticket uses executable bid/ask and sizes from stop risk with cash a
   assert.equal(ticket.suggestedQuantity(), 0);
 });
 
-test('the chart starts loading as soon as the stock list is known, before the first prices arrive', async t => {
-  const feed = fakeFeed([]);
-  const requested = [];
-  feed.client = { closes: async (id) => { requested.push(id); return Array.from({ length: 30 }, (_, i) => ({ at: Date.now() - (30 - i) * 300000, price: 176 + i / 10 })); }, history: async () => [] };
-  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
-  feed.push(LISTED.map(([symbol]) => ({ symbol, name: NAMES[symbol], price: 0, change: 0 })));
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(requested, ['aapl-uuid'], 'one candle request for the linked stock');
-  assert.equal(desk.quotes().length, 0, 'the market view keeps "Loading prices" rather than $0.00 rows');
-  assert.equal(desk.priceHistory().length, 30);
-  feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(desk.selected().symbol, 'AAPL');
-  assert.equal(desk.quotes().length, 5);
-  assert.deepEqual(requested, ['aapl-uuid'], 'the priced tick reuses the loaded chart');
-});

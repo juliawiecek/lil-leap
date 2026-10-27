@@ -8,6 +8,8 @@ export interface Toast {
   kind: ToastKind;
   title: string;
   detail: string;
+  /** The trade's side, when the toast is about one; lets a dashboard colour sells differently. */
+  side?: 'buy' | 'sell';
 }
 
 /** Fills disappear quickly; rejections stay longer so the reason can be read (PS-15). */
@@ -22,9 +24,9 @@ export class ToastService {
   #nextId = 1;
   readonly #timers = new Map<number, ReturnType<typeof setTimeout>>();
 
-  show(kind: ToastKind, title: string, detail = ''): number {
+  show(kind: ToastKind, title: string, detail = '', side?: 'buy' | 'sell'): number {
     const id = this.#nextId++;
-    this.toasts.update((list) => [...list, { id, kind, title, detail }].slice(-MAX_TOASTS));
+    this.toasts.update((list) => [...list, { id, kind, title, detail, ...(side ? { side } : {}) }].slice(-MAX_TOASTS));
     this.#timers.set(id, setTimeout(() => this.dismiss(id), TOAST_MS[kind]));
     return id;
   }
@@ -43,9 +45,9 @@ export class ToastService {
   template: `
     <section class="toasts" aria-live="polite" aria-label="Order updates">
       @for (toast of service.toasts(); track toast.id) {
-        <div class="toast" [class.rejected]="toast.kind === 'rejected'" [attr.role]="toast.kind === 'rejected' ? 'alert' : 'status'">
+        <div class="toast" [class.rejected]="toast.kind === 'rejected'" [class.sell]="toast.side === 'sell'" [attr.role]="toast.kind === 'rejected' ? 'alert' : 'status'">
           <div>
-            <strong><app-status-badge [value]="toast.kind" /> · {{ toast.title }}</strong>
+            <strong><app-status-badge [value]="toast.kind" /><span class="sep"> · </span><span class="title">{{ toast.title }}</span></strong>
             @if (toast.detail) {
               <p>{{ toast.detail }}</p>
             }
