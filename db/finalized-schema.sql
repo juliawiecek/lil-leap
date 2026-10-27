@@ -329,6 +329,7 @@ CREATE TABLE quotes (
 CREATE INDEX idx_quotes_instrument ON quotes(instrument_id);
 CREATE INDEX idx_quotes_quoted_at ON quotes(quoted_at DESC);
 CREATE INDEX idx_quotes_instrument_latest ON quotes(instrument_id, quoted_at DESC);
+CREATE INDEX idx_quotes_candles ON quotes(instrument_id, quoted_at DESC) INCLUDE (bid, ask, created_at, quote_id);
 
 -- ==========================================================
 -- ACCOUNTS (BR-04, BR-05, BR-11: Trading accounts with tier constraints)

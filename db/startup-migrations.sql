@@ -9,4 +9,5 @@ SELECT pg_advisory_lock(719340, 1);
 \ir migrations/018_trade_clients.sql
 \ir migrations/019_account_order_presets.sql
 \ir migrations/020_password_expiry.sql
+\ir migrations/021_quotes_candle_index.sql
 SELECT pg_advisory_unlock(719340, 1);
