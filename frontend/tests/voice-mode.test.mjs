@@ -84,7 +84,7 @@ test('the toggle is one aria-pressed button: on says "Voice mode on", off stops 
   assert.equal(toggle.tagName, 'BUTTON');
   assert.equal(toggle.getAttribute('type'), 'button', 'a real button: mouse, keyboard and switch control all press it');
   assert.equal(toggle.getAttribute('aria-pressed'), 'false');
-  assert.match(root.textContent, /For people who don't use a screen reader/);
+  assert.match(root.textContent, /Leave this off if you use a screen reader/);
 
   toggle.click(); fixture.detectChanges();
   assert.equal(toggle.getAttribute('aria-pressed'), 'true');

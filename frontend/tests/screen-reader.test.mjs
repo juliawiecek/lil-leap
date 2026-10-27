@@ -206,7 +206,7 @@ test('the Live prices card pauses updates, turns Price watch on and picks stocks
   assert.match(root.querySelector('.stocks legend').textContent, /2 chosen/);
   assert.match(root.textContent, /AAPL Apple/);
   assert.doesNotMatch(root.textContent, /A M D/, 'a name written only for speech is not shown');
-  assert.ok(root.querySelector('fieldset legend').textContent.includes('Price watch'));
+  assert.equal(root.querySelector('details.more > summary').textContent.trim(), 'Price watch', 'Price watch sits behind a caret');
 });
 
 // ---- Pause live updates ---------------------------------------------------------------------
@@ -247,26 +247,20 @@ test('paused, the feed shows the first prices and then stops refreshing until re
   stop();
 });
 
-test('the ticker is not a live region, can be paused, and stops scrolling while paused', async (t) => {
+test('the ticker is not a live region, has no pause button, and stops scrolling when paused in Settings', async (t) => {
   withStorage(t);
   const feed = fakeFeed([{ symbol: 'AAPL', name: 'Apple Inc.', price: 100 }]);
-  feed.refreshQuotes = async () => { feed.refreshed = (feed.refreshed ?? 0) + 1; };
-  const fixture = await render(t, MarketTicker, {}, [feedProvider(feed)]);
+  const live = new LivePricesService();
+  const fixture = await render(t, MarketTicker, {}, [feedProvider(feed), { provide: LivePricesService, useValue: live }]);
   const root = fixture.nativeElement;
   const ticker = root.querySelector('.ticker');
   assert.deepEqual([ticker.getAttribute('role'), ticker.getAttribute('aria-label'), ticker.getAttribute('aria-live')], ['region', 'Live prices', 'off']);
   assert.equal(root.querySelector('[role=status], [role=alert], [aria-live=polite], [aria-live=assertive]'), null, 'nothing in the ticker is read out on its own');
-  const pause = root.querySelector('button.pause');
-  assert.equal(pause.textContent.replace(/\s+/g, ' ').trim(), 'Pause live updates', 'its name starts with the word shown');
-  assert.equal(pause.getAttribute('aria-pressed'), 'false');
+  assert.ok(ticker.hasAttribute('data-a11y-no-hover'), 'voice mode does not read the tape on hover');
+  assert.equal([...root.querySelectorAll('button')].some((b) => /pause/i.test(b.textContent)), false);
   assert.ok(root.querySelector('.tape').classList.contains('moving'));
-  pause.click(); fixture.detectChanges();
-  assert.equal(pause.getAttribute('aria-pressed'), 'true');
+  live.setPaused(true); fixture.detectChanges();
   assert.equal(root.querySelector('.tape').classList.contains('moving'), false);
-  assert.match(root.querySelector('.paused-note').textContent, /Prices paused/);
-  pause.click(); fixture.detectChanges();
-  assert.equal(feed.refreshed, 1, 'resuming fetches prices at once');
-  assert.equal(root.querySelector('.paused-note'), null);
 });
 
 // ---- Novice trading -------------------------------------------------------------------------
@@ -558,9 +552,9 @@ test('with My screen reader chosen, the briefing skips the browser voice and is 
   fixture.componentInstance.service.update({ voice: 'screen-reader' });
   fixture.detectChanges();
   assert.match(fixture.nativeElement.querySelector('.note').textContent, /Sent to your screen reader/);
-  const voice = fixture.nativeElement.querySelector('select');
-  assert.match(voice.closest('label').textContent, /Voice/);
-  assert.deepEqual([...voice.options].map((o) => o.textContent.trim()), ['Browser voice', 'My screen reader']);
+  // The popover keeps only speed and repeat; who reads it is chosen in Settings > Accessibility.
+  assert.deepEqual([...fixture.nativeElement.querySelectorAll('select')].map((s) => s.closest('label').textContent.trim().split(/\s/)[0]), ['Voice', 'Repeat']);
+  assert.equal([...fixture.nativeElement.querySelectorAll('option')].some((o) => o.textContent.includes('My screen reader')), false);
 });
 
 test('Alt+B with My screen reader reads the whole briefing once, in order, with no browser voice', async (t) => {

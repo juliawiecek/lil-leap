@@ -89,8 +89,10 @@ test('the Accessibility section has a heading and opens the shortcuts from a key
   let opened = 0;
   fixture.componentInstance.openShortcuts.subscribe(() => opened++);
   const cards = [...root.querySelectorAll('[data-scan-group]')].map((el) => el.getAttribute('data-scan-group'));
-  assert.deepEqual(cards, ['Accessibility', 'Arrow-key navigation', 'Voice mode', 'Read on demand', 'Visual assistance', 'Audio briefing', 'Switch control', 'Live prices', 'Captions'], 'new tools preserve the PS-18, PS-19 and PS-21 cards');
+  assert.deepEqual(cards, ['Accessibility', 'Arrow-key navigation', 'Voice mode', 'Visual assistance', 'Switch control', 'Captions', 'Charts', 'Audio briefing', 'Live prices'], 'new tools preserve the PS-18, PS-19 and PS-21 cards');
   const view = [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === 'View shortcuts');
+  assert.equal(root.querySelector('.a11y-cards').firstElementChild.contains(view), true, 'keyboard shortcuts come first');
+  assert.equal(root.textContent.includes('Read on demand'), false);
   assert.equal(view.getAttribute('type'), 'button', 'a real button, reachable by Tab, Enter, Space and switch control');
   view.click();
   assert.equal(opened, 1);

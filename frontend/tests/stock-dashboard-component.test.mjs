@@ -11,6 +11,7 @@ const { StockDashboardComponent, STOCK_DASHBOARD_TICKS, provideStockDashboardFee
   await import('../src/app/stock-dashboard.component.ts');
 const { QuoteService } = await import('../src/app/quote.service.ts');
 const { LivePricesService } = await import('../src/app/live-prices.ts');
+const { ChartTools } = await import('../src/app/chart-voice.ts');
 TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const NOW = Date.parse('2026-10-20T16:00:00Z');
 const tick = (price, seconds = 0, openPrice = 100) => ({
@@ -57,7 +58,8 @@ async function dashboard(t, sampleMs = 5000) {
   });
   TestBed.configureTestingModule({
     imports: [StockDashboardComponent],
-    providers: [{ provide: STOCK_DASHBOARD_TICKS, useValue: feed }],
+    // Show chart tools on, so Show as table is there to press.
+    providers: [{ provide: STOCK_DASHBOARD_TICKS, useValue: feed }, { provide: ChartTools, useValue: { shown: () => true, setShown() {} } }],
   });
   const fixture = TestBed.createComponent(StockDashboardComponent);
   fixture.componentRef.setInput('sampleMs', sampleMs);

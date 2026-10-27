@@ -8,10 +8,7 @@ import { CaptionService } from './captions';
     <section class="card" aria-labelledby="caption-settings-title" data-scan-group="Captions">
       <span class="card-text">
         <b id="caption-settings-title">Captions</b>
-        <small id="caption-settings-help">
-          Show what NextTrade says aloud in a strip at the bottom of the screen: switch control, the order read-back,
-          the briefing and <kbd>Alt</kbd> + <kbd>W</kbd> explanations. On unless you turn it off.
-        </small>
+        <small id="caption-settings-help">Show what NextTrade says aloud in a strip at the bottom of the screen.</small>
       </span>
       <button
         type="button"

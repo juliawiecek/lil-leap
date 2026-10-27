@@ -75,6 +75,16 @@ test('focus speech debounces, replaces stale reading, does not activate controls
   assert.equal(spoken.length, 2); assert.ok(synth.cancelCount > 0);
 });
 
+test('hover never reads inside data-a11y-no-hover (the scrolling ticker), and hover elsewhere still does', t => {
+  const { doc, spoken } = setup(t, '<div data-a11y-no-hover><button>Apple, $224</button></div><button>Buy Apple</button>', { enabled: true, hover: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const [ticker, buy] = doc.querySelectorAll('button');
+  hover(ticker); t.mock.timers.tick(1000);
+  assert.equal(spoken.length, 0);
+  hover(buy); t.mock.timers.tick(1000);
+  assert.equal(spoken.at(-1).text, 'Buy Apple.');
+});
+
 test('focus/hover voice stays quiet while the existing scanner owns navigation', t => {
   const { doc, spoken } = setup(t, '<button>Portfolio</button>', { enabled: true, focus: true, hover: true }, true);
   t.mock.timers.enable({ apis: ['setTimeout'] });

@@ -44,7 +44,6 @@ html .login-candles path { stroke-width: 1; }
   html body .allocation-boundary { stroke: CanvasText !important; }
   html body .allocation-track { stroke: Canvas !important; }
   html body .ring.sector { stroke: CanvasText !important; filter: none; }
-  html body .sector-label { fill: CanvasText !important; stroke: Canvas !important; }
   html body :is(.asset-dot.stocks, .stocks-meter > span, .split-bar .equities, .split-legend span:first-child::before) { background-image: none !important; border: 3px double CanvasText !important; }
   html body :is(.asset-dot.cash, .cash-meter > span, .split-bar .cash, .split-legend span:last-child::before) { border: 1px dashed CanvasText !important; }
   html .login-candles rect { fill: Canvas !important; stroke: CanvasText !important; }

@@ -10,9 +10,8 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
         <span class="card-text">
           <b id="scan-settings-title">Switch control</b>
           <small>
-            Use the whole dashboard with one button. A ring moves through the page; press your switch to choose
-            what it is on. Number and text fields open an on-screen keypad. Press <kbd>Alt</kbd> + <kbd>S</kbd> on any
-            page to turn it on with every item read aloud, or off.
+            Use the whole dashboard with one button: a ring moves through the page and your switch chooses. Press
+            <kbd>Alt</kbd> + <kbd>S</kbd> on any page to turn it on or off.
           </small>
         </span>
         <button
@@ -25,6 +24,8 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
           {{ scan.settings().enabled ? 'On' : 'Off' }}
         </button>
       </div>
+      <details class="more">
+      <summary>Switch control options</summary>
       <div class="card-options">
         <label
           >Scan speed
@@ -63,6 +64,7 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
           Read each item aloud</label
         >
       </div>
+      </details>
     </section>
   `,
   styles: [
@@ -87,6 +89,14 @@ import { SCAN_BACK_PROMPTS, SCAN_KEYS, SCAN_PAUSE_PROMPTS, SCAN_SPEEDS, SwitchSc
       label.check { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--text); font-size: 13px; }
       label.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
       .scan-toggle:focus-visible, select:focus-visible, label.check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+      /* The options sit behind a caret, as on the other accessibility cards. */
+      details.more > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; }
+      details.more > summary::-webkit-details-marker { display: none; }
+      details.more > summary::before { content: ''; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+      details.more[open] > summary { margin-bottom: 10px; }
+      details.more[open] > summary::before { transform: rotate(45deg); }
+      details.more > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+      @media (prefers-reduced-motion: reduce) { details.more > summary::before { transition: none; } }
       @media (max-width: 480px) { .card { padding-inline: 12px; } .card-top { flex-wrap: wrap; gap: 12px; } }
     `,
   ],

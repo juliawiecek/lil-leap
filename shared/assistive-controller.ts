@@ -154,7 +154,7 @@ export class AssistiveController {
     this.hovered = element;
     const settings = this.options.settings();
     if (!settings.enabled || !settings.hover || !element || this.options.scanning?.() ||
-        element.closest('[data-a11y-sensitive]') || element.matches('input[type="password"]')) return;
+        element.closest('[data-a11y-sensitive], [data-a11y-no-hover]') || element.matches('input[type="password"]')) return;
     this.hoverTimer = setTimeout(() => {
       if (element.isConnected && this.hovered === element && visible(element)) this.read(element, 'assist:hover');
     }, settings.hoverDelay);
@@ -209,7 +209,7 @@ export class AssistiveController {
   readFocused(): void {
     const element = this.lastTarget;
     if (element?.isConnected) this.read(element, 'assist:request', true);
-    else this.options.status('Focus an element on the page, then choose Read focused element.');
+    else this.options.status('Focus an element on the page, then press Alt + Shift + R.');
   }
   /** Gives a person starting from Settings a known place to begin and instructions they can hear. */
   beginArrowNavigation(): void {

@@ -37,5 +37,20 @@ export async function identity(page, info, options = {}) {
   }, { key, age: options.age ?? 0 });
   return { calls, key };
 }
+/** Turns on Show chart tools (Settings > Accessibility > Charts), so charts show Explain this chart and Show as table. */
+export async function chartTools(page) {
+  await page.addInitScript(() => {
+    const key = 'nexttrade.accessibility';
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(key) ?? '{}') ?? {}; } catch { saved = {}; }
+    localStorage.setItem(key, JSON.stringify({ ...saved, charts: { tools: true } }));
+  });
+}
+/** Opens every caret (details.more) in an accessibility settings area, so the options inside can be used. */
+export async function openOptions(scope) {
+  for (const details of await scope.locator('details.more').all()) {
+    if (!(await details.evaluate(d => d.open))) await details.locator('summary').click();
+  }
+}
 export const workspace = page => page.locator('app-trading-workspace, app-insights-workspace');
 export async function ready(page) { await expect(workspace(page)).toBeVisible(); }

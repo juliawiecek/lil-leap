@@ -1,4 +1,4 @@
-import { ChartVoice } from './chart-voice';
+import { ChartTools, ChartVoice } from './chart-voice';
 import { Component, inject, output } from '@angular/core';
 import { BriefingSettingsCard } from './briefing-settings';
 import { SwitchScanSettings } from '../../../shared/switch-scan-settings';
@@ -26,7 +26,25 @@ import { CaptionSettingsCard } from './caption-settings';
         </p>
       </div>
       <div class="a11y-cards">
+        <div class="a11y-card">
+          <span class="a11y-text"
+            ><b>Keyboard shortcuts</b><small>Every shortcut NextTrade understands. Press <kbd>?</kbd> anywhere to open the list.</small></span
+          >
+          <button type="button" class="a11y-button" (click)="openShortcuts.emit()">View shortcuts</button>
+        </div>
         <app-assistive-settings class="settings-appearance" />
+        <app-switch-scan-settings />
+        <app-caption-settings />
+        <fieldset class="a11y-card colour-mode" data-scan-group="Charts">
+          <legend>Charts</legend>
+          <div class="colour-options">
+            <label class="colour-option"><input type="checkbox" [checked]="chartTools.shown()" (change)="chartTools.setShown($any($event.target).checked)" />Show chart tools</label>
+            <label class="colour-option"><input type="checkbox" [checked]="chartVoice.enabled()" (change)="chartVoice.setEnabled($any($event.target).checked)" />Read chart summaries aloud</label>
+          </div>
+          <p class="after">Chart tools add Explain this chart and Show as table under every chart.</p>
+        </fieldset>
+        <app-briefing-settings />
+        <app-live-prices-settings />
         <fieldset class="a11y-card colour-mode" aria-describedby="colour-mode-help">
           <legend>Colour-blind mode</legend>
           <p id="colour-mode-help">Choose colours you can tell apart. Prices and calculations stay the same.</p>
@@ -40,22 +58,6 @@ import { CaptionSettingsCard } from './caption-settings';
             }
           </div>
         </fieldset>
-        <!-- Feature cards (PS-18, PS-19, PS-21, PS-22, PS-27) go here, one per feature. -->
-        <fieldset class="a11y-card colour-mode">
-          <legend>Chart voice</legend>
-          <label class="colour-option"><input type="checkbox" [checked]="chartVoice.enabled()" (change)="chartVoice.setEnabled($any($event.target).checked)" />Read chart summaries aloud</label>
-          <p>Hear a chart when you focus it or choose Explain this chart. Uses your briefing voice speed.</p>
-        </fieldset>
-        <app-briefing-settings />
-        <app-switch-scan-settings />
-        <app-live-prices-settings />
-        <app-caption-settings />
-        <div class="a11y-card">
-          <span class="a11y-text"
-            ><b>Keyboard shortcuts</b><small>Every shortcut NextTrade understands. Press <kbd>?</kbd> anywhere to open the list.</small></span
-          >
-          <button type="button" class="a11y-button" (click)="openShortcuts.emit()">View shortcuts</button>
-        </div>
       </div>
     </section>
   `,
@@ -71,6 +73,7 @@ import { CaptionSettingsCard } from './caption-settings';
       .colour-mode legend { float: left; width: 100%; margin-bottom: 4px; padding: 0; font-size: 14px; font-weight: 600; }
       .colour-mode legend + * { clear: both; }
       .colour-mode p { margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+      .colour-mode p.after { margin: 10px 0 0; }
       .colour-options { display: flex; flex-wrap: wrap; gap: 8px; }
       .colour-option { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px;
         border: 1px solid var(--surface-tone-02); border-radius: 6px; color: var(--text); font-size: 13px; cursor: pointer; }
@@ -96,6 +99,7 @@ import { CaptionSettingsCard } from './caption-settings';
 })
 export class AccessibilitySettings {
   readonly chartVoice = inject(ChartVoice);
+  readonly chartTools = inject(ChartTools);
   readonly colours = inject(ColourModeStore);
   readonly colourOptions = [
     { value: 'off', label: 'Off' },

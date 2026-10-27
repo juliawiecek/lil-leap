@@ -128,6 +128,7 @@ test('Alt+W speaks through the shared voice, cutting in, and is captioned', (t) 
   const captions = new CaptionService();
   doc.body.innerHTML = '<button id="review" data-glossary="market-order">Review buy</button>';
   captions.start(doc);
+  captions.setCaptions(true);
   const stop = listenForGlossary(doc);
   t.after(() => {
     stop(); captions.stop(); speechCoordinator.stop(); doc.body.innerHTML = '';

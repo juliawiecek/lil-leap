@@ -12,17 +12,16 @@ import { STOCK_NAMES } from './speech-text';
     <section class="card" aria-labelledby="live-prices-title" data-scan-group="Live prices">
       <span class="card-text">
         <b id="live-prices-title">Live prices</b>
-        <small>
-          Prices refresh every few seconds and the ticker scrolls. Pause them while you read, or let Price watch tell your
-          screen reader when a stock you pick moves, at most once every 10 seconds.
-        </small>
+        <small>Prices refresh every few seconds and the ticker scrolls. Pause them while you read.</small>
       </span>
       <label class="check"
         ><input type="checkbox" [checked]="live.paused()" (change)="live.setPaused($any($event.target).checked)" />
         Pause live updates</label
       >
-      <fieldset class="watch">
-        <legend>Price watch</legend>
+      <details class="more">
+      <summary>Price watch</summary>
+      <div class="watch">
+        <small class="watch-help">Your screen reader tells you when a stock you pick moves, at most once every 10 seconds.</small>
         <div class="card-options">
           <label class="check"
             ><input
@@ -52,9 +51,11 @@ import { STOCK_NAMES } from './speech-text';
             }
           </div>
         </fieldset>
-      </fieldset>
+      </div>
+      </details>
     </section>
   `,
+  styleUrl: './settings-disclosure.scss',
   styles: [
     `
       .card { display: grid; gap: 14px; padding: 14px 20px; border: 1px solid var(--surface-tone-04); border-radius: 8px; background: var(--surface-tone-03); }
@@ -65,6 +66,7 @@ import { STOCK_NAMES } from './speech-text';
       legend { padding: 0 4px; color: var(--text); font-size: 13px; font-weight: 600; }
       .count { color: var(--text-muted); font-weight: 400; }
       .watch { display: grid; gap: 12px; }
+      .watch-help { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
       .card-options { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
       label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
       select { min-height: 32px; padding: 0 8px; border: 1px solid var(--surface-tone-02); border-radius: 8px; background: var(--background);

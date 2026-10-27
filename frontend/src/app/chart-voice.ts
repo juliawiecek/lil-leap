@@ -4,6 +4,21 @@ import { SwitchScanService } from '../../../shared/switch-scan';
 import { ChartNarrator } from '../../../shared/chart-narrator';
 import { speakable } from './speech-text';
 
+/**
+ * Whether charts show their Explain this chart and Show as table buttons. Off until turned on in
+ * Settings > Accessibility, so the dashboards stay uncluttered; every chart still has its summary
+ * for screen readers, and D and T on a focused chart still explain it and show its table.
+ */
+@Injectable({ providedIn: 'root' })
+export class ChartTools {
+  readonly #store = inject(AccessibilityStore);
+  readonly shown = computed(() => this.#store.read('charts', value => (value as { tools?: unknown } | null)?.tools === true));
+  setShown(shown: boolean): void {
+    const saved = this.#store.read('charts', v => v && typeof v === 'object' ? v : {});
+    this.#store.write('charts', { ...saved, tools: shown });
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChartVoice {
   readonly #store = inject(AccessibilityStore);

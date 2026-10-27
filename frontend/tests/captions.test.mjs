@@ -160,18 +160,19 @@ test('a sentence the browser cannot say is still shown as a caption', (t) => {
   assert.equal(strip().textContent, 'No extra help for this item.');
 });
 
-test('captions are on unless turned off, and the choice is saved with the other accessibility settings', (t) => {
+test('captions are off unless turned on, and the choice is saved with the other accessibility settings', (t) => {
   const values = withStorage(t);
-  assert.deepEqual(parseCaptionSettings(undefined), { show: true });
-  assert.deepEqual(parseCaptionSettings({ show: false }), { show: false });
-  assert.deepEqual(parseCaptionSettings('junk'), { show: true });
+  assert.deepEqual(parseCaptionSettings(undefined), { show: false });
+  assert.deepEqual(parseCaptionSettings({ show: true }), { show: true });
+  assert.deepEqual(parseCaptionSettings('junk'), { show: false });
   const service = new CaptionService();
   service.start(doc);
   t.after(() => service.stop());
-  service.setCaptions(false);
-  assert.deepEqual(JSON.parse(values.get(ACCESSIBILITY_STORAGE_KEY)).captions, { show: false });
-  assert.equal(service.bar.shown, false);
-  assert.equal(new CaptionService().settings().show, false, 'kept after a reload');
+  assert.equal(service.bar.shown, false, 'off for a new user');
+  service.setCaptions(true);
+  assert.deepEqual(JSON.parse(values.get(ACCESSIBILITY_STORAGE_KEY)).captions, { show: true });
+  assert.equal(service.bar.shown, true);
+  assert.equal(new CaptionService().settings().show, true, 'kept after a reload');
 });
 
 test('the Captions card in Settings turns the strip on and off', async (t) => {
@@ -180,13 +181,13 @@ test('the Captions card in Settings turns the strip on and off', async (t) => {
   const root = fixture.nativeElement;
   const toggle = root.querySelector('.caption-toggle');
   assert.equal(root.querySelector('#' + toggle.getAttribute('aria-labelledby')).textContent.trim(), 'Captions');
-  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
-  toggle.click(); fixture.detectChanges();
   assert.equal(toggle.getAttribute('aria-pressed'), 'false');
   assert.equal(toggle.textContent.trim(), 'Off');
-  assert.equal(fixture.componentInstance.captions.settings().show, false);
   toggle.click(); fixture.detectChanges();
   assert.equal(toggle.getAttribute('aria-pressed'), 'true');
+  assert.equal(fixture.componentInstance.captions.settings().show, true);
+  toggle.click(); fixture.detectChanges();
+  assert.equal(toggle.getAttribute('aria-pressed'), 'false');
 });
 
 test('the Captions card is part of the Accessibility section both dashboards share', async (t) => {

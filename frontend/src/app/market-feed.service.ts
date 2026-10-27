@@ -81,7 +81,7 @@ export class MarketFeed {
     return this.#users > 0;
   }
 
-  /** The client paused live updates in Settings or on the ticker (PS-21). */
+  /** The client paused live updates in Settings > Accessibility (PS-21). */
   get paused(): boolean {
     return this.#livePrices.paused();
   }

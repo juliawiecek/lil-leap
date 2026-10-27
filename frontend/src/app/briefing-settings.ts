@@ -10,10 +10,11 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BRIEFING_VOICES, BriefingService } fr
         <b id="briefing-settings-title">Audio briefing</b>
         <small>
           A short spoken summary of the market, your portfolio and your recent orders. Play it with the Briefing button
-          or <kbd>Alt</kbd> + <kbd>B</kbd>. With your balance hidden, amounts are never read out. Choose My screen reader to
-          hear it through NVDA, JAWS or VoiceOver instead of the browser's voice.
+          or <kbd>Alt</kbd> + <kbd>B</kbd>.
         </small>
       </span>
+      <details class="more">
+      <summary>Briefing options</summary>
       <div class="card-options">
         <label
           >Voice
@@ -40,8 +41,10 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BRIEFING_VOICES, BriefingService } fr
           </select></label
         >
       </div>
+      </details>
     </section>
   `,
+  styleUrl: './settings-disclosure.scss',
   styles: [
     `
       :host { display: block; min-width: 0; }

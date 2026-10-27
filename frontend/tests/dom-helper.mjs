@@ -40,7 +40,10 @@ export async function render(t, Type, inputs = {}, providers = []) {
     initialized = true;
   }
   await resolveTemplates();
-  TestBed.configureTestingModule({ imports: [Type], providers: [{ provide: ApiHttpClient, useValue: { get: () => of([]), post: () => of({}) } }, ...providers] });
+  // Charts show Explain this chart and Show as table, as with Show chart tools on in Settings; a test's own providers can override it.
+  const { ChartTools } = await import('../src/app/chart-voice.ts');
+  const chartTools = { provide: ChartTools, useValue: { shown: () => true, setShown() {} } };
+  TestBed.configureTestingModule({ imports: [Type], providers: [{ provide: ApiHttpClient, useValue: { get: () => of([]), post: () => of({}) } }, chartTools, ...providers] });
   const fixture = TestBed.createComponent(Type);
   for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
   t.after(() => { TestBed.resetTestingModule(); frames.clear(); });

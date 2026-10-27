@@ -11,13 +11,13 @@ import { speechCoordinator, type SpeechEvent } from '../../../shared/speech-coor
  */
 
 export interface CaptionSettings {
-  /** Show what is said in the caption strip. On unless turned off in Settings. */
+  /** Show what is said in the caption strip. Off until turned on in Settings, like every other accessibility feature. */
   show: boolean;
 }
 
-/** Saved caption settings; captions are on unless they were turned off. */
+/** Saved caption settings; captions are off unless they were turned on. */
 export function parseCaptionSettings(saved: unknown): CaptionSettings {
-  return { show: (saved as Partial<CaptionSettings> | null)?.show !== false };
+  return { show: (saved as Partial<CaptionSettings> | null)?.show === true };
 }
 
 /** How long a caption stays after its sentence has been spoken. */
@@ -131,10 +131,11 @@ export class CaptionBar {
 
   /**
    * A caption on its own, for a sentence the browser could not speak (no speech engine, or no
-   * voice yet): the user still reads what they asked for.
+   * voice yet): the user still reads what they asked for, even with captions turned off.
    */
   show(text: string): void {
-    this.#begin(text);
+    this.text.set(text);
+    this.#draw(text);
     this.#hideIn(captionTime(text) + CAPTION_HOLD_MS);
   }
 

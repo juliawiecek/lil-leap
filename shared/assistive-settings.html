@@ -1,51 +1,51 @@
 <div class="assistive-settings">
   <fieldset data-scan-group="Arrow-key navigation">
     <legend>Arrow-key navigation</legend>
-    <button type="button" [attr.aria-pressed]="access.settings().arrowNavigation" [attr.aria-describedby]="prefix + '-arrows-help'" (click)="access.toggleArrowNavigation()">Arrow-key navigation <span aria-hidden="true">{{ access.settings().arrowNavigation ? 'On' : 'Off' }}</span></button>
-    <p [id]="prefix + '-arrows-help'">Turning this on starts arrow-key navigation at the page heading and turns off automatic switch scanning if it is running. It keeps your voice setting and also works without speech support. Alt + Shift + N turns arrow-key navigation on or off.</p>
-    <p>Up/Down and Left/Right move between items in that direction. Enter goes inside a group or starts editing a field or exploring a chart. Escape finishes editing and keeps your value; arrows then move between controls again. A further Escape leaves the group. You can also start editing by typing directly. Enter activates buttons and links; in stock search it chooses the result. Tab and mouse access work as usual. The focused item is highlighted; a dashed outline means you are editing or exploring. Turn on Voice mode below for spoken feedback.</p>
+    <div class="toggle-row">
+      <p [id]="prefix + '-arrows-help'">Move around the page with the arrow keys. Alt + Shift + N turns it on or off.</p>
+      <button type="button" class="toggle" [attr.aria-pressed]="access.settings().arrowNavigation" [attr.aria-describedby]="prefix + '-arrows-help'" (click)="access.toggleArrowNavigation()">Arrow-key navigation <span aria-hidden="true">{{ access.settings().arrowNavigation ? 'On' : 'Off' }}</span></button>
+    </div>
+    <details class="more">
+      <summary>How it works</summary>
+      <p>Turning this on starts at the page heading and turns off automatic switch scanning if it is running. It keeps your voice setting and also works without speech support.</p>
+      <p>Up/Down and Left/Right move between items in that direction. Enter goes inside a group or starts editing a field or exploring a chart. Escape finishes editing and keeps your value; arrows then move between controls again. A further Escape leaves the group. You can also start editing by typing directly. Enter activates buttons and links; in stock search it chooses the result. Tab and mouse access work as usual. The focused item is highlighted; a dashed outline means you are editing or exploring. Turn on Voice mode below for spoken feedback.</p>
+    </details>
   </fieldset>
   <fieldset data-scan-group="Voice mode">
     <legend>Voice mode</legend>
-    <p [id]="prefix + '-voice-help'">For people who don't use a screen reader: the browser reads out what you move to or point at. If you use a screen reader, leave this off, since your screen reader already does this. Automatic reading starts off. Only installed local voices are offered.</p>
+    <div class="toggle-row">
+      <p [id]="prefix + '-voice-help'">The browser reads out what you move to. Leave this off if you use a screen reader. Alt + Shift + V turns it on or off; Alt + Shift + X stops reading.</p>
+      <button type="button" class="toggle" [attr.aria-pressed]="access.settings().enabled" [disabled]="!access.supported" [attr.aria-describedby]="prefix + '-voice-help'" (click)="access.update({ enabled: !access.settings().enabled })">Voice mode <span aria-hidden="true">{{ access.settings().enabled ? 'On' : 'Off' }}</span></button>
+    </div>
     @if (!access.supported) { <p role="status">This browser does not support reading aloud. Keyboard and screen-reader access still work.</p> }
-    <button type="button" [attr.aria-pressed]="access.settings().enabled" [disabled]="!access.supported" [attr.aria-describedby]="prefix + '-voice-help'" (click)="access.update({ enabled: !access.settings().enabled })">Voice mode <span aria-hidden="true">{{ access.settings().enabled ? 'On' : 'Off' }}</span></button>
-    <p>Voice mode adds spoken feedback to arrow-key navigation when both are on. Turning voice off keeps arrow-key navigation available. Alt + Shift + V turns voice mode on or off; Alt + Shift + X stops the current speech.</p>
-    <label class="check"><input type="checkbox" [checked]="access.settings().focus" (change)="access.update({ focus: $any($event.target).checked })" />Speak on keyboard focus</label>
-    <label class="check"><input type="checkbox" [checked]="access.settings().hover" (change)="access.update({ hover: $any($event.target).checked })" />Speak on mouse hover</label>
-    <p>Focus and hover reading require voice assistance. Hover waits for your pointer and skips sensitive account/profile details, and hidden balances are never read. Prices are read once, never on every tick. Alt + Shift + X stops the current reading.</p>
-    <div class="fields">
-      <div><label [attr.for]="prefix + '-level'">Detail</label><select [id]="prefix + '-level'" [value]="access.settings().level" [attr.aria-describedby]="prefix + '-level-help'" (change)="access.update({ level: $any($event.target).value })"><option value="brief">Brief</option><option value="detailed">Detailed</option></select></div>
-      <div><label [attr.for]="prefix + '-rate'">Speech speed</label><select [id]="prefix + '-rate'" [value]="access.settings().rate" (change)="access.update({ rate: +$any($event.target).value })"><option value="0.8" [selected]="access.settings().rate === 0.8">Slow</option><option value="1" [selected]="access.settings().rate === 1">Normal</option><option value="1.25" [selected]="access.settings().rate === 1.25">Fast</option><option value="1.5" [selected]="access.settings().rate === 1.5">Faster</option><option value="2" [selected]="access.settings().rate === 2">Fastest</option></select></div>
-      <div><label [attr.for]="prefix + '-voice'">Voice</label><select [id]="prefix + '-voice'" [value]="access.settings().voiceURI" (change)="access.update({ voiceURI: $any($event.target).value })"><option value="">Default local voice</option>@for (voice of access.voices(); track voice.voiceURI) { <option [value]="voice.voiceURI">{{ voice.name }} ({{ voice.lang }})</option> }</select></div>
-      <div><label [attr.for]="prefix + '-volume'">Volume</label><select [id]="prefix + '-volume'" [value]="access.settings().volume" (change)="access.update({ volume: +$any($event.target).value })"><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></div>
-      <div><label [attr.for]="prefix + '-delay'">Hover delay</label><select [id]="prefix + '-delay'" [value]="access.settings().hoverDelay" (change)="access.update({ hoverDelay: +$any($event.target).value })"><option value="400">Short (400 ms)</option><option value="550">Normal (550 ms)</option><option value="700">Long (700 ms)</option></select></div>
-    </div>
-    <p [id]="prefix + '-level-help'">Brief says each item's name and value, such as "Number of shares, 2". Detailed also says what it is and its state, such as button, selected or expanded.@if (access.soundCuesOffered) { Speech speed is shared with the audio briefing.}</p>
-    @if (access.soundCuesOffered) {
-      <label class="check"><input type="checkbox" [checked]="access.settings().soundCues" [attr.aria-describedby]="prefix + '-cues-help'" (change)="access.update({ soundCues: $any($event.target).checked })" />Sound cues</label>
-      <p [id]="prefix + '-cues-help'">Short sounds when the switch-control ring moves or a keypad opens, when an order fills or is rejected, and before you are signed out for inactivity. They play at the volume above, with or without voice assistance, and each one also has a written or spoken message.</p>
-    }
-  </fieldset>
-  <fieldset data-scan-group="Read on demand">
-    <legend>Read on demand</legend>
-    <p>Read without continuous focus or hover speech. Use Alt + Shift + R to read an item while focused on it, or Alt + Shift + P for the current page summary. Selecting text also lets Read section read your selection.</p>
-    <div class="reading-actions" data-a11y-reading-action>
-      <button type="button" (click)="access.controller.readFocused()">Read focused element</button>
-      <button type="button" (click)="access.controller.readSection()">Read section</button>
-      <button type="button" (click)="access.controller.readPage()">Read page summary</button>
-      <button type="button" (click)="access.controller.pause()">{{ access.paused() ? 'Resume speech' : 'Pause speech' }}</button>
-      <button type="button" (click)="access.controller.stop()">Stop speech</button>
-    </div>
-    <p>Alt + Shift + R: read focused item. Alt + Shift + P: page summary. Alt + Shift + X: stop. Alt + Shift + Space: pause/resume. Alt + Shift + A: Accessibility in Settings, or these tools before sign-in. Reading shortcuts leave typing fields alone; Stop works everywhere.</p>
+    <details class="more">
+      <summary>Voice options</summary>
+      <label class="check"><input type="checkbox" [checked]="access.settings().focus" (change)="access.update({ focus: $any($event.target).checked })" />Speak on keyboard focus</label>
+      <label class="check"><input type="checkbox" [checked]="access.settings().hover" (change)="access.update({ hover: $any($event.target).checked })" />Speak on mouse hover</label>
+      <div class="fields">
+        <div><label [attr.for]="prefix + '-level'">Detail</label><select [id]="prefix + '-level'" [value]="access.settings().level" [attr.aria-describedby]="prefix + '-level-help'" (change)="access.update({ level: $any($event.target).value })"><option value="brief">Brief</option><option value="detailed">Detailed</option></select></div>
+        <div><label [attr.for]="prefix + '-rate'">Speech speed</label><select [id]="prefix + '-rate'" [value]="access.settings().rate" (change)="access.update({ rate: +$any($event.target).value })"><option value="0.8" [selected]="access.settings().rate === 0.8">Slow</option><option value="1" [selected]="access.settings().rate === 1">Normal</option><option value="1.25" [selected]="access.settings().rate === 1.25">Fast</option><option value="1.5" [selected]="access.settings().rate === 1.5">Faster</option><option value="2" [selected]="access.settings().rate === 2">Fastest</option></select></div>
+        <div><label [attr.for]="prefix + '-voice'">Voice</label><select [id]="prefix + '-voice'" [value]="access.settings().voiceURI" (change)="access.update({ voiceURI: $any($event.target).value })"><option value="">Default local voice</option>@for (voice of access.voices(); track voice.voiceURI) { <option [value]="voice.voiceURI">{{ voice.name }} ({{ voice.lang }})</option> }</select></div>
+        <div><label [attr.for]="prefix + '-volume'">Volume</label><select [id]="prefix + '-volume'" [value]="access.settings().volume" (change)="access.update({ volume: +$any($event.target).value })"><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></div>
+        <div><label [attr.for]="prefix + '-delay'">Hover delay</label><select [id]="prefix + '-delay'" [value]="access.settings().hoverDelay" (change)="access.update({ hoverDelay: +$any($event.target).value })"><option value="400">Short (400 ms)</option><option value="550">Normal (550 ms)</option><option value="700">Long (700 ms)</option></select></div>
+      </div>
+      <p [id]="prefix + '-level-help'">Brief says each item's name and value. Detailed also says what it is and its state. Hidden balances are never read. Voice mode also speaks during arrow-key navigation when both are on.</p>
+      @if (access.soundCuesOffered) {
+        <label class="check"><input type="checkbox" [checked]="access.settings().soundCues" [attr.aria-describedby]="prefix + '-cues-help'" (change)="access.update({ soundCues: $any($event.target).checked })" />Sound cues</label>
+        <p [id]="prefix + '-cues-help'">Short sounds when an order fills or is rejected, when switch control moves, and before you are signed out.</p>
+      }
+    </details>
   </fieldset>
   <fieldset data-scan-group="Visual assistance">
     <legend>Visual assistance</legend>
-    <label class="check"><input type="checkbox" [checked]="access.settings().enhancedFocus" (change)="access.update({ enhancedFocus: $any($event.target).checked })" />Enhanced focus highlighting</label>
-    <label [attr.for]="prefix + '-size'">Minimum text size</label><select [id]="prefix + '-size'" [value]="access.settings().textSize" (change)="access.update({ textSize: $any($event.target).value })"><option value="standard">Standard</option><option value="large">Large (18 px minimum)</option><option value="extra-large">Extra large (20 px minimum)</option></select>
-    <label class="check"><input type="checkbox" [checked]="access.settings().textSpacing" (change)="access.update({ textSpacing: $any($event.target).checked })" />Increased text spacing</label>
-    <label class="check"><input type="checkbox" [checked]="access.settings().contrast" (change)="access.update({ contrast: $any($event.target).checked })" />Increased interface contrast</label>
-    <label class="check"><input type="checkbox" [checked]="access.settings().highlightSpeech" (change)="access.update({ highlightSpeech: $any($event.target).checked })" />Highlight the element being read</label>
-    <p>Browser zoom and operating-system high contrast also work. Trading palette, chart voice, briefing, and switch-control preferences remain available in Settings.</p>
+    <p>Larger text, clearer focus and more contrast. Browser zoom and system high contrast also work.</p>
+    <details class="more">
+      <summary>Display options</summary>
+      <label class="check"><input type="checkbox" [checked]="access.settings().enhancedFocus" (change)="access.update({ enhancedFocus: $any($event.target).checked })" />Enhanced focus highlighting</label>
+      <label [attr.for]="prefix + '-size'">Minimum text size</label><select [id]="prefix + '-size'" [value]="access.settings().textSize" (change)="access.update({ textSize: $any($event.target).value })"><option value="standard">Standard</option><option value="large">Large (18 px minimum)</option><option value="extra-large">Extra large (20 px minimum)</option></select>
+      <label class="check"><input type="checkbox" [checked]="access.settings().textSpacing" (change)="access.update({ textSpacing: $any($event.target).checked })" />Increased text spacing</label>
+      <label class="check"><input type="checkbox" [checked]="access.settings().contrast" (change)="access.update({ contrast: $any($event.target).checked })" />Increased interface contrast</label>
+      <label class="check"><input type="checkbox" [checked]="access.settings().highlightSpeech" (change)="access.update({ highlightSpeech: $any($event.target).checked })" />Highlight the element being read</label>
+    </details>
   </fieldset>
 </div>

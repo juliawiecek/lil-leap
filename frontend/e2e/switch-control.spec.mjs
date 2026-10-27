@@ -51,6 +51,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
         sessionStorage.setItem('switch-test-seeded', '1');
         localStorage.setItem('nexttrade.accessibility', JSON.stringify({
           voice: { enabled: true },
+          charts: { tools: true },
           switchControl: { enabled: false, intervalMs: 700, key, speak: false, backEverySec: 0, pauseEverySec: 0 },
         }));
       }
@@ -120,9 +121,12 @@ test('switch control reaches the shared tools dialog, toggles voice settings and
   await scanTo(page, state => state.live === 'Voice mode group'); await press();
   await scanTo(page, state => /Voice mode/.test(state.name)); await press();
   await expect(dialog.getByRole('button', { name: 'Voice mode', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await scanTo(page, state => /Voice options/.test(state.name)); await press();
   await scanTo(page, state => /Speak on keyboard focus/.test(state.name)); await press();
   await expect(dialog.getByLabel('Speak on keyboard focus', { exact: true })).toBeChecked();
   await scanTo(page, state => state.live === 'Back'); await press();
+  // Closed, Visual assistance holds only its caret, so the ring goes straight to it; once open it is a group.
+  await scanTo(page, state => /Display options/.test(state.name)); await press();
   await scanTo(page, state => state.live === 'Visual assistance group'); await press();
   await scanTo(page, state => /Minimum text size/.test(state.name)); await press();
   await scanTo(page, state => state.live.includes('Extra large') && state.live.endsWith(' group')); await press();

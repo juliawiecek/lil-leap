@@ -243,15 +243,8 @@ export type BriefingSource = () => Promise<Omit<BriefingSnapshot, 'since'> & { a
               }
             </ol>
           }
+          <!-- Who reads the briefing (browser voice or screen reader) is chosen in Settings > Accessibility only. -->
           <div class="controls">
-            <label
-              >Voice
-              <select (change)="service.update({ voice: $any($event.target).value })">
-                @for (v of voices; track v.value) {
-                  <option [value]="v.value" [selected]="v.value === service.settings().voice">{{ v.label }}</option>
-                }
-              </select></label
-            >
             <label
               >Voice speed
               <select (change)="service.update({ rate: +$any($event.target).value })">
@@ -312,7 +305,6 @@ export class BriefingButton {
   readonly error = signal('');
   readonly rates = BRIEFING_RATES;
   readonly repeats = BRIEFING_REPEATS;
-  readonly voices = BRIEFING_VOICES;
   #lastMarketOpen: boolean | null = null;
 
   constructor() {

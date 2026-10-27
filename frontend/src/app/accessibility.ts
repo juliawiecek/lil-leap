@@ -9,8 +9,8 @@ export { ACCESSIBILITY_STORAGE_KEY } from './colour-mode-preferences';
  * starts off; blocked storage means defaults for this visit, never an error.
  */
 
-/** The sections the accessibility tickets own (PS-18, PS-19, PS-21, PS-22, PS-23, PS-27). */
-export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'visual' | 'captions' | 'colourMode' | 'livePrices';
+/** The sections the accessibility tickets own (PS-18, PS-19, PS-21, PS-22, PS-23, PS-24, PS-27). */
+export type AccessibilitySection = 'briefing' | 'switchControl' | 'voice' | 'visual' | 'captions' | 'colourMode' | 'livePrices' | 'charts';
 
 /** Saved settings, or an empty set when nothing valid is stored. */
 export function parseAccessibility(stored: string | null): Partial<Record<AccessibilitySection, unknown>> {

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
-import { identity } from './fixtures.mjs';
+import { chartTools, identity } from './fixtures.mjs';
 
-test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); await chartTools(page); });
 
 async function alternatives(page, image, access) {
   await expect(image).toHaveAttribute('role', 'img');
@@ -58,7 +58,7 @@ test('novice portfolio and allocation expose real summaries, focus voice and equ
   test.skip(info.project.name !== 'NextTrade');
   await colourFixture(page);
   await page.addInitScript(() => {
-    localStorage.setItem('nexttrade.accessibility', JSON.stringify({ voice: { enabled: true } }));
+    localStorage.setItem('nexttrade.accessibility', JSON.stringify({ voice: { enabled: true }, charts: { tools: true } }));
     window.chartSpeech = [];
     Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speaking: false, speak(u) { window.chartSpeech.push(u.text); }, cancel() {} } });
   });
@@ -99,7 +99,7 @@ test('advanced price, OHLC/indicators, exposure and real reported volume have al
   test.skip(info.project.name !== 'NextTrade');
   await colourFixture(page, 'ADVANCED');
   await page.addInitScript(() => {
-    localStorage.setItem('nexttrade.accessibility', JSON.stringify({ voice: { enabled: true } }));
+    localStorage.setItem('nexttrade.accessibility', JSON.stringify({ voice: { enabled: true }, charts: { tools: true } }));
     window.chartSpeech = [];
     Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { speaking: false, speak(u) { window.chartSpeech.push(u.text); }, cancel() {} } });
   });

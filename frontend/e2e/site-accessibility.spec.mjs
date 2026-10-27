@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { colourFixture } from './colour-fixtures.mjs';
-import { identity, uuid } from './fixtures.mjs';
+import { identity, openOptions, uuid } from './fixtures.mjs';
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 async function mockSpeech(page, preferences = {}) {
@@ -34,12 +34,12 @@ async function tools(page) {
   if (new URL(page.url()).pathname === '/login') {
     await page.getByRole('button', { name: 'Accessibility', exact: true }).click();
     const panel = page.getByRole('dialog', { name: 'Accessibility tools', exact: true });
-    await expect(panel).toBeVisible(); return panel;
+    await expect(panel).toBeVisible(); await openOptions(panel); return panel;
   }
   await page.keyboard.press('Alt+Shift+a');
   await expect(page).toHaveURL(/\/settings$/);
   const panel = page.locator('main app-assistive-settings');
-  await expect(panel).toBeVisible(); return panel;
+  await expect(panel).toBeVisible(); await openOptions(panel); return panel;
 }
 async function closeTools(page) {
   if (await page.locator('dialog[open]').count()) await page.keyboard.press('Escape');
@@ -495,11 +495,15 @@ test('public auth controls, password privacy, validation and accessibility tools
   await audit(page, `${info.project.name}-login`, info);
   const panel = await tools(page); await audit(page, `${info.project.name}-tools`, info);
   await page.keyboard.press('Escape');
-  const password = page.getByLabel('Password', { exact: true }); await password.fill('do-not-speak-this'); await password.focus();
-  await page.getByRole('button', { name: 'Accessibility', exact: true }).click();
-  const readingPanel = page.getByRole('dialog', { name: 'Accessibility tools', exact: true });
-  await readingPanel.getByRole('button', { name: 'Read focused element', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.length)).toBeGreaterThan(0);
+  const password = page.getByLabel('Password', { exact: true }); await password.fill('do-not-speak-this');
+  const voice = await tools(page);
+  await voice.getByRole('button', { name: 'Voice mode', exact: true }).click();
+  await voice.getByLabel('Speak on keyboard focus', { exact: true }).check();
+  await page.keyboard.press('Escape');
+  // Back onto the password field by keyboard: its label is read, never what was typed.
+  await password.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+  await expect(password).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.join(' '))).toMatch(/Password/);
   expect(await page.evaluate(() => window.assistiveSpeech.join(' '))).not.toContain('do-not-speak-this');
 });
 

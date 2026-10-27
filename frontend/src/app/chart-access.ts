@@ -1,6 +1,6 @@
 import { Component, Directive, OnDestroy, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import type { ChartTable } from '../../../shared/chart-description';
-import { ChartVoice } from './chart-voice';
+import { ChartTools, ChartVoice } from './chart-voice';
 import { AccessibilityStore } from './accessibility';
 import { ChartSonifier } from './chart-sonification';
 import { chartCommand, livePricesPaused, type ChartSound } from './chart-keyboard';
@@ -18,10 +18,13 @@ function sameTable(a: ChartTable, b: ChartTable | undefined): boolean {
 @Component({
   selector: 'app-chart-access',
   template: `
-    <div class="actions" role="group" [attr.aria-label]="label() + ' alternatives'">
-      <button type="button" (click)="explain()" [attr.aria-expanded]="explained()" [attr.aria-controls]="id() + '-summary'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 11a9 9 0 1 0-16 6l-2 4 5-2a9 9 0 0 0 13-8Z"/><path d="M8 10h8M8 14h5"/></svg><span>Explain this chart</span></button>
-      <button type="button" (click)="shown.set(!shown())" [attr.aria-expanded]="shown()" [attr.aria-controls]="id() + '-table'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 10v10"/></svg><span>{{ shown() ? 'Hide table' : 'Show as table' }}</span></button>
-    </div>
+    <!-- Only once Show chart tools is on in Settings > Accessibility; D and T on the chart work either way. -->
+    @if (tools.shown()) {
+      <div class="actions" role="group" [attr.aria-label]="label() + ' alternatives'">
+        <button type="button" (click)="explain()" [attr.aria-expanded]="explained()" [attr.aria-controls]="id() + '-summary'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 11a9 9 0 1 0-16 6l-2 4 5-2a9 9 0 0 0 13-8Z"/><path d="M8 10h8M8 14h5"/></svg><span>Explain this chart</span></button>
+        <button type="button" (click)="shown.set(!shown())" [attr.aria-expanded]="shown()" [attr.aria-controls]="id() + '-table'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 10v10"/></svg><span>{{ shown() ? 'Hide table' : 'Show as table' }}</span></button>
+      </div>
+    }
     <p [id]="id() + '-summary'" [class.sr-only]="!explained()">{{ summary() }}</p>
     <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ announcement() }}</p>
     <div [id]="id() + '-table'" [hidden]="!shown()">
@@ -87,6 +90,7 @@ export class ChartAccess implements OnDestroy {
   readonly announcement = signal('');
   readonly displayTable = computed(() => this.raw() && this.rawTable() ? this.rawTable()! : this.table());
   readonly voice = inject(ChartVoice);
+  readonly tools = inject(ChartTools);
   readonly playing = signal(false);
   readonly #store = inject(AccessibilityStore);
   #sonifier: ChartSonifier | undefined;
