@@ -246,6 +246,35 @@ test('dashboard arrows move between real panels and Enter and Escape explore the
 });
 
 for (const tier of ['NOVICE', 'ADVANCED']) {
+  for (const voice of [false, true]) {
+    test(`${tier} quantity editing exits without trapping focus or closing the trade with voice ${voice ? 'on' : 'off'}`, async ({ page }, info) => {
+      test.skip(info.project.name !== 'NextTrade');
+      await colourFixture(page, tier);
+      await mockSpeech(page, { visual: { arrowNavigation: true }, voice: { enabled: voice } });
+      let orders = 0;
+      page.on('request', request => { if (request.method() === 'POST' && /\/orders(?:\?|$)/.test(request.url())) orders++; });
+      await page.goto('/dashboard');
+      if (tier === 'NOVICE') {
+        const search = page.locator('[data-a11y-search] input');
+        await search.fill('AAPL'); await expect(page.locator('[data-a11y-results] button')).toHaveCount(1); await search.press('Enter');
+        await expect(page.getByRole('dialog', { name: 'Buy AAPL', exact: true })).toBeVisible();
+      }
+      const quantity = page.locator(tier === 'NOVICE' ? '#novice-shares' : '#pro-quantity');
+      await quantity.fill('2'); await quantity.press('Escape');
+      await expect(quantity).toBeFocused(); await expect(quantity).toHaveValue('2');
+      if (tier === 'NOVICE') await expect(page.getByRole('dialog', { name: 'Buy AAPL', exact: true })).toBeVisible();
+      await page.keyboard.press('ArrowDown'); await expect(quantity).not.toBeFocused();
+      await expect(quantity).toHaveValue('2');
+      await page.keyboard.press('ArrowUp'); await expect(quantity).toBeFocused();
+      await page.keyboard.press('Enter'); await page.keyboard.press('ArrowUp');
+      await expect(quantity).toHaveValue('3');
+      await page.keyboard.press('Escape'); await expect(quantity).toBeFocused();
+      await page.keyboard.press('ArrowDown'); await expect(quantity).not.toBeFocused();
+      await expect(quantity).toHaveValue('3'); expect(orders).toBe(0);
+      if (!voice) expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
+    });
+  }
+
   test(`${tier} Left reaches the sidebar from settings and its navigation opens a page`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade');
     await page.setViewportSize({ width: 1600, height: 1100 });
@@ -289,6 +318,58 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     });
   }
 }
+
+test('stock-picker Escape closes the menu and releases its arrows without closing the trade', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await colourFixture(page, 'NOVICE'); await mockSpeech(page, { visual: { arrowNavigation: true } });
+  await page.goto('/dashboard');
+  const search = page.locator('[data-a11y-search] input');
+  await search.fill('AAPL'); await expect(page.locator('[data-a11y-results] button')).toHaveCount(1); await search.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Buy AAPL', exact: true }); await expect(dialog).toBeVisible();
+  const picker = page.locator('#novice-stock'), quantity = page.locator('#novice-shares');
+  await picker.focus(); await page.keyboard.press('Escape'); await expect(picker).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(picker).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('Escape');
+  await expect(picker).toHaveAttribute('aria-expanded', 'false'); await expect(dialog).toBeVisible();
+  await page.keyboard.press('ArrowDown'); await expect(quantity).toBeFocused();
+  await page.keyboard.press('ArrowDown'); await expect(quantity).not.toBeFocused();
+  await expect(dialog).toBeVisible();
+});
+
+test('native stock selection and limit-price editing release arrows without reviewing an order', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await colourFixture(page, 'ADVANCED'); await mockSpeech(page, { visual: { arrowNavigation: true } });
+  await page.goto('/dashboard');
+  const ticket = page.locator('app-advanced-ticket'), symbol = page.locator('#pro-symbol');
+  await expect(symbol.locator('option')).toHaveCount(2);
+  await symbol.focus(); await page.keyboard.press('Escape'); await page.keyboard.press('Enter');
+  await expect(symbol).toHaveAttribute('data-a11y-interacting', '');
+  await page.keyboard.press('ArrowDown'); await expect(symbol).toHaveValue('MSFT');
+  await page.keyboard.press('Escape'); await expect(symbol).toBeFocused();
+  await page.keyboard.press('ArrowDown'); await expect(symbol).not.toBeFocused();
+  await ticket.getByRole('button', { name: 'Limit', exact: true }).click();
+  const limit = page.locator('#pro-limit'); await limit.fill('185'); await limit.press('Escape');
+  await expect(limit).toBeFocused(); await expect(limit).toHaveValue('185');
+  await page.keyboard.press('ArrowDown'); await expect(limit).not.toBeFocused();
+  const quantity = page.locator('#pro-quantity'); await quantity.fill('2'); await quantity.press('Enter');
+  await expect(quantity).toBeFocused(); await expect(quantity).not.toHaveAttribute('data-a11y-interacting', '');
+  await expect(ticket.getByRole('button', { name: /Confirm/ })).toHaveCount(0);
+});
+
+test('chart Escape cleans up inspection and returns navigation without closing its trade dialog', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await colourFixture(page, 'NOVICE'); await mockSpeech(page, { visual: { arrowNavigation: true } });
+  await page.goto('/dashboard');
+  const search = page.locator('[data-a11y-search] input');
+  await search.fill('AAPL'); await expect(page.locator('[data-a11y-results] button')).toHaveCount(1); await search.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Buy AAPL', exact: true });
+  const chart = dialog.locator('.trade-chart svg[role="img"][tabindex="0"]');
+  await expect(chart).toBeVisible(); await chart.focus(); await page.keyboard.press('ArrowRight');
+  await expect(chart.locator('line.cursor')).toHaveCount(1);
+  await page.keyboard.press('Escape'); await expect(chart).toBeFocused(); await expect(dialog).toBeVisible();
+  await expect(chart.locator('line.cursor')).toHaveCount(0);
+  await page.keyboard.press('ArrowDown'); await expect(chart).not.toBeFocused(); await expect(dialog).toBeVisible();
+});
 
 for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} all page routes expose native structure and pass the WCAG axe rules`, async ({ page }, info) => {

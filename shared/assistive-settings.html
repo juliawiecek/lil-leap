@@ -3,7 +3,7 @@
     <legend>Arrow-key navigation</legend>
     <button type="button" [attr.aria-pressed]="access.settings().arrowNavigation" [attr.aria-describedby]="prefix + '-arrows-help'" (click)="access.toggleArrowNavigation()">Arrow-key navigation <span aria-hidden="true">{{ access.settings().arrowNavigation ? 'On' : 'Off' }}</span></button>
     <p [id]="prefix + '-arrows-help'">Turning this on starts arrow-key navigation at the page heading and turns off automatic switch scanning if it is running. It keeps your voice setting and also works without speech support. Alt + Shift + N turns arrow-key navigation on or off.</p>
-    <p>Up and Down move to items above and below. Left and Right move to items on either side. On a group, press Enter to go inside; press Escape to return to its container. On a button or link, Enter activates it. Fields, menus, tabs and charts keep their editing and exploration keys; Escape returns to their containing group (close an open menu first), or use Tab to leave them. The focused item is highlighted. Turn on Voice mode below if you also want spoken feedback.</p>
+    <p>Up/Down and Left/Right move between items in that direction. Enter goes inside a group or starts editing a field or exploring a chart. Escape finishes editing and keeps your value; arrows then move between controls again. A further Escape leaves the group. You can also start editing by typing directly. Enter activates buttons and links; in stock search it chooses the result. Tab and mouse access work as usual. The focused item is highlighted; a dashed outline means you are editing or exploring. Turn on Voice mode below for spoken feedback.</p>
   </fieldset>
   <fieldset data-scan-group="Voice mode">
     <legend>Voice mode</legend>

@@ -44,8 +44,13 @@ A panel, navigation area or settings fieldset is a **group**. **Enter** goes ins
 to its container, one level at a time. Arrows move among items at the current level. At an edge,
 feedback explains there is no item in that direction; focus stays put and the key does not scroll the page.
 **Enter** on a button or link activates it; moving focus or entering a group never submits an order.
-Fields, menus, tabs and charts retain their usual editing or exploration keys. **Escape** returns to
-their containing group (close an open menu first), and **Tab/Shift + Tab** also work as usual.
+On a field or chart reached with arrows, **Enter** starts editing or exploring; its arrows then
+change the value or explore the chart. Typing directly into a field also starts editing.
+**Escape** finishes editing **without discarding the value or closing the trade window**. Arrows
+then move between controls again. In a single-line field, Enter also finishes editing; in stock
+search, Enter chooses a result instead. A further Escape leaves the group. Close an open menu
+with Escape first. **Tab/Shift + Tab** and mouse access retain their usual behavior. A dashed
+focus outline indicates editing/exploration; a solid outline indicates navigation.
 **Alt + Shift + X** stops speech. Outside a group, Escape keeps its normal dialog/popup behavior.
 
 To use the left sidebar, move Left to the **Menu** group and press **Enter**. Focus lands on the

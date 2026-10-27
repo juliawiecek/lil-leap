@@ -555,7 +555,7 @@
       </button>
     </div>
     <!-- novalidate + data-a11y-app-validation (PS-21): the trade's own message is what is shown and read, not the browser's. -->
-    <form class="trade-form" method="post" novalidate data-a11y-app-validation (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+    <form class="trade-form" method="post" novalidate data-a11y-app-validation data-a11y-nav-group="Order details" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
       <label id="novice-stock-label" for="novice-stock">Stock</label>
       <div class="stock-picker" (focusout)="stockMenuOpen.set(false)">
         <button

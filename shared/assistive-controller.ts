@@ -18,8 +18,9 @@ export interface AssistiveOptions {
 const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="tab"], [role="img"], [data-a11y-read]';
 const INFORMATION = 'h1, h2, h3, p, dt, dd, td, th, output, [data-a11y-read]';
 const editable = (element: Element | null) => !!element?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
-// These widgets already own their arrow keys. Tab leaves them for page navigation.
+// Widgets own arrows while editing/exploring; selected widgets use arrows for page navigation.
 const ARROW_WIDGETS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="img"][tabindex="0"], [role="slider"], [role="separator"], [role="spinbutton"], [role="combobox"], [role="listbox"], [role="menu"], [role="menubar"], [role="tree"], [role="grid"], [role="radiogroup"]';
+const TYPING_FIELDS = 'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, [contenteditable]:not([contenteditable="false"])';
 /**
  * A novalidate form marked data-a11y-app-validation checks itself and links its own messages to
  * its fields (aria-invalid, aria-describedby), so the browser's wording never replaces the app's.
@@ -46,6 +47,7 @@ export class AssistiveController {
   private highlight: Element | null = null;
   private arrowTarget: HTMLElement | null = null;
   private navigationFocus: HTMLElement | null = null;
+  private interactionTarget: HTMLElement | null = null;
   private enteringGroup = false;
   private previousPath: string | undefined;
   private previousUrl = '';
@@ -64,12 +66,13 @@ export class AssistiveController {
       doc.addEventListener(name, fn, true); this.disposers.push(() => doc.removeEventListener(name, fn, true));
     };
     listen('keydown', event => this.key(event as KeyboardEvent));
-    listen('pointerdown', () => { this.keyboard = false; this.cancelPending(); });
+    listen('pointerdown', () => { this.keyboard = false; this.cancelPending(); this.clearInteraction(); this.clearNavigationFocus(); });
     listen('focusin', event => this.focus(event.target as HTMLElement));
     listen('focusout', event => {
       clearTimeout(this.focusTimer); speech.stop('assist:focus');
       if (event.target === this.arrowTarget) this.releaseArrowTarget();
       if (event.target === this.navigationFocus) this.clearNavigationFocus();
+      if (event.target === this.interactionTarget) this.clearInteraction();
     });
     listen('pointerover', event => this.pointer(event as PointerEvent));
     listen('pointermove', event => { this.pointerReady = true; this.pointer(event as PointerEvent); });
@@ -79,7 +82,11 @@ export class AssistiveController {
       }
     });
     listen('invalid', event => this.invalid(event));
-    listen('input', event => this.clearError(event.target as HTMLInputElement));
+    listen('input', event => {
+      const field = event.target as HTMLInputElement;
+      this.clearError(field);
+      if (this.options.settings().arrowNavigation && field === this.navigationFocus && field.matches(TYPING_FIELDS)) this.startInteraction(field, false);
+    });
     listen('submit', event => this.submit(event));
     listen('beforetoggle', event => this.dialog(event as Event & { newState?: string }));
     // Dismiss popovers before an outside pointer action; never activate a financial control.
@@ -99,12 +106,26 @@ export class AssistiveController {
     applyAssistiveVisuals(this.document.documentElement, this.options.settings());
     this.cancelPending();
     if (!this.options.settings().enabled) { speech.stop('assist:focus'); speech.stop('assist:hover'); }
-    if (!this.options.settings().arrowNavigation) { this.clearNavigationFocus(); this.enteringGroup = false; }
+    if (!this.options.settings().arrowNavigation) { this.clearNavigationFocus(); this.clearInteraction(); this.enteringGroup = false; }
     if (!this.options.settings().highlightSpeech) this.clearHighlight();
   }
   private cancelPending(): void { clearTimeout(this.focusTimer); clearTimeout(this.hoverTimer); }
   private clearHighlight(): void { this.highlight?.removeAttribute('data-a11y-speaking'); this.highlight = null; }
   private clearNavigationFocus(): void { this.navigationFocus?.removeAttribute('data-a11y-nav-focus'); this.navigationFocus = null; }
+  private clearInteraction(): void { this.interactionTarget?.removeAttribute('data-a11y-interacting'); this.interactionTarget = null; }
+  private keyboardWidget(element: HTMLElement): HTMLElement | null {
+    const widget = element.matches(ARROW_WIDGETS) ? element : element.closest<HTMLElement>(ARROW_WIDGETS);
+    return widget?.matches('input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"], input[type="reset"]') ? null : widget;
+  }
+  private startInteraction(widget: HTMLElement, announce = true): void {
+    if (this.interactionTarget === widget) return;
+    this.clearInteraction(); this.interactionTarget = widget; widget.setAttribute('data-a11y-interacting', '');
+    const action = widget.matches('[role="img"], [role="grid"], [role="tree"]') ? 'Exploring' : 'Editing';
+    if (announce) this.navigationFeedback(`${action} ${accessibleName(widget) || 'this control'}. Use its normal keys. Press Escape to finish and return to arrow navigation.`, widget);
+  }
+  private selectedWidget(widget: HTMLElement): boolean {
+    return this.navigationFocus === widget && this.interactionTarget !== widget && widget.getAttribute('aria-expanded') !== 'true';
+  }
   private releaseArrowTarget(): void {
     if (this.arrowTarget?.getAttribute('tabindex') === '-1') this.arrowTarget.removeAttribute('tabindex');
     this.arrowTarget = null;
@@ -202,7 +223,7 @@ export class AssistiveController {
     }
     target.focus({ preventScroll: true }); target.scrollIntoView?.({ block: 'nearest' });
     this.lastTarget = target;
-    const instructions = 'Arrow-key navigation started. Press Down or Up arrow to move below or above. Press Right or Left arrow to move right or left. On a group, press Enter to go inside. Press Escape to come back out. Enter activates a focused button or link. Fields and charts keep their own arrow keys. Alt Shift X stops speech.';
+    const instructions = 'Arrow-key navigation started. Press Down or Up arrow to move below or above. Press Right or Left arrow to move right or left. Enter goes inside a group or starts editing a field. Escape finishes editing, then comes back out of a group. Enter activates a focused button or link. Alt Shift X stops speech.';
     this.navigationFeedback(`${instructions} ${describeElement(target, true, this.options.settings().level)}`, target);
   }
   readSection(): void {
@@ -220,7 +241,7 @@ export class AssistiveController {
     const alerts = [...main.querySelectorAll('[role="alert"]')].filter(visible).map(node => readableText(node, 200));
     const figures = [...main.querySelectorAll('[data-a11y-read]')].filter(visible).slice(0, 2)
       .map(node => describeElement(node, true, this.options.settings().level, this.options.hint?.(node))).join(' ');
-    const navigation = this.options.settings().arrowNavigation ? 'Arrows move in their direction on the page. Enter goes inside a group. Escape comes back out. Fields and charts keep their own arrows.' : 'Use Tab to move through controls, or Read section for details.';
+    const navigation = this.options.settings().arrowNavigation ? 'Arrows move in their direction on the page. Enter goes inside a group or starts editing a field. Escape finishes editing, then comes back out of a group.' : 'Use Tab to move through controls, or Read section for details.';
     const text = `${headings.shift() || this.document.title}. ${headings.length ? 'Sections: ' + headings.slice(0, 10).join('; ') + '.' : ''} ${figures} ${alerts.join('. ')} ${navigation}`;
     this.say(text, 'assist:request', main, true);
   }
@@ -234,6 +255,7 @@ export class AssistiveController {
     this.options.status(speech.paused ? 'Speech paused.' : 'Speech resumed.');
   }
   routeChanged(url: string): void {
+    this.clearInteraction(); this.clearNavigationFocus(); this.enteringGroup = false;
     const path = url.split(/[?#]/)[0];
     this.cancelPending(); speech.stop('assist:focus'); speech.stop('assist:hover'); speech.stop('assist:request');
     if (this.previousUrl && url !== this.previousUrl) {
@@ -272,7 +294,54 @@ export class AssistiveController {
       this.keyboard = true; clearTimeout(this.hoverTimer); speech.stop('assist:hover');
     }
     if (event.key === 'Tab') this.prepareComposites();
+    if (event.key === 'Tab') { this.clearInteraction(); this.clearNavigationFocus(); }
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || this.options.scanning?.()) return;
+    const widget = this.keyboardWidget(element);
+    const toggle = element.matches('input[type="checkbox"], input[type="radio"]');
+    if (!event.shiftKey && this.options.settings().arrowNavigation && toggle && event.key === 'Enter') {
+      event.preventDefault(); event.stopPropagation(); this.enteringGroup = true;
+      element.click();
+      const checked = (element as HTMLInputElement).checked;
+      const state = this.options.settings().level === 'brief' ? (checked ? ' Checked.' : ' Not checked.') : '';
+      this.navigationFeedback(navigationDescription(element, this.options.settings().level) + state, element); return;
+    }
+    if (!event.shiftKey && this.options.settings().arrowNavigation && widget) {
+      const selected = this.selectedWidget(widget);
+      const expanded = widget.getAttribute('aria-expanded') === 'true' || !!widget.closest('[role="listbox"], [role="menu"]');
+      if (event.key === 'Escape' && expanded) {
+        // Release editing now; Angular may apply aria-expanded=false after this event's microtasks.
+        this.clearInteraction(); this.clearNavigationFocus();
+        this.navigationFocus = widget; widget.setAttribute('data-a11y-nav-focus', '');
+        // Let the picker close itself first, then describe its closed state when already rendered.
+        queueMicrotask(() => {
+          if (widget.isConnected && this.document.activeElement === widget && widget.getAttribute('aria-expanded') !== 'true') {
+            this.focusNavigationItem(widget, 'Finished choosing. ');
+          }
+        });
+        return;
+      }
+      if (event.key === 'Escape' && !selected) {
+        if (widget.matches('[role="img"]')) {
+          // Chart handlers still clear their inspection/playback; the containing dialog stays open.
+          widget.addEventListener('keydown', current => { current.preventDefault(); current.stopPropagation(); }, { once: true });
+        } else { event.preventDefault(); event.stopPropagation(); }
+        this.focusNavigationItem(widget, 'Arrow navigation resumed. Arrows now move between controls. '); return;
+      }
+      if (event.key === 'Enter' && selected) {
+        event.preventDefault(); event.stopPropagation(); this.enteringGroup = true;
+        if (widget.matches('[readonly]')) { this.navigationFeedback('Read only. Use arrow keys to move to another control.', widget); return; }
+        this.startInteraction(widget);
+        if (widget.matches('button[role="combobox"]')) widget.click();
+        return;
+      }
+      if (event.key === 'Enter' && !selected && widget.matches(TYPING_FIELDS) && widget.tagName === 'INPUT' && !widget.closest('[data-a11y-search]')) {
+        event.preventDefault(); event.stopPropagation(); this.enteringGroup = true;
+        this.focusNavigationItem(widget, 'Finished editing. Arrows now move between controls. '); return;
+      }
+      // Typing directly is also allowed; it starts editing without requiring Enter first.
+      if (selected && widget.matches(TYPING_FIELDS) && (event.key.length === 1 || ['Backspace', 'Delete'].includes(event.key))) this.startInteraction(widget, false);
+      if (selected && event.key === ' ' && !widget.matches(TYPING_FIELDS)) this.startInteraction(widget, false);
+    }
     if (!event.shiftKey && this.options.settings().arrowNavigation) {
       const root = navigationRoot(this.document, element);
       if (event.key === 'Enter' && isNavigationGroup(element)) {
@@ -313,13 +382,17 @@ export class AssistiveController {
         const index = event.key === 'Home' ? 0 : event.key === 'End' ? results.length - 1 : at + (event.key === 'ArrowDown' ? 1 : -1);
         event.preventDefault();
         const target = index < 0 ? input : results[Math.min(index, results.length - 1)];
-        if (target && this.options.settings().arrowNavigation) this.focusNavigationItem(target);
+        if (target && this.options.settings().arrowNavigation) {
+          this.focusNavigationItem(target);
+          if (target === input) this.startInteraction(target, false);
+        }
         else target?.focus();
         return;
       }
     }
     if (!event.shiftKey && this.options.settings().arrowNavigation &&
-        ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(event.key) && !element.closest(ARROW_WIDGETS)) {
+        ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(event.key) &&
+        (!element.closest(ARROW_WIDGETS) || !!widget && this.selectedWidget(widget) || toggle && this.navigationFocus === element)) {
       this.browse(event, element);
     }
     if (event.key === 'Escape' && !this.document.querySelector('dialog[open]')) {
@@ -351,7 +424,7 @@ export class AssistiveController {
     }
   }
   private focusNavigationItem(next: HTMLElement, prefix = ''): void {
-    this.keyboard = true;
+    this.keyboard = true; this.clearInteraction();
     if (next.tabIndex < 0 && !next.hasAttribute('tabindex')) {
       this.releaseArrowTarget(); this.arrowTarget = next; next.setAttribute('tabindex', '-1');
     }
@@ -359,7 +432,8 @@ export class AssistiveController {
     this.clearNavigationFocus(); this.navigationFocus = next; next.setAttribute('data-a11y-nav-focus', '');
     this.lastTarget = next;
     this.cancelPending();
-    this.navigationFeedback(prefix + navigationDescription(next, this.options.settings().level, this.options.hint?.(next)), next);
+    const help = this.keyboardWidget(next) ? ' Press Enter to edit or explore this control. Escape finishes editing and returns to arrow navigation.' : '';
+    this.navigationFeedback(prefix + navigationDescription(next, this.options.settings().level, this.options.hint?.(next)) + help, next);
   }
   private navigationFeedback(text: string, target?: HTMLElement): void {
     if (!this.options.settings().enabled) { this.options.status(text); return; }
@@ -446,6 +520,6 @@ export class AssistiveController {
   destroy(): void {
     this.cancelPending(); clearTimeout(this.routeTimer); clearTimeout(this.formTimer);
     this.disposers.splice(0).forEach(dispose => dispose());
-    this.releaseArrowTarget(); this.clearNavigationFocus(); this.clearHighlight(); speech.stop('assist:focus'); speech.stop('assist:hover'); speech.stop('assist:request');
+    this.releaseArrowTarget(); this.clearNavigationFocus(); this.clearInteraction(); this.clearHighlight(); speech.stop('assist:focus'); speech.stop('assist:hover'); speech.stop('assist:request');
   }
 }

@@ -17,13 +17,19 @@ hidden/inert content and disabled controls are skipped. Navigation stays inside 
 
 Named panels, navigation regions, settings fieldsets and data-scan-group containers are group stops.
 Enter enters a focused group and announces its name; Escape returns to its container one level at a
-time. Only siblings at the current level participate in arrow movement. Enter on a leaf button/link
+time. Controls selected with arrows remain in navigation mode until Enter or direct typing starts
+editing/exploration. Escape finishes editing, retains the value and keeps the trade dialog open;
+arrows then move between controls again. Single-line input Enter also finishes editing, except
+stock search, where it selects a result. Expanded custom pickers close first. Chart Escape still
+runs the chart cleanup handler while preventing the containing dialog from closing. Tab and mouse
+focus retain native editing behavior. A dashed focus outline identifies editing/exploration.
+Only siblings at the current level participate in arrow movement. Enter on a leaf button/link
 retains native activation. Held Enter after entering a group cannot accidentally activate its first
 control. Escape closes an expanded menu before leaving its group; outside groups, native dialog
 closing is unchanged. Temporary tabindex and focus highlighting are removed after focus leaves.
 
-Fields, editable content, tabs, menus, sliders and focusable charts retain their arrows. Use Tab or
-Shift+Tab to leave these widgets, or Escape to return to their containing group. Modified arrows, screen-reader commands, and switch-control scanning
+Fields, editable content, menus, sliders and focusable charts retain their arrows while editing or
+exploring. Tab/Shift+Tab also leave these widgets. Modified arrows, screen-reader commands, and switch-control scanning
 are left alone. Turning arrow-key navigation off restores ordinary page arrows. Voice can be turned
 off while navigation remains enabled, and navigation works without a speech API or installed voice.
 Turning voice on does not turn navigation on. Older saved voice-enabled preferences migrate to

@@ -314,13 +314,14 @@ test('Enter goes inside named groups, arrows stay at that level, and Escape retu
   assert.equal(activity.hasAttribute('tabindex'), false);
 });
 
-test('Escape leaves an editing field for its group, but lets an expanded picker close first', t => {
+test('Escape finishes editing before leaving a field group and closes an expanded picker first', async t => {
   const { doc } = setup(t, '<fieldset><legend>Order</legend><input aria-label="Quantity" value="2"><button role="combobox" aria-expanded="true">Stock</button></fieldset>', { enabled: true });
   const group = doc.querySelector('fieldset'), picker = doc.querySelector('button'), input = doc.querySelector('input');
-  input.focus(); key(doc, 'Escape'); assert.equal(doc.activeElement, group);
+  input.focus(); key(doc, 'Escape'); assert.equal(doc.activeElement, input);
+  assert.equal(input.value, '2'); key(doc, 'Escape'); assert.equal(doc.activeElement, group);
   picker.focus(); let closed = 0;
   picker.onkeydown = event => { if (event.key === 'Escape') { closed++; picker.setAttribute('aria-expanded', 'false'); } };
-  key(doc, 'Escape'); assert.equal(closed, 1); assert.equal(doc.activeElement, picker);
+  key(doc, 'Escape'); await Promise.resolve(); assert.equal(closed, 1); assert.equal(doc.activeElement, picker);
   key(doc, 'Escape'); assert.equal(closed, 1); assert.equal(doc.activeElement, group);
 });
 
@@ -384,4 +385,75 @@ test('Left from a heading containing a button reaches the sidebar instead of cho
   let clicks = 0; hide.onclick = () => clicks++;
   controller.beginArrowNavigation(); assert.equal(doc.activeElement, heading);
   key(doc, 'ArrowLeft'); assert.equal(doc.activeElement, sidebar); assert.equal(clicks, 0);
+});
+
+test('arrows select a number field, Enter edits, and Escape or Enter resumes navigation without submitting', t => {
+  const { doc } = setup(t, '<form><h1>Order</h1><label>Quantity<input type="number" value="2"></label><button>Review</button></form>', { arrowNavigation: true });
+  const field = doc.querySelector('input'), review = doc.querySelector('button'); let submits = 0;
+  doc.querySelector('form').onkeydown = event => { if (event.key === 'Enter') submits++; };
+  key(doc, 'ArrowDown'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, field);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review); assert.equal(field.value, '2');
+  key(doc, 'ArrowUp'); key(doc, 'Enter'); assert.equal(field.hasAttribute('data-a11y-interacting'), true);
+  assert.equal(key(doc, 'ArrowUp'), true, 'editing arrows retain native behavior');
+  field.value = '3'; field.dispatchEvent(new browser.Event('input', { bubbles: true }));
+  key(doc, 'Enter'); assert.equal(doc.activeElement, field); assert.equal(field.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'Enter', { repeat: true }); assert.equal(submits, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review);
+  key(doc, 'ArrowUp'); key(doc, 'Enter'); key(doc, 'Escape'); assert.equal(doc.activeElement, field);
+  assert.equal(field.value, '3'); assert.equal(submits, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review);
+});
+
+test('direct typing starts editing while Tab, pointer access and mode-off retain native fields', t => {
+  const { doc, update } = setup(t, '<input aria-label="Notes"><button>Next</button>', { arrowNavigation: true });
+  const field = doc.querySelector('input'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, field);
+  key(doc, 'a'); assert.equal(field.hasAttribute('data-a11y-interacting'), true);
+  key(doc, 'Escape'); assert.equal(field.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'Tab'); assert.equal(key(doc, 'ArrowLeft'), true, 'Tab restores native editing until focus changes');
+  key(doc, 'Escape'); assert.equal(key(doc, 'ArrowRight'), false, 'Escape restores arrow navigation');
+  field.dispatchEvent(new browser.PointerEvent('pointerdown', { bubbles: true }));
+  assert.equal(key(doc, 'ArrowLeft'), true, 'clicking a selected field starts native editing');
+  update({ arrowNavigation: false }); assert.equal(key(doc, 'ArrowDown'), true);
+});
+
+test('Escape lets a chart stop inspection without closing its dialog, then arrows leave the chart', t => {
+  const { doc } = setup(t, '<dialog open><div role="img" tabindex="0" aria-label="Prices"></div><button>Close</button></dialog>', { arrowNavigation: true });
+  const chart = doc.querySelector('[role="img"]'), dialog = doc.querySelector('dialog'); let cleaned = 0, closed = 0;
+  chart.addEventListener('keydown', event => { if (event.key === 'Escape') { assert.equal(event.defaultPrevented, false); cleaned++; } });
+  dialog.onkeydown = event => { if (event.key === 'Escape') closed++; };
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, chart);
+  key(doc, 'Enter'); assert.equal(key(doc, 'ArrowRight'), true);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, chart); assert.equal(cleaned, 1); assert.equal(closed, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
+});
+
+test('a select field can be entered and released without swallowing subsequent navigation arrows', t => {
+  const { doc } = setup(t, '<select aria-label="Account"><option>Trading</option></select><button>Next</button>', { arrowNavigation: true });
+  const select = doc.querySelector('select'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, select);
+  key(doc, 'Enter'); assert.equal(select.hasAttribute('data-a11y-interacting'), true);
+  assert.equal(key(doc, 'ArrowDown'), true);
+  key(doc, 'Escape'); assert.equal(select.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
+});
+
+test('a picker closing after rendering still releases its next arrow key', async t => {
+  const { doc } = setup(t, '<button role="combobox" aria-expanded="true">Stock</button><input aria-label="Quantity" type="number">', { arrowNavigation: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const picker = doc.querySelector('button'); let reopened = 0;
+  picker.onkeydown = event => {
+    if (event.key === 'Escape') setTimeout(() => picker.setAttribute('aria-expanded', 'false'), 20);
+    if (event.key === 'ArrowDown') reopened++;
+  };
+  picker.focus(); key(doc, 'Escape'); await Promise.resolve();
+  t.mock.timers.tick(20); key(doc, 'ArrowDown');
+  assert.equal(doc.activeElement, doc.querySelector('input')); assert.equal(reopened, 0);
+});
+
+test('checkboxes support Enter activation and subsequent arrow navigation without submitting their form', t => {
+  const { doc } = setup(t, '<form><label>Use limit price<input type="checkbox"></label><button>Review</button></form>', { arrowNavigation: true });
+  const check = doc.querySelector('input'); let reviews = 0;
+  doc.querySelector('form').onkeydown = event => { if (event.key === 'Enter') reviews++; };
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, check);
+  key(doc, 'Enter'); assert.equal(check.checked, true); assert.equal(reviews, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
 });
