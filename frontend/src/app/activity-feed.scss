@@ -181,6 +181,116 @@
   font-size: 0.8rem;
 }
 
+// BR-15: the order's audit trail, opened under its row. Same type and colours as the row itself,
+// with a thin line joining the steps so the novice dashboard reads it as one story.
+.activity-item .trail {
+  grid-column: 1 / -1;
+  margin: 2px 0 4px;
+  padding: 8px 12px 4px;
+  border-radius: 10px;
+  background: var(--surface-wash-16);
+
+  .activity-message {
+    margin: 4px 0 8px;
+  }
+}
+
+.trail-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  transition: opacity 0.15s;
+
+  &.refreshing {
+    opacity: 0.7;
+  }
+}
+
+.trail-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: start;
+  padding: 0 0 12px;
+  font-size: 13px;
+
+  .marker {
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--gain);
+    box-shadow: 0 0 0 2px var(--surface-wash-16);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 16px;
+    bottom: 0;
+    border-left: 2px solid color-mix(in srgb, currentColor 18%, transparent);
+  }
+
+  &:last-child {
+    padding-bottom: 6px;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  .step-what {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    b {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    small {
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 12.5px;
+    }
+  }
+
+  time {
+    color: var(--text-subtle);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  &.waiting .marker {
+    background: var(--warning);
+  }
+
+  &.failed .marker {
+    background: var(--loss);
+  }
+
+  &.cancelled .marker {
+    background: color-mix(in srgb, currentColor 35%, transparent);
+  }
+}
+
+.activity-item .actions .trail-toggle[aria-expanded='true'] {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+@media (max-width: 720px) {
+  .trail-step {
+    grid-template-columns: 14px minmax(0, 1fr);
+
+    time {
+      grid-column: 2;
+    }
+  }
+}
+
 // The dashboard panels are narrow: stack the time above each row and drop the status column.
 :host(.compact) .activity-item {
   grid-template-columns: minmax(0, 1fr) auto;

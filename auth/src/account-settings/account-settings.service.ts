@@ -120,7 +120,8 @@ export class AccountSettingsService {
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<User> {
     const user = await this.withCurrentPassword(userId, currentPassword, async (manager, owner) => {
       const passwordHash = this.passwordEncoder.encode(newPassword);
-      await manager.update(User, { userId }, { passwordHash });
+      // A new password restarts its age and earns a fresh "expires soon" warning later (BR-03).
+      await manager.update(User, { userId }, { passwordHash, passwordChangedAt: new Date(), passwordExpiryWarnedAt: null });
       await this.refreshTokenService.revokeAllForUser(userId, manager);
       await this.audit(manager, userId, AuditEvent.PASSWORD_CHANGED, { otherSessionsSignedOut: true });
       return { ...owner, passwordHash };

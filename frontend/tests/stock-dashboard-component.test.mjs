@@ -89,9 +89,13 @@ async function dashboard(t, sampleMs = 5000) {
 test('sampled quotes update performance metrics while the area chart keeps its fixed emerald style', async (t) => {
   const d = await dashboard(t);
   d.feed.next(tick(101));
+  d.fixture.detectChanges();
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'the first quote shows without waiting for a sample window');
+  assert.equal(d.fixture.componentInstance.state().connection, 'live');
+  const entries = d.zoneEntries;
   d.feed.next(tick(104));
-  assert.equal(d.fixture.componentInstance.asset(), null);
-  assert.equal(d.zoneEntries, 0);
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'later quotes wait for the sample window');
+  assert.equal(d.zoneEntries, entries, 'nothing enters Angular until the sample window closes');
   d.sample();
   assert.equal(d.fixture.componentInstance.asset().price, 104);
   assert.equal(d.fixture.componentInstance.asset().changePercent, 4);
@@ -178,10 +182,12 @@ test('ten-second chart sampling leaves a raw stream subscriber live', async (t) 
   t.after(() => subscription.unsubscribe());
   d.feed.next(tick(101));
   d.sample(5000);
-  assert.equal(d.fixture.componentInstance.asset(), null);
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'the first quote is immediate');
   assert.equal(raw.length, 1);
   d.feed.next(tick(102, 5));
-  d.sample(5000);
+  d.sample(4999);
+  assert.equal(d.fixture.componentInstance.asset().price, 101, 'the next waits for the ten-second window');
+  d.sample(1);
   assert.equal(raw.length, 2);
   assert.equal(d.fixture.componentInstance.asset().price, 102);
 });

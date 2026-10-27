@@ -5,6 +5,8 @@ import { RegistrationService } from '../onboarding/registration.service';
 import { JwtService } from '../security/jwt.service';
 import { RefreshTokenService } from '../security/refresh-token.service';
 import { TierService } from '../onboarding/tier.service';
+import { PasswordExpiryService } from '../password-expiry/password-expiry.service';
+import { PasswordExpiredException } from './exceptions/password-expired.exception';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { UserRole } from './user-role.enum';
 import { ProfileAccessDeniedException } from './exceptions/profile-access-denied.exception';
@@ -18,6 +20,7 @@ describe('AuthController', () => {
   let jwtService: jest.Mocked<JwtService>;
   let refreshTokenService: jest.Mocked<RefreshTokenService>;
   let tierService: jest.Mocked<TierService>;
+  let passwordExpiry: jest.Mocked<PasswordExpiryService>;
 
   const user = {
     userId: '11111111-1111-1111-1111-111111111111',
@@ -43,6 +46,7 @@ describe('AuthController', () => {
             findRiskProfile: jest.fn().mockResolvedValue('MODERATE'),
           },
         },
+        { provide: PasswordExpiryService, useValue: { handleExpiredSignIn: jest.fn() } },
       ],
     }).compile();
 
@@ -52,6 +56,7 @@ describe('AuthController', () => {
     jwtService = module.get(JwtService);
     refreshTokenService = module.get(RefreshTokenService);
     tierService = module.get(TierService);
+    passwordExpiry = module.get(PasswordExpiryService);
   });
 
   it('register returns the created user without any tokens', async () => {
@@ -109,6 +114,21 @@ describe('AuthController', () => {
     await expect(controller.login({ email: 'trader@example.com', password: 'wrong' } as any)).rejects.toThrow(
       InvalidCredentialsException,
     );
+  });
+
+  it('login with an expired password emails a reset link, issues no tokens and reports PASSWORD_EXPIRED', async () => {
+    userService.login.mockRejectedValue(new PasswordExpiredException(user.userId, user.email));
+
+    await expect(controller.login({ email: user.email, password: 'right-but-old' } as any)).rejects.toThrow(PasswordExpiredException);
+    expect(passwordExpiry.handleExpiredSignIn).toHaveBeenCalledWith(user.userId, user.email);
+    expect(jwtService.issueToken).not.toHaveBeenCalled();
+    expect(refreshTokenService.issue).not.toHaveBeenCalled();
+  });
+
+  it('login with bad credentials sends no reset link', async () => {
+    userService.login.mockRejectedValue(new InvalidCredentialsException());
+    await expect(controller.login({ email: user.email, password: 'wrong' } as any)).rejects.toThrow(InvalidCredentialsException);
+    expect(passwordExpiry.handleExpiredSignIn).not.toHaveBeenCalled();
   });
 
   it('refresh issues a new access token and rotates the refresh token', async () => {

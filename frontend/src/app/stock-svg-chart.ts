@@ -1,5 +1,6 @@
 import { ChartAccess, ChartFocus } from './chart-access';
 import { chartPoints, type ChartSeries } from './chart-data';
+import { APP_TIME_ZONE } from './app-time';
 import { describeSeries, seriesTable, chartDate, chartValue, type ChartTable } from '../../../shared/chart-description';
 import { describeTrades } from './technical-chart-data';
 import type { TradeMark } from './trade-marks';
@@ -41,13 +42,14 @@ import { StockChartViewport } from './stock-chart-viewport';
 import { displayInterval, overviewPoints, quoteCandles, type QuoteCandle } from './stock-chart-display';
 
 let nextChartId = 0;
+// Axis and tooltip clocks are Central, like every other time the app shows.
 const CLOCK = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
+  timeZone: APP_TIME_ZONE,
   hour: 'numeric',
   minute: '2-digit',
 });
 const TIME = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
+  timeZone: APP_TIME_ZONE,
   month: 'short',
   day: 'numeric',
   hour: 'numeric',

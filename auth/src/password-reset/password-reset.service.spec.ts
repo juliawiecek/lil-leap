@@ -36,6 +36,7 @@ class InMemoryMailbox implements MailDelivery {
 class InMemoryManager {
   tokens: PasswordResetToken[] = [];
   readonly passwordHashes = new Map<string, string>();
+  readonly passwordChanges = new Map<string, { passwordChangedAt?: Date; passwordExpiryWarnedAt?: Date | null }>();
   private nextId = 0;
 
   async findOne(entity: unknown, options: { where: { tokenHash?: string; userId?: string } }): Promise<unknown> {
@@ -56,8 +57,9 @@ class InMemoryManager {
     this.tokens = this.tokens.filter((token) => !matches(token));
   }
 
-  async update(_entity: unknown, criteria: { userId: string }, changes: { passwordHash: string }): Promise<void> {
+  async update(_entity: unknown, criteria: { userId: string }, changes: { passwordHash: string; passwordChangedAt?: Date; passwordExpiryWarnedAt?: Date | null }): Promise<void> {
     this.passwordHashes.set(criteria.userId, changes.passwordHash);
+    this.passwordChanges.set(criteria.userId, { passwordChangedAt: changes.passwordChangedAt, passwordExpiryWarnedAt: changes.passwordExpiryWarnedAt });
   }
 }
 
@@ -112,6 +114,14 @@ describe('PasswordResetService', () => {
       expect(manager.tokens).toHaveLength(1);
       expect(manager.tokens[0].tokenHash).toBe(hashResetToken(rawToken));
       expect(manager.tokens[0].tokenHash).not.toContain(rawToken);
+    });
+
+    it('an expired password gets the expired-password wording with the same kind of link', async () => {
+      await service.requestReset(user.email, { expired: true });
+      expect(mailbox.sent[0]).toMatchObject({ to: user.email, subject: 'Your NextTrade password has expired' });
+      expect(mailbox.sent[0].body).toContain('sign-in was refused');
+      expect(manager.tokens).toHaveLength(1);
+      expect(manager.tokens[0].tokenHash).toBe(hashResetToken(mailbox.lastToken()));
     });
 
     it('sends the email only after the token is committed', async () => {
@@ -179,6 +189,8 @@ describe('PasswordResetService', () => {
       await service.resetPassword(rawToken, 'brand-new-password');
 
       expect(manager.passwordHashes.get(user.userId)).toBe('encoded:brand-new-password');
+      expect(manager.passwordChanges.get(user.userId)?.passwordChangedAt).toBeInstanceOf(Date);
+      expect(manager.passwordChanges.get(user.userId)?.passwordExpiryWarnedAt).toBeNull();
       expect(manager.tokens).toHaveLength(0);
       expect(refreshTokens.revokeAllForUser).toHaveBeenCalledWith(user.userId, manager);
     });

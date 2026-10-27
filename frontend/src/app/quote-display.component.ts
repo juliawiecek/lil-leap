@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { interval, Subject, takeUntil, switchMap, startWith, tap, catchError, Observable, of } from 'rxjs';
 import { QuoteService, Quote } from './quote.service';
 import { FormatAgePipe } from './format-age.pipe';
+import { centralTimestamp } from './app-time';
 
 /**
  * Displays the latest market quote with polling for updates.
@@ -65,7 +66,7 @@ import { FormatAgePipe } from './format-age.pipe';
           </div>
           <div class="quote-time">
             <span class="time-label">Quoted at</span>
-            <span>{{ quote.quotedAt | date: 'short' }}</span>
+            <span>{{ quotedAt(quote.quotedAt) }}</span>
           </div>
           <div class="quote-source" *ngIf="quote.synthetic">
             <span class="badge synthetic">SYNTHETIC</span>
@@ -297,6 +298,11 @@ export class QuoteDisplayComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe();
+  }
+
+  /** "Oct 16, 2026, 2:05 PM CT": when the quote was taken, in Central time like every other timestamp. */
+  quotedAt(iso: string): string {
+    return centralTimestamp(iso);
   }
 
   ngOnDestroy(): void {

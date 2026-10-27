@@ -5,6 +5,8 @@ import { PasswordEncoderService } from '../security/password-encoder.service';
 import { InvalidCredentialsException } from './exceptions/invalid-credentials.exception';
 import { CustomerProfile } from '../onboarding/entities/customer-profile.entity';
 import { INVALID_SIGN_IN_MESSAGE, LOGIN_LOCK_MINUTES } from '../security/login-policy';
+import { PASSWORD_MAX_AGE_DAYS } from '../security/password-policy';
+import { PasswordExpiredException } from './exceptions/password-expired.exception';
 
 describe('UserService', () => {
   let user: User;
@@ -20,7 +22,8 @@ describe('UserService', () => {
     customerProfileRepository = { findOne: jest.fn() };
     jest.useFakeTimers().setSystemTime(new Date('2026-10-19T12:00:00Z'));
     user = { userId: 'u1', email: 'trader@example.com', passwordHash: '{bcrypt}hash', userStatus: 'ACTIVE',
-      failedLoginAttempts: 0, lockedUntil: null } as User;
+      failedLoginAttempts: 0, lockedUntil: null, passwordChangedAt: new Date('2026-10-01T00:00:00Z'),
+      passwordExpiryWarnedAt: null } as User;
     committed = false;
     query = { where: jest.fn().mockReturnThis(), setLock: jest.fn().mockReturnThis(), getOne: jest.fn() };
     query.getOne.mockResolvedValue(user);
@@ -152,6 +155,29 @@ describe('UserService', () => {
     await expect(service.login({ email: user.email, password: 'wrong' })).rejects.toThrow(InvalidCredentialsException);
     expect(user.failedLoginAttempts).toBe(1);
     expect(user.lockedUntil).toBeNull();
+  });
+
+  it('refuses a correct password once it is older than the maximum age, after clearing the failure count', async () => {
+    user.passwordChangedAt = new Date(Date.now() - PASSWORD_MAX_AGE_DAYS * 24 * 60 * 60_000);
+    user.failedLoginAttempts = 2;
+
+    const attempt = service.login({ email: user.email, password: 'right' });
+    await expect(attempt).rejects.toThrow(PasswordExpiredException);
+    await expect(attempt).rejects.toMatchObject({ code: 'PASSWORD_EXPIRED', userId: 'u1', email: user.email });
+    expect(committed).toBe(true);
+    expect(user.failedLoginAttempts).toBe(0);
+  });
+
+  it('a wrong password for an expired account is still just a bad credential, and never says the password expired', async () => {
+    user.passwordChangedAt = new Date(Date.now() - 400 * 24 * 60 * 60_000);
+    passwordEncoder.matches.mockReturnValue(false);
+    await expect(service.login({ email: user.email, password: 'wrong' })).rejects.toThrow(InvalidCredentialsException);
+    expect(user.failedLoginAttempts).toBe(1);
+  });
+
+  it('a password one millisecond short of the maximum age still signs in', async () => {
+    user.passwordChangedAt = new Date(Date.now() - PASSWORD_MAX_AGE_DAYS * 24 * 60 * 60_000 + 1);
+    await expect(service.login({ email: user.email, password: 'right' })).resolves.toBe(user);
   });
 
   it('propagates a persistence failure instead of reporting a successful login', async () => {

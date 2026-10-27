@@ -42,7 +42,7 @@
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
 @if (!privateValues() && averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
-@if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : (p.at | date:'medium') + ': ' + (p.price | currency) }}</p> }
+@if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : pointTime(p.at) + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {
   <svg data-glossary="volume" class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">

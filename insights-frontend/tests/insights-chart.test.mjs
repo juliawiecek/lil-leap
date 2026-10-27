@@ -69,7 +69,7 @@ test('PS-25 large dated counts group by day and every underlying observation rem
   const chart = chartWith(t, []);
   chart.prefix = signal('');
   chart.points.set(Array.from({ length: 500 }, (_, i) => ({ label: new Date(Date.UTC(2026, 9, 1) + i * 3600000).toISOString(), value: 2 })));
-  assert.match(chart.dataTable().note, /Grouped by New York/);
+  assert.match(chart.dataTable().note, /Grouped by Central/);
   assert.equal(chart.allData().rows.length, 500);
   assert.equal(chart.dataTable().rows.reduce((sum, row) => sum + Number(row[1].replace(/[^\d.]/g, '')), 0), 1000);
 });

@@ -507,6 +507,27 @@ test('missing active account or stale instrument mapping prevents submission', a
   assert.equal(calls, 0);
 });
 
+test('the sidebar resizes from the keyboard and a double-click on its edge, within its limits, like the novice dashboard', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(fakeFeed([]))]);
+  const key = (k) => desk.sidebar.keys({ key: k, preventDefault() {} });
+  desk.sidebar.width.set(165);
+  key('ArrowRight');
+  assert.equal(desk.sidebar.width(), 181);
+  key('End');
+  assert.equal(desk.sidebar.width(), desk.sidebar.max, 'never wider than the maximum');
+  desk.sidebar.width.set(240);
+  desk.sidebar.toggle();
+  assert.equal(desk.sidebar.width(), desk.sidebar.min);
+  assert.equal(desk.collapsed(), true, 'the icon strip hides labels');
+  key('ArrowLeft');
+  assert.equal(desk.sidebar.width(), desk.sidebar.min, 'never narrower than the icon strip');
+  desk.sidebar.toggle();
+  assert.equal(desk.sidebar.width(), 240, 'a double-click re-opens at the last open width');
+  assert.equal(desk.collapsed(), false);
+  key('Home');
+  assert.equal(desk.collapsed(), true);
+});
+
 test('limit orders submit the selected price and both exit thresholds', async t => {
   const desk = tradingDesk(t);
   await desk.loadTradingData();
@@ -591,4 +612,21 @@ test('market ticket uses executable bid/ask and sizes from stop risk with cash a
   assert.equal(ticket.suggestedQuantity(), 3);
   desk.feed.now.set(Date.now() + 120000);
   assert.equal(ticket.suggestedQuantity(), 0);
+});
+
+test('the chart starts loading as soon as the stock list is known, before the first prices arrive', async t => {
+  const feed = fakeFeed([]);
+  const requested = [];
+  feed.client = { closes: async (id) => { requested.push(id); return Array.from({ length: 30 }, (_, i) => ({ at: Date.now() - (30 - i) * 300000, price: 176 + i / 10 })); }, history: async () => [] };
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
+  feed.push(LISTED.map(([symbol]) => ({ symbol, name: NAMES[symbol], price: 0, change: 0 })));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(requested, ['aapl-uuid'], 'one candle request for the linked stock');
+  assert.equal(desk.quotes().length, 0, 'the market view keeps "Loading prices" rather than $0.00 rows');
+  assert.equal(desk.priceHistory().length, 30);
+  feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(desk.selected().symbol, 'AAPL');
+  assert.equal(desk.quotes().length, 5);
+  assert.deepEqual(requested, ['aapl-uuid'], 'the priced tick reuses the loaded chart');
 });

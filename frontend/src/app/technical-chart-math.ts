@@ -26,7 +26,7 @@ export function ema(points: readonly PricePoint[], period: number): PricePoint[]
 /** Bar VWAP uses reported traded volume and typical OHLC price, reset each exchange day. */
 export function vwap(points: readonly PricePoint[]): PricePoint[] {
   points = orderedPrices(points);
-  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' });
   let session = '', weighted = 0, volume = 0;
   const output: PricePoint[] = [];
   for (const p of points) {

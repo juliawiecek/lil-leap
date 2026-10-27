@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
+import { render } from './dom-helper.mjs';
 const { ORDER_TRACK_LIMIT_MS } = await import('../src/app/order-history-api.ts');
 
 // A fixed live quote per stock, so prices are known once the dashboard's first quote refresh runs.
@@ -277,8 +278,9 @@ test('greeting, diversification and loading states come from the real data (PS-0
   const fresh = component(t, NoviceDashboard, [feedProvider(feedWith())]);
   assert.equal(fresh.portfolioLoaded(), false);
   assert.equal(fresh.diversification().title, 'No investments yet');
-  for (const [hour, greeting] of [[9, 'Good Morning'], [14, 'Good Afternoon'], [20, 'Good Evening']]) {
-    fresh.marketClock.set(new Date(2026, 9, 16, hour));
+  // The greeting follows the Central clock, not the viewer's: these are 9 AM, 2 PM and 8 PM CDT.
+  for (const [hour, greeting] of [[14, 'Good Morning'], [19, 'Good Afternoon'], [1, 'Good Evening']]) {
+    fresh.marketClock.set(new Date(Date.UTC(2026, 9, hour === 1 ? 17 : 16, hour)));
     assert.equal(fresh.greeting(), greeting);
   }
   const { desk } = await tradingDesk(t);
@@ -746,4 +748,28 @@ test('trade chart loading and missing history never report a zero gain as observ
   desk.closeModal();
   answer([{ at: Date.now(), price: 999 }]); await flush();
   assert.deepEqual(desk.stockChartHistory(), [], 'closing a ticket invalidates its pending request');
+});
+
+test('the stock list without its first prices does not show $0.00 rows', t => {
+  const feed = fakeFeed([]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  feed.push(listed().map((row) => ({ ...row, price: 0 })));
+  assert.equal(desk.quotes().length, 0);
+  feed.push(listed());
+  assert.equal(desk.quotes().length, 5);
+});
+
+test('the Ready to trade card sits at the top of the Overview, like the advanced ticket, and leaves with it', async (t) => {
+  const fixture = await render(t, NoviceDashboard, {}, [feedProvider(feedWith())]);
+  const root = fixture.nativeElement;
+  const card = () => root.querySelector('.novice-content > .trade-panel');
+  assert.ok(card(), 'the card is a direct child of the page, not inside a column');
+  assert.equal(card().previousElementSibling.className, 'page-heading', 'right under the greeting');
+  assert.equal(card().nextElementSibling.classList.contains('overview-grid'), true, 'above the columns');
+  assert.deepEqual([...card().querySelectorAll('.trade-actions button')].map((b) => b.textContent.trim()), ['Buy', 'Sell']);
+  card().querySelector('.trade-actions button:last-child').click(); fixture.detectChanges();
+  assert.equal(fixture.componentInstance.modal(), 'trade');
+  assert.equal(fixture.componentInstance.side(), 'Sell');
+  fixture.componentInstance.navigate('Portfolio'); fixture.detectChanges();
+  assert.equal(card(), null, 'other pages have no trade card');
 });

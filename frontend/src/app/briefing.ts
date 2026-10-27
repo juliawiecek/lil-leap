@@ -1,5 +1,6 @@
 import type { MarketStatus } from './market-status-api';
 import { stockName } from './speech-text';
+import { centralHour, centralTime } from './app-time';
 
 /**
  * Spoken market briefing: turns what the dashboard already shows into a few short sentences
@@ -51,9 +52,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Orders reported at most, so a busy day does not turn into a long list. */
 const MAX_ORDERS = 3;
 
-/** "Good morning" before noon, "Good afternoon" before 6 PM, otherwise "Good evening". */
+/** "Good morning" before noon, "Good afternoon" before 6 PM, otherwise "Good evening", by the Central clock. */
 export function greeting(now: Date): string {
-  const hour = now.getHours();
+  const hour = centralHour(now);
   if (hour < 12) {
     return 'Good morning';
   }
@@ -134,7 +135,7 @@ export function marketSentence(market: MarketStatus | null, now: Date, locale?: 
   if (away < DAY_MS) {
     return `The market is closed. It opens in ${spokenDuration(away)}.`;
   }
-  const when = new Intl.DateTimeFormat(locale, { weekday: 'long', hour: 'numeric', minute: '2-digit' }).format(opens);
+  const when = centralTime(opens, { weekday: 'long', hour: 'numeric', minute: '2-digit' }, locale);
   return `The market is closed. It opens ${when.replace(/^(\w+)\s/, '$1 at ')}.`;
 }
 

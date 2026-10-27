@@ -29,6 +29,14 @@ export class User {
   @Column({ name: 'locked_until', type: 'timestamptz', nullable: true })
   lockedUntil: Date | null;
 
+  /** BR-03: when the current password was set; sign-in is refused once it is older than the policy allows. */
+  @Column({ name: 'password_changed_at', type: 'timestamptz' })
+  passwordChangedAt: Date;
+
+  /** When the one "expires soon" email for the current password went out; null until it does. */
+  @Column({ name: 'password_expiry_warned_at', type: 'timestamptz', nullable: true })
+  passwordExpiryWarnedAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

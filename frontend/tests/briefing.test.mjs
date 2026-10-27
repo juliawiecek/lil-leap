@@ -15,7 +15,7 @@ const { SESSION_INACTIVITY_MINUTES, SESSION_WARNING_SECONDS } = await import('@l
 const saved = (briefing) => ({ [ACCESSIBILITY_STORAGE_KEY]: JSON.stringify({ briefing }) });
 const savedBriefing = (values) => JSON.parse(values.get(ACCESSIBILITY_STORAGE_KEY)).briefing;
 
-const NOW = new Date(2026, 9, 16, 14, 5);
+const NOW = new Date(Date.UTC(2026, 9, 16, 19, 5)); // 2:05 PM CDT, so the greeting is "Good afternoon"
 const OPEN = { open: true, exchangeTimeZone: 'America/New_York', nextOpen: '', nextClose: new Date(NOW.getTime() + (2 * 60 + 14) * 60000).toISOString() };
 const order = (over = {}) => ({
   symbol: 'AAPL', side: 'BUY', quantity: 2, status: 'FILLED', submittedAt: new Date(NOW.getTime() - 3600000).toISOString(),
@@ -65,10 +65,10 @@ function withSpeech(t) {
   return { spoken, synth };
 }
 
-test('greeting follows the clock', () => {
-  assert.equal(greeting(new Date(2026, 0, 1, 8)), 'Good morning');
-  assert.equal(greeting(new Date(2026, 0, 1, 12)), 'Good afternoon');
-  assert.equal(greeting(new Date(2026, 0, 1, 18)), 'Good evening');
+test('greeting follows the Central clock', () => {
+  assert.equal(greeting(new Date('2026-01-01T14:00:00Z')), 'Good morning'); // 8 AM CST
+  assert.equal(greeting(new Date('2026-01-01T18:00:00Z')), 'Good afternoon'); // noon CST
+  assert.equal(greeting(new Date('2026-01-02T00:00:00Z')), 'Good evening'); // 6 PM CST
 });
 
 test('amounts, percents and durations are worded the way people say them', () => {
@@ -105,7 +105,7 @@ test('the market sentence says when it closes or opens', () => {
   assert.equal(marketSentence(null, NOW), 'The market status is not available right now.');
   const soon = { ...OPEN, open: false, nextOpen: new Date(NOW.getTime() + 45 * 60000).toISOString() };
   assert.equal(marketSentence(soon, NOW), 'The market is closed. It opens in 45 minutes.');
-  const monday = { ...OPEN, open: false, nextOpen: new Date(2026, 9, 19, 9, 30).toISOString() };
+  const monday = { ...OPEN, open: false, nextOpen: '2026-10-19T14:30:00Z' }; // 9:30 AM CDT
   // Newer ICU versions put a narrow no-break space before AM.
   assert.match(marketSentence(monday, NOW, 'en-US'), /^The market is closed\. It opens Monday at 9:30\sAM\.$/u);
 });

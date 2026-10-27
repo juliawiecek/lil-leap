@@ -5,7 +5,7 @@ import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
 import { Component, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit, inject } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { ActivityFeed } from './activity-feed';
 import { OrderSubmissionClient, OrderSubmissionError, Instrument } from './order-submission-api';
@@ -40,7 +40,7 @@ import { PortfolioChart } from './portfolio-chart';
 import {
   CHART_PERIODS, CashEvent, ChartPeriod, ChartRange, PricePoint, ShareEvent, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel, historyCoverage,
 } from './portfolio-history';
-import { centralDay, centralTime } from './app-time';
+import { centralDay, centralHour, centralTime } from './app-time';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
@@ -129,7 +129,7 @@ const NO_QUOTE: Quote = { symbol: '', name: '', price: 0, change: 0, quotedAt: '
   selector: 'app-novice-dashboard',
   imports: [
     FinancialChange,
-    CurrencyPipe, DatePipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
+    CurrencyPipe, DecimalPipe, DashboardIcon, ActivityFeed, AccountSwitcher, MarketTicker, Toasts, PriceProtectionSettings, PortfolioChart,
     AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, FocusAfterChange, AccountSettings, PriceWatch,
   ],
   templateUrl: './novice-dashboard.html',
@@ -282,9 +282,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   readonly serviceDown = signal(false);
   readonly query = signal('');
   readonly showBalance = signal(true);
-  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the client's own clock (PS-06). */
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock the whole app keeps (PS-06). */
   readonly greeting = computed(() => {
-    const hour = this.marketClock().getHours();
+    const hour = centralHour(this.marketClock());
     if (hour < 12) {
       return 'Good Morning';
     }
@@ -292,6 +292,8 @@ export class NoviceDashboard implements OnInit, OnDestroy {
   });
   /** First name from the investor profile, for the greeting; empty when it is not known. */
   readonly firstName = computed(() => this.profile()?.firstName?.trim() ?? '');
+  /** Today's date in Central time, next to the market status. */
+  readonly marketDate = computed(() => centralTime(this.marketClock(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }));
   /**
    * The sentence under the Overview greeting, from the live numbers: today's move and the held
    * stock that moved most (no stock when none moved). Null until holdings load.
@@ -1307,6 +1309,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   #applyFeed(): void {
     const live = this.feed.quotes();
+    if (live.length && !live.some((q) => q.price > 0)) {
+      return; // The list without its first prices: keep "Loading prices" rather than show $0.00.
+    }
     this.quotes.set(live.map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, change: q.change, quotedAt: q.quotedAt })));
     for (const q of live) {
       if (q.bid > 0) {

@@ -182,6 +182,9 @@ describe('AccountSettingsService (PS-07)', () => {
       await service.changePassword(ME, CURRENT, 'brand-new-password');
 
       expect(db.me().passwordHash).toBe('hash:brand-new-password');
+      // The password age restarts and the next "expires soon" warning is earned again (BR-03).
+      expect((db.me() as { passwordChangedAt?: Date }).passwordChangedAt).toBeInstanceOf(Date);
+      expect((db.me() as { passwordExpiryWarnedAt?: Date | null }).passwordExpiryWarnedAt).toBeNull();
       expect([...db.openSessions]).toEqual(['other-laptop']);
       expect(db.audit).toEqual([{ userId: ME, eventType: AuditEvent.PASSWORD_CHANGED, payload: { otherSessionsSignedOut: true } }]);
       expect(JSON.stringify(db.audit)).not.toContain('brand-new-password');

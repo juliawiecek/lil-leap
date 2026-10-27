@@ -3,8 +3,9 @@ import { chartPoints, orderedPrices, type ChartSeries } from './chart-data';
 import { chartDate, chartPeriodLabel, chartValue, describeSeries } from '../../../shared/chart-description';
 import { describeTrades, technicalTable, volumeTable } from './technical-chart-data';
 import { AfterViewInit, Component, ElementRef, OnChanges, OnDestroy, computed, input, signal, viewChild } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import type { PricePoint } from './market-feed-api';
+import { centralTime, centralTimestamp } from './app-time';
 import { displayCandles, indicators, placeEndLabels, rsi } from './technical-chart-math';
 import { pricePath, priceRange, priceY, plotMarks, type ChartWindow, type TradeMark } from './trade-marks';
 import { chartSound, pointAnnouncement, stepIndex, type ChartSound } from './chart-keyboard';
@@ -17,7 +18,7 @@ const MIN_EXTENT_MS = 30 * 60 * 1000;
 /** Native SVG enhancement of the existing history plot; no new market requests or chart library. */
 @Component({
   selector: 'app-technical-chart',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, ChartAccess, ChartFocus],
+  imports: [CurrencyPipe, DecimalPipe, ChartAccess, ChartFocus],
   templateUrl: './technical-chart.html',
   styleUrl: './technical-chart.scss',
 })
@@ -38,7 +39,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly rsiDescription = computed(() => describeSeries(this.visibleRsi().map(p => ({ at: p.at, value: p.price })), {
     name: this.symbol() + ' RSI ' + this.rsiPeriod(), period: this.period(), empty: `Needs ${this.rsiPeriod() + 1} recorded bars.`,
   }));
-  readonly rsiTable = computed(() => ({ columns: ['Time (New York)', 'RSI ' + this.rsiPeriod()],
+  readonly rsiTable = computed(() => ({ columns: ['Time (Central)', 'RSI ' + this.rsiPeriod()],
     rows: this.visibleRsi().map(p => [chartDate(p.at), chartValue(p.price)]) }));
   readonly chartSeries = computed<readonly ChartSeries[]>(() => [
     { id: this.symbol() + ':price', label: this.symbol() + ' recorded prices', unit: 'USD', points: chartPoints(this.visible(), p => p.at, p => p.price), status: this.visible().length ? 'ready' : 'empty' },
@@ -119,7 +120,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   }), HEIGHT, 28));
   readonly marks = computed(() => plotMarks(this.privateValues() ? [] : this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
   readonly axes = computed(() => Array.from({ length: 5 }, (_, i) => this.range().high - i * (this.range().high - this.range().low) / 4));
-  readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at)));
+  readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => centralTime(at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })));
   readonly maxVolume = computed(() => Math.max(1, ...this.candles().map(p => p.candle!.volume ?? 0)));
   readonly hasVolume = computed(() => this.candles().some(p => p.candle!.volume !== null));
   readonly bodyWidth = computed(() => {
@@ -133,6 +134,11 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   y(price: number): number { return priceY(price, this.range(), HEIGHT); }
   bodyTop(p: PricePoint): number { return Math.min(this.y(p.candle!.open), this.y(p.candle!.close)); }
   bodyHeight(p: PricePoint): number { return Math.max(1, Math.abs(this.y(p.candle!.open) - this.y(p.candle!.close))); }
+  /** "Oct 16, 2026, 2:05:09 PM CT", for the inspected point. */
+  pointTime(at: number): string {
+    return centralTimestamp(at, true);
+  }
+
   candleText(p: PricePoint): string {
     const c = p.candle!;
     return `${chartDate(c.time)}: ${c.close > c.open ? 'Up, hollow' : c.close < c.open ? 'Down, filled' : 'Unchanged'}, open ${chartValue(c.open, { precision: 4 })}, high ${chartValue(c.high, { precision: 4 })}, low ${chartValue(c.low, { precision: 4 })}, close ${chartValue(c.close, { precision: 4 })}${c.volume === null ? ', volume unavailable' : ', volume ' + c.volume}`;
