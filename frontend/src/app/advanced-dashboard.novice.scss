@@ -89,8 +89,8 @@ h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; text-transform:
 /* Portfolio summary: one hero card -- big value with a change pill, then the other figures
    in a row split by hairlines (no boxes inside the card), like the novice portfolio card. */
 .summary-panel { padding: 26px 28px 24px; }
-.summary-panel h1 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
-.summary-panel h1 .icon-button { width: 28px; height: 28px; border-radius: 8px; color: var(--text-muted); }
+.summary-panel h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.summary-panel h2 .icon-button { width: 28px; height: 28px; border-radius: 8px; color: var(--text-muted); }
 .summary-metrics { display: grid; grid-template-columns: minmax(260px, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 0; align-items: end; margin-top: 8px; }
 .summary-metrics > div,
 .summary-metrics > div:first-child,
@@ -196,7 +196,7 @@ th { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; letter-spac
 .list-tabs button.active { border-bottom-color: var(--accent); background: none; color: var(--text); }
 /* The small Portfolio Summary card keeps its heading on one line. */
 .exposure-panel .panel-heading h2 { font-size: 16px; white-space: nowrap; }
-.summary-panel h1 { margin-bottom: 4px; }
+.summary-panel h2 { margin-bottom: 4px; }
 
 /* Markets page: the market overview and the stock list were both placed in the same grid row and
    overlapped. Stack them: overview first, then the full stock list. */
@@ -340,7 +340,7 @@ th { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; letter-spac
 
 /* Spacing pass: every card uses the same 24px inset, and rows inside cards line up. */
 .summary-panel { padding: 24px; }
-.summary-panel h1 { margin: 0 0 6px; padding: 0; transform: none; text-indent: 0; }
+.summary-panel h2 { margin: 0 0 6px; padding: 0; transform: none; text-indent: 0; }
 /* Figures under the big value: one baseline, separated from the value by a hairline. */
 .pro-grid:not(.secondary-page) .summary-metrics { align-items: start; }
 @media (min-width: 1201px) {
@@ -359,7 +359,7 @@ th { color: var(--text-subtle); font-size: 12.5px; font-weight: 600; letter-spac
 /* Recent activity: the list scrolls inside the card, so the heading and rows share the same edges. */
 .pro-grid:not(.secondary-page) .bottom-panels .panel { overflow: hidden; display: flex; flex-direction: column; }
 .pro-grid:not(.secondary-page) .bottom-panels .panel > app-activity-feed { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
-.summary-panel h1 { position: static; margin: 0 0 8px; }
+.summary-panel h2 { position: static; margin: 0 0 8px; }
 /* Watchlist footer at one-third width: each label sits directly above its two buttons. */
 @media (min-width: 1201px) {
   .pro-grid:not(.secondary-page) .watch-access > div { display: grid; justify-content: stretch; gap: 8px; }

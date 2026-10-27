@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
+import { chartTools } from './fixtures.mjs';
 
 test('advanced line and candlesticks avoid visual gaps in sparse recorded quotes', async ({ page }, info) => {
   test.skip(info.project.name !== 'NextTrade');
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await chartTools(page);
   await colourFixture(page, 'ADVANCED');
   await page.route('**/quotes/history/**', route => route.fulfill({ json: Array.from({ length: 121 }, (_, i) => ({
     quotedAt: new Date(Date.parse('2026-10-21T13:30:00Z') + i * 60000).toISOString(),
@@ -42,6 +44,7 @@ for (const mode of ['off', 'red-green', 'blue-yellow']) {
     test.skip(info.project.name !== 'NextTrade');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await colourFixture(page, 'ADVANCED');
+    await chartTools(page);
     await page.addInitScript(mode => document.documentElement.setAttribute('data-colour-mode', mode), mode);
     await page.route('**/quotes/history/**', route => route.fulfill({ json: Array.from({ length: 1000 }, (_, i) => ({
       quotedAt: new Date(Date.parse('2026-10-21T14:23:24Z') + i * 4000).toISOString(),

@@ -210,7 +210,7 @@ export function buildBriefing(s: BriefingSnapshot): string[] {
       lines.push(orderSentence(order, names, s.balanceHidden, s.locale));
     }
     if (changed.length > MAX_ORDERS) {
-      lines.push('The rest are under Orders.');
+      lines.push('The rest are under Activity.');
     }
   }
 
@@ -221,4 +221,14 @@ export function buildBriefing(s: BriefingSnapshot): string[] {
     lines.push('Some prices are delayed, so these numbers may be a little behind.');
   }
   return lines;
+}
+
+/** An unavailable history must not hold up the rest of the briefing. */
+export async function briefingOrders<T>(request: Promise<T[]>, timeoutMs = 1500): Promise<T[]> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([request.catch(() => []), new Promise<T[]>(resolve => {
+      timer = setTimeout(() => resolve([]), timeoutMs);
+    })]);
+  } finally { clearTimeout(timer); }
 }

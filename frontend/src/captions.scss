@@ -1,0 +1,54 @@
+/*
+ * Caption strip (captions.ts, PS-23): what NextTrade is saying aloud, at the bottom of the screen.
+ * Added by the caption bar itself, to the page or to the open dialog, so its styles are global.
+ * Colours come from the theme tokens (PS-27): body text on the page surface passes AA in every
+ * colour mode. Sized in rem and wrapping, so it grows with zoom and text size.
+ */
+.caption-strip {
+  position: fixed;
+  z-index: 2147482997;
+  left: 50%;
+  bottom: 12px;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(760px, calc(100vw - 32px));
+  max-height: 40vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  transform: translateX(-50%);
+  border: 2px solid var(--text);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 1.125rem/1.45 var(--font-ui);
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.caption-strip[hidden] {
+  display: none;
+}
+
+/*
+ * While a caption shows, everything docked at the bottom moves up above it instead of being
+ * covered: the switch-control bar and keypad (switch-scan.scss), toasts (toasts.ts), open dialogs
+ * such as the trade review, and the dashboards, whose scrolling page ends above the strip so the
+ * trade ticket's buttons can always be scrolled clear of it.
+ */
+html.has-captions dialog:modal {
+  bottom: var(--caption-offset, 0px);
+  max-height: calc(100dvh - 40px - var(--caption-offset, 0px));
+}
+html.has-captions :is(app-novice-dashboard, app-advanced-dashboard) {
+  padding-bottom: var(--caption-offset, 0px);
+  scroll-padding-bottom: var(--caption-offset, 0px);
+}
+
+@media (forced-colors: active) {
+  .caption-strip {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

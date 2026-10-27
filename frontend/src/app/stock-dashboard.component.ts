@@ -50,6 +50,7 @@ import { samplingInterval, type ChartSampleMs } from './stock-chart-stream';
 import type { StockPriceTick } from './stock-price-ticks';
 import { validPrice } from './stock-chart-math';
 import { quoteHistoryPoints } from './chart-data';
+import { LivePricesService } from './live-prices';
 
 export interface StockAsset {
   readonly symbol: string;
@@ -90,10 +91,12 @@ export const STOCK_DASHBOARD_TICKS = new InjectionToken<Observable<StockDashboar
 export function provideStockDashboardFeed(asset: StockAsset): Provider {
   return {
     provide: STOCK_DASHBOARD_TICKS,
-    useFactory: () =>
-      createStockDashboardFeed(asset, inject(QuoteService), inject(ApiHttpClient)).pipe(
+    useFactory: () => {
+      const live = inject(LivePricesService);
+      return createStockDashboardFeed(asset, inject(QuoteService), inject(ApiHttpClient), () => live.paused()).pipe(
         shareReplay({ bufferSize: 1, refCount: true }),
-      ),
+      );
+    },
   };
 }
 
@@ -101,13 +104,16 @@ function createStockDashboardFeed(
   asset: StockAsset,
   quotes: QuoteService,
   http: ApiHttpClient,
+  paused: () => boolean = () => false,
 ): Observable<StockDashboardTick> {
   let history: readonly StockPriceTick[] | undefined;
+  let latest: StockDashboardTick | undefined;
   let historyDay = '';
   let openPrice: number | null = null;
   return timer(0, 1000).pipe(
     exhaustMap(() =>
-      quotes.getLatestByMarketSymbol(asset.market, asset.symbol).pipe(
+      // Keep a heartbeat for the offline timeout while pausing network refreshes.
+      paused() && latest ? of(latest) : quotes.getLatestByMarketSymbol(asset.market, asset.symbol).pipe(
         switchMap((quote) => {
           const day = sessionDay(Date.parse(quote.quotedAt));
           if (day !== historyDay) {
@@ -138,7 +144,7 @@ function createStockDashboardFeed(
               const open = result.opens.find((row) => row.instrumentId === quote.instrumentId);
               // The backend may return a previous close before the session opens.
               // Keep that distinct from the requested current-session opening price.
-              return {
+              return latest = {
                 ...asset,
                 symbol: quote.symbol,
                 market: quote.marketCode,
@@ -247,6 +253,8 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
   readonly #feed = inject(STOCK_DASHBOARD_TICKS, { optional: true });
   readonly #injector = inject(Injector);
   readonly #platform = inject(PLATFORM_ID);
+  /** Pause live updates (PS-21, WCAG 2.2.2) holds the chart on the price already shown. */
+  readonly #livePrices = inject(LivePricesService);
   private readonly chart = viewChild(StockSvgChart);
   #subscription: Subscription | undefined;
   #assetKey = '';
@@ -289,6 +297,7 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
         selection!,
         this.#injector.get(QuoteService),
         this.#injector.get(ApiHttpClient),
+        () => this.#livePrices.paused(),
       );
     const raw = source.pipe(
       filter((tick) => this.#validTick(tick)),
@@ -318,6 +327,7 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
             ),
           { connector: () => new ReplaySubject<StockDashboardTick>(1) },
         ),
+        filter(() => !this.#livePrices.paused() || !this.state().asset),
         distinctUntilChanged((a, b) => QUOTE_FIELDS.every((field) => a[field] === b[field])),
       )
       .subscribe({

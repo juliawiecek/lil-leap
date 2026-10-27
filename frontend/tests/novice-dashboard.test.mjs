@@ -336,6 +336,20 @@ test('quote search matches symbols and company names regardless of case or surro
   assert.equal(desk.results().length, desk.quotes().length);
 });
 
+test('search Enter selects the latest match and leaves empty, unmatched and composing searches alone', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  const opened = []; t.mock.method(desk, 'openTrade', (...args) => opened.push(args));
+  const event = patch => ({ key: 'Enter', preventDefault() {}, ...patch });
+  desk.query.set(' msft '); desk.submitSearch(event({}));
+  assert.deepEqual(opened, [['Buy', 'MSFT']]);
+  desk.query.set('apple'); desk.submitSearch(event({}));
+  assert.deepEqual(opened.at(-1), ['Buy', 'AAPL']);
+  for (const query of ['', '   ', 'missing company']) { desk.query.set(query); desk.submitSearch(event({})); }
+  desk.query.set('NVDA');
+  for (const guard of ['isComposing', 'repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey']) desk.submitSearch(event({ [guard]: true }));
+  assert.equal(opened.length, 2);
+});
+
 test('watchlist toggling removes and restores the selected quote without duplicates', t => {
   const feed = feedWith();
   const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
@@ -503,7 +517,7 @@ test('choosing a chart period says where the portfolio started and where it is n
 });
 
 test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
-  const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+  const { SwitchScanService } = await import('../../shared/switch-scan.ts');
   const said = [];
   const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
   const { desk } = await tradingDesk(t, { providers: [{ provide: SwitchScanService, useValue: scan }] });

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
-import { identity } from './fixtures.mjs';
+import { identity, openOptions } from './fixtures.mjs';
 
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -38,6 +38,7 @@ for (const tier of ['NOVICE', 'ADVANCED']) {
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page).toHaveURL(/\/settings$/);
     const preferences = page.locator('main app-assistive-settings');
+    await openOptions(preferences);
     await expect(preferences.getByLabel('Speak on keyboard focus', { exact: true })).toBeVisible();
     await preferences.getByLabel('Enhanced focus highlighting', { exact: true }).check();
     await page.getByRole('button', { name: 'Portfolio', exact: true }).click();
@@ -71,11 +72,13 @@ for (const role of ['ANALYST', 'OPERATIONS']) {
     await expect(page.locator('.assistive-launcher')).toHaveCount(0);
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Settings', exact: true, level: 1 })).toBeVisible();
+    await openOptions(page.locator('main'));
     await page.getByLabel('Enhanced focus highlighting', { exact: true }).check();
     await page.getByRole('link', { name: 'Clients', exact: true }).click();
     await expect(page.locator('.assistive-launcher')).toHaveCount(0);
     await page.locator('main h1').focus(); await page.keyboard.press('Alt+Shift+a');
     await expect(page).toHaveURL(/\/settings$/);
+    await openOptions(page.locator('main'));
     await expect(page.getByLabel('Enhanced focus highlighting', { exact: true })).toBeChecked();
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Accessibility', exact: true })).toBeVisible();

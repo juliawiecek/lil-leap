@@ -67,8 +67,8 @@ export function speakable(text: string): string {
       continue;
     }
     if (bullets) {
-      // "••B3B9" is the end of an account number.
-      out += ', ending in ';
+      // "••B3B9" is the end of an account number; "•••••• invested" is a hidden balance.
+      out += /[A-Za-z0-9]/.test(ch) ? ', ending in ' : ' hidden';
       bullets = false;
     }
     if (ch === '$' && /[A-Za-z0-9]$/.test(out)) {
@@ -83,8 +83,55 @@ export function speakable(text: string): string {
       out += ch;
     }
   }
+  if (bullets) {
+    // A balance hidden at the end: "Total portfolio value ••••••••".
+    out += ' hidden';
+  }
   const named = out.split(/(\b[A-Z]{1,5}\b)/).map((part) => STOCK_NAMES[part] ?? part).join('');
   return tidy(named);
+}
+
+const NUMBER = String.raw`(\d[\d,]*(?:\.\d+)?)`;
+/** A sign that starts a value ("+1.2%", "−$4.10"), not a hyphen inside a word or range. */
+const SIGN = String.raw`(?<![\w.])([+−-])\s?`;
+const direction = (sign: string) => (sign === '+' ? 'up' : 'down');
+
+/** "$185" as "185 dollars", "$24,550.68" as "24,550 dollars and 68 cents". */
+function dollars(amount: string): string {
+  const [whole, cents = ''] = amount.split('.');
+  const pennies = Number(cents.padEnd(2, '0').slice(0, 2));
+  return pennies ? `${whole} dollars and ${pennies} cents` : `${whole} dollars`;
+}
+
+/**
+ * Text for voice mode (PS-22): speakable() first, then the symbols a speech engine might read out
+ * literally said as words. "+1.20%" becomes "up 1.20 percent", "−$4.10" "down 4 dollars and 10
+ * cents", "$185" "185 dollars", and a "+" or "$" standing on its own is dropped.
+ */
+export function voiceText(text: string): string {
+  const words = speakable(text)
+    .replace(new RegExp(`${SIGN}${NUMBER}\\s?%`, 'g'), (_, sign: string, n: string) => `${direction(sign)} ${n} percent`)
+    .replace(new RegExp(`${SIGN}\\$${NUMBER}`, 'g'), (_, sign: string, n: string) => `${direction(sign)} ${dollars(n)}`)
+    .replace(new RegExp(`\\$${NUMBER}`, 'g'), (_, n: string) => dollars(n))
+    .replace(new RegExp(`${NUMBER}\\s?%`, 'g'), '$1 percent')
+    .replace(new RegExp(`(?<![\\w.])\\+(?=\\d)`, 'g'), 'plus ')
+    .replace(/[+$%]/g, ' ');
+  return tidy(words);
+}
+
+/**
+ * How voice mode says a stock in the ticker, holdings or watchlist: its name, the price rounded
+ * to whole dollars and the day's change in words, then what selecting it does.
+ * "Apple, 185 dollars, up 1.2 percent. Select to trade."
+ */
+export function spokenQuote(company: string, price: number, changePercent: number, delayed = false): string {
+  if (!price) {
+    return `${company}, price not available yet.`;
+  }
+  const rounded = price >= 10 ? Math.round(price).toLocaleString('en-US') : String(Number(price.toFixed(2)));
+  const size = Math.abs(changePercent);
+  const change = size < 0.05 ? 'unchanged' : `${changePercent > 0 ? 'up' : 'down'} ${size.toFixed(1)} percent`;
+  return `${company}, ${rounded} dollars, ${change}${delayed ? ', price delayed' : ''}. Select to trade.`;
 }
 
 /**

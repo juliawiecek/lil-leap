@@ -91,7 +91,7 @@ app-market-ticker { margin: 0 0 16px; padding: 0 14px; border: 1px solid var(--s
   background: radial-gradient(60% 160% at 0% 0%, var(--text-wash-09), transparent 60%), var(--surface-tone-03);
   box-shadow: inset 0 1px 0 var(--text-wash-15);
 }
-.summary-panel h1 { gap: 6px; color: var(--text-tone-02); font-size: 12.5px; font-weight: 600; }
+.summary-panel h2 { gap: 6px; color: var(--text-tone-02); font-size: 12.5px; font-weight: 600; }
 .summary-metrics { margin-top: 6px; align-items: center; }
 .summary-metrics > div { padding: 0 18px; border-left-color: var(--text-wash-14); }
 .summary-metrics > div > span { margin-bottom: 4px; color: var(--text-tone-02); font-size: 12px; font-weight: 600; }
@@ -215,7 +215,7 @@ dialog p { font-size: 13.5px; }
 .summary-panel { grid-column: 1 / -1; grid-row: 1; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
 .summary-panel:hover { border-color: transparent; }
 .summary-panel { position: relative; }
-.summary-panel h1 { position: absolute; top: 16px; left: 22px; z-index: 1; margin: 0; }
+.summary-panel h2 { position: absolute; top: 16px; left: 22px; z-index: 1; margin: 0; }
 .summary-panel > .empty-note { padding: 50px 22px 18px; }
 .summary-metrics { grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); gap: 16px; margin: 0; align-items: stretch; }
 .summary-metrics > div,

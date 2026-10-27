@@ -81,3 +81,38 @@ test('the toast corner shares the service and offers a View action', t => {
   corner.view.emit();
   assert.equal(viewed, 1);
 });
+
+test('sell styling survives while hover and focus hold a toast until both leave', t => {
+ t.mock.timers.enable({ apis: ['setTimeout'] }); const service = new ToastService(); t.after(() => service.ngOnDestroy());
+ const id = service.show('filled', 'Sold 1 AAPL', '', 'sell'); t.mock.timers.tick(5000);
+ assert.equal(service.toasts()[0].side, 'sell');
+ service.hold(id, 'hover'); service.hold(id, 'focus'); t.mock.timers.tick(20000);
+ service.release(id, 'hover'); t.mock.timers.tick(20000); assert.equal(service.toasts().length, 1);
+ service.release(id, 'focus'); t.mock.timers.tick(TOAST_MS.filled - 1); assert.equal(service.toasts().length, 1);
+ t.mock.timers.tick(1); assert.equal(service.toasts().length, 0);
+});
+test('modal dialogs hold toasts and closing starts a fresh full duration', async t => {
+ const { browser } = await import('./dom-helper.mjs'); t.mock.timers.enable({ apis: ['setTimeout'] });
+ const dialog = browser.document.createElement('dialog'); browser.document.body.append(dialog); dialog.open = true;
+ const service = new ToastService(); t.after(() => { service.ngOnDestroy(); dialog.remove(); });
+ service.show('filled', 'Filled'); t.mock.timers.tick(60000); assert.equal(service.toasts().length, 1);
+ dialog.open = false; service.modalChanged(); t.mock.timers.tick(TOAST_MS.filled - 1); assert.equal(service.toasts().length, 1);
+ t.mock.timers.tick(1); assert.equal(service.toasts().length, 0);
+});
+test('toast actions have 24px targets and stay reachable in a modal', async t => {
+ const { render, browser } = await import('./dom-helper.mjs');
+ const fixture = await render(t, Toasts); const instance = fixture.componentInstance; const host = fixture.nativeElement;
+ const dialog = browser.document.createElement('dialog'); browser.document.body.append(dialog); dialog.open = true;
+ await new Promise(resolve => setImmediate(resolve));
+ instance.service.show('info', 'Saved'); fixture.detectChanges();
+ assert.equal(host.parentNode, dialog);
+ assert.match(Toasts[Object.getOwnPropertyNames(Toasts).find(key => key.endsWith('cmp'))].styles.join(' '), /min-width: 24px; min-height: 24px/);
+ dialog.open = false; await new Promise(resolve => setImmediate(resolve)); assert.notEqual(host.parentNode, dialog); dialog.remove();
+});
+
+test('limit reviews name the exact per-share limit and its estimated total', () => {
+ const text = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'', limitPrice:170.25 });
+ assert.match(text, /limit \$170\.25 per share/); assert.match(text, /estimated \$340\.50/); assert.doesNotMatch(text, /fills at up to/);
+ const closed = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'9:30 AM', limitPrice:170.25 });
+ assert.doesNotMatch(closed, /fills at the open/); assert.match(closed, /execution is not guaranteed/);
+});

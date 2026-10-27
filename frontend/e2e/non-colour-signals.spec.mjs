@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { colourFixture } from './colour-fixtures.mjs';
 import { contrast } from '../tests/colour-math.mjs';
+import { chartTools } from './fixtures.mjs';
 const now = Date.parse('2026-10-21T15:30:00Z');
 const modes = ['off', 'red-green', 'blue-yellow'];
 
 test.beforeEach(async ({ page }, info) => {
   test.skip(info.project.name !== 'NextTrade');
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await chartTools(page);
 });
 
 async function mode(page, value) {
@@ -43,7 +45,7 @@ test('financial changes and statuses keep their meaning in every palette and gra
     expect(signals.some(s => s.direction === 'flat')).toBe(true);
     for (const s of signals) {
       expect(s.visible).toMatch({ up: /^▲ \+/, down: /^▼ −/, flat: /^—/ }[s.direction]);
-      expect(s.spoken).toMatch({ up: /^Increased by/, down: /^Decreased by/, flat: /^Unchanged/ }[s.direction]);
+      expect(s.spoken).toMatch({ up: /^up /, down: /^down /, flat: /^unchanged/ }[s.direction]);
     }
     // The deliberate allocation simplification (bf0cf08) removed the old hatch overlay.
     // Meaning must still survive grayscale through labels, numeric shares and the exact table.

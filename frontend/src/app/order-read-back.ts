@@ -17,6 +17,9 @@ export interface OrderReadBackInput {
   closedWarning: string;
   /** The price is older than the orders service accepts. */
   priceDelayed: boolean;
+  limitPrice?: number;
+  takeProfit?: number;
+  stopLoss?: number;
 }
 
 /**
@@ -27,6 +30,10 @@ export function orderReadBack(o: OrderReadBackInput): string {
   const verb = o.side === 'Sell' ? 'sell' : 'buy';
   const shares = `${o.quantity} ${o.quantity === 1 ? 'share' : 'shares'}`;
   const parts = [`You're about to ${verb} ${shares} of ${spokenCompany(o.name, o.symbol)} for ${spokenAmount(o.total)}.`];
+  const price = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 }).format(value);
+  if (o.limitPrice !== undefined) parts.push(`Limit price ${price(o.limitPrice)} per share, or better.`);
+  if (o.takeProfit !== undefined) parts.push(`Take profit at ${price(o.takeProfit)}.`);
+  if (o.stopLoss !== undefined) parts.push(`Stop loss triggers at ${price(o.stopLoss)}; the execution price may differ.`);
   if (o.closedWarning) {
     parts.push(o.closedWarning);
   }

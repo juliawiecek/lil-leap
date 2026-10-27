@@ -63,6 +63,10 @@ export class ReportsPage implements OnDestroy {
     const end = Date.parse(this.reportEnd() + 'T00:00:00Z');
     return Number.isNaN(start) || Number.isNaN(end) ? 0 : Math.round((end - start) / 86_400_000) + 1;
   });
+  /** "Reporting period: 30 days, 2026-09-27 to 2026-10-26." for the status region; the error is announced instead when the dates are invalid. */
+  readonly periodAnnouncement = computed(() => this.reportDateError()
+    ? ''
+    : `Reporting period: ${this.rangeDays()} ${this.rangeDays() === 1 ? 'day' : 'days'}, ${this.reportStart()} to ${this.reportEnd()}.`);
   readonly generating = signal<ReportKind | null>(null);
   readonly dayTime = centralDayTime;
   readonly notice = signal('');
@@ -103,9 +107,10 @@ export class ReportsPage implements OnDestroy {
       };
       this.exports.update((list) => [generated, ...list]);
       this.download(generated);
+      // The notice is an <output> (a polite status), so the row count is read out as well as shown.
       this.notice.set(
         rows
-          ? `${report.name} generated for ${generated.period}.`
+          ? `${report.name} generated for ${generated.period}: ${rows} ${rows === 1 ? 'row' : 'rows'}.`
           : `${report.name} generated, but no trades were executed between ${generated.period}.`,
       );
     } catch (error) {

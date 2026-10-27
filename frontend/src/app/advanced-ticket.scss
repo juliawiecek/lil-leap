@@ -418,6 +418,9 @@ h2 {
 @keyframes nt-tick-down { from { background-color: var(--loss-wash-03); } to { background-color: var(--loss-wash-02); } }
 @media (prefers-reduced-motion: reduce) { .tick-up, .tick-down { animation: none; } }
 
+/* The quantity's error under its field (PS-21); the warning sign repeats what the words say. */
+.field-error { margin: 6px 0 0; color: var(--loss); font-size: 13px; font-weight: 600; line-height: 1.5; }
+input[aria-invalid='true'] { border-color: var(--loss); }
 .option-switch, .size-presets { display: flex; gap: 6px; }
 .option-switch button, .size-presets button { flex: 1; min-height: 34px; padding: 6px; border: 1px solid var(--surface-tone-28); border-radius: 4px; background: var(--surface-tone-04); color: var(--muted); font-size: 12px; }
 .option-switch button.active { border-color: var(--gain); background: var(--gain-wash-02); color: var(--gain); }
