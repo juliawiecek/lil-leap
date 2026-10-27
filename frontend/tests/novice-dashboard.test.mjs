@@ -734,3 +734,12 @@ test('trade chart loading and missing history never report a zero gain as observ
   answer([{ at: Date.now(), price: 999 }]); await flush();
   assert.deepEqual(desk.stockChartHistory(), [], 'closing a ticket invalidates its pending request');
 });
+
+test('the stock list without its first prices does not show $0.00 rows', t => {
+  const feed = fakeFeed([]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  feed.push(listed().map((row) => ({ ...row, price: 0 })));
+  assert.equal(desk.quotes().length, 0);
+  feed.push(listed());
+  assert.equal(desk.quotes().length, 5);
+});

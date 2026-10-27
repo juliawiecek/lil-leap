@@ -595,3 +595,20 @@ test('market ticket uses executable bid/ask and sizes from stop risk with cash a
   desk.feed.now.set(Date.now() + 120000);
   assert.equal(ticket.suggestedQuantity(), 0);
 });
+
+test('the chart starts loading as soon as the stock list is known, before the first prices arrive', async t => {
+  const feed = fakeFeed([]);
+  const requested = [];
+  feed.client = { closes: async (id) => { requested.push(id); return Array.from({ length: 30 }, (_, i) => ({ at: Date.now() - (30 - i) * 300000, price: 176 + i / 10 })); }, history: async () => [] };
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useValue: { accessToken: null } }, feedProvider(feed)]);
+  feed.push(LISTED.map(([symbol]) => ({ symbol, name: NAMES[symbol], price: 0, change: 0 })));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(requested, ['aapl-uuid'], 'one candle request for the linked stock');
+  assert.equal(desk.quotes().length, 0, 'the market view keeps "Loading prices" rather than $0.00 rows');
+  assert.equal(desk.priceHistory().length, 30);
+  feed.push(LISTED.map(([symbol, price, change]) => ({ symbol, name: NAMES[symbol], price, change })));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(desk.selected().symbol, 'AAPL');
+  assert.equal(desk.quotes().length, 5);
+  assert.deepEqual(requested, ['aapl-uuid'], 'the priced tick reuses the loaded chart');
+});

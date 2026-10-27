@@ -484,6 +484,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   #applyFeed(): void {
     const live = this.feed.quotes();
+    if (live.length && !live.some((q) => q.price > 0)) {
+      // The list is known before its first prices: start the chart now rather than one request later.
+      const listed = live.find((q) => q.symbol === this.symbol()) ?? live[0];
+      void this.#loadHistory({ instrumentId: listed.instrumentId, symbol: listed.symbol, name: listed.name, price: 0, change: 0, sector: listed.sector, quotedAt: '' });
+      return;
+    }
     this.quotes.set(
       live.map((q) => ({
         instrumentId: q.instrumentId, symbol: q.symbol, name: q.name, price: q.price,

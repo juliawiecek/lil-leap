@@ -84,7 +84,8 @@ export class MarketFeed {
   }
 
   /**
-   * Loads the stock list if needed, then every stock's latest price in one request (PS-10).
+   * Loads the stock list if needed, then every stock's latest price in one request (PS-10),
+   * read together with the session baselines rather than after them.
    * A stock without a new quote, or a failed request, keeps the last price shown.
    */
   async refreshQuotes(): Promise<void> {
@@ -93,15 +94,13 @@ export class MarketFeed {
     }
     if (!this.quotes().length) {
       await this.#loadInstruments();
+      // Views hear about the list before its first prices, so a chart can start loading now.
+      if (this.quotes().length && this.running) {
+        this.#notify();
+      }
     }
     const listed = this.quotes();
-    const opens = await this.#loadOpens(listed);
-    let ticks = new Map<string, PriceTick>();
-    try {
-      ticks = await this.client.latestMany(listed.map((q) => q.instrumentId));
-    } catch {
-      // Keep the last prices; the next tick retries.
-    }
+    const [opens, ticks] = await Promise.all([this.#loadOpens(listed), this.#loadTicks(listed)]);
     if (!this.running) {
       return;
     }
@@ -126,8 +125,21 @@ export class MarketFeed {
         };
       }),
     );
+    this.#notify();
+  }
+
+  #notify(): void {
     for (const listener of this.#listeners) {
       listener();
+    }
+  }
+
+  /** Every listed stock's latest quote; a failed request keeps the last prices until the next tick. */
+  async #loadTicks(listed: LiveQuote[]): Promise<Map<string, PriceTick>> {
+    try {
+      return await this.client.latestMany(listed.map((q) => q.instrumentId));
+    } catch {
+      return new Map();
     }
   }
 
