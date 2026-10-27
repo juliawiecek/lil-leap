@@ -129,6 +129,19 @@ test('choosing a symbol moves the ticket to it and clears stale search and error
   assert.equal(desk.page(), 'Overview');
 });
 
+test('search Enter chooses the latest stock match without choosing empty, unmatched or composing text', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
+  const chosen = []; t.mock.method(desk, 'choose', quote => chosen.push(quote.symbol));
+  const event = patch => ({ key: 'Enter', preventDefault() {}, ...patch });
+  desk.query.set('msft'); desk.submitSearch(event({}));
+  desk.query.set('APPLE'); desk.submitSearch(event({}));
+  assert.deepEqual(chosen, ['MSFT', 'AAPL']);
+  for (const query of ['', '   ', 'missing company']) { desk.query.set(query); desk.submitSearch(event({})); }
+  desk.query.set('NVDA');
+  for (const guard of ['isComposing', 'repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey']) desk.submitSearch(event({ [guard]: true }));
+  assert.equal(chosen.length, 2);
+});
+
 test('the ticket starts at one share and defaults to market orders (PS-06)', t => {
   const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
   assert.equal(desk.quantity(), '1');

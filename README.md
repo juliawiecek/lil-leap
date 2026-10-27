@@ -48,6 +48,14 @@ Fields, menus, tabs and charts retain their usual editing or exploration keys. *
 their containing group (close an open menu first), and **Tab/Shift + Tab** also work as usual.
 **Alt + Shift + X** stops speech. Outside a group, Escape keeps its normal dialog/popup behavior.
 
+To use the left sidebar, move Left to the **Menu** group and press **Enter**. Focus lands on the
+current menu item; Up/Down moves between pages and Enter opens the selected page. At the left edge
+of an entered content group, Left also reaches the sidebar. Escape returns
+through the navigation group to the Menu group, where Right moves back toward the page content.
+In stock search, type a symbol or company name and press **Enter** to select the first matching
+result, or use Down/Up to choose another result and Enter to open it. Selecting a result does not
+submit an order. Empty searches and searches without matches do not select a stock.
+
 Navigation and voice preferences are saved independently in this browser. Choose a local voice, speed and detail level under
 **Settings > Accessibility**, or press **Alt + Shift + A** to open accessibility settings/tools.
 If you use a screen reader, you can keep voice mode off and use its usual reading commands.

@@ -446,6 +446,14 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
+  /** Enter chooses the first current match, just as clicking the first search result does. */
+  submitSearch(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    if (event.repeat || !this.query().trim()) return;
+    const quote = this.results()[0];
+    if (quote) this.openTrade('Buy', quote.symbol);
+  }
   readonly modal = signal('trade');
   readonly tradeQuote = signal<Quote>(NO_QUOTE);
   /**

@@ -246,6 +246,51 @@ test('dashboard arrows move between real panels and Enter and Escape explore the
 });
 
 for (const tier of ['NOVICE', 'ADVANCED']) {
+  test(`${tier} Left reaches the sidebar from settings and its navigation opens a page`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'NextTrade');
+    await page.setViewportSize({ width: 1600, height: 1100 });
+    await colourFixture(page, tier); await mockSpeech(page);
+    await page.goto('/settings'); await expect(page.locator('main h1')).toBeVisible();
+    await page.keyboard.press('Alt+Shift+n'); await expect(page.locator('main h1')).toBeFocused();
+    const sidebar = page.locator('aside[data-scan-group="Menu"]');
+    await page.keyboard.press('ArrowLeft');
+    await expect(sidebar).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(sidebar.locator('nav [aria-current="page"]')).toBeFocused();
+    for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowUp');
+    await expect(sidebar.getByRole('button', { name: 'Overview', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter'); await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.locator('main h1')).toBeFocused();
+    await page.keyboard.press('ArrowLeft'); await expect(sidebar).toBeFocused();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+    await expect(sidebar).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    expect(await sidebar.evaluate(node => node.contains(document.activeElement))).toBe(false);
+    expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
+  });
+
+  for (const navigation of [false, true]) {
+    test(`${tier} Enter searches for a stock with arrow navigation ${navigation ? 'on' : 'off'}`, async ({ page }, info) => {
+      test.skip(info.project.name !== 'NextTrade');
+      await colourFixture(page, tier);
+      await mockSpeech(page, { visual: { arrowNavigation: navigation } });
+      let orders = 0;
+      page.on('request', request => { if (request.method() === 'POST' && /\/orders(?:\?|$)/.test(request.url())) orders++; });
+      await page.goto('/dashboard');
+      const search = page.locator('[data-a11y-search] input');
+      await search.fill('MSFT');
+      await expect(page.locator('[data-a11y-results] button')).toHaveCount(1);
+      await search.press('Enter');
+      if (tier === 'NOVICE') await expect(page.getByRole('dialog', { name: 'Buy MSFT', exact: true })).toBeVisible();
+      else await expect(page.locator('#pro-symbol')).toHaveValue('MSFT');
+      await expect(search).toHaveValue('');
+      expect(orders).toBe(0);
+    });
+  }
+}
+
+for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} all page routes expose native structure and pass the WCAG axe rules`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);
     await colourFixture(page, tier); await mockSpeech(page);

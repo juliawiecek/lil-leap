@@ -55,6 +55,7 @@
           placeholder="Search for a company or symbol (e.g. AAPL)"
           [value]="query()"
           (input)="query.set($any($event.target).value)"
+          (keydown)="submitSearch($event)"
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
@@ -66,7 +67,7 @@
                 ><b>{{ quote.price | currency }}</b>
               </button>
             } @empty {
-              <p>No matching companies or symbols.</p>
+              <p role="status">No matching companies or symbols.</p>
             }
           </div>
         }

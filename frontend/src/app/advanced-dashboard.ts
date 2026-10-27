@@ -273,6 +273,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
+  /** Use the latest computed matches even if Angular has not painted the result list yet. */
+  submitSearch(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    if (event.repeat || !this.query().trim()) return;
+    const quote = this.results()[0];
+    if (quote) this.choose(quote);
+  }
   readonly screened = computed(() =>
     this.quotes().filter((q) => {
       const filter = this.filter();

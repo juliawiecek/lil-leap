@@ -334,6 +334,20 @@ test('quote search matches symbols and company names regardless of case or surro
   assert.equal(desk.results().length, desk.quotes().length);
 });
 
+test('search Enter selects the latest match and leaves empty, unmatched and composing searches alone', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  const opened = []; t.mock.method(desk, 'openTrade', (...args) => opened.push(args));
+  const event = patch => ({ key: 'Enter', preventDefault() {}, ...patch });
+  desk.query.set(' msft '); desk.submitSearch(event({}));
+  assert.deepEqual(opened, [['Buy', 'MSFT']]);
+  desk.query.set('apple'); desk.submitSearch(event({}));
+  assert.deepEqual(opened.at(-1), ['Buy', 'AAPL']);
+  for (const query of ['', '   ', 'missing company']) { desk.query.set(query); desk.submitSearch(event({})); }
+  desk.query.set('NVDA');
+  for (const guard of ['isComposing', 'repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey']) desk.submitSearch(event({ [guard]: true }));
+  assert.equal(opened.length, 2);
+});
+
 test('watchlist toggling removes and restores the selected quote without duplicates', t => {
   const feed = feedWith();
   const desk = component(t, NoviceDashboard, [feedProvider(feed)]);

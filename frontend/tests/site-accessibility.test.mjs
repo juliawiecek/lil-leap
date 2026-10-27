@@ -361,3 +361,27 @@ test('turning voice off retains navigation and its highlight, and navigation can
   update({ arrowNavigation: false }); assert.equal(doc.activeElement.hasAttribute('data-a11y-nav-focus'), false);
   assert.equal(key(doc, 'ArrowUp'), true); assert.equal(doc.activeElement.textContent, 'Second');
 });
+
+test('Enter on the sidebar goes to the current navigation item instead of the resize handle or logo', t => {
+  const { doc } = setup(t, '<aside aria-label="Menu"><div role="separator" tabindex="0" aria-label="Resize sidebar"></div><a href="/">Home</a><nav aria-label="Main navigation"><button>Overview</button><button aria-current="page">Settings</button></nav></aside><section aria-label="Portfolio"><h1>Portfolio</h1></section>', { arrowNavigation: true });
+  const sidebar = doc.querySelector('aside'), panel = doc.querySelector('section'), nav = doc.querySelector('nav');
+  const [overview, settings] = nav.querySelectorAll('button');
+  place(sidebar, 0, 0, 200, 400); place(panel, 250, 0, 300, 400);
+  place(overview, 10, 100); place(settings, 10, 150);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, sidebar);
+  key(doc, 'Enter'); assert.equal(doc.activeElement, settings);
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement, overview);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, nav);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, sidebar);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, panel);
+});
+
+test('Left from a heading containing a button reaches the sidebar instead of choosing that nested button', t => {
+  const { doc, controller } = setup(t, '<aside aria-label="Menu"><nav aria-label="Main navigation"><button>Overview</button></nav></aside><main><section aria-label="Summary"><h1>Summary<button aria-label="Hide balances"></button></h1></section></main>', { arrowNavigation: true });
+  const sidebar = doc.querySelector('aside'), heading = doc.querySelector('h1'), hide = doc.querySelector('h1 button');
+  place(sidebar, 0, 0, 200, 600); place(doc.querySelector('section'), 250, 20, 600, 200);
+  place(heading, 270, 30, 550, 40); place(hide, 780, 35, 30, 30);
+  let clicks = 0; hide.onclick = () => clicks++;
+  controller.beginArrowNavigation(); assert.equal(doc.activeElement, heading);
+  key(doc, 'ArrowLeft'); assert.equal(doc.activeElement, sidebar); assert.equal(clicks, 0);
+});

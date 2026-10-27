@@ -64,9 +64,24 @@ export function firstNavigationItem(items: HTMLElement[], last = false): HTMLEle
   return last ? ordered.at(-1) : ordered[0];
 }
 
+/** Enter a navigation landmark at its current page, rather than its logo or resize handle. */
+export function navigationEntryItem(scope: HTMLElement): HTMLElement | undefined {
+  const navigation = scope.matches('nav, [role="navigation"]') ? scope :
+    scope.matches('aside, [role="complementary"]') ? scope.querySelector<HTMLElement>('nav, [role="navigation"]') : null;
+  if (navigation) {
+    const links = [...navigation.querySelectorAll<HTMLElement>('a[href], button')]
+      .filter(item => navigationVisible(item) && !item.matches(':disabled, [aria-disabled="true"]'));
+    const current = links.find(item => item.getAttribute('aria-current') === 'page');
+    if (current || links.length) return current ?? firstNavigationItem(links);
+  }
+  return firstNavigationItem(navigationItems(scope));
+}
+
 /** Use the rendered layout, re-read on each key so scrolling and responsive reflow are reflected. */
 export function spatialNeighbor(current: HTMLElement, items: HTMLElement[], direction: ArrowDirection): HTMLElement | undefined {
-  if (!items.includes(current)) return firstNavigationItem(items, direction === 'ArrowUp' || direction === 'ArrowLeft');
+  if (!items.includes(current) && (current.matches('body, main, dialog, [role="dialog"], [role="alertdialog"]') || !navigationVisible(current))) {
+    return firstNavigationItem(items, direction === 'ArrowUp' || direction === 'ArrowLeft');
+  }
   const origin = current.getBoundingClientRect();
   const vertical = direction === 'ArrowUp' || direction === 'ArrowDown';
   const forward = direction === 'ArrowDown' || direction === 'ArrowRight';

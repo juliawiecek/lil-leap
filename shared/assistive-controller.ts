@@ -1,7 +1,7 @@
 import { applyAssistiveVisuals, type AssistivePreferences } from './assistive-preferences.ts';
 import { accessibleName, describeElement, readableText } from './accessible-description.ts';
 import { speechCoordinator as speech } from './speech-coordinator.ts';
-import { firstNavigationItem, isNavigationGroup, navigationDescription, navigationGroupName, navigationItems, navigationRoot, parentNavigationGroup, spatialNeighbor, type ArrowDirection } from './spatial-navigation.ts';
+import { isNavigationGroup, navigationDescription, navigationEntryItem, navigationGroupName, navigationItems, navigationRoot, parentNavigationGroup, spatialNeighbor, type ArrowDirection } from './spatial-navigation.ts';
 
 export interface AssistiveOptions {
   settings: () => AssistivePreferences;
@@ -277,7 +277,7 @@ export class AssistiveController {
       const root = navigationRoot(this.document, element);
       if (event.key === 'Enter' && isNavigationGroup(element)) {
         event.preventDefault(); event.stopPropagation(); this.enteringGroup = true;
-        const first = firstNavigationItem(navigationItems(element));
+        const first = navigationEntryItem(element);
         if (first) this.focusNavigationItem(first, `Inside ${navigationGroupName(element)}. `);
         else this.navigationFeedback('This group has no available items. Press Escape to go out.', element);
         return;
@@ -334,9 +334,16 @@ export class AssistiveController {
   private browse(event: KeyboardEvent, current: HTMLElement): void {
     const root = navigationRoot(this.document, current);
     const scope = parentNavigationGroup(current, root) ?? root;
-    const next = spatialNeighbor(current, navigationItems(scope), event.key as ArrowDirection);
+    let next = spatialNeighbor(current, navigationItems(scope), event.key as ArrowDirection);
+    let prefix = '';
+    // The page's sidebar remains reachable at the left edge of an entered content group.
+    if (!next && event.key === 'ArrowLeft' && scope !== root && !current.closest('aside')) {
+      const sidebars = [...root.querySelectorAll<HTMLElement>('aside')].filter(isNavigationGroup);
+      next = spatialNeighbor(current, [current, ...sidebars], 'ArrowLeft');
+      if (next) prefix = `Outside ${navigationGroupName(scope)}. `;
+    }
     event.preventDefault(); event.stopPropagation();
-    if (next) this.focusNavigationItem(next);
+    if (next) this.focusNavigationItem(next, prefix);
     else {
       const direction = ({ ArrowDown: 'below', ArrowUp: 'above', ArrowLeft: 'to the left', ArrowRight: 'to the right' } as Record<string, string>)[event.key];
       const help = scope !== root ? ' Press Escape to leave this group.' : '';
