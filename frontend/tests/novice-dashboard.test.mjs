@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
+import { render } from './dom-helper.mjs';
 const { ORDER_TRACK_LIMIT_MS } = await import('../src/app/order-history-api.ts');
 
 // A fixed live quote per stock, so prices are known once the dashboard's first quote refresh runs.
@@ -742,4 +743,17 @@ test('the stock list without its first prices does not show $0.00 rows', t => {
   assert.equal(desk.quotes().length, 0);
   feed.push(listed());
   assert.equal(desk.quotes().length, 5);
+});
+
+test('Buy and Sell sit in the page heading on the Overview, like the advanced ticket, and leave with it', async (t) => {
+  const fixture = await render(t, NoviceDashboard, {}, [feedProvider(feedWith())]);
+  const root = fixture.nativeElement;
+  const heading = () => [...root.querySelectorAll('.page-heading .trade-actions button')].map((b) => b.textContent.trim());
+  assert.deepEqual(heading(), ['Buy', 'Sell']);
+  assert.equal(root.querySelector('.trade-panel'), null, 'the old Ready to trade card is gone');
+  root.querySelector('.page-heading .trade-actions button:last-child').click(); fixture.detectChanges();
+  assert.equal(fixture.componentInstance.modal(), 'trade');
+  assert.equal(fixture.componentInstance.side(), 'Sell');
+  fixture.componentInstance.navigate('Portfolio'); fixture.detectChanges();
+  assert.deepEqual(heading(), [], 'other pages keep the heading to the title and market status');
 });

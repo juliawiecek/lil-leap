@@ -183,17 +183,11 @@ th { color: var(--text-subtle); font-weight: 600; }
 .diversification small { font-size: 12.5px; font-weight: 500; }
 .shield-icon { border-radius: 10px; background: var(--surface-tone-85); color: var(--text-tone-19); }
 .shield-icon app-dashboard-icon { width: 16px; height: 16px; }
-.trade-panel {
-  padding: 24px;
-  border-color: var(--surface-tone-10);
-  border-radius: 22px;
-  background: radial-gradient(90% 80% at 100% 0%, var(--text-wash-59), transparent 60%), var(--surface-tone-84);
-}
-.trade-panel h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
-.trade-panel p { font-size: 14px; line-height: 1.55; }
-.trade-actions { gap: 8px; margin-top: 20px; }
+/* Buy and Sell sit in the page heading beside the market status, like the advanced ticket at the top. */
+.heading-side { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.trade-actions { display: flex; gap: 8px; margin: 0; }
 .trade-actions > :last-child { grid-column: auto; }
-.trade-actions button { min-height: 46px; font-size: 14.5px; font-weight: 800; }
+.trade-actions button { min-height: 40px; min-width: 88px; padding: 0 22px; font-size: 14px; font-weight: 800; white-space: nowrap; }
 .green-button, .secondary-button, .outline-button { border-radius: 12px; font-weight: 700; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
 .period-picker button.selected, .green-button { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); box-shadow: none; }
 .green-button:hover { background: var(--white); box-shadow: 0 10px 30px var(--text-wash-20); }
@@ -267,8 +261,8 @@ th { color: var(--text-subtle); font-weight: 600; }
 .tolerance-field:focus-within { border-color: var(--surface-tone-49); box-shadow: 0 0 0 4px var(--text-wash-22); }
 .detail-dialog .tolerance-field input { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text); font: inherit; text-align: right; outline: none; }
 
-/* Buy uses the allocation's periwinkle, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
-   and on its Review / Confirm button. Sell on the card is outlined so it doesn't shout. */
+/* Buy uses the allocation's periwinkle, Sell is red: in the page heading, in the trade window's side picker,
+   and on its Review / Confirm button. Sell in the heading is outlined so it doesn't shout. */
 /* Keep an opaque base and the same gradient on hover in every palette. */
 .trade-actions .green-button { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: var(--category-tone-07); }
 .trade-actions .green-button:hover { border-color: var(--periwinkle-light); background-color: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
