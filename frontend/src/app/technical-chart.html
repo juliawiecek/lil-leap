@@ -7,7 +7,7 @@
 </div>
 <ul class="indicator-legend" aria-label="Technical indicator legend">
   @for (s of paths(); track s.name) {
-    <li><svg width="24" height="8" aria-hidden="true"><path d="M0 4H24" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /></svg><span>{{ s.name }} @if (!s.path) { <small>{{ s.unavailable }}</small> }</span></li>
+    <li [attr.data-glossary]="s.name === 'VWAP' ? 'vwap' : 'ema'"><svg width="24" height="8" aria-hidden="true"><path d="M0 4H24" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /></svg><span>{{ s.name }} @if (!s.path) { <small>{{ s.unavailable }}</small> }</span></li>
   }
   <!-- Candle and volume direction cues as swatches rather than a sentence. -->
   <li><svg width="10" height="14" aria-hidden="true"><rect class="swatch-up" x="1" y="1" width="8" height="12" /></svg><span>Up</span></li>
@@ -15,7 +15,7 @@
   <li><svg width="10" height="14" aria-hidden="true"><path class="swatch-flat" d="M1 7H9M5 2V12" /></svg><span>Flat</span></li>
 </ul>
 <div class="chart-layout">
-  <svg #plot class="technical-plot" [attr.viewBox]="'0 0 ' + width() + ' ' + height" preserveAspectRatio="none" role="img" tabindex="0" [attr.aria-label]="symbol() + ' ' + period() + ' recorded prices and technical indicators'" [appChartFocus]="access" (pointermove)="inspectPointer($event)" (pointerleave)="inspected.set(null)" (keydown)="inspectKey($event)" (blur)="inspected.set(null)">
+  <svg #plot class="technical-plot" [attr.viewBox]="'0 0 ' + width() + ' ' + height" preserveAspectRatio="none" role="img" tabindex="0" [attr.aria-label]="symbol() + ' ' + period() + ' recorded prices and technical indicators'" [appChartFocus]="access" [chartSound]="sound" (pointermove)="inspectPointer($event)" (pointerleave)="inspected.set(null)" (keydown)="inspectKey($event)" (blur)="inspected.set(null)">
     <defs><clipPath [attr.id]="id + '-clip'"><rect [attr.width]="width()" [attr.height]="height" /></clipPath></defs>
     <g [attr.clip-path]="'url(#' + id + '-clip)'">
       @for (p of candles(); track p.candle!.time) {
@@ -28,7 +28,7 @@
       @if (hasRawPrices()) { <path class="price-line" transform="translate(4 0)" [attr.d]="line()" /> }
       @for (s of paths(); track s.name) { @if (s.path) { <path class="indicator-line" transform="translate(4 0)" [attr.data-indicator]="s.name" [attr.d]="s.path" [attr.stroke]="s.token" [attr.stroke-dasharray]="s.dash" /> } }
       @for (s of labels(); track s.name) { <path class="label-leader" [attr.d]="'M' + s.x + ' ' + s.y + 'L' + width() + ' ' + s.labelY" [attr.stroke]="s.token" /> }
-      @if (averageCost(); as cost) { <line class="average-line" x1="0" [attr.x2]="width()" [attr.y1]="y(cost)" [attr.y2]="y(cost)" /> }
+      @if (!privateValues() && averageCost(); as cost) { <line class="average-line" x1="0" [attr.x2]="width()" [attr.y1]="y(cost)" [attr.y2]="y(cost)" /> }
       @for (mark of marks(); track $index) {
         <path class="trade-marker" [class.sell]="mark.side === 'SELL'" [attr.d]="mark.side === 'BUY' ? 'M' + mark.x + ' ' + mark.y + 'l-5 8h10z' : 'M' + mark.x + ' ' + mark.y + 'l-5 -8h10z'"><title>{{ mark.label }}</title></path>
       }
@@ -41,11 +41,11 @@
   <div class="price-axis" aria-label="Price scale">@if (visible().length) { @for (price of axes(); track $index) { <span>{{ price | number:'1.2-2' }}</span> } }</div>
 </div>
 <div class="chart-times" aria-hidden="true">@for (time of times(); track $index) { <span>{{ time }}</span> }</div>
-@if (averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
-@if (inspected(); as p) { <p class="candle-detail" role="status">{{ p.candle ? candleText(p) : pointTime(p.at) + ': ' + (p.price | currency) }}</p> }
+@if (!privateValues() && averageCost(); as cost) { <p class="chart-conventions">Dashed reference: average cost {{ cost | currency }}. ▲ Bought · ▼ Sold (hover a trade for details).</p> }
+@if (inspected(); as p) { <p class="candle-detail">{{ p.candle ? candleText(p) : pointTime(p.at) + ': ' + (p.price | currency) }}</p> }
 <app-chart-access #access [id]="id" [label]="symbol() + ' price and technical indicators'" [summary]="description()" [table]="dataTable()" [rawTable]="allData()" [context]="chartKey() + zoom() + anchor()" />
 @if (hasVolume()) {
-  <svg class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">
+  <svg data-glossary="volume" class="volume-plot" [attr.viewBox]="'0 0 ' + width() + ' 44'" preserveAspectRatio="none" tabindex="0" [appChartFocus]="volumeAccess" role="img" aria-label="Reported traded volume. Up bars outlined; down bars hatched; unchanged bars dashed.">
     <defs><pattern [attr.id]="id + '-volume'" width="5" height="5" patternUnits="userSpaceOnUse"><path class="hatch-line" d="M-1 1L1 -1M0 5L5 0M4 6L6 4" /></pattern></defs>
     @for (p of candles(); track p.candle!.time) { @if (p.candle!.volume !== null) { <rect class="volume-bar" [class.up]="p.candle!.close > p.candle!.open" [class.down]="p.candle!.close < p.candle!.open" [class.flat]="p.candle!.close === p.candle!.open" [attr.x]="x(p.at) - bodyWidth() / 2" [attr.width]="bodyWidth()" [attr.y]="44 - p.candle!.volume! / maxVolume() * 42" [attr.height]="p.candle!.volume! / maxVolume() * 42" [attr.fill]="p.candle!.close < p.candle!.open ? 'url(#' + id + '-volume)' : 'none'"><title>{{ candleText(p) }}</title></rect> } }
   </svg>
@@ -57,7 +57,7 @@
 </p>
 @if (rsiLine()) {
   <div class="rsi-wrap">
-    <svg class="rsi-plot" [attr.viewBox]="'0 0 ' + width() + ' 60'" preserveAspectRatio="none" role="img" tabindex="0" [appChartFocus]="rsiAccess" [attr.aria-label]="symbol() + ' relative strength index'">
+    <svg data-glossary="rsi" class="rsi-plot" [attr.viewBox]="'0 0 ' + width() + ' 60'" preserveAspectRatio="none" role="img" tabindex="0" [appChartFocus]="rsiAccess" [attr.aria-label]="symbol() + ' relative strength index'">
       <rect class="rsi-band" x="0" y="18" [attr.width]="width()" height="24" />
       <line class="rsi-guide" x1="0" [attr.x2]="width()" y1="18" y2="18" />
       <line class="rsi-guide" x1="0" [attr.x2]="width()" y1="42" y2="42" />

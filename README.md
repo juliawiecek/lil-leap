@@ -28,6 +28,44 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 - Insights (reporting): http://localhost:4201
 - API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
+### Arrow-key navigation, with or without voice
+
+Open **Settings > Accessibility** and turn **Arrow-key navigation On** using its single toggle button.
+This starts navigation and moves focus to the page heading,
+keeping your voice setting. For silent navigation, leave **Voice mode Off**.
+Use **Down/Up arrows** to move to elements below/above and **Right/Left arrows** to move to
+elements to the right/left. Movement follows the current page layout, including responsive reflow.
+You do not need to keep pressing Tab between ordinary page items.
+
+In either app, **Alt + Shift + N** turns arrow-key navigation on or off, including before sign-in.
+**Alt + Shift + V** independently turns voice mode on or off. Navigation works without browser
+speech support. With voice on, items are also read aloud as focus moves.
+A panel, navigation area or settings fieldset is a **group**. **Enter** goes inside that group; **Escape** comes back out
+to its container, one level at a time. Arrows move among items at the current level. At an edge,
+feedback explains there is no item in that direction; focus stays put and the key does not scroll the page.
+**Enter** on a button or link activates it; moving focus or entering a group never submits an order.
+On a field or chart reached with arrows, **Enter** starts editing or exploring; its arrows then
+change the value or explore the chart. Typing directly into a field also starts editing.
+**Escape** finishes editing **without discarding the value or closing the trade window**. Arrows
+then move between controls again. In a single-line field, Enter also finishes editing; in stock
+search, Enter chooses a result instead. A further Escape leaves the group. Close an open menu
+with Escape first. **Tab/Shift + Tab** and mouse access retain their usual behavior. A dashed
+focus outline indicates editing/exploration; a solid outline indicates navigation.
+**Alt + Shift + X** stops speech. Outside a group, Escape keeps its normal dialog/popup behavior.
+
+To use the left sidebar, move Left to the **Menu** group and press **Enter**. Focus lands on the
+current menu item; Up/Down moves between pages and Enter opens the selected page. At the left edge
+of an entered content group, Left also reaches the sidebar. Escape returns
+through the navigation group to the Menu group, where Right moves back toward the page content.
+In stock search, type a symbol or company name and press **Enter** to select the first matching
+result, or use Down/Up to choose another result and Enter to open it. Selecting a result does not
+submit an order. Empty searches and searches without matches do not select a stock.
+
+Navigation and voice preferences are saved independently in this browser. Choose a local voice, speed and detail level under
+**Settings > Accessibility**, or press **Alt + Shift + A** to open accessibility settings/tools.
+If you use a screen reader, you can keep voice mode off and use its usual reading commands.
+Browser speech requires an installed local system voice.
+
 ### Test Logins (Development Only)
 
 A fresh database comes with three ready accounts, so there is no need to register by hand.
@@ -678,6 +716,7 @@ Press `?` anywhere on a dashboard to see this list.
 | `?` | Open the shortcut list (not while typing in a field) |
 | `Alt` + `B` | Play the audio briefing |
 | `Alt` + `S` | Turn switch control on, reading each item aloud, or off |
+| `Alt` + `W` | Explain the ringed, focused or hovered trading term |
 | `Tab` / `Shift` + `Tab` | Move to the next or previous control |
 | `Enter` / `Space` | Activate the focused button or link, or review an order |
 | `Esc` | Close a dialog, clear the search, or stop exploring a chart |
@@ -692,7 +731,7 @@ All paths are under `frontend/src/app/` unless shown otherwise; the tests are in
 | Settings > Accessibility page | `accessibility-settings.ts`; every choice is saved by `accessibility.ts` | `accessibility.test.mjs` |
 | Colour-blind mode | `colour-mode.ts`, `colour-mode-preferences.ts`, `theme-colours.ts`; arrows and signs in `financial-change.ts` | `colour-mode.test.mjs`, `colour-palettes.test.mjs`, `non-colour-signals.test.mjs` |
 | Audio briefing | the sentences in `briefing.ts`; button and speech in `briefing-button.ts`; settings card `briefing-settings.ts` | `briefing.test.mjs` |
-| Switch control | `switch-scan.ts`; settings card `switch-scan-settings.ts`; how text is spoken in `speech-text.ts` and `chart-speech.ts` | `switch-scan.test.mjs`, `spoken-labels.test.mjs` |
+| Switch control | `shared/switch-scan.ts`; settings card `shared/switch-scan-settings.ts`; how text is spoken in `speech-text.ts` and `chart-speech.ts` | `switch-scan.test.mjs`, `spoken-labels.test.mjs` |
 | Order read-back | `order-read-back.ts` | `spoken-labels.test.mjs` |
 | Skip link, page titles, shortcuts | `skip-link.ts`, `app.routes.ts`, `keyboard-shortcuts.ts` | `page-structure.test.mjs` |
 | Inactivity warning | `shared/session-core/src/session-timeout-warning.ts` | `shared/session-core/tests/session-timeout-warning.test.mjs` |
@@ -703,17 +742,21 @@ tests.
 
 ### Checking accessibility
 
-`frontend/e2e/accessibility.spec.mjs` runs axe, an automated accessibility checker, against the
-WCAG 2.2 AA rules on the running app. Start the backend services and the frontend
-(`npx ng serve --port 4320` in `frontend/`), then:
+`npm run test:a11y` in `frontend/` runs mocked API axe checks against both built apps,
+including dashboard routes, order/account dialogs, registration, recovery, reset and Insights.
+Build both applications first; the test runner serves them locally and needs no account password:
 
 ```sh
-cd frontend
-A11Y_PASSWORD=<test password> npm run test:a11y
+npm run build --prefix frontend
+npm run build --prefix insights-frontend
+npm run test:a11y --prefix frontend
 ```
 
-`A11Y_BASE_URL` and `A11Y_EMAIL` are optional. The latest results are in the
-[axe report](docs/accessibility/axe-report.md).
+Optional real-service checks remain in `frontend/e2e/accessibility.spec.mjs`. Start the services
+and a frontend at `A11Y_BASE_URL` (default `http://localhost:4320`), then provide `A11Y_PASSWORD`
+and optionally `A11Y_EMAIL`. Without credentials these two live checks skip. Sprint 10's automated
+results and outstanding manual checks are recorded in `docs/accessibility/SPRINT10-validation.md`.
+
 
 ## Synthetic Quotes
 

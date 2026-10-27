@@ -16,19 +16,19 @@ function bars(count = 220, volume = 10) {
 }
 
 test('financial changes have exact signs/arrows, neutral zeroes, localized precision and meaningful speech', () => {
-  assert.deepEqual(describeChange(2.45), { visual: '▲ +2.45%', spoken: 'Increased by 2.45 percent', direction: 'up' });
+  assert.deepEqual(describeChange(2.45), { visual: '▲ +2.45%', spoken: 'up 2.45 percent', direction: 'up' });
   assert.equal(describeChange(-1.82).visual, '▼ −1.82%');
-  for (const zero of [0, -0]) assert.deepEqual(describeChange(zero), { visual: '— 0.00%', spoken: 'Unchanged at 0.00 percent', direction: 'flat' });
+  for (const zero of [0, -0]) assert.deepEqual(describeChange(zero), { visual: '— 0.00%', spoken: 'unchanged at 0 percent', direction: 'flat' });
   assert.equal(describeChange(-12.5, 'currency').visual, '▼ −$12.50');
   assert.equal(describeChange(1234.5, 'number', 'USD', 'en-US', '1.3-3').visual, '▲ +1,234.500');
-  assert.equal(describeChange(100, 'currency', 'JPY').spoken, 'Increased by 100 JPY');
+  assert.equal(describeChange(100, 'currency', 'JPY').spoken, 'up 100 JPY');
   for (const invalid of [null, NaN, Infinity]) assert.equal(describeChange(invalid).spoken, 'Change unavailable');
 });
 
 test('financial visual symbols are hidden from speech and changes update without live announcements', async t => {
   const fixture = await render(t, FinancialChange, { value: 2.45 });
   assert.equal(fixture.nativeElement.querySelector('[aria-hidden=true]').textContent, '▲ +2.45%');
-  assert.equal(fixture.nativeElement.querySelector('.sr-only').textContent, 'Increased by 2.45 percent');
+  assert.equal(fixture.nativeElement.querySelector('.sr-only').textContent, 'up 2.45 percent');
   assert.equal(fixture.nativeElement.querySelector('[aria-live]'), null);
   fixture.componentRef.setInput('value', -2.45); fixture.detectChanges();
   assert.equal(fixture.nativeElement.getAttribute('data-movement'), 'down');
@@ -54,7 +54,7 @@ test('a quoted percentage carries its sign without repeating the leading arrow',
   const visual = fixture.nativeElement.querySelector('[aria-hidden=true]').textContent;
   assert.equal(visual, '▲ +$12.34 (+1.23%)');
   assert.equal(visual.match(/▲/g).length, 1, 'the triangle is not repeated inside the brackets');
-  assert.equal(fixture.nativeElement.querySelector('.sr-only').textContent, 'Increased by 12.34 USD, 1.23 percent');
+  assert.equal(fixture.nativeElement.querySelector('.sr-only').textContent, 'up 12.34 USD, 1.23 percent');
 });
 
 test('the market status spells out Open or Closed exactly once', () => {

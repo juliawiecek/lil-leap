@@ -8,7 +8,9 @@ const { SpeechCoordinator, speechCoordinator } = await import('../../shared/spee
 
 function setup(t, markup, patch = {}, scanning = false) {
   browser.document.body.innerHTML = markup;
-  let preferences = { ...parseAssistivePreferences({}, {}), ...patch };
+  // Happy DOM has no layout engine. Model a vertical page unless a test supplies specific rectangles.
+  [...browser.document.body.querySelectorAll('*')].forEach((element, index) => place(element, 0, index * 30));
+  let preferences = { ...parseAssistivePreferences(patch, patch), ...patch };
   const spoken = [], statuses = [];
   const synth = { speaking: false, paused: false, cancelCount: 0,
     speak(utterance) { spoken.push(utterance); this.speaking = true; },
@@ -27,6 +29,9 @@ function setup(t, markup, patch = {}, scanning = false) {
 }
 const key = (doc, name, options = {}) => doc.activeElement.dispatchEvent(new browser.KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true, ...options }));
 const hover = (element, options = {}) => element.dispatchEvent(new browser.PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', ...options }));
+function place(element, left, top, width = 100, height = 20) {
+  element.getBoundingClientRect = () => ({ left, top, right: left + width, bottom: top + height, width, height, x: left, y: top });
+}
 
 test('preferences default off, reject corrupt values and preserve independent existing voice/visual choices', () => {
   const defaults = parseAssistivePreferences({ enabled: 'true', focus: 1, hover: 'yes', rate: Infinity, hoverDelay: 50, volume: -1 }, {});
@@ -43,7 +48,8 @@ test('preferences default off, reject corrupt values and preserve independent ex
 test('descriptions include names, native roles, values and relevant states but never password values', () => {
   browser.document.body.innerHTML = '<label>Quantity<input type="number" required value="2" aria-invalid="true" aria-describedby="error"></label><p id="error">Enter a whole number.</p><label>Password<input type="text" autocomplete="current-password" value="secret-value"></label><button disabled aria-expanded="false">Review order</button>';
   const [quantity, password] = browser.document.querySelectorAll('input');
-  assert.match(describeElement(quantity), /Quantity.*Required number field.*Value 2.*Invalid entry.*whole number/);
+  // Fields are said as label and value first (PS-22); Detailed then adds the role and states.
+  assert.match(describeElement(quantity), /^Quantity, 2\. number field\. Required\. Invalid entry\. Enter a whole number\.$/);
   assert.doesNotMatch(describeElement(password, true), /secret-value/);
   assert.match(describeElement(browser.document.querySelector('button')), /Review order.*button.*Unavailable.*Collapsed/);
   const metric = browser.document.createElement('div');
@@ -63,9 +69,20 @@ test('focus speech debounces, replaces stale reading, does not activate controls
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const [first, second] = doc.querySelectorAll('button'); let clicks = 0; second.onclick = () => clicks++;
   key(doc, 'Tab'); first.focus(); t.mock.timers.tick(100); second.focus(); t.mock.timers.tick(180);
-  assert.equal(spoken.length, 1); assert.match(spoken[0].text, /Buy Apple.*button/); assert.equal(clicks, 0);
+  // Brief is the default level: the name alone, no role (PS-22).
+  assert.equal(spoken.length, 1); assert.equal(spoken[0].text, 'Buy Apple.'); assert.equal(clicks, 0);
   first.focus(); t.mock.timers.tick(180);
   assert.equal(spoken.length, 2); assert.ok(synth.cancelCount > 0);
+});
+
+test('hover never reads inside data-a11y-no-hover (the scrolling ticker), and hover elsewhere still does', t => {
+  const { doc, spoken } = setup(t, '<div data-a11y-no-hover><button>Apple, $224</button></div><button>Buy Apple</button>', { enabled: true, hover: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const [ticker, buy] = doc.querySelectorAll('button');
+  hover(ticker); t.mock.timers.tick(1000);
+  assert.equal(spoken.length, 0);
+  hover(buy); t.mock.timers.tick(1000);
+  assert.equal(spoken.at(-1).text, 'Buy Apple.');
 });
 
 test('focus/hover voice stays quiet while the existing scanner owns navigation', t => {
@@ -118,7 +135,7 @@ test('route focus follows page navigation, while query/data changes leave focus 
 });
 
 test('shortcuts leave typing alone, stop is available while typing, and form errors are linked and focusable', t => {
-  const { doc, controller, spoken } = setup(t, '<main><h1>Sign in</h1><form novalidate><label>Email<input type="email" required></label><button>Continue</button></form></main>');
+  const { doc, controller, spoken } = setup(t, '<main><h1>Sign in</h1><form><label>Email<input type="email" required></label><button>Continue</button></form></main>');
   const input = doc.querySelector('input'), form = doc.querySelector('form'); input.focus();
   key(doc, 'r', { altKey: true, shiftKey: true }); assert.equal(spoken.length, 0);
   controller.readFocused(); key(doc, 'x', { altKey: true, shiftKey: true }); assert.equal(speechCoordinator.owner, '');
@@ -128,6 +145,18 @@ test('shortcuts leave typing alone, stop is available while typing, and form err
   assert.equal(doc.activeElement, input);
   input.value = 'person@example.com'; input.dispatchEvent(new browser.Event('input', { bubbles: true }));
   assert.equal(input.hasAttribute('aria-invalid'), false);
+});
+
+test('a form that validates itself keeps its own messages: the browser wording never replaces them (PS-21)', t => {
+  const { doc } = setup(t, '<form novalidate data-a11y-app-validation><label>Quantity<input type="number" min="1" required value="0"></label><button>Review</button></form>');
+  const input = doc.querySelector('input'), form = doc.querySelector('form');
+  let handled = 0; form.addEventListener('submit', () => handled++);
+  form.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true }));
+  assert.equal(handled, 1, "the app's own submit handler still runs");
+  assert.equal(input.hasAttribute('aria-invalid'), false, 'the app, not the controller, marks the field');
+  assert.equal(doc.querySelector('.a11y-field-error'), null);
+  input.dispatchEvent(new browser.Event('invalid', { cancelable: true }));
+  assert.equal(input.hasAttribute('aria-describedby'), false);
 });
 
 test('coordinator queues its channel, prevents passive overlap, configures local voice and releases cancellation callbacks', t => {
@@ -161,4 +190,280 @@ test('malformed and composition keyboard events leave typing alone; focus takes 
   assert.match(spoken.at(-1).text, /Sell Apple/);
   const count = spoken.length; key(doc, 'r', { altKey: true, shiftKey: true, isComposing: true });
   assert.equal(spoken.length, count);
+});
+
+test('custom validation and hidden native fields never steal registration focus', async t => {
+ const { doc } = setup(t, '<form novalidate><label>Hidden<input required aria-hidden="true"></label><button>Continue</button></form><form><input required aria-hidden="true"><label>Email<input required type="email"></label></form>');
+ const [custom, standard] = doc.querySelectorAll('form'); const button = custom.querySelector('button'); button.focus();
+ custom.querySelector('input').dispatchEvent(new browser.Event('invalid', { cancelable: true }));
+ custom.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve();
+ assert.equal(doc.activeElement, button);
+ standard.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })); await Promise.resolve();
+ assert.equal(doc.activeElement, standard.querySelector('input[type="email"]'));
+});
+
+test('voice arrows read text and controls in both directions without requiring focus speech or activating actions', t => {
+  const { doc, spoken, controller } = setup(t, '<main><h1>Portfolio</h1><p>Your investments</p><button>Buy Apple</button><output>Available cash: $200</output></main>', { enabled: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const heading = doc.querySelector('h1'), paragraph = doc.querySelector('p'), buy = doc.querySelector('button');
+  let clicks = 0; buy.onclick = () => clicks++;
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, heading); assert.equal(spoken.at(-1).text, 'Portfolio.');
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, paragraph); assert.equal(spoken.at(-1).text, 'Your investments.');
+  assert.equal(heading.hasAttribute('tabindex'), false, 'temporary focusability is restored');
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, buy); assert.equal(spoken.at(-1).text, 'Buy Apple.');
+  key(doc, 'ArrowDown'); assert.match(spoken.at(-1).text, /Available cash/);
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement, buy);
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement, paragraph);
+  t.mock.timers.tick(200); assert.equal(spoken.length, 6, 'no duplicate focus speech');
+  assert.equal(clicks, 0);
+  controller.destroy(); assert.equal(paragraph.hasAttribute('tabindex'), false);
+});
+
+test('voice arrows stay on the first and last items and use the current DOM after redraws', t => {
+  const { doc, spoken } = setup(t, '<h1>Portfolio</h1><p>Old value</p>', { enabled: true, focus: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  key(doc, 'ArrowDown'); key(doc, 'ArrowUp'); assert.equal(doc.activeElement.tagName, 'H1');
+  doc.querySelector('p').outerHTML = '<p>Updated value</p><button>Orders</button>';
+  place(doc.querySelector('p'), 0, 60); place(doc.querySelector('button'), 0, 90);
+  key(doc, 'ArrowDown'); assert.equal(spoken.at(-1).text, 'Updated value.');
+  key(doc, 'ArrowDown'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement.textContent, 'Orders');
+  t.mock.timers.tick(180); assert.equal(spoken.length, 5);
+});
+
+test('voice arrows skip hidden, inert, disabled and nested duplicate content, including closed details', t => {
+  const { doc, spoken } = setup(t, '<h1>Portfolio</h1><div style="display:none"><button>Hidden</button></div><div style="visibility:hidden"><p>Invisible</p></div><div aria-hidden="true"><p>Decoration</p></div><div inert><button>Behind modal</button></div><button disabled>Disabled</button><details><summary>More</summary><p>Collapsed detail</p></details><div data-a11y-read data-a11y-label="Cash"><p>$200</p></div><div role="img" aria-label="NextTrade logo"></div><button>Orders</button>', { enabled: true });
+  for (let i = 0; i < 5; i++) key(doc, 'ArrowDown');
+  assert.deepEqual(spoken.map(item => item.text), ['Portfolio.', 'More.', 'Cash. $200.', 'NextTrade logo.', 'Orders.']);
+});
+
+test('voice arrows remain inside an open modal and restore ordinary navigation after it closes', t => {
+  const { doc, spoken } = setup(t, '<button>Background</button><dialog open><h2>Review order</h2><button>Confirm</button><button>Cancel</button></dialog>', { enabled: true });
+  key(doc, 'ArrowDown'); assert.equal(spoken.at(-1).text, 'Review order.');
+  key(doc, 'ArrowDown'); key(doc, 'ArrowDown'); key(doc, 'ArrowDown');
+  assert.equal(doc.activeElement.textContent, 'Cancel');
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement.textContent, 'Confirm');
+  doc.querySelector('dialog').close(); doc.querySelector('button').focus();
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement.textContent, 'Background');
+});
+
+test('voice arrows leave editing, chart exploration, modifiers and switch scanning alone', t => {
+  const { doc, spoken, update } = setup(t, '<h1>Portfolio</h1><input type="number" aria-label="Quantity" value="2"><textarea aria-label="Notes"></textarea><select aria-label="Account"><option>Trading</option></select><div contenteditable="true"><span>Editable text</span></div><div role="img" tabindex="0" aria-label="Price chart"></div><div role="slider" tabindex="0" aria-label="Volume"></div><button>Buy</button>', { enabled: true });
+  for (const item of doc.querySelectorAll('input, textarea, select, [contenteditable], [role="img"], [role="slider"]')) {
+    item.focus();
+    for (const arrow of ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight']) {
+      assert.equal(key(doc, arrow), true, 'native arrow behavior is not prevented');
+      assert.equal(doc.activeElement, item);
+    }
+  }
+  const buy = doc.querySelector('button'); buy.focus();
+  for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey', 'isComposing']) {
+    assert.equal(key(doc, 'ArrowUp', { [modifier]: true }), true);
+    assert.equal(doc.activeElement, buy);
+  }
+  update({ enabled: false, arrowNavigation: false }); assert.equal(key(doc, 'ArrowUp'), true); assert.equal(doc.activeElement, buy);
+  assert.equal(spoken.length, 0);
+});
+
+test('switch scanning owns the arrows while voice mode is enabled', t => {
+  const { doc, spoken } = setup(t, '<h1>Portfolio</h1><button>Buy</button>', { enabled: true }, true);
+  assert.equal(key(doc, 'ArrowDown'), true); assert.equal(doc.activeElement, doc.body); assert.equal(spoken.length, 0);
+});
+
+test('guided arrow navigation leaves a settings field, speaks the instructions and starts at the page heading', t => {
+  const { doc, controller, spoken, statuses } = setup(t, '<main><h1>Settings</h1><p>Choose your preferences</p><select aria-label="Speed"><option>Normal</option></select></main>', { enabled: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  doc.querySelector('select').focus(); controller.beginArrowNavigation();
+  assert.equal(doc.activeElement, doc.querySelector('h1'));
+  assert.match(spoken.at(-1).text, /^Arrow-key navigation started.*Press Down or Up arrow.*Settings\.$/);
+  assert.match(statuses.at(-1), /Press Down or Up arrow/);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('p'));
+  assert.equal(spoken.at(-1).text, 'Choose your preferences.');
+  t.mock.timers.tick(180); assert.equal(spoken.length, 2);
+});
+
+test('spatial arrows follow rendered rows and columns even when DOM order differs, and never wrap', t => {
+  const { doc, spoken } = setup(t, '<button id="br">Bottom right</button><button id="tl">Top left</button><button id="bl">Bottom left</button><button id="tr">Top right</button>', { enabled: true });
+  const at = id => doc.getElementById(id);
+  place(at('tl'), 0, 0); place(at('tr'), 150, 0, 100, 35);
+  place(at('bl'), 0, 100); place(at('br'), 150, 100);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, at('tl'));
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, at('tr'));
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, at('br'));
+  key(doc, 'ArrowLeft'); assert.equal(doc.activeElement, at('bl'));
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement, at('tl'));
+  assert.equal(key(doc, 'ArrowUp'), false, 'an edge prevents the page scrolling');
+  assert.equal(doc.activeElement, at('tl')); assert.equal(spoken.at(-1).text, 'No item above.');
+  // Right stays horizontal even when the neighboring item's height changes.
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, at('tr'));
+  place(at('br'), 150, -100); place(at('bl'), 0, 200);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, at('bl'), 'the layout is read again after reflow');
+});
+
+test('Enter goes inside named groups, arrows stay at that level, and Escape returns one level at a time', t => {
+  const { doc, spoken, controller } = setup(t, '<section data-scan-group="Portfolio"><h2>Value</h2><fieldset><legend>Actions</legend><button>Buy</button><button>Sell</button></fieldset></section><section aria-label="Activity"><button>History</button></section>', { enabled: true });
+  const [portfolio, activity] = doc.querySelectorAll('section'), nested = doc.querySelector('fieldset');
+  const [buy, sell] = nested.querySelectorAll('button'); let activated = 0; buy.onclick = () => activated++;
+  place(portfolio, 0, 0, 200, 200); place(activity, 250, 0, 200, 200);
+  place(doc.querySelector('h2'), 10, 10); place(nested, 10, 50, 180, 130);
+  place(buy, 20, 80, 60, 20); place(sell, 100, 80, 60, 20);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, portfolio);
+  assert.match(spoken.at(-1).text, /Portfolio\. Group\. Press Enter/);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, activity);
+  key(doc, 'ArrowLeft'); key(doc, 'Enter'); assert.equal(doc.activeElement.tagName, 'H2');
+  assert.match(spoken.at(-1).text, /^Inside Portfolio/);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, nested);
+  key(doc, 'Enter'); assert.equal(doc.activeElement, buy); assert.equal(activated, 0);
+  key(doc, 'Enter', { repeat: true }); assert.equal(activated, 0);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, sell);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, sell);
+  assert.match(spoken.at(-1).text, /No item to the right.*Escape/);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, nested);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, portfolio);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, activity);
+  controller.destroy(); assert.equal(activity.hasAttribute('data-a11y-nav-focus'), false);
+  assert.equal(activity.hasAttribute('tabindex'), false);
+});
+
+test('Escape finishes editing before leaving a field group and closes an expanded picker first', async t => {
+  const { doc } = setup(t, '<fieldset><legend>Order</legend><input aria-label="Quantity" value="2"><button role="combobox" aria-expanded="true">Stock</button></fieldset>', { enabled: true });
+  const group = doc.querySelector('fieldset'), picker = doc.querySelector('button'), input = doc.querySelector('input');
+  input.focus(); key(doc, 'Escape'); assert.equal(doc.activeElement, input);
+  assert.equal(input.value, '2'); key(doc, 'Escape'); assert.equal(doc.activeElement, group);
+  picker.focus(); let closed = 0;
+  picker.onkeydown = event => { if (event.key === 'Escape') { closed++; picker.setAttribute('aria-expanded', 'false'); } };
+  key(doc, 'Escape'); await Promise.resolve(); assert.equal(closed, 1); assert.equal(doc.activeElement, picker);
+  key(doc, 'Escape'); assert.equal(closed, 1); assert.equal(doc.activeElement, group);
+});
+
+test('arrow navigation and voice save independently, including migration of older preferences', () => {
+  assert.equal(parseAssistivePreferences({}, {}).arrowNavigation, false);
+  assert.equal(parseAssistivePreferences({ enabled: true }, {}).arrowNavigation, true, 'older saved voice mode keeps working');
+  assert.equal(parseAssistivePreferences({ enabled: true }, { arrowNavigation: false }).arrowNavigation, false);
+  for (const value of ['true', 1, null]) assert.equal(parseAssistivePreferences({}, { arrowNavigation: value }).arrowNavigation, false);
+  const navigation = mergeAssistivePreferences({}, {}, { arrowNavigation: true });
+  assert.equal(navigation.voice.enabled, false); assert.equal(navigation.visual.arrowNavigation, true);
+  const voiced = mergeAssistivePreferences(navigation.voice, navigation.visual, { enabled: true });
+  const quiet = mergeAssistivePreferences(voiced.voice, voiced.visual, { enabled: false });
+  assert.equal(parseAssistivePreferences(quiet.voice, quiet.visual).arrowNavigation, true);
+  const voiceOnly = mergeAssistivePreferences({}, {}, { enabled: true });
+  assert.equal(voiceOnly.voice.enabled, true); assert.equal(voiceOnly.visual.arrowNavigation, false);
+});
+
+test('silent navigation moves, enters and exits groups and reports boundaries without any speech API', t => {
+  const { doc, spoken, statuses, controller } = setup(t, '<main><h1>Settings</h1><section aria-label="Preferences"><button>First</button><button>Second</button></section></main>', { enabled: false, arrowNavigation: true, focus: true, hover: true });
+  Object.defineProperty(globalThis, 'speechSynthesis', { configurable: true, value: undefined });
+  Object.defineProperty(globalThis, 'SpeechSynthesisUtterance', { configurable: true, value: undefined });
+  controller.beginArrowNavigation(); assert.equal(doc.activeElement.tagName, 'H1');
+  assert.match(statuses.at(-1), /Arrow-key navigation started/);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement.tagName, 'SECTION');
+  key(doc, 'Enter'); assert.equal(doc.activeElement.textContent, 'First');
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement.textContent, 'Second');
+  assert.equal(doc.activeElement.hasAttribute('data-a11y-nav-focus'), true);
+  key(doc, 'ArrowDown'); assert.match(statuses.at(-1), /No item below/);
+  key(doc, 'Escape'); assert.equal(doc.activeElement.tagName, 'SECTION');
+  assert.equal(spoken.length, 0);
+});
+
+test('turning voice off retains navigation and its highlight, and navigation can be disabled separately', t => {
+  const { doc, spoken, update } = setup(t, '<button>First</button><button>Second</button>', { enabled: true, arrowNavigation: true });
+  key(doc, 'ArrowDown'); assert.equal(spoken.length, 1);
+  update({ enabled: false }); assert.equal(doc.activeElement.hasAttribute('data-a11y-nav-focus'), true);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement.textContent, 'Second'); assert.equal(spoken.length, 1);
+  update({ arrowNavigation: false }); assert.equal(doc.activeElement.hasAttribute('data-a11y-nav-focus'), false);
+  assert.equal(key(doc, 'ArrowUp'), true); assert.equal(doc.activeElement.textContent, 'Second');
+});
+
+test('Enter on the sidebar goes to the current navigation item instead of the resize handle or logo', t => {
+  const { doc } = setup(t, '<aside aria-label="Menu"><div role="separator" tabindex="0" aria-label="Resize sidebar"></div><a href="/">Home</a><nav aria-label="Main navigation"><button>Overview</button><button aria-current="page">Settings</button></nav></aside><section aria-label="Portfolio"><h1>Portfolio</h1></section>', { arrowNavigation: true });
+  const sidebar = doc.querySelector('aside'), panel = doc.querySelector('section'), nav = doc.querySelector('nav');
+  const [overview, settings] = nav.querySelectorAll('button');
+  place(sidebar, 0, 0, 200, 400); place(panel, 250, 0, 300, 400);
+  place(overview, 10, 100); place(settings, 10, 150);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, sidebar);
+  key(doc, 'Enter'); assert.equal(doc.activeElement, settings);
+  key(doc, 'ArrowUp'); assert.equal(doc.activeElement, overview);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, nav);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, sidebar);
+  key(doc, 'ArrowRight'); assert.equal(doc.activeElement, panel);
+});
+
+test('Left from a heading containing a button reaches the sidebar instead of choosing that nested button', t => {
+  const { doc, controller } = setup(t, '<aside aria-label="Menu"><nav aria-label="Main navigation"><button>Overview</button></nav></aside><main><section aria-label="Summary"><h1>Summary<button aria-label="Hide balances"></button></h1></section></main>', { arrowNavigation: true });
+  const sidebar = doc.querySelector('aside'), heading = doc.querySelector('h1'), hide = doc.querySelector('h1 button');
+  place(sidebar, 0, 0, 200, 600); place(doc.querySelector('section'), 250, 20, 600, 200);
+  place(heading, 270, 30, 550, 40); place(hide, 780, 35, 30, 30);
+  let clicks = 0; hide.onclick = () => clicks++;
+  controller.beginArrowNavigation(); assert.equal(doc.activeElement, heading);
+  key(doc, 'ArrowLeft'); assert.equal(doc.activeElement, sidebar); assert.equal(clicks, 0);
+});
+
+test('arrows select a number field, Enter edits, and Escape or Enter resumes navigation without submitting', t => {
+  const { doc } = setup(t, '<form><h1>Order</h1><label>Quantity<input type="number" value="2"></label><button>Review</button></form>', { arrowNavigation: true });
+  const field = doc.querySelector('input'), review = doc.querySelector('button'); let submits = 0;
+  doc.querySelector('form').onkeydown = event => { if (event.key === 'Enter') submits++; };
+  key(doc, 'ArrowDown'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, field);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review); assert.equal(field.value, '2');
+  key(doc, 'ArrowUp'); key(doc, 'Enter'); assert.equal(field.hasAttribute('data-a11y-interacting'), true);
+  assert.equal(key(doc, 'ArrowUp'), true, 'editing arrows retain native behavior');
+  field.value = '3'; field.dispatchEvent(new browser.Event('input', { bubbles: true }));
+  key(doc, 'Enter'); assert.equal(doc.activeElement, field); assert.equal(field.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'Enter', { repeat: true }); assert.equal(submits, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review);
+  key(doc, 'ArrowUp'); key(doc, 'Enter'); key(doc, 'Escape'); assert.equal(doc.activeElement, field);
+  assert.equal(field.value, '3'); assert.equal(submits, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, review);
+});
+
+test('direct typing starts editing while Tab, pointer access and mode-off retain native fields', t => {
+  const { doc, update } = setup(t, '<input aria-label="Notes"><button>Next</button>', { arrowNavigation: true });
+  const field = doc.querySelector('input'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, field);
+  key(doc, 'a'); assert.equal(field.hasAttribute('data-a11y-interacting'), true);
+  key(doc, 'Escape'); assert.equal(field.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'Tab'); assert.equal(key(doc, 'ArrowLeft'), true, 'Tab restores native editing until focus changes');
+  key(doc, 'Escape'); assert.equal(key(doc, 'ArrowRight'), false, 'Escape restores arrow navigation');
+  field.dispatchEvent(new browser.PointerEvent('pointerdown', { bubbles: true }));
+  assert.equal(key(doc, 'ArrowLeft'), true, 'clicking a selected field starts native editing');
+  update({ arrowNavigation: false }); assert.equal(key(doc, 'ArrowDown'), true);
+});
+
+test('Escape lets a chart stop inspection without closing its dialog, then arrows leave the chart', t => {
+  const { doc } = setup(t, '<dialog open><div role="img" tabindex="0" aria-label="Prices"></div><button>Close</button></dialog>', { arrowNavigation: true });
+  const chart = doc.querySelector('[role="img"]'), dialog = doc.querySelector('dialog'); let cleaned = 0, closed = 0;
+  chart.addEventListener('keydown', event => { if (event.key === 'Escape') { assert.equal(event.defaultPrevented, false); cleaned++; } });
+  dialog.onkeydown = event => { if (event.key === 'Escape') closed++; };
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, chart);
+  key(doc, 'Enter'); assert.equal(key(doc, 'ArrowRight'), true);
+  key(doc, 'Escape'); assert.equal(doc.activeElement, chart); assert.equal(cleaned, 1); assert.equal(closed, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
+});
+
+test('a select field can be entered and released without swallowing subsequent navigation arrows', t => {
+  const { doc } = setup(t, '<select aria-label="Account"><option>Trading</option></select><button>Next</button>', { arrowNavigation: true });
+  const select = doc.querySelector('select'); key(doc, 'ArrowDown'); assert.equal(doc.activeElement, select);
+  key(doc, 'Enter'); assert.equal(select.hasAttribute('data-a11y-interacting'), true);
+  assert.equal(key(doc, 'ArrowDown'), true);
+  key(doc, 'Escape'); assert.equal(select.hasAttribute('data-a11y-interacting'), false);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
+});
+
+test('a picker closing after rendering still releases its next arrow key', async t => {
+  const { doc } = setup(t, '<button role="combobox" aria-expanded="true">Stock</button><input aria-label="Quantity" type="number">', { arrowNavigation: true });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const picker = doc.querySelector('button'); let reopened = 0;
+  picker.onkeydown = event => {
+    if (event.key === 'Escape') setTimeout(() => picker.setAttribute('aria-expanded', 'false'), 20);
+    if (event.key === 'ArrowDown') reopened++;
+  };
+  picker.focus(); key(doc, 'Escape'); await Promise.resolve();
+  t.mock.timers.tick(20); key(doc, 'ArrowDown');
+  assert.equal(doc.activeElement, doc.querySelector('input')); assert.equal(reopened, 0);
+});
+
+test('checkboxes support Enter activation and subsequent arrow navigation without submitting their form', t => {
+  const { doc } = setup(t, '<form><label>Use limit price<input type="checkbox"></label><button>Review</button></form>', { arrowNavigation: true });
+  const check = doc.querySelector('input'); let reviews = 0;
+  doc.querySelector('form').onkeydown = event => { if (event.key === 'Enter') reviews++; };
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, check);
+  key(doc, 'Enter'); assert.equal(check.checked, true); assert.equal(reviews, 0);
+  key(doc, 'ArrowDown'); assert.equal(doc.activeElement, doc.querySelector('button'));
 });

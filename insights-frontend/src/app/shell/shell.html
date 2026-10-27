@@ -1,6 +1,6 @@
-<a class="skip-link" href="#workspace" (click)="$event.preventDefault(); workspace.focus()">Skip to content</a>
+<a class="skip-link" href="#workspace" data-scan-ignore (click)="$event.preventDefault(); workspace.focus()">Skip to content</a>
 <div class="shell">
-  <aside id="insights-navigation" aria-label="Insights navigation" (keydown.escape)="closeNavigation()" class="sidebar" [class.open]="mobileNav()">
+  <aside id="insights-navigation" aria-label="Insights navigation" data-scan-group="Menu" (keydown.escape)="closeNavigation()" class="sidebar" [class.open]="mobileNav()">
     <a class="brand" [routerLink]="home()" (click)="mobileNav.set(false)" title="NextTrade Insights, home"
       ><svg class="brand-mark" viewBox="0 0 72 72" fill="none" aria-hidden="true">
         <path d="M7 59V14H18L44 43V14H55V59H44L18 29V59H7Z" fill="#f2f0e9" />

@@ -623,6 +623,13 @@ body:has(.settings-page) {
       outline-offset: 3px;
     }
 
+    /* Pressed: the password is shown. Underlined as well as brighter, so it never relies on colour. */
+    .password-toggle[aria-pressed='true'] {
+      color: var(--text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     .primary-action {
       width: 100%;
       min-height: 49px;

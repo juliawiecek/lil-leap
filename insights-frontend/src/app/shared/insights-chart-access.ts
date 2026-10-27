@@ -3,6 +3,8 @@ import type { ChartTable } from '../../../../shared/chart-description';
 import { ChartNarrator } from '../../../../shared/chart-narrator';
 import { SiteAccessibility } from '../site-accessibility';
 
+/** The shortest gap between two "Chart data updated" announcements for one chart. */
+const UPDATE_NOTICE_EVERY_MS = 60_000;
 
 /** Both report charts share one stored opt-in and one owned speech channel. */
 @Injectable({ providedIn: 'root' })
@@ -105,6 +107,8 @@ export class InsightsChartAccess implements OnDestroy {
   #previousTable: ChartTable | undefined;
   #context = '';
   #pendingContext = false;
+  /** When "Chart data updated" was last said; 0 until the first time. */
+  #updatedAt = 0;
   constructor() {
     effect(onCleanup => {
       const text = this.summary(), context = this.context(), table = this.table();
@@ -117,11 +121,14 @@ export class InsightsChartAccess implements OnDestroy {
       untracked(() => {
         if (contextChanged || privacyChanged) { this.voice.stop(this.id()); }
         if (!changed) { return; }
-        this.announcement.set('');
         // Live prices do not make every chart on a page talk at once. Announce the chart in use,
-        // or the result of a deliberate period/security change, after updates have settled.
-        if (fullAnnouncement || this.focused() || this.explained() || this.shown()) {
+        // or the result of a deliberate period/security change, after updates have settled. The
+        // pages refresh every few seconds, so "updated" is said at most once a minute (PS-29).
+        const quiet = !fullAnnouncement && Date.now() - this.#updatedAt < UPDATE_NOTICE_EVERY_MS;
+        if (!quiet && (fullAnnouncement || this.focused() || this.explained() || this.shown())) {
+          this.announcement.set('');
           const timer = setTimeout(() => {
+            if (!fullAnnouncement) { this.#updatedAt = Date.now(); }
             this.announcement.set(fullAnnouncement ? text : 'Chart data updated. Explain this chart to hear the latest summary.');
             if (fullAnnouncement && (this.focused() || this.explained())) { this.voice.speak(text, this.id()); }
             if (!/loading|No recorded observations/i.test(text)) { this.#pendingContext = false; }

@@ -1,3 +1,4 @@
+import { SwitchScanToggle } from '../../../shared/switch-scan-toggle';
 import { PASSWORD_RULES } from './password-rules';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AppSessionService } from './app-session.service';
@@ -76,7 +77,7 @@ function markIntroSeen(): void {
 
 @Component({
   selector: 'app-login',
-  imports: [InvestorProfile, SkipLink],
+  imports: [InvestorProfile, SkipLink, SwitchScanToggle],
   templateUrl: './app.html',
   styleUrls: ['./app.scss', './app.refresh.scss', './app.signin.scss'],
   encapsulation: ViewEncapsulation.None,

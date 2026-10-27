@@ -29,7 +29,6 @@ export class DashboardIcon {
     chart: 'M3 21V11h4v10M10 21V6h4v15M17 21V2h4v19',
     orders: 'M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1',
     file: 'M5 2h9l5 5v15H5ZM14 2v6h5M8 12h8M8 16h8',
-    learn: 'm2 9 10-5 10 5-10 5ZM6 11v7l6 3 6-3v-7M22 9v8',
     settings:
       'm9 3 1-2h4l1 2 3 2 3 0 2 4-2 2v3l2 2-2 4-3-1-3 2-1 2h-4l-1-2-3-2-3 1-2-4 2-2v-3L1 9l2-4h3ZM16 12a4 4 0 1 0-8 0 4 4 0 0 0 8 0',
     search: 'M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0M15 15l6 6',

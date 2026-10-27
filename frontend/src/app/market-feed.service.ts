@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { QUOTE_REFRESH_MS } from './portfolio-api';
 import { MARKET_STATUS_REFRESH_MS, MarketStatus, MarketStatusClient } from './market-status-api';
 import { LiveQuote, MarketFeedClient, PriceTick, changeFrom, unpriced } from './market-feed-api';
+import { LivePricesService } from './live-prices';
 
 /**
  * One shared feed of live prices and market status for every view (TS-14.7, PS-02).
@@ -17,6 +18,7 @@ export class MarketFeed {
   readonly #tokens = inject(AuthService, { optional: true }) ?? { accessToken: null };
   client = new MarketFeedClient(this.#tokens, inject(ApiHttpClient));
   statusClient = new MarketStatusClient(this.#tokens, inject(ApiHttpClient));
+  readonly #livePrices = inject(LivePricesService, { optional: true }) ?? new LivePricesService();
 
   readonly quotes = signal<LiveQuote[]>([]);
   readonly status = signal<MarketStatus | null>(null);
@@ -79,6 +81,11 @@ export class MarketFeed {
     return this.#users > 0;
   }
 
+  /** The client paused live updates in Settings > Accessibility (PS-21). */
+  get paused(): boolean {
+    return this.#livePrices.paused();
+  }
+
   get hidden(): boolean {
     return globalThis.document?.hidden === true;
   }
@@ -90,6 +97,10 @@ export class MarketFeed {
    */
   async refreshQuotes(): Promise<void> {
     if (!this.#canPoll()) {
+      return;
+    }
+    // Paused (PS-21, WCAG 2.2.2): prices hold still once the first ones are on screen.
+    if (this.paused && this.quotes().some((q) => q.price > 0)) {
       return;
     }
     if (!this.quotes().length) {

@@ -1,7 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { accessibilityStore } from './accessibility';
-import { speakable } from './speech-text';
-import { speechCoordinator } from '../../../shared/speech-coordinator';
+import { scanStore, scanFormat, scanCues, scanSayNow } from './switch-scan-options';
+import { speechCoordinator } from './speech-coordinator';
 
 /**
  * Switch control: lets someone who can press only one button (a head switch, a sip-and-puff
@@ -119,6 +118,7 @@ export type ScanItem =
   | { kind: 'pause' };
 
 export interface ScanEngineOptions {
+  format?: (text: string) => string;
   intervalMs?: number;
   key?: ScanKey;
   /** Read each item aloud as the ring reaches it. */
@@ -132,10 +132,14 @@ export interface ScanEngineOptions {
   onTurnOff?: () => void;
   /** Off in tests, which call next() themselves. */
   autoAdvance?: boolean;
+  /** Called each time the ring moves on (the end of next()), for the ring's sound cue (PS-22). */
+  onMove?: () => void;
+  /** Called when a keypad or option pad opens, for the keypad's sound cue (PS-22). */
+  onPadOpen?: () => void;
 }
 
 const FOCUSABLE =
-  'button, a[href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+  '[role="option"], button, a[href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
 const CLICKED_INPUTS = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'image', 'color', 'range', 'file']);
 const NUMBER_ROWS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']];
 const LETTER_ROWS = [
@@ -144,6 +148,11 @@ const LETTER_ROWS = [
   ['M', 'N', 'O', 'P', 'Q', 'R'],
   ['S', 'T', 'U', 'V', 'W', 'X'],
   ['Y', 'Z', 'Space', '⌫'],
+  ['0', '1', '2', '3', '4'],
+  ['5', '6', '7', '8', '9'],
+  ['@', '.', '-', '_', '!', '#'],
+  ['$', '%', '&', '*', '+', '='],
+  ['?', '/', ':', ';', String.fromCharCode(39), '~'],
 ];
 
 /** Component hosts styled `display: contents` draw no box of their own; their children do. */
@@ -213,6 +222,7 @@ function shownText(el: HTMLElement): string {
 export function spokenItem(el: HTMLElement): string {
   const label = el.getAttribute('data-speak') || scanLabel(el, Number.POSITIVE_INFINITY);
   const field = el as HTMLInputElement;
+  if (el.matches('input[type="password"], [autocomplete="current-password"], [autocomplete="new-password"]')) return `${label}, ${field.value.length} characters`;
   if (el.tagName === 'INPUT' && field.type === 'checkbox') {
     return `${label}, ${field.checked ? 'on' : 'off'}`;
   }
@@ -236,10 +246,13 @@ export class ScanEngine {
   speak: boolean;
   backEveryMs: number;
   pauseEveryMs: number;
+  readonly #format: (text: string) => string;
   readonly #doc: Document;
   readonly #isVisible: (el: HTMLElement) => boolean;
   readonly #onTurnOff: () => void;
   readonly #autoAdvance: boolean;
+  readonly #onMove: () => void;
+  readonly #onPadOpen: () => void;
   #stack: HTMLElement[] = [];
   #index = 0;
   #cycles = 0;
@@ -255,6 +268,7 @@ export class ScanEngine {
   #bar: HTMLElement | null = null;
   /** The ring's own sentence being read, so the ring knows when it is talking and never cuts off the briefing. */
   #utterance: SpeechSynthesisUtterance | null = null;
+  #urgentSpeech = false;
   /** When what the ring is saying should be finished; it waits until then before moving on. */
   #speechUntil = 0;
   /** The item last read out, so a redraw does not read it again. */
@@ -270,6 +284,7 @@ export class ScanEngine {
   #frame: number | undefined;
 
   constructor(doc: Document, options: ScanEngineOptions = {}) {
+    this.#format = options.format ?? (text => text);
     this.#doc = doc;
     this.intervalMs = options.intervalMs ?? DEFAULT_SCAN.intervalMs;
     this.key = options.key ?? DEFAULT_SCAN.key;
@@ -279,6 +294,8 @@ export class ScanEngine {
     this.#isVisible = options.isVisible ?? defaultVisible;
     this.#onTurnOff = options.onTurnOff ?? (() => this.stop());
     this.#autoAdvance = options.autoAdvance ?? true;
+    this.#onMove = options.onMove ?? (() => undefined);
+    this.#onPadOpen = options.onPadOpen ?? (() => undefined);
   }
 
   get running(): boolean {
@@ -297,6 +314,15 @@ export class ScanEngine {
   /** How many levels deep scanning is; 1 is the page (or the open dialog) itself. */
   get depth(): number {
     return this.#stack.length;
+  }
+
+  /** The control or group the ring is on, for "What's this?" (Alt+W); null on Back, Pause or an offer. */
+  ringed(): HTMLElement | null {
+    if (!this.#running || this.#paused || this.#prompt) {
+      return null;
+    }
+    const item = this.current();
+    return item && 'el' in item ? item.el : null;
   }
 
   start(): void {
@@ -424,6 +450,7 @@ export class ScanEngine {
       }
       this.#announce('', false);
       this.#render();
+      this.#onMove();
       return;
     }
     const count = this.items().length;
@@ -441,6 +468,7 @@ export class ScanEngine {
     // A control is announced by taking focus; groups and Back/Pause announce themselves.
     this.#announce('');
     this.#render();
+    this.#onMove();
   }
 
   /** The switch was pressed: act on the highlighted item. */
@@ -604,7 +632,7 @@ export class ScanEngine {
       this.#resumeAt = el;
       // Confirm first, then click: what the click says (an order read-back, which cuts in) must
       // not be cut off by this confirmation (PS-23).
-      this.#announce(`${scanLabel(el)} selected.`);
+      if (!el.closest('.scan-pad')) this.#announce(`${scanLabel(el)} selected.`);
       el.click();
     }
   }
@@ -616,12 +644,15 @@ export class ScanEngine {
     // Like a selected field: the first key replaces what was there instead of adding to it.
     let fresh = original !== '';
     const numeric = field.type === 'number';
+    const secret = field.type === 'password' || ['current-password', 'new-password'].includes(field.autocomplete);
+    let caps = false;
+    const displayValue = () => secret ? `${value.length} characters` : value || ' ';
     const pad = this.#makePad(scanLabel(field));
     const display = pad.querySelector('output')!;
-    display.textContent = value || ' ';
+    display.textContent = displayValue();
     const write = (next: string) => {
       value = next;
-      display.textContent = value || ' ';
+      display.textContent = displayValue();
       // A number field drops a value like "1." it cannot parse, so wait for the next digit.
       if (!numeric || !value.endsWith('.')) {
         field.value = value;
@@ -629,9 +660,9 @@ export class ScanEngine {
       }
     };
     for (const keys of rows) {
-      const row = this.#padRow(pad, `${keys[0]} to ${keys.at(-1)}`);
+      const row = this.#padRow(pad, `${keys[0] === '.' ? 'point' : keys[0]} to ${keys.at(-1) === '\u232b' ? 'Delete' : keys.at(-1)}`);
       for (const key of keys) {
-        const name = key === '⌫' ? 'Delete' : key;
+        const name = key === '⌫' ? 'Delete' : key === '.' ? 'point' : key;
         this.#padButton(row, key, name, () => {
           if (fresh && key !== '⌫') {
             value = '';
@@ -639,18 +670,19 @@ export class ScanEngine {
           fresh = false;
           if (key === '⌫') {
             write(value.slice(0, -1));
-          } else if (key === '.' && value.includes('.')) {
+          } else if (numeric && key === '.' && value.includes('.')) {
             return;
           } else {
-            write(value + (key === 'Space' ? ' ' : numeric ? key : key.toLowerCase()));
+            write(value + (key === 'Space' ? ' ' : numeric || caps ? key : key.toLowerCase()));
           }
-          this.#announce(value ? `${value.split('').join(' ')}` : 'Empty');
+          this.#announce(secret ? `${value.length} characters` : value ? `${value.split('').join(' ')}` : 'Empty');
         });
       }
     }
+    if (!numeric) this.#padButton(this.#padRow(pad, 'Letter case'), 'Caps', 'Caps', () => { caps = !caps; this.#announce(caps ? 'Caps on' : 'Caps off'); });
     const finish = this.#padRow(pad, 'Done or cancel');
     this.#padButton(finish, 'Done', 'Done', () => {
-      field.value = value.replace(/\.$/, '');
+      field.value = numeric ? value.replace(/\.$/, '') : value;
       field.dispatchEvent(new Event('input', { bubbles: true }));
       field.dispatchEvent(new Event('change', { bubbles: true }));
       this.#closePad();
@@ -724,6 +756,7 @@ export class ScanEngine {
     this.#stack = [];
     this.#index = 0;
     this.#announce(`${scanLabel(field)} keypad.`);
+    this.#onPadOpen();
   }
 
   #closePad(): void {
@@ -854,7 +887,8 @@ export class ScanEngine {
     if (!group) {
       chip.style.left = '16px';
       chip.style.top = '';
-      chip.style.bottom = '64px';
+      // Above the status bar, which moves up while a caption shows (captions.scss).
+      chip.style.bottom = 'calc(64px + var(--caption-offset, 0px))';
       return;
     }
     const box = screenBox(group);
@@ -928,7 +962,7 @@ export class ScanEngine {
     if (this.#live) {
       this.#live.textContent = text;
     }
-    this.#say(text, !interrupt);
+    this.#say(text, !interrupt, interrupt);
   }
 
   /** Tells screen readers what happened and, when speaking is on, says it aloud too. */
@@ -950,22 +984,22 @@ export class ScanEngine {
       return;
     }
     this.#spokenKey = key;
-    this.#say(text, this.#queueNext);
+    this.#say(text, this.#queueNext && (this.intervalMs > 700 || this.#urgentSpeech));
     this.#queueNext = false;
   }
 
-  #say(raw: string, queue: boolean): void {
+  #say(raw: string, queue: boolean, interrupt = false): void {
     const synth = globalThis.speechSynthesis ? speechCoordinator.channel('switch') : undefined;
     // Keypad keys are single letters and digits, said as they are; everything else is cleaned up.
-    const text = this.#picker ? raw : speakable(raw);
+    const text = this.#picker ? raw : this.#format(raw);
     if (!this.speak || !text || !synth || typeof globalThis.SpeechSynthesisUtterance !== 'function') {
       return;
     }
     // Another voice, such as the market briefing, is talking; the ring stays quiet rather than cut it off.
-    if (synth.speaking && !this.#utterance) {
+    if (!interrupt && synth.speaking && !this.#utterance) {
       return;
     }
-    if (!queue && this.#utterance) {
+    if (!interrupt && !queue && this.#utterance) {
       synth.cancel();
     }
     const utterance = new SpeechSynthesisUtterance(text);
@@ -973,20 +1007,22 @@ export class ScanEngine {
     const done = () => {
       if (this.#utterance === utterance) {
         this.#utterance = null;
+        this.#urgentSpeech = false;
       }
     };
     utterance.onend = done;
     utterance.onerror = done;
     this.#utterance = utterance;
+    this.#urgentSpeech = interrupt;
     // A queued sentence starts after the one being read, so the ring waits for both.
     const from = queue ? Math.max(Date.now(), this.#speechUntil) : Date.now();
     this.#speechUntil = from + speechTime(text);
-    synth.speak(utterance);
+    speechCoordinator.submit('switch', utterance, { interrupt, queue, defaultVoice: true });
   }
 
   /** The ring is still reading something out (until the browser says it finished), so it waits. */
   #talking(): boolean {
-    return !!this.#utterance && Date.now() < this.#speechUntil;
+    return (this.intervalMs > 700 || this.#urgentSpeech) && !!this.#utterance && Date.now() < this.#speechUntil;
   }
 
   #restartTimer(): void {
@@ -1036,8 +1072,11 @@ export class ScanEngine {
  */
 @Injectable({ providedIn: 'root' })
 export class SwitchScanService {
-  readonly #store = accessibilityStore();
+  readonly #store = scanStore();
+  readonly #format = scanFormat();
   readonly settings = signal<ScanSettings>(this.#store.read('switchControl', parseScanSettings));
+  readonly #cues = scanCues();
+  readonly #sayNow = scanSayNow();
   #engine: ScanEngine | null = null;
 
   constructor() {
@@ -1075,7 +1114,8 @@ export class SwitchScanService {
 
   /** Says something for the page (a chart summary, an order read-back) while switch control is on. */
   announce(text: string, interrupt = false): void {
-    this.#engine?.say(text, interrupt);
+    if (this.settings().enabled && this.settings().speak) this.#engine?.say(text, interrupt);
+    else if (this.#store.read('voice', value => (value as { enabled?: boolean } | null)?.enabled === true)) this.#sayNow('order-read-back', text);
   }
 
   /** Cuts off the sentence being read without changing any setting (Stop speech, Alt+Shift+X). */
@@ -1089,6 +1129,7 @@ export class SwitchScanService {
    * function that stops listening.
    */
   listenForShortcut(doc: Document = document): () => void {
+    if (new URL(doc.URL).searchParams.get('switch') === 'on') this.update({ enabled: true, speak: true });
     const onKey = (event: KeyboardEvent) => {
       if (!isSwitchControlShortcut(event)) {
         return;
@@ -1105,14 +1146,19 @@ export class SwitchScanService {
     return () => doc.removeEventListener('keydown', onKey, true);
   }
 
+  ngOnDestroy(): void { this.#engine?.stop(); this.#engine = null; }
+
   #start(): void {
     if (typeof document === 'undefined') {
       return;
     }
     const { intervalMs, key, speak, backEverySec, pauseEverySec } = this.settings();
     this.#engine = new ScanEngine(document, {
-      intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
+      format: this.#format, intervalMs, key, speak, backEveryMs: backEverySec * 1000, pauseEveryMs: pauseEverySec * 1000,
       onTurnOff: () => this.update({ enabled: false }),
+      // Each ring move ticks and each keypad clicks (PS-22); the ring and the pad show and say the same.
+      onMove: () => this.#cues.play('ring'),
+      onPadOpen: () => this.#cues.play('keypad'),
     });
     this.#engine.start();
   }

@@ -23,9 +23,12 @@ export function describeChange(value: number | null, unit: ChangeUnit = 'percent
     : formatNumber(Math.abs(value), locale, digits ?? '1.2-2');
   const symbol = (arrow ? { up: '▲ +', down: '▼ −', flat: '— ' } : { up: '+', down: '−', flat: '' })[direction];
   const measure = unit === 'percent' ? ' percent' : unit === 'currency' ? ` ${currency}` : '';
-  const precision = unit === 'currency' ? getNumberOfCurrencyDigits(currency) : 2;
-  const spokenAmount = formatNumber(Math.abs(value), locale, digits ?? `1.${precision}-${precision}`);
-  const verb = direction === 'flat' ? 'Unchanged at' : direction === 'up' ? 'Increased by' : 'Decreased by';
+  // Money keeps its cents; a percentage drops trailing zeros, since "1.20" is read "one point two zero".
+  const cents = getNumberOfCurrencyDigits(currency);
+  const spokenDigits = unit === 'currency' ? `1.${cents}-${cents}` : '1.0-2';
+  const spokenAmount = formatNumber(Math.abs(value), locale, digits ?? spokenDigits);
+  // Read as "up 1.2 percent" / "down 3 percent" (PS-21), the way people say a move aloud.
+  const verb = direction === 'flat' ? 'unchanged at' : direction;
   return {
     visual: symbol + amount + (unit === 'percent' ? '%' : ''),
     spoken: arrow

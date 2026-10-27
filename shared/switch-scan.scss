@@ -44,7 +44,8 @@
   position: fixed;
   z-index: 2147482998;
   left: 16px;
-  bottom: 16px;
+  /* Moves up above the caption strip while one shows (captions.scss). */
+  bottom: calc(16px + var(--caption-offset, 0px));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -69,7 +70,7 @@
   position: fixed;
   z-index: 2147482990;
   left: 50%;
-  bottom: 24px;
+  bottom: calc(24px + var(--caption-offset, 0px));
   display: grid;
   gap: 8px;
   width: min(420px, calc(100vw - 32px));

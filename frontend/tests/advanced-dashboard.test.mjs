@@ -4,7 +4,7 @@ import { component } from './component-helper.mjs';
 const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AuthService } = await import('../src/app/auth.service.ts');
-const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+const { SwitchScanService } = await import('../../shared/switch-scan.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
 
 const NAMES = { AAPL: 'Apple Inc.', MSFT: 'Microsoft Corporation', NVDA: 'NVIDIA Corporation', AMZN: 'Amazon.com, Inc.', GOOGL: 'Alphabet Inc.' };
@@ -85,7 +85,7 @@ function tradingDesk(t) {
 
 test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => {
   const said = [];
-  const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
+  const scan = { announce: (text, interrupt) => said.push([text, interrupt]), settings: () => ({ enabled: false }) };
   const desk = component(t, AdvancedDashboard, [
     { provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith()),
     { provide: SwitchScanService, useValue: scan },
@@ -98,6 +98,11 @@ test('reviewing an order on the ticket reads it back, cutting in (PS-23)', t => 
   desk.quantity.set('0');
   desk.reviewOrder();
   assert.equal(said.length, 1, 'an invalid order is not read back');
+  desk.closeModal(); desk.side.set('Sell'); desk.choose(desk.quote('AAPL')); desk.quantity.set('3'); desk.reviewOrder();
+  assert.equal(said.length, 2, 'editing and reviewing again reads the order again');
+  assert.match(said.at(-1)[0], /^You're about to sell 3 shares of Apple for .*Press Confirm sell to place the order\.$/);
+  assert.equal(said.at(-1)[1], true);
+
 });
 
 test('screeners separate gainers and decliners and restore all quotes', t => {
@@ -122,6 +127,19 @@ test('choosing a symbol moves the ticket to it and clears stale search and error
   assert.equal(desk.total(), 1786.24, 'the estimate is the live price times the shares, with no invented fee');
   assert.equal(desk.query(), ''); assert.equal(desk.message(), '');
   assert.equal(desk.page(), 'Overview');
+});
+
+test('search Enter chooses the latest stock match without choosing empty, unmatched or composing text', t => {
+  const desk = component(t, AdvancedDashboard, [{ provide: AuthService, useClass: MockAuthService }, feedProvider(feedWith())]);
+  const chosen = []; t.mock.method(desk, 'choose', quote => chosen.push(quote.symbol));
+  const event = patch => ({ key: 'Enter', preventDefault() {}, ...patch });
+  desk.query.set('msft'); desk.submitSearch(event({}));
+  desk.query.set('APPLE'); desk.submitSearch(event({}));
+  assert.deepEqual(chosen, ['MSFT', 'AAPL']);
+  for (const query of ['', '   ', 'missing company']) { desk.query.set(query); desk.submitSearch(event({})); }
+  desk.query.set('NVDA');
+  for (const guard of ['isComposing', 'repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey']) desk.submitSearch(event({ [guard]: true }));
+  assert.equal(chosen.length, 2);
 });
 
 test('the ticket starts at one share and defaults to market orders (PS-06)', t => {

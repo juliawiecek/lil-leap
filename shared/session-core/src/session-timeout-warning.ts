@@ -1,5 +1,10 @@
-import { Component, ElementRef, computed, effect, input, viewChild } from '@angular/core';
+import { Component, ElementRef, InjectionToken, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { SessionCoordinator } from './app-session.service.js';
+
+/** Apps stop their briefing and deliver the warning through their shared speech channel. */
+export const SESSION_WARNING_ANNOUNCE = new InjectionToken<(text: string) => void>('SESSION_WARNING_ANNOUNCE', {
+  providedIn: 'root', factory: () => () => {},
+});
 
 /** "0:42" for the countdown people see. */
 export function countdownClock(seconds: number): string {
@@ -35,6 +40,7 @@ export function countdownWords(seconds: number): string {
       (cancel)="onCancel($event)"
     >
       <h2 id="session-warning-title">Still there?</h2>
+      <span class="session-warning-live" role="alert" aria-live="assertive" aria-atomic="true">{{ announcement() }}</span>
       <p id="session-warning-message">
         For your security, you'll be signed out in
         <span class="session-warning-time" aria-hidden="true">{{ clock() }}</span
@@ -79,7 +85,7 @@ export function countdownWords(seconds: number): string {
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
-      .session-warning-sr {
+      .session-warning-live, .session-warning-sr {
         position: absolute;
         width: 1px;
         height: 1px;
@@ -118,6 +124,8 @@ export function countdownWords(seconds: number): string {
   ],
 })
 export class SessionTimeoutWarning {
+  readonly announcement = signal('');
+  private readonly announce = inject(SESSION_WARNING_ANNOUNCE);
   readonly session = input.required<SessionCoordinator>();
   readonly secondsLeft = computed(() => this.session().warningSecondsLeft());
   readonly clock = computed(() => countdownClock(this.secondsLeft() ?? 0));
@@ -134,9 +142,13 @@ export class SessionTimeoutWarning {
       }
       if (warning) {
         dialog.showModal();
+        const text = `Still there? For your security, you'll be signed out in ${this.words()} because there's been no activity. Choose Stay signed in to continue.`;
+        this.announcement.set(text);
+        this.announce(text);
         // The safe choice gets focus, so Enter, a click or one switch press keeps the session.
         this.stayButton()?.nativeElement.focus();
       } else {
+        this.announcement.set('');
         dialog.close();
       }
     });

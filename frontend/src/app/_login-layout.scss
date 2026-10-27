@@ -28,7 +28,7 @@
   .volume-field { left: 3.5%; right: 17%; bottom: 5%; height: 17%; opacity: .4; mask-image: linear-gradient(to top, var(--mask-ink) 10%, var(--shadow-109) 70%, transparent); }
   .volume-bar { max-width: 10px; background: linear-gradient(to top, var(--surface-tone-24), var(--surface-tone-58)); }
   .volume-bar.accent { background: linear-gradient(to top, var(--gain-tone-22), var(--gain)); }
-  .tape-track { color: var(--text-muted); }
+  .tape-track { color: var(--text); }
   .tape-track .up { color: var(--gain); }
 }
 
@@ -71,7 +71,7 @@
     width: max-content;
     gap: 0;
     animation: tape-scroll 65s linear infinite;
-    color: var(--surface-tone-106);
+    color: var(--text);
     font-size: clamp(12px, 1vw, 12px);
     letter-spacing: 0;
     font-weight: 500;

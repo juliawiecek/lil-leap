@@ -154,19 +154,19 @@ test('hidden balances, an empty portfolio, delays and long order lists change th
   const many = Array.from({ length: 5 }, (_, i) => order({ filledAt: new Date(NOW.getTime() - (i + 1) * 60000).toISOString() }));
   const busy = buildBriefing(snapshot({ orders: many, since: new Date(NOW.getTime() - 3600000), gain: -50 }));
   assert.ok(busy.includes('5 orders changed since your last briefing.'));
-  assert.ok(busy.includes('The rest are under Orders.'));
+  assert.ok(busy.includes('The rest are under Activity.'));
   assert.ok(busy.some((line) => /down \$50,/.test(line)));
 });
 
 test('settings fall back to defaults and are saved in the Accessibility settings store when changed', (t) => {
-  assert.deepEqual(parseBriefingSettings(undefined), { rate: 1, everyMinutes: 0 });
-  assert.deepEqual(parseBriefingSettings('text'), { rate: 1, everyMinutes: 0 });
-  assert.deepEqual(parseBriefingSettings({ rate: 9, everyMinutes: 7 }), { rate: 1, everyMinutes: 0 });
+  assert.deepEqual(parseBriefingSettings(undefined), { rate: 1, everyMinutes: 0, voice: 'browser' });
+  assert.deepEqual(parseBriefingSettings('text'), { rate: 1, everyMinutes: 0, voice: 'browser' });
+  assert.deepEqual(parseBriefingSettings({ rate: 9, everyMinutes: 7, voice: 'robot' }), { rate: 1, everyMinutes: 0, voice: 'browser' });
   const stored = withStorage(t, saved({ rate: 1.25, everyMinutes: 2 }));
   const service = new BriefingService();
-  assert.deepEqual(service.settings(), { rate: 1.25, everyMinutes: 2 });
+  assert.deepEqual(service.settings(), { rate: 1.25, everyMinutes: 2, voice: 'browser' });
   service.update({ rate: 0.8 });
-  assert.deepEqual(savedBriefing(stored), { rate: 0.8, everyMinutes: 2, lastAt: {} });
+  assert.deepEqual(savedBriefing(stored), { rate: 0.8, everyMinutes: 2, voice: 'browser', lastAt: {} });
 });
 
 test('every repeat fits inside the inactivity sign-out, and older longer repeats are kept on (PS-30)', () => {
@@ -176,7 +176,7 @@ test('every repeat fits inside the inactivity sign-out, and older longer repeats
     assert.ok(value + BRIEFING_TICK_MS / 60000 < warningStartsAt, `${value} minutes plays before the warning`);
   }
   for (const legacy of [15, 30, 60]) {
-    assert.deepEqual(parseBriefingSettings({ rate: 1, everyMinutes: legacy }), { rate: 1, everyMinutes: 5 });
+    assert.deepEqual(parseBriefingSettings({ rate: 1, everyMinutes: legacy }), { rate: 1, everyMinutes: 5, voice: 'browser' });
   }
 });
 
@@ -291,16 +291,18 @@ test('a failed source shows an error, and the repeat timer only plays when one i
 test('the Audio briefing card in Settings changes voice speed and repeats', async (t) => {
   const { BriefingSettingsCard } = await import('../src/app/briefing-settings.ts');
   const calls = [];
-  const fake = { settings: () => ({ rate: 1, everyMinutes: 0 }), update: (c) => calls.push(c) };
+  const fake = { settings: () => ({ rate: 1, everyMinutes: 0, voice: 'browser' }), update: (c) => calls.push(c) };
   const fixture = await render(t, BriefingSettingsCard, {}, [{ provide: BriefingService, useValue: fake }]);
   const root = fixture.nativeElement;
   assert.match(root.querySelector('#briefing-settings-title').textContent, /Audio briefing/);
-  const [speed, repeat] = root.querySelectorAll('select');
+  const [voice, speed, repeat] = root.querySelectorAll('select');
   assert.equal(speed.closest('label').textContent.includes('Voice speed'), true, 'each dropdown has a label');
   speed.value = '1.25'; speed.dispatchEvent(new browser.Event('change'));
   assert.deepEqual([...repeat.options].map((o) => o.textContent.trim()), ['Only when I ask', 'Every 2 minutes', 'Every 5 minutes']);
   repeat.value = '5'; repeat.dispatchEvent(new browser.Event('change'));
-  assert.deepEqual(calls, [{ rate: 1.25 }, { everyMinutes: 5 }]);
+  voice.value = 'screen-reader'; voice.dispatchEvent(new browser.Event('change'));
+  assert.match(voice.closest('label').textContent, /Voice/);
+  assert.deepEqual(calls, [{ rate: 1.25 }, { everyMinutes: 5 }, { voice: 'screen-reader' }]);
 });
 
 test('a market open or close triggers a briefing only when repeats are on', async (t) => {
@@ -313,4 +315,11 @@ test('a market open or close triggers a briefing only when repeats are on', asyn
   fixture.componentInstance.service.update({ everyMinutes: 0 });
   fixture.componentRef.setInput('marketOpen', false); fixture.detectChanges();
   assert.equal(plays.mock.callCount(), 1);
+});
+
+ test('history timeout preserves the briefing and handles rejected history', async () => {
+  const { briefingOrders } = await import('../src/app/briefing.ts');
+  assert.deepEqual(await briefingOrders(new Promise(() => {}), 5), []);
+  assert.deepEqual(await briefingOrders(Promise.reject(new Error('offline')), 5), []);
+  assert.deepEqual(await briefingOrders(Promise.resolve([1]), 5), [1]);
 });

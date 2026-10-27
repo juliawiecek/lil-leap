@@ -48,3 +48,10 @@ story is merged; skip them if it is not.
 | Date | Who | Result | Notes |
 |---|---|---|---|
 | | | | |
+
+## Captions and glossary (PS-23)
+
+1. Turn Voice mode on in Accessibility and keep Captions on. Move focus and verify the spoken sentence appears in the caption strip. Open an order review and check the strip stays visible inside the dialog.
+2. Focus Buying power and press Alt+W. Hear and see its plain-language definition. Repeat on a control without a glossary entry; it says "No extra help for this item."
+3. Turn on switch control and repeat Alt+W on the ringed item. At Fast, item phrases stop when the ring advances; an order review finishes before scanning continues.
+4. Review an order, choose Edit, change its quantity and review again. The new read-back interrupts any briefing. Turn captions off and verify the strip disappears.

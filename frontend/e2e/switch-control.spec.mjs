@@ -9,7 +9,7 @@ async function scanState(page) {
     return {
       live: document.querySelector('.scan-live')?.textContent ?? '',
       chip: chip && !chip.hidden ? chip.textContent : '',
-      name: active?.getAttribute('aria-label') || active?.textContent?.trim().slice(0, 160),
+      name: active?.getAttribute('aria-label') || [...(active?.labels ?? [])].map(label => label.textContent.trim()).join(' ') || active?.textContent?.trim().slice(0, 160),
       graphic: active?.matches('svg, .allocation-donut, .split-bar, .heat-map, .sector-list') ?? false,
     };
   });
@@ -51,6 +51,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
         sessionStorage.setItem('switch-test-seeded', '1');
         localStorage.setItem('nexttrade.accessibility', JSON.stringify({
           voice: { enabled: true },
+          charts: { tools: true },
           switchControl: { enabled: false, intervalMs: 700, key, speak: false, backEverySec: 0, pauseEverySec: 0 },
         }));
       }
@@ -71,7 +72,7 @@ for (const [tier, key] of [['NOVICE', 'Space'], ['ADVANCED', 'Enter']]) {
     await expect(page.locator('.scan-ring')).toHaveCount(1);
     await expect(page.locator('.scan-bar')).toBeVisible();
     await expectVisibleRing(page);
-    if (tier === 'NOVICE') { await group('Portfolio performance'); await group('Portfolio chart'); }
+    if (tier === 'NOVICE') { await group('Portfolio chart'); }
     else await group('Price chart');
 
     await scanTo(page, state => state.name === 'Explain this chart');
@@ -117,14 +118,18 @@ test('switch control reaches the shared tools dialog, toggles voice settings and
   await page.clock.pauseAt(new Date('2026-10-21T15:30:10Z'));
   await page.keyboard.press('Alt+s'); await page.clock.runFor(20);
   const press = async () => { await page.keyboard.press('Space'); await page.clock.runFor(65); };
-  await scanTo(page, state => state.live === 'Voice assistance group'); await press();
-  await scanTo(page, state => /Enable built-in voice assistance/.test(state.name)); await press();
-  await expect(dialog.getByLabel('Enable built-in voice assistance', { exact: true })).toBeChecked();
+  await scanTo(page, state => state.live === 'Voice mode group'); await press();
+  await scanTo(page, state => /Voice mode/.test(state.name)); await press();
+  await expect(dialog.getByRole('button', { name: 'Voice mode', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await scanTo(page, state => /Voice options/.test(state.name)); await press();
   await scanTo(page, state => /Speak on keyboard focus/.test(state.name)); await press();
   await expect(dialog.getByLabel('Speak on keyboard focus', { exact: true })).toBeChecked();
   await scanTo(page, state => state.live === 'Back'); await press();
+  // Closed, Visual assistance holds only its caret, so the ring goes straight to it; once open it is a group.
+  await scanTo(page, state => /Display options/.test(state.name)); await press();
   await scanTo(page, state => state.live === 'Visual assistance group'); await press();
   await scanTo(page, state => /Minimum text size/.test(state.name)); await press();
+  await scanTo(page, state => state.live.includes('Extra large') && state.live.endsWith(' group')); await press();
   await scanTo(page, state => /Extra large/.test(state.name)); await press();
   await expect(page.locator('html')).toHaveAttribute('data-a11y-text', 'extra-large');
   await expectVisibleRing(page);

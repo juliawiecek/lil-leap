@@ -3,6 +3,8 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": ".", "ignoreDeprecations": "6.0",
+    "paths": { "@angular/core": ["./node_modules/@angular/core"], "tslib": ["./node_modules/tslib"] },
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,

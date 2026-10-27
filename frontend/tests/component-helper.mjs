@@ -12,7 +12,7 @@ import { angularJitApplicationTransform } from '@angular/compiler-cli';
 // source maps. Compile in memory; production source files are never changed.
 const appRoot = new URL('../src/', import.meta.url).href;
 const sharedRoot = new URL('../../shared/', import.meta.url).href;
-const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['.ts']), {
+const program = ts.createProgram([...ts.sys.readDirectory(fileURLToPath(appRoot), ['.ts']), ...ts.sys.readDirectory(fileURLToPath(sharedRoot), ['.ts'], ['node_modules', 'session-core'], ['*.ts'], 1)], {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
   experimentalDecorators: true, inlineSourceMap: true, inlineSources: true,
@@ -20,6 +20,7 @@ const program = ts.createProgram(ts.sys.readDirectory(fileURLToPath(appRoot), ['
 });
 registerHooks({
   resolve(specifier, context, nextResolve) {
+    if (context.parentURL?.startsWith(sharedRoot) && /^(?:@angular\/|rxjs|tslib)/.test(specifier)) return nextResolve(specifier, { ...context, parentURL: new URL('../package.json', appRoot).href });
     if (specifier.startsWith('.') && (context.parentURL?.startsWith(appRoot) || context.parentURL?.startsWith(sharedRoot))) {
       const candidate = new URL(specifier + '.ts', context.parentURL);
       if (existsSync(candidate)) return nextResolve(candidate.href, context);
@@ -27,7 +28,7 @@ registerHooks({
     return nextResolve(specifier, context);
   },
   load(url, context, nextLoad) {
-    if (url.startsWith(appRoot) && new URL(url).pathname.endsWith('.ts')) {
+    if ((url.startsWith(appRoot) || url.startsWith(sharedRoot)) && new URL(url).pathname.endsWith('.ts')) {
       const sourceFile = program.getSourceFile(fileURLToPath(url));
       // Keep plain TS on Node's native loader in every suite. Mixing stripped
       // and transpiled versions of one URL would merge incompatible coverage offsets.
