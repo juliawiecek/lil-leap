@@ -745,15 +745,17 @@ test('the stock list without its first prices does not show $0.00 rows', t => {
   assert.equal(desk.quotes().length, 5);
 });
 
-test('Buy and Sell sit in the page heading on the Overview, like the advanced ticket, and leave with it', async (t) => {
+test('the Ready to trade card sits at the top of the Overview, like the advanced ticket, and leaves with it', async (t) => {
   const fixture = await render(t, NoviceDashboard, {}, [feedProvider(feedWith())]);
   const root = fixture.nativeElement;
-  const heading = () => [...root.querySelectorAll('.page-heading .trade-actions button')].map((b) => b.textContent.trim());
-  assert.deepEqual(heading(), ['Buy', 'Sell']);
-  assert.equal(root.querySelector('.trade-panel'), null, 'the old Ready to trade card is gone');
-  root.querySelector('.page-heading .trade-actions button:last-child').click(); fixture.detectChanges();
+  const card = () => root.querySelector('.novice-content > .trade-panel');
+  assert.ok(card(), 'the card is a direct child of the page, not inside a column');
+  assert.equal(card().previousElementSibling.className, 'page-heading', 'right under the greeting');
+  assert.equal(card().nextElementSibling.classList.contains('overview-grid'), true, 'above the columns');
+  assert.deepEqual([...card().querySelectorAll('.trade-actions button')].map((b) => b.textContent.trim()), ['Buy', 'Sell']);
+  card().querySelector('.trade-actions button:last-child').click(); fixture.detectChanges();
   assert.equal(fixture.componentInstance.modal(), 'trade');
   assert.equal(fixture.componentInstance.side(), 'Sell');
   fixture.componentInstance.navigate('Portfolio'); fixture.detectChanges();
-  assert.deepEqual(heading(), [], 'other pages keep the heading to the title and market status');
+  assert.equal(card(), null, 'other pages have no trade card');
 });

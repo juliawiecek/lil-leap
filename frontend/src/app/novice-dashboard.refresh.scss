@@ -183,8 +183,15 @@ th { color: var(--text-subtle); font-weight: 600; }
 .diversification small { font-size: 12.5px; font-weight: 500; }
 .shield-icon { border-radius: 10px; background: var(--surface-tone-85); color: var(--text-tone-19); }
 .shield-icon app-dashboard-icon { width: 16px; height: 16px; }
-/* Buy and Sell sit in the page heading beside the market status, like the advanced ticket at the top. */
-.heading-side { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+/* The "Ready to trade?" card runs across the top of the Overview, under the greeting, like the advanced ticket. */
+.trade-panel {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  margin-bottom: 20px; padding: 22px 28px;
+  border-color: var(--surface-tone-10); border-radius: 22px;
+  background: radial-gradient(90% 80% at 100% 0%, var(--text-wash-59), transparent 60%), var(--surface-tone-84);
+}
+.trade-panel h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+.trade-panel p { margin: 0; font-size: 14px; line-height: 1.55; }
 .trade-actions { display: flex; gap: 12px; margin: 0; }
 .trade-actions > :last-child { grid-column: auto; }
 .trade-actions button { min-height: 52px; min-width: 132px; padding: 0 32px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; border-radius: 14px; white-space: nowrap; }
@@ -249,7 +256,8 @@ th { color: var(--text-subtle); font-weight: 600; }
   .portfolio-value { font-size: 40px; }
   .portfolio-stats strong { font-size: 15px; }
   .holdings-table th:first-child, .holdings-table td:first-child { padding-left: 16px; }
-  .heading-side, .trade-actions { width: 100%; }
+  .trade-panel { padding: 18px 16px; }
+  .trade-actions { width: 100%; }
   .trade-actions button { flex: 1; }
 }
 
@@ -263,8 +271,8 @@ th { color: var(--text-subtle); font-weight: 600; }
 .tolerance-field:focus-within { border-color: var(--surface-tone-49); box-shadow: 0 0 0 4px var(--text-wash-22); }
 .detail-dialog .tolerance-field input { width: 40px; height: auto; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text); font: inherit; text-align: right; outline: none; }
 
-/* Buy uses the allocation's periwinkle, Sell is red: in the page heading, in the trade window's side picker,
-   and on its Review / Confirm button. Sell in the heading is outlined so it doesn't shout. */
+/* Buy uses the allocation's periwinkle, Sell is red: on the "Ready to trade?" card, in the trade window's side picker,
+   and on its Review / Confirm button. Sell on the card is outlined so it doesn't shout. */
 /* Keep an opaque base and the same gradient on hover in every palette. */
 .trade-actions .green-button { border-color: var(--periwinkle); background: var(--periwinkle) linear-gradient(135deg, var(--periwinkle-deep), var(--periwinkle-light)); color: var(--category-tone-07); }
 .trade-actions .green-button:hover { border-color: var(--periwinkle-light); background-color: var(--periwinkle-light); box-shadow: 0 10px 30px var(--category-wash-06); }
