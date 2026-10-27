@@ -82,12 +82,13 @@ test('the toast corner shares the service and offers a View action', t => {
   assert.equal(viewed, 1);
 });
 
-test('hover and focus each hold a toast until both leave, then restart its full timer', t => {
+test('sell styling survives while hover and focus hold a toast until both leave', t => {
  t.mock.timers.enable({ apis: ['setTimeout'] }); const service = new ToastService(); t.after(() => service.ngOnDestroy());
- const id = service.show('info', 'Saved'); t.mock.timers.tick(5000);
+ const id = service.show('filled', 'Sold 1 AAPL', '', 'sell'); t.mock.timers.tick(5000);
+ assert.equal(service.toasts()[0].side, 'sell');
  service.hold(id, 'hover'); service.hold(id, 'focus'); t.mock.timers.tick(20000);
  service.release(id, 'hover'); t.mock.timers.tick(20000); assert.equal(service.toasts().length, 1);
- service.release(id, 'focus'); t.mock.timers.tick(TOAST_MS.info - 1); assert.equal(service.toasts().length, 1);
+ service.release(id, 'focus'); t.mock.timers.tick(TOAST_MS.filled - 1); assert.equal(service.toasts().length, 1);
  t.mock.timers.tick(1); assert.equal(service.toasts().length, 0);
 });
 test('modal dialogs hold toasts and closing starts a fresh full duration', async t => {

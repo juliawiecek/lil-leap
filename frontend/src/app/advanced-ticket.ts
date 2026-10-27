@@ -1,4 +1,5 @@
 import { PriceFlash } from './price-flash';
+import { MenuOption, SelectMenu } from './select-menu';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { firstValueFrom } from 'rxjs';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
@@ -9,11 +10,20 @@ import { OrderPreset, riskQuantity, validPreset } from './order-presets';
 
 @Component({
   selector: 'app-advanced-ticket',
-  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, PriceFlash],
+  imports: [CurrencyPipe, DecimalPipe, DashboardIcon, PriceFlash, SelectMenu],
   templateUrl: './advanced-ticket.html',
   styleUrl: './advanced-ticket.scss',
 })
 export class AdvancedTicket {
+  /** The symbol menu's rows: symbol, company name and live price, like the novice stock menu. */
+  readonly symbolOptions = computed<MenuOption[]>(() =>
+    this.desk().quotes().map((q) => ({
+      value: q.symbol,
+      label: q.symbol,
+      detail: q.name,
+      meta: q.price ? `$${q.price.toFixed(2)}` : undefined,
+    })),
+  );
   readonly desk = input.required<AdvancedDashboard>();
   readonly riskBudget = signal('');
   readonly presetName = signal('');

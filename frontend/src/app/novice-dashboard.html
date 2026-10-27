@@ -139,18 +139,6 @@
           <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketDate() }}</span>
         </div>
       </div>
-      @if (activeTab() === 'Overview') {
-        <section class="panel trade-panel" data-scan-group="Ready to trade" aria-labelledby="novice-dashboard-heading-5">
-          <div>
-            <h2 id="novice-dashboard-heading-5">Ready to trade?</h2>
-            <p>Buy or sell shares. You’ll review the details before confirming.</p>
-          </div>
-          <div class="trade-actions">
-            <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
-            ><button type="button" class="secondary-button" (click)="openTrade('Sell')">Sell</button>
-          </div>
-        </section>
-      }
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
         <div class="primary-column">
           @if (activeTab() === 'Overview') {
@@ -399,6 +387,16 @@
         </div>
         @if (activeTab() === 'Overview') {
           <div class="secondary-column">
+            <section class="panel trade-panel" data-scan-group="Ready to trade" aria-labelledby="novice-dashboard-heading-5">
+              <h2 id="novice-dashboard-heading-5">Ready to trade?</h2>
+              <p>Buy or sell shares. You’ll review the details before confirming.</p>
+              <div class="trade-actions">
+                <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
+                ><button type="button" class="secondary-button" (click)="openTrade('Sell')">
+                  Sell
+                </button>
+              </div>
+            </section>
             <section class="panel allocation-panel" data-scan-group="Asset allocation" aria-labelledby="novice-dashboard-heading-4">
               <div class="panel-heading">
                 <h2 id="novice-dashboard-heading-4">Allocation by sector</h2>

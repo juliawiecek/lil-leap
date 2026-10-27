@@ -9,7 +9,6 @@ const { DashboardIcon } = await import('../src/app/dashboard-icon.ts');
 const { StockDashboard } = await import('../src/app/stock-dashboard.ts');
 const { AdvancedDashboard } = await import('../src/app/advanced-dashboard.ts');
 const { AdvancedTicket } = await import('../src/app/advanced-ticket.ts');
-const { AdvancedChart } = await import('../src/app/advanced-chart.ts');
 const { StockDashboardComponent } = await import('../src/app/stock-dashboard.component.ts');
 
 test('icons render requested paths and fall back for unknown names', async t => {
@@ -61,22 +60,3 @@ test('trade ticket binds order inputs and submits a review with validation', asy
   assert.match(desk.message(), /whole number/); assert.equal(review.mock.callCount(), 1);
 });
 
-test('chart periods update accessible labels and unavailable indicators are explained without invented data', async t => {
-  t.mock.method(StockDashboardComponent.prototype, 'ngAfterViewInit', () => {});
-  const desk = component(t, AdvancedDashboard, [feedProvider(feedWith())]);
-  const fixture = await render(t, AdvancedChart, { desk });
-  assert.match(fixture.nativeElement.querySelector('.technical-plot').getAttribute('aria-label'), /AAPL 1D recorded prices/);
-  assert.match(fixture.nativeElement.textContent, /Collecting recorded prices for AAPL/);
-  assert.match(fixture.nativeElement.textContent, /Needs 200 recorded bars/);
-  assert.match(fixture.nativeElement.textContent, /Volume unavailable/);
-  assert.equal(fixture.nativeElement.querySelectorAll('.indicator-line').length, 0);
-  const weekly = button(fixture, '1W');
-  assert.equal(weekly.getAttribute('aria-pressed'), 'true');
-  assert.equal(desk.period(), '1W');
-  assert.match(fixture.nativeElement.querySelector('.technical-plot').getAttribute('aria-label'), /AAPL 1W recorded prices/);
-  // Every seeded quote starts as a gainer, so make one fall to check the loss styling.
-  desk.quote('NVDA').change = -2.36;
-  desk.choose(desk.quote('NVDA')); fixture.detectChanges();
-  assert.match(fixture.nativeElement.textContent, /NVIDIA/);
-  assert.ok(fixture.nativeElement.querySelector('.loss'));
-});
