@@ -10,6 +10,10 @@ export interface KeyboardShortcut {
 }
 
 export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
+  { keys: ['Alt + Shift + N'], action: 'Turn arrow-key navigation on or off, independently of voice mode.' },
+  { keys: ['Alt + Shift + V'], action: 'Turn voice mode on or off on any page, including before sign-in.' },
+  { keys: ['Up / Down', 'Left / Right'], action: 'With arrow-key navigation on, move above/below or left/right, following the page layout. Voice mode optionally reads each item aloud.' },
+  { keys: ['Enter', 'Escape'], action: 'On a group, Enter goes inside. Escape returns to its containing group. On a button or link, Enter activates it.' },
   { keys: ['Alt + Shift + A'], action: 'Open Settings for accessibility. Before sign-in, open accessibility tools.' },
   { keys: ['Alt + Shift + R'], action: 'Read the focused element on demand.' },
   { keys: ['Alt + Shift + P'], action: 'Read a concise page summary.' },

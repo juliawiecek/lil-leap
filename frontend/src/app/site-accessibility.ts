@@ -45,6 +45,8 @@ export class SiteAccessibility {
     // Stop speech silences the current sentence only; turning off "Read items aloud" here would
     // leave a switch user with a silent ring until they found the setting again (PS-19).
     stopScanningSpeech: () => this.scan.hush(),
+    toggleVoice: () => this.update({ enabled: !this.settings().enabled }),
+    toggleNavigation: () => this.toggleArrowNavigation(),
     // $, %, + and marks such as ★ and × are said as words or left out, never read literally.
     format: voiceText, hint: glossaryHint,
   });
@@ -80,7 +82,13 @@ export class SiteAccessibility {
     this.destroy.onDestroy(() => { subscription?.unsubscribe(); this.controller.destroy(); });
   }
   openSettings(): void { void this.router?.navigate(['/settings']); }
+  toggleArrowNavigation(): void {
+    const enabled = !this.settings().arrowNavigation;
+    this.update({ arrowNavigation: enabled });
+    if (enabled) this.controller.beginArrowNavigation();
+  }
   update(patch: Partial<AssistivePreferences>): void {
+    if (patch.arrowNavigation === true && this.scan.settings().enabled) this.scan.update({ enabled: false });
     const wasOn = this.settings().enabled;
     const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
     this.store.write('voice', next.voice); this.store.write('visual', next.visual);

@@ -28,6 +28,31 @@ NextTrade is a trading platform built around two applications: **NextTrade**, th
 - Insights (reporting): http://localhost:4201
 - API docs: see [API Documentation](#api-documentation-swagger--openapi)
 
+### Arrow-key navigation, with or without voice
+
+Open **Settings > Accessibility** and turn **Arrow-key navigation On** using its single toggle button.
+This starts navigation and moves focus to the page heading,
+keeping your voice setting. For silent navigation, leave **Voice mode Off**.
+Use **Down/Up arrows** to move to elements below/above and **Right/Left arrows** to move to
+elements to the right/left. Movement follows the current page layout, including responsive reflow.
+You do not need to keep pressing Tab between ordinary page items.
+
+In either app, **Alt + Shift + N** turns arrow-key navigation on or off, including before sign-in.
+**Alt + Shift + V** independently turns voice mode on or off. Navigation works without browser
+speech support. With voice on, items are also read aloud as focus moves.
+A panel, navigation area or settings fieldset is a **group**. **Enter** goes inside that group; **Escape** comes back out
+to its container, one level at a time. Arrows move among items at the current level. At an edge,
+feedback explains there is no item in that direction; focus stays put and the key does not scroll the page.
+**Enter** on a button or link activates it; moving focus or entering a group never submits an order.
+Fields, menus, tabs and charts retain their usual editing or exploration keys. **Escape** returns to
+their containing group (close an open menu first), and **Tab/Shift + Tab** also work as usual.
+**Alt + Shift + X** stops speech. Outside a group, Escape keeps its normal dialog/popup behavior.
+
+Navigation and voice preferences are saved independently in this browser. Choose a local voice, speed and detail level under
+**Settings > Accessibility**, or press **Alt + Shift + A** to open accessibility settings/tools.
+If you use a screen reader, you can keep voice mode off and use its usual reading commands.
+Browser speech requires an installed local system voice.
+
 ### Test Logins (Development Only)
 
 A fresh database comes with three ready accounts, so there is no need to register by hand.

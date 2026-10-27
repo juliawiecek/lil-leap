@@ -14,6 +14,7 @@ function parseAssistivePreferences(voice, visual = {}) {
     const v = record(voice), l = record(visual);
     return {
         enabled: v.enabled === true, focus: v.focus === true, hover: v.hover === true,
+        arrowNavigation: l.arrowNavigation === true || (l.arrowNavigation === undefined && v.enabled === true),
         hoverDelay: numberIn(v.hoverDelay, 400, 700, 550), rate: nearestRate(numberIn(v.rate, .5, 2, 1)),
         volume: numberIn(v.volume, 0, 1, 1), voiceURI: typeof v.voiceURI === 'string' ? v.voiceURI.slice(0, 300) : '',
         level: v.level === 'detailed' ? 'detailed' : 'brief', soundCues: v.soundCues === true,
@@ -27,7 +28,7 @@ function mergeAssistivePreferences(voice, visual, patch) {
     const next = parseAssistivePreferences({ enabled, focus, hover, hoverDelay, rate, volume, voiceURI, level, soundCues }, looks);
     return {
         voice: { ...record(voice), enabled: next.enabled, focus: next.focus, hover: next.hover, hoverDelay: next.hoverDelay, rate: next.rate, volume: next.volume, voiceURI: next.voiceURI, level: next.level, soundCues: next.soundCues },
-        visual: { ...record(visual), enhancedFocus: next.enhancedFocus, textSize: next.textSize, textSpacing: next.textSpacing, contrast: next.contrast, highlightSpeech: next.highlightSpeech },
+        visual: { ...record(visual), arrowNavigation: next.arrowNavigation, enhancedFocus: next.enhancedFocus, textSize: next.textSize, textSpacing: next.textSpacing, contrast: next.contrast, highlightSpeech: next.highlightSpeech },
     };
 }
 function applyAssistiveVisuals(root, settings) {

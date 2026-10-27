@@ -73,6 +73,178 @@ async function insightsFixture(page, info, operations = false) {
 
 test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 
+test('voice arrow navigation works from sign-in with a keyboard shortcut and persists in both apps', async ({ page }) => {
+  await mockSpeech(page);
+  await page.goto('/login');
+  await expect(page.locator('#landing-title')).toBeVisible();
+  await page.keyboard.press('Alt+Shift+v');
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toBe('Voice mode on.');
+
+  const panel = await tools(page);
+  await panel.getByRole('button', { name: 'Arrow-key navigation', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  const headingBox = await panel.getByRole('heading', { name: 'Accessibility tools', exact: true }).boundingBox();
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('P');
+  const paragraphBox = await page.evaluate(() => ({ top: document.activeElement.getBoundingClientRect().top }));
+  expect(paragraphBox.top).toBeGreaterThanOrEqual(headingBox.y + headingBox.height - 1);
+  const text = await page.evaluate(() => document.activeElement.textContent.replace(/\s+/g, ' ').trim());
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain(text);
+  await page.keyboard.press('Escape');
+  await expect(panel).not.toBeVisible();
+
+  const email = page.locator('input[type="email"]:visible').first();
+  await email.focus(); await email.fill('user@example.test');
+  await page.keyboard.press('ArrowLeft');
+  await expect(email).toBeFocused(); await expect(email).toHaveValue('user@example.test');
+  await page.keyboard.press('Alt+Shift+v');
+  const count = await page.evaluate(() => window.assistiveSpeech.length);
+  await page.keyboard.press('ArrowDown');
+  expect(await page.evaluate(() => window.assistiveSpeech.length)).toBe(count);
+  await page.keyboard.press('Alt+Shift+v');
+  await page.reload(); await expect(page.locator('#landing-title')).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.length)).toBeGreaterThan(0);
+});
+
+test('the single arrow-key navigation toggle starts navigation and moves focus instead of scrolling', async ({ page }) => {
+  await mockSpeech(page, { voice: { enabled: true }, visual: { arrowNavigation: false } });
+  await page.goto('/login');
+  const panel = await tools(page);
+  const start = panel.getByRole('button', { name: 'Arrow-key navigation', exact: true });
+  await expect(start).toHaveCount(1);
+  await start.focus(); await page.keyboard.press('Enter');
+  await expect(panel.getByRole('heading', { name: 'Accessibility tools', exact: true })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain('Arrow-key navigation started. Press Down or Up arrow');
+  await page.keyboard.press('ArrowRight');
+  await expect(panel.getByRole('button', { name: 'Close accessibility tools', exact: true })).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain('Close accessibility tools');
+  await expect(panel).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(panel.getByRole('heading', { name: 'Accessibility tools', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowDown'); // introductory paragraph below the header
+  await expect.poll(() => page.evaluate(() => document.activeElement.tagName)).toBe('P');
+  await page.keyboard.press('ArrowDown');
+  const group = panel.locator('fieldset[data-scan-group="Arrow-key navigation"]');
+  await expect(group).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain('Group. Press Enter');
+  await page.keyboard.press('Enter');
+  expect(await group.evaluate(node => node.contains(document.activeElement) && node !== document.activeElement)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain('Inside Arrow-key navigation');
+  await page.keyboard.press('Escape');
+  await expect(group).toBeFocused(); await expect(panel).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(panel).not.toBeVisible();
+});
+
+for (const unsupported of [false, true]) {
+  test(`silent arrow navigation persists independently of voice${unsupported ? ' without speech support' : ''}`, async ({ page }, info) => {
+    await mockSpeech(page);
+    if (unsupported) await page.addInitScript(() => {
+      Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: undefined });
+      window.SpeechSynthesisUtterance = undefined;
+    });
+    await page.goto('/login');
+    const panel = await tools(page);
+    const voice = panel.getByRole('button', { name: 'Voice mode', exact: true });
+    const navigation = panel.getByRole('button', { name: 'Arrow-key navigation', exact: true });
+    await expect(voice).toHaveAttribute('aria-pressed', 'false');
+    await expect(navigation).toHaveAttribute('aria-pressed', 'false');
+    if (unsupported) await expect(voice).toBeDisabled();
+    const start = navigation;
+    await expect(panel.getByRole('button', { name: /arrow-key navigation/i })).toHaveCount(1);
+    await expect(start).toBeEnabled(); await start.focus(); await page.keyboard.press('Enter');
+    await expect(navigation).toHaveAttribute('aria-pressed', 'true');
+    await expect(voice).toHaveAttribute('aria-pressed', 'false');
+    await page.keyboard.press('ArrowRight');
+    await expect(panel.getByRole('button', { name: 'Close accessibility tools', exact: true })).toBeFocused();
+    await expect(panel.getByRole('button', { name: 'Close accessibility tools', exact: true })).toHaveAttribute('data-a11y-nav-focus', '');
+    await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+    const group = panel.locator('fieldset[data-scan-group="Arrow-key navigation"]');
+    await expect(group).toBeFocused(); await page.keyboard.press('Enter');
+    expect(await group.evaluate(node => node !== document.activeElement && node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape'); await expect(group).toBeFocused();
+    expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
+    await page.reload(); await expect(page.locator('#landing-title')).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    expect(await page.evaluate(() => document.activeElement.hasAttribute('data-a11y-nav-focus'))).toBe(true);
+    expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
+    const key = info.project.name === 'Insights' ? 'nexttrade-insights.accessibility' : 'nexttrade.accessibility';
+    let saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
+    expect(saved.visual.arrowNavigation).toBe(true); expect(saved.voice.enabled).toBe(false);
+    await page.keyboard.press('Alt+Shift+n');
+    saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
+    expect(saved.visual.arrowNavigation).toBe(false); expect(saved.voice.enabled).toBe(false);
+    await page.keyboard.press('Alt+Shift+n');
+    expect(await page.evaluate(() => window.assistiveSpeech)).toEqual([]);
+  });
+}
+
+test('spatial navigation follows a rendered grid and enters and exits groups without activating their buttons', async ({ page }) => {
+  await mockSpeech(page, { voice: { enabled: true } });
+  await page.goto('/login'); await expect(page.locator('#landing-title')).toBeVisible();
+  // A real browser layout fixture exercises the production delegated controller in both apps.
+  await page.evaluate(() => {
+    window.spatialActivations = 0;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'spatial-layout'; dialog.tabIndex = -1;
+    dialog.style.cssText = 'width:540px;height:420px;padding:20px;max-height:90vh';
+    dialog.innerHTML = `<section data-a11y-nav-group="Bottom right" style="position:absolute;left:290px;top:220px;width:220px;height:150px"><button>Bottom right action</button></section>
+      <section data-a11y-nav-group="Top left" style="position:absolute;left:20px;top:20px;width:220px;height:150px"><button data-test-action>First action</button><button>Second action</button></section>
+      <section data-a11y-nav-group="Bottom left" style="position:absolute;left:20px;top:220px;width:220px;height:150px"><button>Bottom left action</button></section>
+      <section data-a11y-nav-group="Top right" style="position:absolute;left:290px;top:20px;width:220px;height:150px"><button>Top right action</button></section>`;
+    dialog.querySelector('[data-test-action]').addEventListener('click', () => window.spatialActivations++);
+    document.body.append(dialog); dialog.showModal(); dialog.focus();
+  });
+  const fixture = page.locator('#spatial-layout');
+  const group = name => fixture.locator(`[data-a11y-nav-group="${name}"]`);
+  await page.keyboard.press('ArrowDown'); await expect(group('Top left')).toBeFocused();
+  await page.keyboard.press('ArrowRight'); await expect(group('Top right')).toBeFocused();
+  await page.keyboard.press('ArrowDown'); await expect(group('Bottom right')).toBeFocused();
+  await page.keyboard.press('ArrowLeft'); await expect(group('Bottom left')).toBeFocused();
+  await page.keyboard.press('ArrowUp'); await expect(group('Top left')).toBeFocused();
+  const scroll = await page.evaluate(() => document.querySelector('#spatial-layout').scrollTop);
+  await page.keyboard.press('ArrowUp'); await expect(group('Top left')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toBe('No item above.');
+  expect(await fixture.evaluate(node => node.scrollTop)).toBe(scroll);
+  await page.keyboard.down('Enter'); await expect(fixture.getByRole('button', { name: 'First action', exact: true })).toBeFocused();
+  await page.keyboard.down('Enter'); await page.keyboard.up('Enter');
+  expect(await page.evaluate(() => window.spatialActivations)).toBe(0);
+  await page.keyboard.press('Enter'); expect(await page.evaluate(() => window.spatialActivations)).toBe(1);
+  await page.keyboard.press('Escape'); await expect(group('Top left')).toBeFocused();
+  await expect(fixture).toBeVisible();
+  await group('Top right').evaluate(node => { node.style.left = '20px'; node.style.top = '185px'; node.style.height = '25px'; });
+  await page.keyboard.press('ArrowDown'); await expect(group('Top right')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(fixture).not.toBeVisible();
+});
+
+test('dashboard arrows move between real panels and Enter and Escape explore their contents', async ({ page }, info) => {
+  test.skip(info.project.name !== 'NextTrade');
+  await page.setViewportSize({ width: 1600, height: 1100 });
+  await colourFixture(page, 'NOVICE'); await mockSpeech(page, { voice: { enabled: true } });
+  await page.goto('/dashboard');
+  const investments = page.locator('section[data-scan-group="Your investments"]');
+  const portfolio = page.locator('section[data-scan-group="Portfolio"]');
+  const allocation = page.locator('section[data-scan-group="Asset allocation"]');
+  await investments.getByRole('button', { name: /View all holdings/ }).focus();
+  await page.keyboard.press('Escape'); await expect(investments).toBeFocused();
+  await page.keyboard.press('ArrowUp'); await expect(portfolio).toBeFocused();
+  await page.keyboard.press('ArrowRight'); await expect(allocation).toBeFocused();
+  await page.keyboard.press('ArrowLeft'); await expect(portfolio).toBeFocused();
+  await page.keyboard.press('Enter');
+  expect(await portfolio.evaluate(node => node.contains(document.activeElement) && node !== document.activeElement)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.assistiveSpeech.at(-1))).toContain('Inside Portfolio');
+  await page.keyboard.press('Escape'); await expect(portfolio).toBeFocused();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  // Reflow to one column; the same panel is now found below, never by wrapping Right.
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.keyboard.press('ArrowDown');
+  const after = await page.evaluate(() => ({ top: document.activeElement.getBoundingClientRect().top + scrollY }));
+  const pageTop = await page.evaluate(() => scrollY);
+  // Scroll-into-view can move the viewport; compare document coordinates after the move.
+  const portfolioNow = await portfolio.boundingBox();
+  expect(after.top).toBeGreaterThanOrEqual(portfolioNow.y + pageTop + portfolioNow.height - 1);
+});
+
 for (const tier of ['NOVICE', 'ADVANCED']) {
   test(`${tier} all page routes expose native structure and pass the WCAG axe rules`, async ({ page }, info) => {
     test.skip(info.project.name !== 'NextTrade'); test.setTimeout(120000);

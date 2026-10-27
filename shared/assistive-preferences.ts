@@ -2,6 +2,8 @@
 export type SpeechLevel = 'brief' | 'detailed';
 export interface AssistivePreferences {
   enabled: boolean;
+  /** Spatial keyboard navigation is independent of optional browser speech. */
+  arrowNavigation: boolean;
   focus: boolean;
   hover: boolean;
   hoverDelay: number;
@@ -28,6 +30,8 @@ export function parseAssistivePreferences(voice: unknown, visual: unknown = {}):
   const v = record(voice), l = record(visual);
   return {
     enabled: v.enabled === true, focus: v.focus === true, hover: v.hover === true,
+    // Preserve navigation for older saved voice-mode users until they choose this separate setting.
+    arrowNavigation: l.arrowNavigation === true || (l.arrowNavigation === undefined && v.enabled === true),
     hoverDelay: numberIn(v.hoverDelay, 400, 700, 550), rate: nearestRate(numberIn(v.rate, .5, 2, 1)),
     volume: numberIn(v.volume, 0, 1, 1), voiceURI: typeof v.voiceURI === 'string' ? v.voiceURI.slice(0, 300) : '',
     level: v.level === 'detailed' ? 'detailed' : 'brief', soundCues: v.soundCues === true,
@@ -41,7 +45,7 @@ export function mergeAssistivePreferences(voice: unknown, visual: unknown, patch
   const next = parseAssistivePreferences({ enabled, focus, hover, hoverDelay, rate, volume, voiceURI, level, soundCues }, looks);
   return {
     voice: { ...record(voice), enabled: next.enabled, focus: next.focus, hover: next.hover, hoverDelay: next.hoverDelay, rate: next.rate, volume: next.volume, voiceURI: next.voiceURI, level: next.level, soundCues: next.soundCues },
-    visual: { ...record(visual), enhancedFocus: next.enhancedFocus, textSize: next.textSize, textSpacing: next.textSpacing, contrast: next.contrast, highlightSpeech: next.highlightSpeech },
+    visual: { ...record(visual), arrowNavigation: next.arrowNavigation, enhancedFocus: next.enhancedFocus, textSize: next.textSize, textSpacing: next.textSpacing, contrast: next.contrast, highlightSpeech: next.highlightSpeech },
   };
 }
 /** Apply before first paint as well as when settings change; standard preferences add no overrides. */

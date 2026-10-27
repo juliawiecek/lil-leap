@@ -1,12 +1,19 @@
 <div class="assistive-settings">
+  <fieldset data-scan-group="Arrow-key navigation">
+    <legend>Arrow-key navigation</legend>
+    <button type="button" [attr.aria-pressed]="access.settings().arrowNavigation" [attr.aria-describedby]="prefix + '-arrows-help'" (click)="access.toggleArrowNavigation()">Arrow-key navigation <span aria-hidden="true">{{ access.settings().arrowNavigation ? 'On' : 'Off' }}</span></button>
+    <p [id]="prefix + '-arrows-help'">Turning this on starts arrow-key navigation at the page heading and turns off automatic switch scanning if it is running. It keeps your voice setting and also works without speech support. Alt + Shift + N turns arrow-key navigation on or off.</p>
+    <p>Up and Down move to items above and below. Left and Right move to items on either side. On a group, press Enter to go inside; press Escape to return to its container. On a button or link, Enter activates it. Fields, menus, tabs and charts keep their editing and exploration keys; Escape returns to their containing group (close an open menu first), or use Tab to leave them. The focused item is highlighted. Turn on Voice mode below if you also want spoken feedback.</p>
+  </fieldset>
   <fieldset data-scan-group="Voice mode">
     <legend>Voice mode</legend>
     <p [id]="prefix + '-voice-help'">For people who don't use a screen reader: the browser reads out what you move to or point at. If you use a screen reader, leave this off, since your screen reader already does this. Automatic reading starts off. Only installed local voices are offered.</p>
     @if (!access.supported) { <p role="status">This browser does not support reading aloud. Keyboard and screen-reader access still work.</p> }
     <button type="button" [attr.aria-pressed]="access.settings().enabled" [disabled]="!access.supported" [attr.aria-describedby]="prefix + '-voice-help'" (click)="access.update({ enabled: !access.settings().enabled })">Voice mode <span aria-hidden="true">{{ access.settings().enabled ? 'On' : 'Off' }}</span></button>
+    <p>Voice mode adds spoken feedback to arrow-key navigation when both are on. Turning voice off keeps arrow-key navigation available. Alt + Shift + V turns voice mode on or off; Alt + Shift + X stops the current speech.</p>
     <label class="check"><input type="checkbox" [checked]="access.settings().focus" (change)="access.update({ focus: $any($event.target).checked })" />Speak on keyboard focus</label>
     <label class="check"><input type="checkbox" [checked]="access.settings().hover" (change)="access.update({ hover: $any($event.target).checked })" />Speak on mouse hover</label>
-    <p>Focus and hover reading require voice assistance. Hover waits for your pointer and skips sensitive account/profile details, and hidden balances are never read. Prices are read once, never on every tick. Escape stops the current reading.</p>
+    <p>Focus and hover reading require voice assistance. Hover waits for your pointer and skips sensitive account/profile details, and hidden balances are never read. Prices are read once, never on every tick. Alt + Shift + X stops the current reading.</p>
     <div class="fields">
       <div><label [attr.for]="prefix + '-level'">Detail</label><select [id]="prefix + '-level'" [value]="access.settings().level" [attr.aria-describedby]="prefix + '-level-help'" (change)="access.update({ level: $any($event.target).value })"><option value="brief">Brief</option><option value="detailed">Detailed</option></select></div>
       <div><label [attr.for]="prefix + '-rate'">Speech speed</label><select [id]="prefix + '-rate'" [value]="access.settings().rate" (change)="access.update({ rate: +$any($event.target).value })"><option value="0.8" [selected]="access.settings().rate === 0.8">Slow</option><option value="1" [selected]="access.settings().rate === 1">Normal</option><option value="1.25" [selected]="access.settings().rate === 1.25">Fast</option><option value="1.5" [selected]="access.settings().rate === 1.5">Faster</option><option value="2" [selected]="access.settings().rate === 2">Fastest</option></select></div>

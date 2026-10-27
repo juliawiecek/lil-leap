@@ -1,6 +1,7 @@
 import { applyAssistiveVisuals, type AssistivePreferences } from './assistive-preferences.ts';
 import { accessibleName, describeElement, readableText } from './accessible-description.ts';
 import { speechCoordinator as speech } from './speech-coordinator.ts';
+import { firstNavigationItem, isNavigationGroup, navigationDescription, navigationGroupName, navigationItems, navigationRoot, parentNavigationGroup, spatialNeighbor, type ArrowDirection } from './spatial-navigation.ts';
 
 export interface AssistiveOptions {
   settings: () => AssistivePreferences;
@@ -9,12 +10,16 @@ export interface AssistiveOptions {
   voices: (voices: SpeechSynthesisVoice[]) => void;
   scanning?: () => boolean;
   stopScanningSpeech?: () => void;
+  toggleVoice?: () => void;
+  toggleNavigation?: () => void;
   format?: (text: string) => string;
   hint?: (element: Element) => string;
 }
 const INTERACTIVE = 'button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="tab"], [role="img"], [data-a11y-read]';
 const INFORMATION = 'h1, h2, h3, p, dt, dd, td, th, output, [data-a11y-read]';
-const editable = (element: Element | null) => !!element?.matches('input, textarea, select, [contenteditable="true"]');
+const editable = (element: Element | null) => !!element?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+// These widgets already own their arrow keys. Tab leaves them for page navigation.
+const ARROW_WIDGETS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="img"][tabindex="0"], [role="slider"], [role="separator"], [role="spinbutton"], [role="combobox"], [role="listbox"], [role="menu"], [role="menubar"], [role="tree"], [role="grid"], [role="radiogroup"]';
 /**
  * A novalidate form marked data-a11y-app-validation checks itself and links its own messages to
  * its fields (aria-invalid, aria-describedby), so the browser's wording never replaces the app's.
@@ -39,6 +44,9 @@ export class AssistiveController {
   private routeTimer: ReturnType<typeof setTimeout> | undefined;
   private formTimer: ReturnType<typeof setTimeout> | undefined;
   private highlight: Element | null = null;
+  private arrowTarget: HTMLElement | null = null;
+  private navigationFocus: HTMLElement | null = null;
+  private enteringGroup = false;
   private previousPath: string | undefined;
   private previousUrl = '';
   private errorId = 0;
@@ -58,7 +66,11 @@ export class AssistiveController {
     listen('keydown', event => this.key(event as KeyboardEvent));
     listen('pointerdown', () => { this.keyboard = false; this.cancelPending(); });
     listen('focusin', event => this.focus(event.target as HTMLElement));
-    listen('focusout', () => { clearTimeout(this.focusTimer); speech.stop('assist:focus'); });
+    listen('focusout', event => {
+      clearTimeout(this.focusTimer); speech.stop('assist:focus');
+      if (event.target === this.arrowTarget) this.releaseArrowTarget();
+      if (event.target === this.navigationFocus) this.clearNavigationFocus();
+    });
     listen('pointerover', event => this.pointer(event as PointerEvent));
     listen('pointermove', event => { this.pointerReady = true; this.pointer(event as PointerEvent); });
     listen('pointerout', event => {
@@ -87,10 +99,16 @@ export class AssistiveController {
     applyAssistiveVisuals(this.document.documentElement, this.options.settings());
     this.cancelPending();
     if (!this.options.settings().enabled) { speech.stop('assist:focus'); speech.stop('assist:hover'); }
+    if (!this.options.settings().arrowNavigation) { this.clearNavigationFocus(); this.enteringGroup = false; }
     if (!this.options.settings().highlightSpeech) this.clearHighlight();
   }
   private cancelPending(): void { clearTimeout(this.focusTimer); clearTimeout(this.hoverTimer); }
   private clearHighlight(): void { this.highlight?.removeAttribute('data-a11y-speaking'); this.highlight = null; }
+  private clearNavigationFocus(): void { this.navigationFocus?.removeAttribute('data-a11y-nav-focus'); this.navigationFocus = null; }
+  private releaseArrowTarget(): void {
+    if (this.arrowTarget?.getAttribute('tabindex') === '-1') this.arrowTarget.removeAttribute('tabindex');
+    this.arrowTarget = null;
+  }
   private meaningful(target: Element | null, informational = false): HTMLElement | null {
     if (!target?.closest || target.closest('[data-a11y-reading-action], [inert], [hidden]')) return null;
     // Closest interactive ancestor wins over its nested decorative text/icon.
@@ -98,7 +116,7 @@ export class AssistiveController {
     return element?.closest('[aria-hidden="true"]') ? null : element as HTMLElement | null;
   }
   private focus(target: HTMLElement): void {
-    const element = this.meaningful(target, true);
+    const element = isNavigationGroup(target) ? target : this.meaningful(target, true);
     if (element && !element.closest('[data-a11y-tools]')) this.lastTarget = element;
     clearTimeout(this.focusTimer);
     if (!element || !this.keyboard || !this.options.settings().enabled || !this.options.settings().focus || this.options.scanning?.()) return;
@@ -149,7 +167,9 @@ export class AssistiveController {
   }
   private read(element: Element, owner: string, requested = false): void {
     // The level is read per item, so changing it takes effect on the next item.
-    this.say(describeElement(element, requested, this.options.settings().level, this.options.hint?.(element)), owner, element, requested);
+    const description = isNavigationGroup(element) ? navigationDescription(element as HTMLElement, this.options.settings().level) :
+      describeElement(element, requested, this.options.settings().level, this.options.hint?.(element));
+    this.say(description, owner, element, requested);
   }
   /**
    * Speaks a message from the app while voice assistance is on: "Voice assistance on.", an order
@@ -170,6 +190,21 @@ export class AssistiveController {
     if (element?.isConnected) this.read(element, 'assist:request', true);
     else this.options.status('Focus an element on the page, then choose Read focused element.');
   }
+  /** Gives a person starting from Settings a known place to begin and instructions they can hear. */
+  beginArrowNavigation(): void {
+    if (!this.options.settings().arrowNavigation || this.options.scanning?.()) return;
+    const modal = [...this.document.querySelectorAll<HTMLElement>('dialog[open], [role="dialog"][aria-modal="true"]')].filter(visible).at(-1);
+    const scope = modal ?? [...this.document.querySelectorAll<HTMLElement>('main')].find(visible) ?? this.document.body;
+    const target = [...scope.querySelectorAll<HTMLElement>('h1, h2')].find(visible) ?? scope;
+    this.keyboard = true; this.releaseArrowTarget();
+    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) {
+      this.arrowTarget = target; target.setAttribute('tabindex', '-1');
+    }
+    target.focus({ preventScroll: true }); target.scrollIntoView?.({ block: 'nearest' });
+    this.lastTarget = target;
+    const instructions = 'Arrow-key navigation started. Press Down or Up arrow to move below or above. Press Right or Left arrow to move right or left. On a group, press Enter to go inside. Press Escape to come back out. Enter activates a focused button or link. Fields and charts keep their own arrow keys. Alt Shift X stops speech.';
+    this.navigationFeedback(`${instructions} ${describeElement(target, true, this.options.settings().level)}`, target);
+  }
   readSection(): void {
     const selection = this.document.getSelection();
     const anchor = selection?.anchorNode?.parentElement;
@@ -185,7 +220,8 @@ export class AssistiveController {
     const alerts = [...main.querySelectorAll('[role="alert"]')].filter(visible).map(node => readableText(node, 200));
     const figures = [...main.querySelectorAll('[data-a11y-read]')].filter(visible).slice(0, 2)
       .map(node => describeElement(node, true, this.options.settings().level, this.options.hint?.(node))).join(' ');
-    const text = `${headings.shift() || this.document.title}. ${headings.length ? 'Sections: ' + headings.slice(0, 10).join('; ') + '.' : ''} ${figures} ${alerts.join('. ')} Use Tab to move through controls, or Read section for details.`;
+    const navigation = this.options.settings().arrowNavigation ? 'Arrows move in their direction on the page. Enter goes inside a group. Escape comes back out. Fields and charts keep their own arrows.' : 'Use Tab to move through controls, or Read section for details.';
+    const text = `${headings.shift() || this.document.title}. ${headings.length ? 'Sections: ' + headings.slice(0, 10).join('; ') + '.' : ''} ${figures} ${alerts.join('. ')} ${navigation}`;
     this.say(text, 'assist:request', main, true);
   }
   stop(): void {
@@ -223,18 +259,36 @@ export class AssistiveController {
     if (typeof event.key !== 'string' || event.isComposing) return;
     const element = event.target as HTMLElement;
     if (!element?.closest) return;
+    if (event.key === 'Enter' && event.repeat && this.enteringGroup) { event.preventDefault(); event.stopPropagation(); return; }
+    if (event.key === 'Enter' && !event.repeat) this.enteringGroup = false;
     // Escape stops the current speech while voice assistance is on (or reading it started), then
     // still does its usual job of closing a dialog or popup.
     if (event.key === 'Escape' && speech.speaking && (this.options.settings().enabled || speech.owner.startsWith('assist:'))) this.hush();
     if (event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.repeat) {
-      const action = ({ r: () => this.readFocused(), p: () => this.readPage(), x: () => this.stop(), a: () => this.openSettings(), ' ': () => this.pause() } as Record<string, (() => void) | undefined>)[event.key.toLowerCase()];
-      if (action && (!editable(element) || event.key.toLowerCase() === 'x')) { event.preventDefault(); action(); return; }
+      const action = ({ r: () => this.readFocused(), p: () => this.readPage(), x: () => this.stop(), v: this.options.toggleVoice, n: this.options.toggleNavigation, a: () => this.openSettings(), ' ': () => this.pause() } as Record<string, (() => void) | undefined>)[event.key.toLowerCase()];
+      if (action && (!editable(element) || ['x', 'v', 'n'].includes(event.key.toLowerCase()))) { event.preventDefault(); action(); return; }
     }
     if (event.key === 'Tab' || event.key.startsWith('Arrow') || event.key === 'Home' || event.key === 'End') {
       this.keyboard = true; clearTimeout(this.hoverTimer); speech.stop('assist:hover');
     }
     if (event.key === 'Tab') this.prepareComposites();
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || this.options.scanning?.()) return;
+    if (!event.shiftKey && this.options.settings().arrowNavigation) {
+      const root = navigationRoot(this.document, element);
+      if (event.key === 'Enter' && isNavigationGroup(element)) {
+        event.preventDefault(); event.stopPropagation(); this.enteringGroup = true;
+        const first = firstNavigationItem(navigationItems(element));
+        if (first) this.focusNavigationItem(first, `Inside ${navigationGroupName(element)}. `);
+        else this.navigationFeedback('This group has no available items. Press Escape to go out.', element);
+        return;
+      }
+      // An expanded picker gets the first Escape to close its options; the next Escape leaves its group.
+      const expanded = element.closest('[aria-expanded="true"], [role="listbox"], [role="menu"]');
+      const parent = parentNavigationGroup(element, root);
+      if (event.key === 'Escape' && parent && !expanded) {
+        event.preventDefault(); event.stopPropagation(); this.focusNavigationItem(parent, `Outside ${navigationGroupName(parent)}. `); return;
+      }
+    }
     const tablist = element.closest('[role="tablist"]');
     if (tablist && element.getAttribute('role') === 'tab') {
       const vertical = tablist.getAttribute('aria-orientation') === 'vertical';
@@ -245,7 +299,9 @@ export class AssistiveController {
         const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (at + (event.key === previous ? -1 : 1) + tabs.length) % tabs.length;
         event.preventDefault(); tabs.forEach((tab, i) => tab.tabIndex = i === index ? 0 : -1);
         // Manual activation: arrows move focus; Space/Enter retains the native button action.
-        tabs[index]?.focus(); return;
+        if (tabs[index] && this.options.settings().arrowNavigation) this.focusNavigationItem(tabs[index]);
+        else tabs[index]?.focus();
+        return;
       }
     }
     const search = element.closest('[data-a11y-search]');
@@ -255,8 +311,16 @@ export class AssistiveController {
       if (results.length && (element !== input || event.key === 'ArrowDown')) {
         const at = results.indexOf(element as HTMLButtonElement);
         const index = event.key === 'Home' ? 0 : event.key === 'End' ? results.length - 1 : at + (event.key === 'ArrowDown' ? 1 : -1);
-        event.preventDefault(); (index < 0 ? input : results[Math.min(index, results.length - 1)])?.focus(); return;
+        event.preventDefault();
+        const target = index < 0 ? input : results[Math.min(index, results.length - 1)];
+        if (target && this.options.settings().arrowNavigation) this.focusNavigationItem(target);
+        else target?.focus();
+        return;
       }
+    }
+    if (!event.shiftKey && this.options.settings().arrowNavigation &&
+        ['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(event.key) && !element.closest(ARROW_WIDGETS)) {
+      this.browse(event, element);
     }
     if (event.key === 'Escape' && !this.document.querySelector('dialog[open]')) {
       if (search) {
@@ -265,6 +329,34 @@ export class AssistiveController {
       }
       this.dismissOutside(null);
     }
+  }
+  /** Arrows navigate siblings by their actual on-screen direction; Enter/Escape change the level. */
+  private browse(event: KeyboardEvent, current: HTMLElement): void {
+    const root = navigationRoot(this.document, current);
+    const scope = parentNavigationGroup(current, root) ?? root;
+    const next = spatialNeighbor(current, navigationItems(scope), event.key as ArrowDirection);
+    event.preventDefault(); event.stopPropagation();
+    if (next) this.focusNavigationItem(next);
+    else {
+      const direction = ({ ArrowDown: 'below', ArrowUp: 'above', ArrowLeft: 'to the left', ArrowRight: 'to the right' } as Record<string, string>)[event.key];
+      const help = scope !== root ? ' Press Escape to leave this group.' : '';
+      this.navigationFeedback(`No item ${direction}.${help}`);
+    }
+  }
+  private focusNavigationItem(next: HTMLElement, prefix = ''): void {
+    this.keyboard = true;
+    if (next.tabIndex < 0 && !next.hasAttribute('tabindex')) {
+      this.releaseArrowTarget(); this.arrowTarget = next; next.setAttribute('tabindex', '-1');
+    }
+    next.focus({ preventScroll: true }); next.scrollIntoView?.({ block: 'nearest' });
+    this.clearNavigationFocus(); this.navigationFocus = next; next.setAttribute('data-a11y-nav-focus', '');
+    this.lastTarget = next;
+    this.cancelPending();
+    this.navigationFeedback(prefix + navigationDescription(next, this.options.settings().level, this.options.hint?.(next)), next);
+  }
+  private navigationFeedback(text: string, target?: HTMLElement): void {
+    if (!this.options.settings().enabled) { this.options.status(text); return; }
+    if (this.say(text, 'assist:request', target, true)) this.options.status(text);
   }
   private prepareComposites(): void {
     for (const list of this.document.querySelectorAll('[role="tablist"]')) {
@@ -347,6 +439,6 @@ export class AssistiveController {
   destroy(): void {
     this.cancelPending(); clearTimeout(this.routeTimer); clearTimeout(this.formTimer);
     this.disposers.splice(0).forEach(dispose => dispose());
-    this.clearHighlight(); speech.stop('assist:focus'); speech.stop('assist:hover'); speech.stop('assist:request');
+    this.releaseArrowTarget(); this.clearNavigationFocus(); this.clearHighlight(); speech.stop('assist:focus'); speech.stop('assist:hover'); speech.stop('assist:request');
   }
 }

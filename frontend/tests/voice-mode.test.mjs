@@ -9,6 +9,7 @@ const { BriefingService } = await import('../src/app/briefing-button.ts');
 const { ToastService } = await import('../src/app/toasts.ts');
 const { ACCESSIBILITY_STORAGE_KEY, AccessibilityStore } = await import('../src/app/accessibility.ts');
 const { SoundCues } = await import('../src/app/sound-cues.ts');
+const { SwitchScanService } = await import('../../shared/switch-scan.ts');
 const { AssistiveController } = await import('../../shared/assistive-controller.ts');
 const { parseAssistivePreferences } = await import('../../shared/assistive-preferences.ts');
 const { describeElement } = await import('../../shared/accessible-description.ts');
@@ -118,6 +119,30 @@ test('voice speed is one setting with the briefing, changed from either side', a
   fixture.detectChanges();
   const speed = fixture.nativeElement.querySelector('select[id$="-rate"]');
   assert.equal(speed.value, '0.8', 'the voice mode card shows the briefing speed');
+});
+
+test('one arrow-key navigation toggle starts navigation, preserves voice settings and turns navigation off again', async t => {
+  withStorage(t); fakeSpeech(t);
+  const fixture = await render(t, AssistiveSettings);
+  const access = TestBed.inject(SiteAccessibility), scanner = TestBed.inject(SwitchScanService);
+  const order = [];
+  t.mock.method(scanner, 'settings', () => ({ enabled: true }));
+  t.mock.method(scanner, 'update', patch => { assert.equal(patch.enabled, false); order.push('scan off'); });
+  t.mock.method(access.controller, 'beginArrowNavigation', () => {
+    assert.equal(access.settings().enabled, false); assert.equal(access.settings().arrowNavigation, true); order.push('start');
+  });
+  const controls = [...fixture.nativeElement.querySelectorAll('button')].filter(button => /arrow-key navigation/i.test(button.textContent));
+  assert.equal(controls.length, 1);
+  const [start] = controls;
+  assert.equal(start.type, 'button');
+  start.click(); fixture.detectChanges();
+  assert.deepEqual(order, ['scan off', 'start']);
+  assert.equal(access.settings().enabled, false);
+  assert.equal(access.settings().arrowNavigation, true);
+  start.click(); fixture.detectChanges();
+  assert.equal(access.settings().arrowNavigation, false);
+  assert.equal(access.settings().enabled, false);
+  assert.deepEqual(order, ['scan off', 'start'], 'turning off does not restart navigation');
 });
 
 test('a fill or rejection cuts in on polite speech while voice mode is on, and is silent while it is off', async (t) => {
