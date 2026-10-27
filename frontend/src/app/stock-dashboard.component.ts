@@ -32,12 +32,14 @@ import {
   filter,
   forkJoin,
   map,
+  merge,
   of,
   retry,
   shareReplay,
   sampleTime,
   scan,
   switchMap,
+  take,
   tap,
   timeout,
   timer,
@@ -299,6 +301,7 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
       shareReplay({ bufferSize: 1, refCount: true }),
     );
     // Sampling belongs exclusively to this consumer; other price streams keep their live cadence.
+    // The first quote shows as soon as it arrives; sampling paces the updates after it.
     this.#subscription = raw
       .pipe(
         tap({
@@ -307,8 +310,11 @@ export class StockDashboardComponent implements AfterViewInit, OnChanges, OnDest
         }),
         connect(
           (shared) =>
-            this.#sampleClock.pipe(
-              switchMap((milliseconds) => shared.pipe(sampleTime(milliseconds))),
+            merge(
+              shared.pipe(take(1)),
+              this.#sampleClock.pipe(
+                switchMap((milliseconds) => shared.pipe(sampleTime(milliseconds))),
+              ),
             ),
           { connector: () => new ReplaySubject<StockDashboardTick>(1) },
         ),

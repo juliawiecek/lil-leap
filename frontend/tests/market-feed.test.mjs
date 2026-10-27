@@ -307,3 +307,25 @@ test('the badge flips between open and closed in local time, and the ticket warn
   assert.equal(marketBadgeText(null, now), 'Market status unavailable');
   assert.match(localOpeningTime('2026-10-19T13:30:00Z', now, 'en-GB'), /^Mon /, 'another day names the weekday');
 });
+
+test('the stock list is announced before its first prices, which are read together with the day opens', async t => {
+  page(t);
+  const { feed } = feedWith(t);
+  let opensPending = false;
+  let pricesStartedDuringOpens = false;
+  feed.client.dayOpens = async (ids) => {
+    opensPending = true;
+    await new Promise((resolve) => setImmediate(resolve));
+    opensPending = false;
+    return new Map(ids.map((id) => [id, 100]));
+  };
+  const original = feed.client.latestMany;
+  feed.client.latestMany = async (ids) => { pricesStartedDuringOpens ||= opensPending; return original(ids); };
+  const updates = [];
+  feed.onUpdate(() => updates.push(feed.quotes().map((q) => q.price)));
+  const stop = feed.start();
+  await flush();
+  assert.deepEqual(updates, [[0, 0], [400, 200]], 'listed first, priced second');
+  assert.equal(pricesStartedDuringOpens, true, 'prices are not queued behind the baselines');
+  stop();
+});

@@ -1244,6 +1244,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
    */
   #applyFeed(): void {
     const live = this.feed.quotes();
+    if (live.length && !live.some((q) => q.price > 0)) {
+      return; // The list without its first prices: keep "Loading prices" rather than show $0.00.
+    }
     this.quotes.set(live.map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, change: q.change, quotedAt: q.quotedAt })));
     for (const q of live) {
       if (q.bid > 0) {
