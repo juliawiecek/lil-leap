@@ -53,6 +53,7 @@ import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { briefingOrders } from './briefing';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
+import { enterMatch } from './search-enter';
 import { SwitchScanService } from '../../../shared/switch-scan';
 import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';
@@ -265,7 +266,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** The sentence under the Overview greeting: today's move and the held stock that moved most. */
   readonly daySummary = computed(() => {
     const held = this.positions();
-    if (!this.portfolioLoaded() || !held.length) return null;
+    if (!this.portfolioLoaded() || !held.length) {
+      return null;
+    }
     const amount = this.dayGain();
     const moves = held.map((p) => ({ symbol: p.symbol, change: this.quotes().find((q) => q.symbol === p.symbol)?.change ?? 0 }));
     const best = moves.reduce((a, b) => (Math.abs(b.change) > Math.abs(a.change) ? b : a));
@@ -336,13 +339,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
-  /** Use the latest computed matches even if Angular has not painted the result list yet. */
+  /** Enter moves the ticket to the first current match. */
   submitSearch(event: KeyboardEvent): void {
-    if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    event.preventDefault();
-    if (event.repeat || !this.query().trim()) return;
-    const quote = this.results()[0];
-    if (quote) this.choose(quote);
+    const quote = enterMatch(event, this.query(), this.results());
+    if (quote) {
+      this.choose(quote);
+    }
   }
   readonly screened = computed(() =>
     this.quotes().filter((q) => {
@@ -422,18 +424,28 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly stopLoss = signal('');
   readonly ticketQuote = computed(() => {
     const q = this.feed.quotes().find(q => q.symbol === this.selected().symbol);
-    if (!q || !Number.isFinite(q.bid) || !Number.isFinite(q.ask) || q.bid <= 0 || q.ask < q.bid) return null;
+    if (!q) {
+      return null;
+    }
+    const priced = Number.isFinite(q.bid) && Number.isFinite(q.ask) && q.bid > 0;
+    if (!priced || q.ask < q.bid) {
+      return null;
+    }
     return { bid: q.bid, ask: q.ask, spread: q.ask - q.bid, spreadPercent: (q.ask - q.bid) / ((q.ask + q.bid) / 2) * 100 };
   });
   readonly marketEntryPrice = computed(() => {
-    if (this.selected().price <= 0) return 0;
+    if (this.selected().price <= 0) {
+      return 0;
+    }
     const quote = this.ticketQuote();
     return quote ? (this.side() === 'Buy' ? quote.ask : quote.bid) : this.selected().price;
   });
   readonly entryPrice = computed(() => this.orderType() === 'LIMIT' ? Number(this.limitPrice()) : this.marketEntryPrice());
   readonly exitPrice = (kind: 'profit' | 'loss'): number => {
     const value = Number(kind === 'profit' ? this.takeProfit() : this.stopLoss());
-    if (this.exitUnit() === 'price') return value;
+    if (this.exitUnit() === 'price') {
+      return value;
+    }
     const direction = (this.side() === 'Buy' ? 1 : -1) * (kind === 'profit' ? 1 : -1);
     return Math.round(this.entryPrice() * (1 + direction * value / 100) * 100) / 100;
   };
@@ -441,14 +453,20 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly risk = computed(() => Math.abs(this.exitPrice('loss') - this.entryPrice()) * Number(this.quantity()));
   setOrderType(type: 'MARKET' | 'LIMIT'): void {
     this.orderType.set(type);
-    if (type === 'LIMIT' && !this.limitPrice()) this.limitPrice.set(this.marketEntryPrice() > 0 ? this.marketEntryPrice().toFixed(2) : '');
+    if (type === 'LIMIT' && !this.limitPrice()) {
+      this.limitPrice.set(this.marketEntryPrice() > 0 ? this.marketEntryPrice().toFixed(2) : '');
+    }
     this.message.set('');
   }
   setExitUnit(unit: 'price' | 'percent'): void {
-    if (unit === this.exitUnit()) return;
+    if (unit === this.exitUnit()) {
+      return;
+    }
     const entry = this.entryPrice();
     for (const [kind, field] of [['profit', this.takeProfit], ['loss', this.stopLoss]] as const) {
-      if (!field()) continue;
+      if (!field()) {
+        continue;
+      }
       const price = this.exitPrice(kind);
       field.set(unit === 'price' ? price.toFixed(2) : (entry > 0 ? Math.abs(price - entry) / entry * 100 : 0).toFixed(2));
     }
@@ -598,7 +616,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   /** A ticker symbol was clicked: load it on the chart and ticket. */
   pickTicker(symbol: string): void {
     const quote = this.quotes().find((q) => q.symbol === symbol);
-    if (quote) this.choose(quote);
+    if (quote) {
+      this.choose(quote);
+    }
   }
   /** A watchlist, mover or position row as voice mode says it: "Apple, 185 dollars, up 1.2 percent. Select to trade." (PS-22). */
   spokenRow(q: Pick<Quote, 'name' | 'symbol' | 'price' | 'change'>): string {
@@ -759,12 +779,18 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return 'Enter a limit price greater than zero.';
     }
     for (const [enabled, kind, label] of [[this.takeProfitEnabled(), 'profit', 'Take profit'], [this.stopLossEnabled(), 'loss', 'Stop loss']] as const) {
-      if (!enabled) continue;
+      if (!enabled) {
+        continue;
+      }
       const exit = this.exitPrice(kind);
       const raw = Number(kind === 'profit' ? this.takeProfit() : this.stopLoss());
-      if (!Number.isFinite(exit) || exit <= 0 || !Number.isFinite(raw) || raw <= 0) return `${label} must be greater than zero.`;
+      if (!Number.isFinite(exit) || exit <= 0 || !Number.isFinite(raw) || raw <= 0) {
+        return `${label} must be greater than zero.`;
+      }
       const above = (this.side() === 'Buy') === (kind === 'profit');
-      if (above ? exit <= this.entryPrice() : exit >= this.entryPrice()) return `${label} must be ${above ? 'above' : 'below'} the entry price.`;
+      if (above ? exit <= this.entryPrice() : exit >= this.entryPrice()) {
+        return `${label} must be ${above ? 'above' : 'below'} the entry price.`;
+      }
     }
     if (this.side() === 'Buy' && this.total() > this.buyingPower()) {
       return 'This order exceeds your buying power.';

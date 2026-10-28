@@ -116,3 +116,36 @@ test('limit reviews name the exact per-share limit and its estimated total', () 
  const closed = orderReviewSummary({ side:'Buy', quantity:2, symbol:'AAPL', price:200, tolerancePercent:2, opensAt:'9:30 AM', limitPrice:170.25 });
  assert.doesNotMatch(closed, /fills at the open/); assert.match(closed, /execution is not guaranteed/);
 });
+
+test('focus leaving a toast releases its hold, unless focus moved within the toast', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const service = component(t, ToastService);
+  const corner = component(t, Toasts, [{ provide: ToastService, useValue: service }]);
+  const id = service.show('filled', 'Filled');
+  service.hold(id, 'focus');
+  t.mock.timers.tick(TOAST_MS.filled * 2);
+  assert.equal(service.toasts().length, 1, 'held while focused');
+  const toast = { contains: (node) => node === 'inside' };
+  corner.leaveFocus({ currentTarget: toast, relatedTarget: 'inside' }, id);
+  t.mock.timers.tick(TOAST_MS.filled * 2);
+  assert.equal(service.toasts().length, 1, 'focus moving to the toast action keeps the hold');
+  corner.leaveFocus({ currentTarget: toast, relatedTarget: null }, id);
+  t.mock.timers.tick(TOAST_MS.filled);
+  assert.equal(service.toasts().length, 0, 'leaving the toast lets it time out');
+  // Without a rendered host there is nothing to move between dialogs.
+  assert.doesNotThrow(() => corner.ngAfterViewInit());
+  assert.doesNotThrow(() => corner.ngOnDestroy());
+});
+
+test('without MutationObserver the service still shows toasts and times them out', async t => {
+  const { browser } = await import('./dom-helper.mjs');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const window = browser.document.defaultView, Observer = window.MutationObserver;
+  window.MutationObserver = undefined;
+  t.after(() => { window.MutationObserver = Observer; });
+  const service = new ToastService(); t.after(() => service.ngOnDestroy());
+  service.show('info', 'Saved');
+  assert.equal(service.toasts().length, 1);
+  t.mock.timers.tick(TOAST_MS.info);
+  assert.equal(service.toasts().length, 0);
+});

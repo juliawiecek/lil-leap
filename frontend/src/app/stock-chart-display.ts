@@ -39,7 +39,9 @@ export function quoteCandles(points: readonly StockPriceTick[], interval: number
 
 /** A quiet overview of interval closes; the original observations remain available for inspection. */
 export function overviewPoints(points: readonly StockPriceTick[], interval: number): StockPriceTick[] {
-  if (!points.length) return [];
+  if (!points.length) {
+    return [];
+  }
   const closes = quoteCandles(points, interval).map(candle => ({ time: candle.endTime, price: candle.close }));
   return closes[0].time === points[0].time ? closes : [points[0], ...closes];
 }

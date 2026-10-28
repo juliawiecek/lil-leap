@@ -47,40 +47,70 @@ export class AdvancedTicket {
     this.presetLoading.set(true);
     try {
       const presets = await firstValueFrom(this.http.get<OrderPreset[]>(`/api/v1/orders/presets?accountId=${encodeURIComponent(account)}`));
-      if (version === this.requestVersion && account === this.storageKey()) this.presets.set(presets);
+      if (version === this.requestVersion && account === this.storageKey()) {
+        this.presets.set(presets);
+      }
     } catch {
       if (version === this.requestVersion && account === this.storageKey()) {
         this.presetLoadError.set(true);
         this.presetMessage.set('Could not load saved presets. Please retry.');
       }
-    } finally { if (version === this.requestVersion) this.presetLoading.set(false); }
+    } finally {
+      if (version === this.requestVersion) {
+        this.presetLoading.set(false);
+      }
+    }
   }
   readonly capacity = computed(() => {
     const d = this.desk();
-    if (!d.portfolioLoaded()) return 0;
-    if (d.side() === 'Sell') return d.positions().find(p => p.symbol === d.selected().symbol)?.quantity ?? 0;
+    if (!d.portfolioLoaded()) {
+      return 0;
+    }
+    if (d.side() === 'Sell') {
+      return d.positions().find(p => p.symbol === d.selected().symbol)?.quantity ?? 0;
+    }
     const price = d.entryPrice() * (d.orderType() === 'MARKET' ? 1 + d.tolerance() / 100 : 1);
     return price > 0 ? Math.max(0, Math.floor(d.buyingPower() / price)) : 0;
   });
   readonly sizingBlockReason = computed(() => {
     const d = this.desk();
     const entry = d.entryPrice(), stop = d.exitPrice('loss'), budget = Number(this.riskBudget());
-    if (!d.stopLossEnabled()) return 'Turn on Stop loss above to enable risk-based sizing.';
-    if (!d.stopLoss().trim() || !Number.isFinite(Number(d.stopLoss())) || Number(d.stopLoss()) <= 0)
+    if (!d.stopLossEnabled()) {
+      return 'Turn on Stop loss above to enable risk-based sizing.';
+    }
+    if (!d.stopLoss().trim() || !Number.isFinite(Number(d.stopLoss())) || Number(d.stopLoss()) <= 0) {
       return 'Enter a stop-loss price or percentage above.';
-    if (!Number.isFinite(entry) || entry <= 0) return d.orderType() === 'LIMIT' ? 'Enter a limit price greater than zero.' : 'Waiting for an entry price.';
-    if (!Number.isFinite(stop) || stop <= 0) return 'The stop must resolve to a price greater than zero. Check the price/percentage setting.';
-    if (d.side() === 'Buy' ? stop >= entry : stop <= entry)
+    }
+    if (!Number.isFinite(entry) || entry <= 0) {
+      return d.orderType() === 'LIMIT' ? 'Enter a limit price greater than zero.' : 'Waiting for an entry price.';
+    }
+    if (!Number.isFinite(stop) || stop <= 0) {
+      return 'The stop must resolve to a price greater than zero. Check the price/percentage setting.';
+    }
+    if (d.side() === 'Buy' ? stop >= entry : stop <= entry) {
       return `For ${d.side()}, the stop-loss price must be ${d.side() === 'Buy' ? 'below' : 'above'} the entry price of $${entry.toFixed(2)}.`;
-    if (!Number.isFinite(budget) || budget <= 0) return 'Enter a risk budget greater than zero in USD.';
+    }
+    if (!Number.isFinite(budget) || budget <= 0) {
+      return 'Enter a risk budget greater than zero in USD.';
+    }
     const perShare = Math.abs(entry - stop);
-    if (budget < perShare) return `Your risk budget is less than the $${perShare.toFixed(2)} estimated risk for one share.`;
-    if (d.priceDelayed()) return 'The quote is over a minute old. Apply will unlock when a fresh quote arrives.';
-    if (!d.ticketQuote()) return 'Waiting for a valid bid and ask.';
-    if (!d.portfolioLoaded()) return 'Waiting for account balances.';
-    if (!Number.isFinite(this.capacity()) || this.capacity() < 1) return d.side() === 'Buy'
-      ? 'Available buying power cannot cover one share at this entry price, including market price protection.'
-      : `You do not hold any ${d.selected().symbol} shares available to sell.`;
+    if (budget < perShare) {
+      return `Your risk budget is less than the $${perShare.toFixed(2)} estimated risk for one share.`;
+    }
+    if (d.priceDelayed()) {
+      return 'The quote is over a minute old. Apply will unlock when a fresh quote arrives.';
+    }
+    if (!d.ticketQuote()) {
+      return 'Waiting for a valid bid and ask.';
+    }
+    if (!d.portfolioLoaded()) {
+      return 'Waiting for account balances.';
+    }
+    if (!Number.isFinite(this.capacity()) || this.capacity() < 1) {
+      return d.side() === 'Buy'
+        ? 'Available buying power cannot cover one share at this entry price, including market price protection.'
+        : `You do not hold any ${d.selected().symbol} shares available to sell.`;
+    }
     return '';
   });
   readonly suggestedQuantity = computed(() => {
@@ -102,7 +132,9 @@ export class AdvancedTicket {
     const distance = (kind: 'profit' | 'loss') => {
       const price = d.exitPrice(kind);
       const above = (d.side() === 'Buy') === (kind === 'profit');
-      if (entry <= 0 || price <= 0 || (above ? price <= entry : price >= entry)) return NaN;
+      if (entry <= 0 || price <= 0 || (above ? price <= entry : price >= entry)) {
+        return NaN;
+      }
       return Math.round(Math.abs(price - entry) / entry * 1000000) / 10000;
     };
     const preset: OrderPreset = {
@@ -122,7 +154,9 @@ export class AdvancedTicket {
   applyPreset(preset: OrderPreset): void {
     const d = this.desk();
     d.setOrderType(preset.orderType);
-    if (preset.orderType === 'LIMIT') d.limitPrice.set(d.marketEntryPrice() > 0 ? d.marketEntryPrice().toFixed(2) : '');
+    if (preset.orderType === 'LIMIT') {
+      d.limitPrice.set(d.marketEntryPrice() > 0 ? d.marketEntryPrice().toFixed(2) : '');
+    }
     d.quantity.set(String(preset.quantity));
     d.orderTolerance.set(preset.tolerance);
     d.exitUnit.set('percent');
@@ -140,7 +174,9 @@ export class AdvancedTicket {
   }
   private async persist(preset: OrderPreset, remove = false): Promise<void> {
     const account = this.storageKey();
-    if (!account || this.presetBusy() || this.presetLoading() || this.presetLoadError()) return;
+    if (!account || this.presetBusy() || this.presetLoading() || this.presetLoadError()) {
+      return;
+    }
     this.presetBusy.set(true);
     this.presetMessage.set('');
     try {
@@ -153,7 +189,9 @@ export class AdvancedTicket {
         this.presetMessage.set(remove ? `Removed ${preset.name}.` : `Saved ${preset.name} to your account.`);
       }
     } catch {
-      if (account === this.storageKey()) this.presetMessage.set('Could not update presets. Please retry. You can save up to 10 per account.');
+      if (account === this.storageKey()) {
+        this.presetMessage.set('Could not update presets. Please retry. You can save up to 10 per account.');
+      }
     } finally { this.presetBusy.set(false); }
   }
 }

@@ -8,7 +8,7 @@ import { SwitchScanService } from '../../../shared/switch-scan';
 import { ToastService } from './toasts';
 import { voiceText } from './speech-text';
 import { AssistiveController } from '../../../shared/assistive-controller';
-import { mergeAssistivePreferences, parseAssistivePreferences, type AssistivePreferences } from '../../../shared/assistive-preferences';
+import { parseAssistivePreferences, storeAssistivePatch, switchArrowNavigation, type AssistivePreferences } from '../../../shared/assistive-preferences';
 import { speechCoordinator } from '../../../shared/speech-coordinator';
 
 /** What voice mode says when it is turned on, matching the setting's name. */
@@ -82,21 +82,16 @@ export class SiteAccessibility {
     this.destroy.onDestroy(() => { subscription?.unsubscribe(); this.controller.destroy(); });
   }
   openSettings(): void { void this.router?.navigate(['/settings']); }
-  toggleArrowNavigation(): void {
-    const enabled = !this.settings().arrowNavigation;
-    this.update({ arrowNavigation: enabled });
-    if (enabled) this.controller.beginArrowNavigation();
-  }
+  toggleArrowNavigation(): void { switchArrowNavigation(this, this.controller); }
   update(patch: Partial<AssistivePreferences>): void {
-    if (patch.arrowNavigation === true && this.scan.settings().enabled) this.scan.update({ enabled: false });
     const wasOn = this.settings().enabled;
-    const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
-    this.store.write('voice', next.voice); this.store.write('visual', next.visual);
-    if (patch.rate !== undefined) { this.briefing.update({ rate: next.voice.rate }); }
+    const { voice } = storeAssistivePatch(this.store, this.scan, patch);
+    if (patch.rate !== undefined) { this.briefing.update({ rate: voice.rate }); }
     if (patch.enabled === false) {
       // Off means quiet at once: whatever voice assistance was saying stops.
       for (const owner of ['assist:focus', 'assist:hover', 'assist:request', 'assist:announce', 'assist:alert']) { speechCoordinator.stop(owner); }
-    } else if (patch.enabled === true && !wasOn) {
+    }
+    if (patch.enabled === true && !wasOn) {
       this.controller.announce(VOICE_ON);
     }
   }

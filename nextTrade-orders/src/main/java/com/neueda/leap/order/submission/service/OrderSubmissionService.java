@@ -140,10 +140,10 @@ public class OrderSubmissionService {
         boolean sameTerms = request.normalizedSide().equals(existing.side())
                 && request.quantity() == existing.quantity()
                 && request.normalizedOrderType().equals(existing.orderType());
-        return sameInstrument && sameTerms && sameBuffer(request.bufferPercent(), existing.bufferPercent())
-                && sameBuffer(request.limitPrice(), existing.limitPrice())
+        boolean samePrices = sameBuffer(request.limitPrice(), existing.limitPrice())
                 && sameBuffer(request.takeProfitPrice(), existing.takeProfitPrice())
                 && sameBuffer(request.stopLossPrice(), existing.stopLossPrice());
+        return sameInstrument && sameTerms && sameBuffer(request.bufferPercent(), existing.bufferPercent()) && samePrices;
     }
 
     static void validateExits(SubmitOrderRequest request, BigDecimal entry) {

@@ -118,7 +118,8 @@ export function glossaryHint(el: Element | null | undefined): string {
  * Checks the physical key too, since Option+W types a symbol on a Mac.
  */
 export function isGlossaryShortcut(event: KeyboardEvent): boolean {
-  return event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && (event.code === 'KeyW' || event.key?.toLowerCase() === 'w');
+  const otherModifier = event.ctrlKey || event.metaKey || event.shiftKey;
+  return event.altKey && !otherModifier && (event.code === 'KeyW' || event.key?.toLowerCase() === 'w');
 }
 
 /**

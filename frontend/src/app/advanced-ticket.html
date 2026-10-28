@@ -23,6 +23,7 @@
         class="native-control"
         tabindex="-1"
         aria-hidden="true"
+        aria-labelledby="pro-symbol-label"
         [value]="desk().selected()?.symbol"
         (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
       >

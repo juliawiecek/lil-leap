@@ -125,7 +125,8 @@ export class InsightsChartAccess implements OnDestroy {
         // or the result of a deliberate period/security change, after updates have settled. The
         // pages refresh every few seconds, so "updated" is said at most once a minute (PS-29).
         const quiet = !fullAnnouncement && Date.now() - this.#updatedAt < UPDATE_NOTICE_EVERY_MS;
-        if (!quiet && (fullAnnouncement || this.focused() || this.explained() || this.shown())) {
+        const listening = fullAnnouncement || this.focused() || this.explained() || this.shown();
+        if (!quiet && listening) {
           this.announcement.set('');
           const timer = setTimeout(() => {
             if (!fullAnnouncement) { this.#updatedAt = Date.now(); }

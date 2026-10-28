@@ -7,8 +7,12 @@ import { chartCommand, livePricesPaused, type ChartSound } from './chart-keyboar
 
 /** Whether two tables say the same thing, cell for cell. */
 function sameTable(a: ChartTable, b: ChartTable | undefined): boolean {
-  if (a === b) return true;
-  if (!b || a.note !== b.note || a.grouped !== b.grouped || a.rows.length !== b.rows.length) return false;
+  if (a === b) {
+    return true;
+  }
+  if (!b || a.note !== b.note || a.grouped !== b.grouped || a.rows.length !== b.rows.length) {
+    return false;
+  }
   const line = (cells: readonly string[]) => cells.join('\u0000');
   const refs = (t: ChartTable) => line((t.references ?? []).map(r => r.label + '\u0001' + r.value));
   return line(a.columns) === line(b.columns) && refs(a) === refs(b) && a.rows.every((row, i) => line(row) === line(b.rows[i]));
@@ -188,10 +192,16 @@ export class ChartFocus {
   command(event: KeyboardEvent): void {
     if (event.key === 'Escape') { this.access().stopSound(); return; }
     const command = chartCommand(event), sound = this.chartSound();
-    if (!command || (command === 'sound' && !sound)) return;
+    if (!command || (command === 'sound' && !sound)) {
+      return;
+    }
     event.preventDefault();
-    if (command === 'summary') this.access().readSummary();
-    else if (command === 'table') this.access().toggleTable();
-    else this.access().toggleSound(sound!());
+    if (command === 'summary') {
+      this.access().readSummary();
+    } else if (command === 'table') {
+      this.access().toggleTable();
+    } else {
+      this.access().toggleSound(sound!());
+    }
   }
 }
