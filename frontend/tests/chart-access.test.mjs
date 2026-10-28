@@ -180,3 +180,14 @@ test('main scanner owns focus speech and explicit explanations queue after its s
   t.mock.timers.tick(1);
   assert.equal(spoken.length, 2);
 });
+test('a table that gains or loses rows is announced as an update, like a changed value', async t => {
+  const fixture = await render(t, ChartAccess, { id: 'prices', label: 'Prices', summary: 'Prices rose from 10 to 20.', table }, [{ provide: ChartVoice, useValue: { stop() {}, speak() {} } }]);
+  button(fixture, 'Show as table');
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  fixture.componentRef.setInput('table', { columns: ['Time', 'Price'], rows: [['Midday', '$11.10'], ['Close', '$11.20']] });
+  fixture.detectChanges();
+  assert.equal(fixture.componentInstance.announcement(), '');
+  t.mock.timers.tick(600); fixture.detectChanges();
+  assert.match(fixture.componentInstance.announcement(), /Chart data updated/);
+  assert.equal(fixture.nativeElement.querySelectorAll('tbody tr').length, 2);
+});

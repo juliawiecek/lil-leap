@@ -48,6 +48,39 @@ export function mergeAssistivePreferences(voice: unknown, visual: unknown, patch
     visual: { ...record(visual), arrowNavigation: next.arrowNavigation, enhancedFocus: next.enhancedFocus, textSize: next.textSize, textSpacing: next.textSpacing, contrast: next.contrast, highlightSpeech: next.highlightSpeech },
   };
 }
+/** Where each app keeps its "voice" and "visual" sections. */
+export interface AssistiveStore {
+  read<T>(section: 'voice' | 'visual', parse: (saved: unknown) => T): T;
+  write(section: 'voice' | 'visual', value: unknown): void;
+}
+/**
+ * Stores a settings change and returns the merged preferences. Turning arrow navigation on also turns
+ * switch scanning off, since both take the arrow keys.
+ */
+export function storeAssistivePatch(
+  store: AssistiveStore,
+  scan: { settings(): { enabled: boolean }; update(patch: { enabled: boolean }): void },
+  patch: Partial<AssistivePreferences>,
+) {
+  if (patch.arrowNavigation === true && scan.settings().enabled) {
+    scan.update({ enabled: false });
+  }
+  const next = mergeAssistivePreferences(store.read('voice', v => v), store.read('visual', v => v), patch);
+  store.write('voice', next.voice);
+  store.write('visual', next.visual);
+  return next;
+}
+/** Flips arrow navigation in a site's settings; when it comes on, navigation starts at once. */
+export function switchArrowNavigation(
+  site: { settings(): { arrowNavigation: boolean }; update(patch: Partial<AssistivePreferences>): void },
+  controller: { beginArrowNavigation(): void },
+): void {
+  const enabled = !site.settings().arrowNavigation;
+  site.update({ arrowNavigation: enabled });
+  if (enabled) {
+    controller.beginArrowNavigation();
+  }
+}
 /** Apply before first paint as well as when settings change; standard preferences add no overrides. */
 export function applyAssistiveVisuals(root: HTMLElement, settings: AssistivePreferences): void {
   for (const [key, value] of Object.entries({

@@ -46,6 +46,7 @@ import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { chartSummary } from './chart-speech';
 import { orderReadBack } from './order-read-back';
+import { enterMatch } from './search-enter';
 import { spokenCompany } from './briefing';
 import { briefingOrders } from './briefing';
 import { spokenQuote } from './speech-text';
@@ -450,17 +451,9 @@ export class NoviceDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
-  /** Enter chooses the first current match, just as clicking the first search result does. */
+  /** Enter opens a Buy for the first current match, just as clicking the first search result does. */
   submitSearch(event: KeyboardEvent): void {
-    const modified = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-    if (event.key !== 'Enter' || event.isComposing || modified) {
-      return;
-    }
-    event.preventDefault();
-    if (event.repeat || !this.query().trim()) {
-      return;
-    }
-    const quote = this.results()[0];
+    const quote = enterMatch(event, this.query(), this.results());
     if (quote) {
       this.openTrade('Buy', quote.symbol);
     }

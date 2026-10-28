@@ -605,3 +605,54 @@ test('market ticket uses executable bid/ask and sizes from stop risk with cash a
   assert.equal(ticket.suggestedQuantity(), 0);
 });
 
+
+test('risk sizing also explains a missing limit price, an unusable stop, a missing quote and unloaded balances', async t => {
+  const desk = tradingDesk(t), ticket = await advancedTicket(t, desk);
+  desk.stopLossEnabled.set(true); desk.stopLoss.set('95'); ticket.riskBudget.set('50');
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('');
+  assert.match(ticket.sizingBlockReason(), /Enter a limit price greater than zero/);
+  desk.limitPrice.set('100');
+  // A percentage stop of 100% or more resolves to a price of zero or less.
+  desk.exitUnit.set('percent'); desk.stopLoss.set('150');
+  assert.match(ticket.sizingBlockReason(), /stop must resolve to a price greater than zero/);
+  desk.exitUnit.set('price'); desk.stopLoss.set('95');
+  assert.equal(ticket.sizingBlockReason(), '');
+  desk.feed.push([{ symbol: 'AAPL', price: 100, bid: 0, ask: 0 }]);
+  assert.match(ticket.sizingBlockReason(), /Waiting for a valid bid and ask/);
+  desk.feed.push([{ symbol: 'AAPL', price: 100, bid: 99, ask: 101 }]);
+  desk.portfolioLoaded.set(false);
+  assert.match(ticket.sizingBlockReason(), /Waiting for account balances/);
+  assert.equal(ticket.capacity(), 0, 'no capacity is assumed before the balances arrive');
+});
+
+test('presets refuse an exit on the wrong side of the entry and wait while presets are busy or failed', async t => {
+  const desk = tradingDesk(t), ticket = await advancedTicket(t, desk);
+  desk.setOrderType('LIMIT'); desk.limitPrice.set('100'); desk.quantity.set('1');
+  ticket.presetName.set('Wrong side');
+  desk.takeProfitEnabled.set(true); desk.exitUnit.set('price'); desk.takeProfit.set('90');
+  await ticket.savePreset();
+  assert.match(ticket.presetMessage(), /valid settings/);
+  assert.equal(ticket.presets().length, 0);
+  // A valid preset is not sent while the list is still loading or failed to load.
+  desk.takeProfit.set('110');
+  ticket.presetLoadError.set(true);
+  await ticket.savePreset();
+  assert.equal(ticket.presetBusy(), false);
+  assert.match(ticket.presetMessage(), /valid settings/, 'the earlier message stays; nothing was saved');
+});
+
+test('a ticker click loads a listed stock and ignores unknown symbols; exit units skip empty fields and zero exits are refused', t => {
+  const desk = tradingDesk(t);
+  desk.pickTicker('MSFT');
+  assert.equal(desk.selected().symbol, 'MSFT');
+  desk.pickTicker('NOPE');
+  assert.equal(desk.selected().symbol, 'MSFT', 'an unlisted symbol changes nothing');
+  desk.setExitUnit('price');
+  assert.equal(desk.exitUnit(), 'price', 'the same unit again is a no-op');
+  desk.takeProfit.set(''); desk.stopLoss.set('');
+  desk.setExitUnit('percent');
+  assert.equal(desk.exitUnit(), 'percent');
+  assert.equal(desk.takeProfit(), ''); assert.equal(desk.stopLoss(), '', 'empty exits are not converted');
+  desk.quantity.set('1'); desk.takeProfitEnabled.set(true); desk.takeProfit.set('0');
+  assert.match(desk.validate(), /Take profit must be greater than zero/);
+});

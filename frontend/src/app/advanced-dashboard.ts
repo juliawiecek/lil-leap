@@ -53,6 +53,7 @@ import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
 import { briefingOrders } from './briefing';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
+import { enterMatch } from './search-enter';
 import { SwitchScanService } from '../../../shared/switch-scan';
 import { liveAnnouncer } from './live-announcer';
 import { speakable } from './speech-text';
@@ -338,17 +339,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
-  /** Use the latest computed matches even if Angular has not painted the result list yet. */
+  /** Enter moves the ticket to the first current match. */
   submitSearch(event: KeyboardEvent): void {
-    const modified = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-    if (event.key !== 'Enter' || event.isComposing || modified) {
-      return;
-    }
-    event.preventDefault();
-    if (event.repeat || !this.query().trim()) {
-      return;
-    }
-    const quote = this.results()[0];
+    const quote = enterMatch(event, this.query(), this.results());
     if (quote) {
       this.choose(quote);
     }
