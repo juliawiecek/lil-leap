@@ -545,3 +545,4 @@
 }
 
 .ranking-graphic:focus-visible, .bars:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+:host .ring.ranking-graphic { border-radius: 50%; }

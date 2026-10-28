@@ -8,6 +8,8 @@ spring:
     hikari:
       read-only: false
       maximum-pool-size: 10
+      # Candle reads sort one instrument's whole quote history; the 4 MB default spills that sort to disk.
+      connection-init-sql: SET work_mem = '64MB'
   mvc:
     log-request-details: false
 app:

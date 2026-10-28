@@ -191,9 +191,10 @@ th { color: var(--text-subtle); font-weight: 600; }
 }
 .trade-panel h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
 .trade-panel p { font-size: 14px; line-height: 1.55; }
-.trade-actions { gap: 8px; margin-top: 20px; }
+.trade-actions { display: flex; gap: 12px; margin-top: 18px; }
+.trade-actions button { flex: 1; }
 .trade-actions > :last-child { grid-column: auto; }
-.trade-actions button { min-height: 46px; font-size: 14.5px; font-weight: 800; }
+.trade-actions button { min-height: 52px; min-width: 132px; padding: 0 24px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; border-radius: 14px; white-space: nowrap; }
 .green-button, .secondary-button, .outline-button { border-radius: 12px; font-weight: 700; transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease; }
 .period-picker button.selected, .green-button { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); box-shadow: none; }
 .green-button:hover { background: var(--white); box-shadow: 0 10px 30px var(--text-wash-20); }
@@ -255,6 +256,7 @@ th { color: var(--text-subtle); font-weight: 600; }
   .portfolio-value { font-size: 40px; }
   .portfolio-stats strong { font-size: 15px; }
   .holdings-table th:first-child, .holdings-table td:first-child { padding-left: 16px; }
+  .trade-panel { padding: 18px 16px; }
 }
 
 /* Price protection: one compact field, so the ticket's input styling doesn't swallow it. */
@@ -370,9 +372,10 @@ th { color: var(--text-subtle); font-weight: 600; }
 /* Large monitors: content stops at 1600px and sits centered; top bar and ticker line up with it. */
 .novice-content { max-width: 1600px; margin-inline: auto; }
 @media (min-width: 1351px) {
-  .novice-topbar,
-  app-market-ticker { padding-inline: max(32px, calc((100% - 1600px) / 2 + 32px)); }
+  .novice-topbar { padding-inline: max(32px, calc((100% - 1600px) / 2 + 32px)); }
 }
+/* The live price strip runs the full width of the page, edge to edge, on every screen size. */
+@media (min-width: 901px) { app-market-ticker { padding-inline: 24px; } }
 @media (max-width: 900px) {
   .novice-shell.resizable { grid-template-columns: 64px minmax(0, 1fr); }
 }

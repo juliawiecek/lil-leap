@@ -53,7 +53,7 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss", "../shared/switch-scan.scss"
             ]
           },
           "configurations": {

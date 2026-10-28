@@ -7,7 +7,7 @@
   font: 300 11px/1 var(--font-mono, monospace);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-subtle);
+  color: var(--text);
 }
 .login-screen .tape-group { justify-content: flex-start; gap: 44px; min-width: 0; padding-right: 44px; }
 .login-screen .tape-track .divider { color: var(--surface-tone-58); }
@@ -299,3 +299,6 @@
 
 /* Caps Lock hint under the password field, in the same amber as the Insights sign-in. */
 .login-screen .field-hint { margin: 6px 0 0; color: var(--warning); font-size: 12.5px; line-height: 1.3; }
+
+/* The sample quote strip remains legible on registration and recovery too. */
+body.auth-phase .login-screen .market-tape { opacity: 1; }

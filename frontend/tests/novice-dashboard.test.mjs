@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { component } from './component-helper.mjs';
 const { NoviceDashboard } = await import('../src/app/novice-dashboard.ts');
 import { fakeFeed, feedProvider } from './feed-helper.mjs';
+import { render } from './dom-helper.mjs';
 const { ORDER_TRACK_LIMIT_MS } = await import('../src/app/order-history-api.ts');
 
 // A fixed live quote per stock, so prices are known once the dashboard's first quote refresh runs.
@@ -335,6 +336,20 @@ test('quote search matches symbols and company names regardless of case or surro
   assert.equal(desk.results().length, desk.quotes().length);
 });
 
+test('search Enter selects the latest match and leaves empty, unmatched and composing searches alone', t => {
+  const desk = component(t, NoviceDashboard, [feedProvider(feedWith())]);
+  const opened = []; t.mock.method(desk, 'openTrade', (...args) => opened.push(args));
+  const event = patch => ({ key: 'Enter', preventDefault() {}, ...patch });
+  desk.query.set(' msft '); desk.submitSearch(event({}));
+  assert.deepEqual(opened, [['Buy', 'MSFT']]);
+  desk.query.set('apple'); desk.submitSearch(event({}));
+  assert.deepEqual(opened.at(-1), ['Buy', 'AAPL']);
+  for (const query of ['', '   ', 'missing company']) { desk.query.set(query); desk.submitSearch(event({})); }
+  desk.query.set('NVDA');
+  for (const guard of ['isComposing', 'repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey']) desk.submitSearch(event({ [guard]: true }));
+  assert.equal(opened.length, 2);
+});
+
 test('watchlist toggling removes and restores the selected quote without duplicates', t => {
   const feed = feedWith();
   const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
@@ -502,7 +517,7 @@ test('choosing a chart period says where the portfolio started and where it is n
 });
 
 test('reviewing an order reads it back once, cutting in; confirming does not repeat it, editing re-reads (PS-23)', async t => {
-  const { SwitchScanService } = await import('../src/app/switch-scan.ts');
+  const { SwitchScanService } = await import('../../shared/switch-scan.ts');
   const said = [];
   const scan = { announce: (text, interrupt) => said.push([text, interrupt]) };
   const { desk } = await tradingDesk(t, { providers: [{ provide: SwitchScanService, useValue: scan }] });
@@ -733,4 +748,54 @@ test('trade chart loading and missing history never report a zero gain as observ
   desk.closeModal();
   answer([{ at: Date.now(), price: 999 }]); await flush();
   assert.deepEqual(desk.stockChartHistory(), [], 'closing a ticket invalidates its pending request');
+});
+
+test('the stock list without its first prices does not show $0.00 rows', t => {
+  const feed = fakeFeed([]);
+  const desk = component(t, NoviceDashboard, [feedProvider(feed)]);
+  feed.push(listed().map((row) => ({ ...row, price: 0 })));
+  assert.equal(desk.quotes().length, 0);
+  feed.push(listed());
+  assert.equal(desk.quotes().length, 5);
+});
+
+test('the Ready to trade card sits beside the Overview and leaves with it', async (t) => {
+  const fixture = await render(t, NoviceDashboard, {}, [feedProvider(feedWith())]);
+  const root = fixture.nativeElement;
+  const card = () => root.querySelector('.secondary-column > .trade-panel');
+  assert.ok(card(), 'the card sits in the side column');
+  assert.equal(card().parentElement.firstElementChild, card(), 'first in the side column');
+  assert.equal(card().nextElementSibling.classList.contains('allocation-panel'), true, 'above the asset allocation card');
+  assert.deepEqual([...card().querySelectorAll('.trade-actions button')].map((b) => b.textContent.trim()), ['Buy', 'Sell']);
+  card().querySelector('.trade-actions button:last-child').click(); fixture.detectChanges();
+  assert.equal(fixture.componentInstance.modal(), 'trade');
+  assert.equal(fixture.componentInstance.side(), 'Sell');
+  fixture.componentInstance.navigate('Portfolio'); fixture.detectChanges();
+  assert.equal(card(), null, 'other pages have no trade card');
+});
+
+test('the minute refresh of the overview chart keeps the line on screen; a new period shows Loading until it is ready', async t => {
+  const now = Date.now();
+  const { desk, feed } = await tradingDesk(t, { history: [[]], portfolios: [{ cash: 500, holdings: [{ ...holding('AAPL', 5, 100), instrumentId: 'aapl-id' }] }], chart: true });
+  desk.accountState.use([{ account_id: 'acct-1', account_status: 'ACTIVE', trading_enabled: true, created_at: new Date(now - 10 * 3600000).toISOString() }]);
+  desk.cashActivityClient = { list: async () => [{ transactionId: 't1', accountId: 'acct-1', accountName: 'Main', type: 'DEPOSIT', amount: 1000, settlementStatus: 'SETTLED', occurredAt: new Date(now - 10 * 3600000).toISOString() }] };
+  desk.orderHistoryClient = { list: async () => [historyRow('FILLED', { quantity: 5, fillPrice: 100, filledQuantity: 5, filledAt: new Date(now - 8 * 3600000).toISOString() })] };
+  let release;
+  feed.client = { closes: async () => { await new Promise((resolve) => { release = resolve; }); return [{ at: now - 4 * 3600000, price: 110 }]; } };
+  desk.chartPeriod.set('1W');
+  const first = desk.loadChart();
+  assert.equal(desk.chartLoading(), true, 'the first load shows Loading');
+  await flush(); release(); await first;
+  assert.equal(desk.chartLoading(), false);
+  assert.equal(desk.chartHistory().length, 2);
+  const refresh = desk.loadChart();
+  assert.equal(desk.chartLoading(), false, 'the same period refreshing keeps its line');
+  assert.equal(desk.chartHistory().length, 2);
+  await flush(); release(); await refresh;
+  desk.chartPeriod.set('1M');
+  const switched = desk.loadChart();
+  assert.equal(desk.chartLoading(), true, 'another period hides the old line until its own is ready');
+  await flush(); release(); await switched;
+  assert.equal(desk.chartLoading(), false);
+  desk.ngOnDestroy();
 });

@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-button';
+import { BRIEFING_RATES, BRIEFING_REPEATS, BRIEFING_VOICES, BriefingService } from './briefing-button';
 
 /** Audio briefing card in Settings > Accessibility (PS-18): voice speed and automatic repeats. */
 @Component({
@@ -10,10 +10,20 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-bu
         <b id="briefing-settings-title">Audio briefing</b>
         <small>
           A short spoken summary of the market, your portfolio and your recent orders. Play it with the Briefing button
-          or <kbd>Alt</kbd> + <kbd>B</kbd>. With your balance hidden, amounts are never read out.
+          or <kbd>Alt</kbd> + <kbd>B</kbd>.
         </small>
       </span>
+      <details class="more">
+      <summary>Briefing options</summary>
       <div class="card-options">
+        <label
+          >Voice
+          <select (change)="briefing.update({ voice: $any($event.target).value })">
+            @for (v of voices; track v.value) {
+              <option [value]="v.value" [selected]="v.value === briefing.settings().voice">{{ v.label }}</option>
+            }
+          </select></label
+        >
         <label
           >Voice speed
           <select (change)="briefing.update({ rate: +$any($event.target).value })">
@@ -31,8 +41,10 @@ import { BRIEFING_RATES, BRIEFING_REPEATS, BriefingService } from './briefing-bu
           </select></label
         >
       </div>
+      </details>
     </section>
   `,
+  styleUrl: './settings-disclosure.scss',
   styles: [
     `
       :host { display: block; min-width: 0; }
@@ -55,4 +67,5 @@ export class BriefingSettingsCard {
   readonly briefing = inject(BriefingService);
   readonly rates = BRIEFING_RATES;
   readonly repeats = BRIEFING_REPEATS;
+  readonly voices = BRIEFING_VOICES;
 }

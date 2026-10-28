@@ -19,7 +19,7 @@ TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 const MINUTE = 60 * 1000;
 
 /** A signed-in coordinator with a fake auth client and router, plus the warning rendered for it. */
-async function signedIn(t) {
+async function signedIn(t, announce = () => {}) {
   const navigations = [];
   const calls = { activity: 0, logouts: 0, refreshes: 0 };
   let invalidate;
@@ -58,7 +58,7 @@ async function signedIn(t) {
   };
   const session = new SessionCoordinator(auth, router, 'TRADER', (url) => url);
   await session.initialize();
-  TestBed.configureTestingModule({});
+  TestBed.configureTestingModule({ providers: [{ provide: angularApi.SESSION_WARNING_ANNOUNCE, useValue: announce }] });
   const fixture = TestBed.createComponent(SessionTimeoutWarning);
   fixture.componentRef.setInput('session', session);
   fixture.detectChanges();
@@ -186,4 +186,14 @@ test('no answer signs out once and tells the sign-in page why', async (t) => {
   assert.equal(calls.logouts, 1);
   assert.equal(navigations.length, 1, 'the logout does not start a second, unexplained redirect');
   assert.deepEqual(navigations[0].queryParams, { returnUrl: '/orders', reason: 'inactive' });
+});
+
+test('announces once on opening, with an assertive region, rather than every countdown tick', async t => {
+  const spoken = [];
+  const { dialog, idleFor, fixture, session } = await signedIn(t, text => spoken.push(text));
+  await idleFor(10 * 60 - 30);
+  assert.match(spoken[0], /Still there.*Stay signed in/);
+  assert.equal(dialog.querySelector('[role="alert"]').getAttribute('aria-live'), 'assertive');
+  session.warningSecondsLeft.set(29); fixture.detectChanges();
+  assert.equal(spoken.length, 1);
 });

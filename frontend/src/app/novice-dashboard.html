@@ -55,6 +55,7 @@
           placeholder="Search for a company or symbol (e.g. AAPL)"
           [value]="query()"
           (input)="query.set($any($event.target).value)"
+          (keydown)="submitSearch($event)"
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
@@ -66,7 +67,7 @@
                 ><b>{{ quote.price | currency }}</b>
               </button>
             } @empty {
-              <p>No matching companies or symbols.</p>
+              <p role="status">No matching companies or symbols.</p>
             }
           </div>
         }
@@ -115,6 +116,7 @@
       </div>
     }
     <main id="main-content" class="novice-content" tabindex="-1">
+      <app-price-watch />
       <div class="page-heading">
         <div>
           @if (activeTab() === 'Overview') {
@@ -134,7 +136,7 @@
           }
         </div>
         <div class="market-status">
-          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()" role="status"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketDate() }}</span>
+          <span [class.closed]="!marketOpen()" [class.open]="marketOpen()" [class.closing-soon]="marketClosingSoon()"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ marketDate() }}</span>
         </div>
       </div>
       <div class="overview-grid" [class.single-column]="activeTab() !== 'Overview'">
@@ -154,7 +156,7 @@
                     }
                   </div>
                   <div class="portfolio-gain" [class.up]="chartChangeAvailable() && headerChange().amount > 0" [class.down]="chartChangeAvailable() && headerChange().amount < 0">
-                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Change unavailable } } @else { •••••• }</strong
+                    <strong>@if (showBalance()) { @if (chartChangeAvailable()) { @if (showBalance()) { <app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> } @else { Hidden } } @else { Change unavailable } } @else { •••••• }</strong
                     ><span>{{ chartChangeAvailable() ? headerChange().label : (chartLoading() ? 'Loading history' : '') }}</span>
                   </div>
                 </div>
@@ -162,7 +164,7 @@
               @if (showBalance()) {
                 <app-portfolio-chart
                   data-scan-group="Portfolio chart"
-                  [points]="chartPoints()"
+                  [points]="chartPoints()" [fills]="chartFills()"
                   [range]="chartSpan()"
                   [period]="chartPeriod()"
                   [loading]="chartLoading()"
@@ -176,7 +178,7 @@
               <!-- PS-25 owns the chart live region; keep the existing switch-control announcement. -->
               <p class="sr-only" aria-hidden="true">{{ chartAnnouncement() }}</p>
               <div class="portfolio-stats">
-                <div>
+                <div data-glossary="buying-power">
                   <span>Buying power</span
                   ><strong>{{ showBalance() ? (buyingPower() | currency) : '••••••' }}</strong>
                 </div>
@@ -186,35 +188,36 @@
                 </div>
                 <div>
                   <span>Today’s return</span
-                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
+                  ><strong [class.positive]="todayReturn() > 0" [class.negative]="todayReturn() < 0">@if (showBalance()) { @if (showBalance()) { <app-financial-change [value]="todayReturn()" [percent]="todayReturnPercent()" unit="currency" /> } @else { Hidden } } @else { •••••• }</strong>
                 </div>
-                <div>
+                <div data-glossary="total-return">
                   <span>Total return</span
-                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { •••••• }</strong>
+                  ><strong [class.positive]="totalReturn() > 0" [class.negative]="totalReturn() < 0">@if (showBalance()) { @if (showBalance()) { <app-financial-change [value]="totalReturn()" [percent]="totalReturnPercent()" unit="currency" /> } @else { Hidden } } @else { •••••• }</strong>
                 </div>
               </div>
             </section>
           }
           @if (activeTab() === 'Overview' || activeTab() === 'Portfolio') {
-            <section class="panel investments-panel" data-scan-group="Your investments">
+            <section class="panel investments-panel" data-scan-group="Your investments" aria-labelledby="novice-dashboard-heading-1">
               <div class="panel-heading">
-                <h2>Your investments</h2>
+                <h2 id="novice-dashboard-heading-1">Your investments</h2>
                 <button type="button" class="text-link" (click)="navigate('Portfolio')">
                   View all holdings <app-dashboard-icon name="chevron" />
                 </button>
               </div>
-              <div class="investment-tabs" aria-label="Investment view">
+              <div class="investment-tabs" role="tablist" aria-label="Investment view">
                 @for (item of ['Holdings', 'Asset classes']; track item) {
                   <button
                     type="button"
                     [class.selected]="investmentTab() === item"
-                    [attr.aria-pressed]="investmentTab() === item"
+                    role="tab" [id]="'investment-tab-' + $index" aria-controls="investment-panel" [attr.aria-selected]="investmentTab() === item" [tabIndex]="investmentTab() === item ? 0 : -1"
                     (click)="investmentTab.set(item)"
                   >
                     {{ item }}
                   </button>
                 }
               </div>
+              <div id="investment-panel" role="tabpanel" [attr.aria-labelledby]="investmentTab() === 'Holdings' ? 'investment-tab-0' : 'investment-tab-1'">
               @if (investmentTab() === 'Holdings') {
                 <div class="table-scroll" tabindex="0" role="region" aria-label="Holdings table" data-scan-group="Holdings table">
                   <table class="holdings-table">
@@ -223,9 +226,9 @@
                       <tr>
                         <th scope="col">Symbol · Name</th>
                         <th scope="col">Value · Shares</th>
-                        <th scope="col">Avg. price</th>
+                        <th scope="col" data-glossary="average-cost">Avg. price</th>
                         <th scope="col">Today</th>
-                        <th scope="col">Total return</th>
+                        <th scope="col" data-glossary="total-return">Total return</th>
                         <th scope="col"><span class="sr-only">Actions</span></th>
                       </tr>
                     </thead>
@@ -236,7 +239,7 @@
                             <button
                               class="holding-symbol"
                               type="button"
-                              [attr.data-speak]="spokenStock(holding.name, holding.symbol)"
+                              [attr.data-speak]="spokenRow(holding.name, holding.symbol, holding.shares ? holding.value / holding.shares : 0, holding.change)"
                               (click)="openTrade('Buy', holding.symbol)"
                             >
                               <span class="company-logo" [class]="'company-logo ' + holding.logo">
@@ -262,14 +265,14 @@
                             </button>
                           </td>
                           <td>
-                            <span class="cell-main">{{ holding.value | currency }}</span><span class="cell-sub">{{ holding.shares | number: '1.3-3' }} shares</span>
+                            <span class="cell-main">{{ showBalance() ? (holding.value | currency) : 'Hidden' }}</span><span class="cell-sub">{{ holding.shares | number: '1.3-3' }} shares</span>
                           </td>
-                          <td>{{ holding.average | currency }}</td>
+                          <td>{{ showBalance() ? (holding.average | currency) : 'Hidden' }}</td>
                           <td [class.positive]="holding.today > 0" [class.negative]="holding.today < 0">
-                            <app-financial-change [value]="holding.today" unit="currency" /><span><app-financial-change [value]="holding.change" unit="percent" /></span>
+                            @if (showBalance()) { <app-financial-change [value]="holding.today" unit="currency" /> } @else { Hidden }<span><app-financial-change [value]="holding.change" unit="percent" /></span>
                           </td>
                           <td [class.positive]="holding.total > 0" [class.negative]="holding.total < 0">
-                            <app-financial-change [value]="holding.total" unit="currency" /><span
+                            @if (showBalance()) { <app-financial-change [value]="holding.total" unit="currency" /> } @else { Hidden }<span
                               ><app-financial-change [value]="holding.totalPercent" unit="percent" /></span
                             >
                           </td>
@@ -306,22 +309,24 @@
                   </div>
                 </div>
               }
+              </div>
             </section>
           }
           @if (activeTab() === 'Overview') {
-            <section class="panel expanded-list activity-panel" data-scan-group="Recent activity">
-              <div class="panel-heading"><h2>Recent activity</h2></div>
+            <section class="panel expanded-list activity-panel" data-scan-group="Recent activity" aria-labelledby="novice-dashboard-heading-2">
+              <div class="panel-heading"><h2 id="novice-dashboard-heading-2">Recent activity</h2></div>
               <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
             </section>
           }
           @if (activeTab() === 'Activity') {
-            <section class="panel expanded-list" data-scan-group="Activity">
-              <div class="panel-heading"><h2>Orders, deposits and transfers</h2></div>
+            <section class="panel expanded-list" data-scan-group="Activity" aria-labelledby="novice-dashboard-heading-3">
+              <div class="panel-heading"><h2 id="novice-dashboard-heading-3">Orders, deposits and transfers</h2></div>
               <app-activity-feed />
             </section>
           }
           @if (activeTab() === 'Settings') {
-            <section class="settings-page" aria-label="Account settings" data-scan-group="Account settings">
+            <section class="settings-page" aria-labelledby="account-settings-title" data-scan-group="Account settings">
+              <h2 id="account-settings-title">Account settings</h2>
               @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
               @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
               @if (profile(); as userProfile) {
@@ -382,9 +387,19 @@
         </div>
         @if (activeTab() === 'Overview') {
           <div class="secondary-column">
-            <section class="panel allocation-panel" data-scan-group="Asset allocation">
+            <section class="panel trade-panel" data-scan-group="Ready to trade" aria-labelledby="novice-dashboard-heading-5">
+              <h2 id="novice-dashboard-heading-5">Ready to trade?</h2>
+              <p>Buy or sell shares. You’ll review the details before confirming.</p>
+              <div class="trade-actions">
+                <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
+                ><button type="button" class="secondary-button" (click)="openTrade('Sell')">
+                  Sell
+                </button>
+              </div>
+            </section>
+            <section class="panel allocation-panel" data-scan-group="Asset allocation" aria-labelledby="novice-dashboard-heading-4">
               <div class="panel-heading">
-                <h2>Allocation by sector</h2>
+                <h2 id="novice-dashboard-heading-4">Allocation by sector</h2>
                 <button type="button" class="text-link" (click)="openModal('allocation')">
                   View details <app-dashboard-icon name="chevron" />
                 </button>
@@ -433,19 +448,9 @@
                 ><app-dashboard-icon name="chevron" />
               </button>
             </section>
-            <section class="panel trade-panel" data-scan-group="Ready to trade">
-              <h2>Ready to trade?</h2>
-              <p>Buy or sell shares. You’ll review the details before confirming.</p>
-              <div class="trade-actions">
-                <button type="button" class="green-button" (click)="openTrade('Buy')">Buy</button
-                ><button type="button" class="secondary-button" (click)="openTrade('Sell')">
-                  Sell
-                </button>
-              </div>
-            </section>
-            <section class="panel watchlist-panel" data-scan-group="Watchlist">
+            <section class="panel watchlist-panel" data-scan-group="Watchlist" aria-labelledby="novice-dashboard-heading-6">
               <div class="panel-heading">
-                <h2>Watchlist</h2>
+                <h2 id="novice-dashboard-heading-6">Watchlist</h2>
                 <span class="muted-note">Open a stock to add or remove it</span>
               </div>
               <div class="table-scroll" tabindex="0" role="region" aria-label="Watchlist table" data-scan-group="Watchlist table">
@@ -462,7 +467,7 @@
                   @for (quote of watchlist(); track quote.symbol) {
                     <tr>
                       <td>
-                        <button type="button" (click)="openTrade('Buy', quote.symbol)">
+                        <button type="button" [attr.data-speak]="spokenRow(quote.name, quote.symbol, quote.price, quote.change)" (click)="openTrade('Buy', quote.symbol)">
                           {{ quote.symbol }}
                         </button>
                       </td>
@@ -516,7 +521,7 @@
       <div class="trade-chart-price">
         <div class="trade-chart-value">{{ stockChartPrice() | currency }}</div>
         <div class="portfolio-gain" [class.up]="stockChartChange().amount > 0" [class.down]="stockChartChange().amount < 0">
-          <strong>@if (stockChartChangeAvailable()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Change unavailable }</strong
+          <strong>@if (stockChartChangeAvailable()) { @if (showBalance()) { <app-financial-change [value]="stockChartChange().amount" [percent]="stockChartChange().percent" unit="currency" /> } @else { Hidden } } @else { Change unavailable }</strong
           ><span>{{ stockChartChange().label }}</span>
         </div>
       </div>
@@ -543,7 +548,8 @@
         {{ watched().includes(tradeQuote().symbol) ? '★ Saved' : '☆ Add to watchlist' }}
       </button>
     </div>
-    <form class="trade-form" method="post" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
+    <!-- novalidate + data-a11y-app-validation (PS-21): the trade's own message is what is shown and read, not the browser's. -->
+    <form class="trade-form" method="post" novalidate data-a11y-app-validation data-a11y-nav-group="Order details" (submit)="$event.preventDefault(); reviewing() ? confirmTrade() : reviewTrade()">
       <label id="novice-stock-label" for="novice-stock">Stock</label>
       <div class="stock-picker" (focusout)="stockMenuOpen.set(false)">
         <button
@@ -595,23 +601,28 @@
       </div>
       <label for="novice-shares">Number of shares</label
       ><input
-        id="novice-shares" aria-describedby="novice-trade-message"
+        id="novice-shares"
         type="number"
         min="1"
         step="1"
         required
         placeholder="0"
         [value]="quantity()"
+        [attr.aria-invalid]="quantityError() ? 'true' : null"
+        [attr.aria-describedby]="quantityError() ? 'novice-shares-error' : 'novice-trade-message'"
         (input)="
           quantity.set($any($event.target).value); reviewing.set(false); tradeMessage.set('')
         "
       />
+      @if (quantityError()) {
+        <p id="novice-shares-error" class="field-error"><span aria-hidden="true">⚠ </span>{{ quantityError() }}</p>
+      }
       <div class="trade-total">
         <span>Estimated total</span><strong>{{ tradeTotal() | currency }}</strong>
       </div>
-      <p>Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
+      <p data-glossary="buying-power">Buying power: {{ showBalance() ? (buyingPower() | currency) : '••••••' }}</p>
       @if (protectionNote()) {
-        <div class="protection-row">
+        <div class="protection-row" data-glossary="price-protection">
           <div class="protection-copy">
             <span>Price protection <b>{{ tolerance() }}%</b></span>
             <small>{{ protectionNote() }}</small>
@@ -638,15 +649,17 @@
         <p class="closed-warning" role="note">{{ closedWarning() }}</p>
       }
       @if (reviewing()) {
-        <p class="review-confirmation review-summary" role="status" appFocusAfterChange>{{ reviewSummary() }}</p>
+        <!-- Announced once through the live announcer as the review opens, and focus goes to Confirm (PS-21). -->
+        <p id="novice-review-summary" class="review-confirmation review-summary">{{ reviewSummary() }}</p>
         <div class="review-actions">
           <button class="secondary-button" type="button" (click)="reviewing.set(false)">Edit</button>
-          <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Confirm {{ side().toLowerCase() }}</button>
+          <button id="novice-confirm" class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" appFocusAfterChange>Confirm {{ side().toLowerCase() }}</button>
         </div>
       } @else {
-        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit">Review {{ side().toLowerCase() }}</button>
+        <button class="green-button submit-trade" [class.sell]="side() === 'Sell'" type="submit" data-glossary="market-order">Review {{ side().toLowerCase() }}</button>
       }
-      <output id="novice-trade-message">{{ tradeMessage() }}</output>
+      <!-- Read through the live announcer (PS-21), once per message, so this copy stays quiet. -->
+      <output id="novice-trade-message" aria-live="off">{{ tradeStatus() }}</output>
     </form>
     </div>
     </div>
@@ -661,8 +674,8 @@
     </div>
     <h3 class="modal-subhead">By asset class</h3>
     <div class="asset-class-list modal-allocation-list">
-      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ assetAllocation().stocksPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
-      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ assetAllocation().cashPercent }}%</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot stocks" aria-hidden="true"></i>Stocks</span><strong>{{ allocationReady() ? assetAllocation().stocksPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().stocksValue | currency) : '••••••') : '—' }}</span></div>
+      <div><span><i class="asset-dot cash" aria-hidden="true"></i>Cash</span><strong>{{ allocationReady() ? assetAllocation().cashPercent + '%' : '—' }}</strong><span>{{ allocationReady() ? (showBalance() ? (assetAllocation().cashValue | currency) : '••••••') : '—' }}</span></div>
     </div>
     <p>
       Spreading investments across asset classes can help manage concentration. Review how your

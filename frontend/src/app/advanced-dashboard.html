@@ -19,9 +19,13 @@
       (keydown)="sidebar.keys($event)"
       (dblclick)="sidebar.toggle()"
     ></div>
-    <a class="pro-logo" href="/" (click)="$event.preventDefault(); navigate('Overview')"
-      >Next<span>Trade</span><app-dashboard-icon name="arrow"
-    /></a>
+    <a class="pro-logo" href="/" aria-label="NextTrade home" (click)="$event.preventDefault(); navigate('Overview')"
+      >Next<span>Trade</span
+      ><svg class="wordmark-trend" viewBox="0 0 22 16" aria-hidden="true">
+        <path d="M1 13 7 9l4 2 8-9" />
+        <path d="m14 2h5v5" />
+      </svg
+    ></a>
     <nav aria-label="Advanced navigation" data-scan-group="Main navigation">
       @for (item of nav; track item.name) {
         <button
@@ -37,8 +41,7 @@
       }
     </nav>
     <div class="sidebar-help" data-scan-group="Help and support">
-      <span>Help &amp; Support</span
-      ><button type="button" aria-label="Keyboard shortcuts" (click)="openModal('shortcuts')">
+      <button type="button" aria-label="Keyboard shortcuts" (click)="openModal('shortcuts')">
         <app-dashboard-icon name="keyboard" /><span>Keyboard shortcuts</span></button
       ><button type="button" class="sign-out" aria-label="Sign out" [attr.title]="collapsed() ? 'Sign out' : null" (click)="signOut.emit()">
         <app-dashboard-icon name="signout" /><span>Sign out</span>
@@ -53,6 +56,7 @@
           placeholder="Search symbols, companies, or keywords (e.g. AAPL, earnings, AI)..."
           [value]="query()"
           (input)="query.set($any($event.target).value)"
+          (keydown)="submitSearch($event)"
           (keydown.escape)="query.set('')"
         />
         @if (query().trim()) {
@@ -64,13 +68,12 @@
                 ><strong>{{ q.price | currency }}</strong>
               </button>
             } @empty {
-              <p>No matching symbols or companies.</p>
+              <p role="status">No matching symbols or companies.</p>
             }
           </div>
         }
       </div>
       <div class="header-actions">
-        <span class="market-status" [class.closed]="!marketOpen()" role="status"><i aria-hidden="true"></i>{{ marketBadge() }}</span>
         <app-briefing [source]="briefingSource" [marketOpen]="marketKnownOpen()" />
         <app-account-switcher />
         <span class="tier-badge" title="Assigned from the net worth and income you declared"><span class="sr-only">Trader tier: </span>Advanced · Pro</span>
@@ -102,7 +105,37 @@
         </button>
       </div>
     </header>
+    <app-market-ticker data-scan-group="Live prices" (pick)="pickTicker($event)" />
     <main id="main-content" class="pro-content" tabindex="-1">
+      @if (page() === 'Portfolio' || page() === 'Activity' || page() === 'Markets') {
+        <div class="page-heading">
+          <div>
+            <span class="page-greeting">{{ greeting() }}</span>
+            <h1 class="greeting-title">{{ page() }}</h1>
+          </div>
+          <div class="heading-status">
+            <span class="status-pill" [class.closed]="!marketOpen()" [class.open]="marketOpen()"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ formattedTime().date }}</span>
+          </div>
+        </div>
+      }
+      @if (page() === 'Overview') {
+        <div class="page-heading">
+          <div>
+            <h1 class="greeting-title">{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
+            @if (daySummary(); as day) {
+              @if (day.symbol) {
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today, and <b>{{ day.symbol }}</b> is your best mover <span [class.positive]="day.change > 0" [class.negative]="day.change < 0">(<app-financial-change [value]="day.change" />)</span>.</p>
+              } @else {
+                <p class="day-summary">You’re <b [class.positive]="day.amount > 0" [class.negative]="day.amount < 0"><span aria-hidden="true">{{ day.moveArrow }}</span>{{ day.moveText }}</b> today.</p>
+              }
+            }
+          </div>
+          <div class="heading-status">
+            <span class="status-pill" [class.closed]="!marketOpen()" [class.open]="marketOpen()"><i aria-hidden="true"></i>{{ marketText() }}</span><span>{{ formattedTime().date }}</span>
+          </div>
+        </div>
+      }
+      <app-price-watch />
       @if (serviceDown()) {
         <div class="service-banner" role="alert">
           <strong>We can't reach NextTrade right now.</strong>
@@ -111,35 +144,36 @@
         </div>
       }
       <div class="pro-grid" [class.secondary-page]="page() !== 'Overview'">
-        <section class="panel summary-panel" data-scan-group="Portfolio summary">
-          <h1>
-            {{ page() === 'Overview' ? 'Portfolio Summary' : page() }}
-            <button
-              type="button"
-              class="icon-button"
-              [attr.aria-label]="privateBalance() ? 'Show balances' : 'Hide balances'"
-              (click)="privateBalance.set(!privateBalance())"
-            >
-              <app-dashboard-icon name="eye" />
-            </button>
-          </h1>
+        @if (page() === 'Overview') {
+        <section class="panel summary-panel" data-scan-group="Portfolio summary" aria-labelledby="portfolio-page-title">
+          <h2 id="portfolio-page-title">
+            Portfolio Summary
+          </h2>
           @if (!portfolioLoaded()) {
             <p class="empty-note" aria-live="polite">Loading your balances…</p>
           } @else {
             <div class="summary-metrics" data-a11y-read data-a11y-label="Portfolio summary">
-              <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
-                <strong>{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong
-                ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
-              </div>
-              <div>
+              <!-- Follows the portfolio graph below: its range, and the point under the cursor (as in novice). -->
+              @if (chartChangeAvailable()) {
+                <div class="main-value" [class.day-up]="headerChange().amount > 0" [class.day-down]="headerChange().amount < 0">
+                  <strong>{{ headerValue() | currency }}</strong
+                  ><span [class.gain]="headerChange().amount > 0" [class.loss]="headerChange().amount < 0"><app-financial-change [value]="headerChange().amount" [percent]="headerChange().percent" unit="currency" /> <small>{{ headerChange().label }}</small></span>
+                </div>
+              } @else {
+                <div class="main-value" [class.day-up]="dayGain() > 0" [class.day-down]="dayGain() < 0">
+                  <strong>{{ headerValue() | currency }}</strong
+                  ><span [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" [percent]="dayGainPercent()" unit="currency" /> <small>Today</small></span>
+                </div>
+              }
+              <div data-glossary="buying-power">
                 <span>Buying Power</span
-                ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong>
+                ><strong>{{ buyingPower() | currency }}</strong>
               </div>
               <div>
                 <span>Day P&amp;L</span><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></strong
                 ><b [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></b>
               </div>
-              <div>
+              <div data-glossary="total-return">
                 <span>Total Return</span
                 ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
                   ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
@@ -149,144 +183,135 @@
               </div>
               <div>
                 <span>Cash</span
-                ><strong>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</strong
+                ><strong>{{ buyingPower() | currency }}</strong
                 ><small>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} of total</small>
               </div>
               <div>
                 <span>Invested</span
-                ><strong>{{ privateBalance() ? '••••••' : (exposure().equities | currency) }}</strong
+                ><strong>{{ exposure().equities | currency }}</strong
                 ><small>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} of total</small>
               </div>
             </div>
+            <app-portfolio-chart
+              class="summary-chart"
+              data-scan-group="Portfolio chart"
+              [points]="chartPoints()"
+              [range]="chartSpan()"
+              [period]="chartPeriod()"
+              [loading]="chartLoading()"
+              [error]="chartError()"
+              [notice]="chartNotice()"
+              [delayed]="chartDelayed()" [accountKey]="selectedAccount()?.account_id ?? ''"
+              (periodChange)="setChartPeriod($event)"
+              (scrub)="chartScrub.set($event)"
+            />
+            <!-- Explain / table for the portfolio's equities-and-cash split (moved here from the old bottom card). -->
+            <div class="exposure-access"><span class="watch-access-label">Cash vs. invested</span>
+              <app-chart-access class="summary-access" id="advanced-exposure" label="Portfolio exposure" [summary]="exposureDescription()" [table]="exposureTable()" [context]="selectedAccount()?.account_id ?? ''" /></div>
           }
         </section>
+        }
         @if (page() === 'Overview') {
           <app-advanced-chart data-scan-group="Price chart" [desk]="this" />
           <app-advanced-ticket data-scan-group="Trade ticket" [desk]="this" />
         }
         @if (page() === 'Overview' || page() === 'Portfolio') {
-          <section class="panel positions-panel" data-scan-group="Positions">
-            <div class="panel-tabs">
+          <section class="panel positions-panel" data-scan-group="Holdings" aria-labelledby="positions-title">
+            <div class="panel-heading">
+              <h2 id="positions-title">Your holdings</h2>
+              <span class="panel-note">{{ positions().length }} holdings · {{ exposure().equities | currency }} invested</span>
+            </div>
+            <div class="investment-tabs" role="tablist" aria-label="Holdings view">
               @for (tab of bottomTabs; track tab) {
                 <button
                   type="button"
-                  [class.active]="bottomTab() === tab"
-                  [attr.aria-pressed]="bottomTab() === tab"
+                  [class.selected]="bottomTab() === tab"
+                  role="tab" [id]="'portfolio-tab-' + $index" aria-controls="portfolio-panel" [attr.aria-selected]="bottomTab() === tab" [tabIndex]="bottomTab() === tab ? 0 : -1"
                   (click)="bottomTab.set(tab)"
                 >
                   {{ tab }}
                 </button>
               }
-              <span class="panel-note">{{ positions().length }} positions · {{ privateBalance() ? '••••••' : (exposure().equities | currency) }} invested</span>
             </div>
-            <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
-              @if (bottomTab() === 'Positions') {
-                <table class="positions-table">
-                  <caption class="sr-only">Positions</caption>
+            <div id="portfolio-panel" role="tabpanel" [attr.aria-labelledby]="'portfolio-tab-' + bottomTabs.indexOf(bottomTab())">
+            @if (bottomTab() === 'Holdings') {
+              <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
+                <table class="positions-table holdings-table">
+                  <caption class="sr-only">Holdings</caption>
                   <thead>
                     <tr>
-                      <th scope="col">Symbol</th>
-                      <th scope="col">Last</th>
-                      <th scope="col">Change %</th>
-                      <th scope="col">Quantity</th>
-                      <th scope="col">Market Value</th>
+                      <th scope="col">Symbol · Name</th>
+                      <th scope="col">Last · Change</th>
+                      <th scope="col">Value · Shares</th>
                       <th scope="col">Day P&amp;L</th>
                       <th scope="col">Total P&amp;L</th>
                       <th scope="col">Weight</th>
-                      <th scope="col">Actions</th>
+                      <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (p of positions(); track p.symbol) {
                       <tr>
                         <td>
-                          <button type="button" (click)="choose(quote(p.symbol))">
-                            <b>{{ p.symbol }}</b>
+                          <button class="holding-symbol" [attr.data-speak]="spokenRow(quote(p.symbol))" type="button" (click)="choose(quote(p.symbol))">
+                            <span class="company-logo" aria-hidden="true">{{ p.symbol.slice(0, 1) }}</span
+                            ><span class="holding-id"><b>{{ p.symbol }}</b><span class="company-name" data-glossary="average-cost">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</span></span>
                           </button>
-                          <small class="position-sub">{{ quote(p.symbol).name }} · avg {{ p.cost | currency }}</small>
                         </td>
-                        <td>@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | number: '1.2-2' }}</app-price-flash>}</td>
-                        <td
-                          [class.gain]="quote(p.symbol).change > 0"
-                          [class.loss]="quote(p.symbol).change < 0"
-                        >
-                          <app-financial-change [value]="quote(p.symbol).change" unit="percent" />
+                        <td>
+                          <span class="cell-main">@for (t of [tickOf(p.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ p.price | currency }}</app-price-flash>}</span
+                          ><span class="cell-sub" [class.gain]="quote(p.symbol).change > 0" [class.loss]="quote(p.symbol).change < 0"><app-financial-change [value]="quote(p.symbol).change" unit="percent" /></span>
                         </td>
-                        <td>{{ p.quantity }}</td>
-                        <td>{{ p.value | currency }}</td>
+                        <td>
+                          <span class="cell-main">{{ p.value | currency }}</span><span class="cell-sub">{{ p.quantity }} shares</span>
+                        </td>
                         <td [class.gain]="p.day > 0" [class.loss]="p.day < 0">
-                          <app-financial-change [value]="p.day" unit="currency" />
+                          <span class="cell-main"><app-financial-change [value]="p.day" unit="currency" /></span>
                         </td>
                         <td [class.gain]="p.total > 0" [class.loss]="p.total < 0">
-                          <app-financial-change [value]="p.total" unit="currency" />
+                          <span class="cell-main"><app-financial-change [value]="p.total" unit="currency" /></span
+                          ><span class="cell-sub"><app-financial-change [value]="p.cost * p.quantity ? (p.total / (p.cost * p.quantity)) * 100 : 0" unit="percent" /></span>
                         </td>
                         <td>
                           <span class="weight-cell">{{ p.weight | number: '1.1-1' }}%<span class="weight-bar" aria-hidden="true"><i [style.width.%]="p.weight"></i></span></span>
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            class="icon-button"
-                            [attr.aria-label]="'Trade ' + p.symbol"
-                            (click)="choose(quote(p.symbol))"
-                          >
-                            <app-dashboard-icon name="more" /><span class="trade-label" aria-hidden="true">Trade</span>
-                          </button>
+                          <button type="button" class="holding-actions" [attr.aria-label]="'Trade ' + p.symbol" (click)="tradeHolding(p.symbol)">Trade</button>
                         </td>
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="9">
-                          {{ portfolioLoaded() ? 'No positions yet. Buy a stock from the ticket to start.' : 'Loading your positions…' }}
+                        <td colspan="7" class="empty-row">
+                          {{ portfolioLoaded() ? 'No holdings yet. Buy a stock from the ticket to start.' : 'Loading your holdings…' }}
                         </td>
                       </tr>
                     }
                   </tbody>
                 </table>
-              } @else if (bottomTab() === 'Balances') {
-                <div class="balance-details">
-                  <div>
-                    <span>Cash</span><strong>{{ buyingPower() | currency }}</strong>
-                  </div>
-                  <div>
-                    <span>Buying Power</span><strong>{{ buyingPower() | currency }}</strong>
-                  </div>
-                  <div><span>Invested</span><strong>{{ exposure().equities | currency }}</strong></div>
-                  <div><span>Total Value</span><strong>{{ portfolio() | currency }}</strong></div>
+              </div>
+            } @else {
+              <div class="asset-class-list">
+                <div>
+                  <span><i class="asset-dot stocks"></i>Stocks</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }}</strong
+                  ><span>{{ allocationReady() ? (exposure().equities | currency) : '—' }}</span>
                 </div>
-              } @else {
-                <div class="balance-details">
-                  <div>
-                    <span>Day P&amp;L</span
-                    ><strong [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"
-                      ><app-financial-change [value]="dayGain()" unit="currency" /></strong
-                    >
-                  </div>
-                  <div>
-                    <span>Total Return</span
-                    ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      ><app-financial-change [value]="totalReturn()" unit="currency" /></strong
-                    >
-                  </div>
-                  <div>
-                    <span>Return %</span
-                    ><strong [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"
-                      ><app-financial-change [value]="totalReturnPercent()" unit="percent" /></strong
-                    >
-                  </div>
+                <div>
+                  <span><i class="asset-dot cash"></i>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</strong
+                  ><span>{{ allocationReady() ? (exposure().cash | currency) : '—' }}</span>
                 </div>
-              }
+              </div>
+            }
             </div>
           </section>
         }
         @if (page() === 'Activity') {
-          <section class="panel orders-history-panel" data-scan-group="Activity">
-            <div class="panel-heading"><h2>Activity</h2></div>
+          <section class="panel orders-history-panel" data-scan-group="Activity" aria-labelledby="advanced-dashboard-heading-1">
+            <div class="panel-heading"><h2 id="advanced-dashboard-heading-1">Orders, deposits and transfers</h2></div>
             <app-activity-feed />
           </section>
         }
         @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel watch-panel" data-scan-group="Watchlist">
+          <section class="panel watch-panel" data-scan-group="Watchlist" aria-labelledby="advanced-dashboard-heading-2">
             @if (page() === 'Overview') {
               <div class="list-tabs" role="tablist" aria-label="Watchlist and market lists">
                 @for (tab of ['Watchlist', 'Movers', 'Sectors']; track tab) {
@@ -303,20 +328,17 @@
                 }
               </div>
             } @else {
-              <div class="panel-heading"><h2>Stocks</h2></div>
+              <div class="panel-heading"><h2 id="advanced-dashboard-heading-2">Stocks</h2></div>
             }
             <div id="watch-list-panel" [attr.role]="page() === 'Overview' ? 'tabpanel' : null" [attr.aria-labelledby]="page() === 'Overview' ? 'watch-tab-' + overviewList() : null">
             @if (page() === 'Markets' || overviewList() === 'Watchlist') {
             @if (page() === 'Markets') {
-              <select
-                aria-label="Stock filter"
-                [value]="filter()"
-                (change)="filter.set($any($event.target).value)"
-              >
-                <option>All stocks</option>
-                <option>Gainers</option>
-                <option>Decliners</option>
-              </select>
+              <!-- The stock filter as underlined tabs, like the other lists, instead of a small native dropdown. -->
+              <div class="list-tabs stock-filter" role="group" aria-label="Stock filter">
+                @for (option of ['All stocks', 'Gainers', 'Decliners']; track option) {
+                  <button type="button" [class.active]="filter() === option" [attr.aria-pressed]="filter() === option" (click)="filter.set(option)">{{ option }}</button>
+                }
+              </div>
             }
             <div class="table-scroll" tabindex="0" role="region" aria-label="Financial table" data-scan-group="Financial table">
               <table class="watch-table">
@@ -333,8 +355,8 @@
                   @for (q of page() === 'Markets' ? screened() : quotes(); track q.symbol) {
                     <tr [class.selected]="selected().symbol === q.symbol">
                       <td>
-                        <button type="button" (click)="choose(q)">
-                          <b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ q.sector }}</small>
+                        <button type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
+                          @if (page() === 'Markets') {<span class="company-logo" aria-hidden="true">{{ q.symbol.slice(0, 1) }}</span>}<b>{{ q.symbol }}</b><small class="watch-sector" aria-hidden="true">{{ page() === 'Markets' ? q.name : q.sector }}</small>
                         </button>
                       </td>
                       <td>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | number: '1.2-2' }}</app-price-flash>}</td>
@@ -356,7 +378,7 @@
             }
             } @else if (overviewList() === 'Movers') {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong
@@ -384,44 +406,35 @@
               <app-chart-access #watchSectorAccess id="advanced-watch-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             }
             </div>
-          </section>
-        }
-        @if (page() === 'Overview' || page() === 'Markets') {
-          <section class="panel market-panel" data-scan-group="Market overview">
-            <div class="panel-heading"><h2>Market Overview</h2></div>
             @if (page() === 'Overview') {
-              <div class="heat-map" role="group" tabindex="0" aria-label="Listed stock performance heat map" data-scan-group="Stock performance" [appChartFocus]="heatAccess" [chartScanChildren]="true">
-                @for (q of heatMapQuotes(); track q.symbol) {
-                  <button
-                    type="button"
-                    class="heat-tile"
-                    [class.gain]="q.change > 0"
-                    [class.loss]="q.change < 0"
-                    [style.--heat]="q.change < 0 ? -q.change : q.change"
-                    (click)="choose(q)"
-                    aria-describedby="advanced-heatmap-summary"
-                  >
-                    <b>{{ q.symbol }}</b>@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash role="img" [attr.aria-label]="q.symbol + ': daily change ' + q.change + ' percent'" aria-describedby="advanced-heatmap-summary" class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'"><app-financial-change [value]="q.change" unit="percent" /></app-price-flash>}
-                  </button>
-                } @empty {
-                  <p class="empty-note">Loading prices…</p>
+              <!-- Moved here from the Market Overview card, which no longer shows on Overview (it stays on Markets). -->
+              <div class="watch-access">
+                <div><span class="watch-access-label">Stock moves today</span>
+                  <app-chart-access id="advanced-heatmap" label="Listed stock performance today" [summary]="heatDescription()" [table]="heatTable()" /></div>
+                @if (overviewList() !== 'Sectors') {
+                  <div><span class="watch-access-label">Sector moves today</span>
+                    <app-chart-access id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" /></div>
                 }
               </div>
-              <app-chart-access #heatAccess id="advanced-heatmap" label="Listed stock performance today" [summary]="heatDescription()" [table]="heatTable()" />
-            } @else {
-            <div class="market-tabs">
+            }
+          </section>
+        }
+        @if (page() === 'Markets') {
+          <section class="panel market-panel" data-scan-group="Market overview" aria-labelledby="advanced-dashboard-heading-3">
+            <div class="panel-heading"><h2 id="advanced-dashboard-heading-3">Market overview</h2></div>
+            <div class="market-tabs" role="tablist" aria-label="Market view">
               @for (tab of ['Sectors', 'Top Movers']; track tab) {
                 <button
                   type="button"
-                  [class.active]="marketTab() === tab"
+                  role="tab" [id]="'market-tab-' + $index" aria-controls="market-panel" [attr.aria-selected]="marketTab() === tab" [tabIndex]="marketTab() === tab ? 0 : -1" [class.active]="marketTab() === tab"
                   (click)="marketTab.set(tab)"
                 >
                   {{ tab }}
                 </button>
               }
             </div>
-            }
-            @if (page() === 'Overview' || marketTab() === 'Sectors') {
+            <div id="market-panel" role="tabpanel" [attr.aria-labelledby]="marketTab() === 'Sectors' ? 'market-tab-0' : 'market-tab-1'">
+            @if (marketTab() === 'Sectors') {
               <div class="sector-list" [class.solo]="sectors().length === 1" role="img" tabindex="0" aria-label="Sector performance today" [appChartFocus]="marketSectorAccess">
                 @for (s of sectors(); track s.name) {
                   <div>
@@ -440,7 +453,7 @@
               <app-chart-access #marketSectorAccess id="advanced-market-sectors" label="Sector performance today" [summary]="sectorDescription()" [table]="sectorTable()" />
             } @else {
               @for (q of topMovers(); track q.symbol) {
-                <button class="mover-row" type="button" (click)="choose(q)">
+                <button class="mover-row" type="button" [attr.data-speak]="spokenRow(q)" (click)="choose(q)">
                   <b>{{ q.symbol }}</b
                   >@for (t of [tickOf(q.symbol)]; track t.key) {<app-price-flash class="tick" [direction]="t.dir" [class.tick-up]="t.dir === 'up'" [class.tick-down]="t.dir === 'down'">{{ q.price | currency }}</app-price-flash>}<strong [class.gain]="q.change > 0" [class.loss]="q.change < 0"
                     ><app-financial-change [value]="q.change" unit="percent" /></strong
@@ -448,82 +461,59 @@
                 </button>
               }
             }
+            </div>
           </section>
         }
         @if (page() === 'Overview') {
           <div class="bottom-panels">
-            <section class="panel executions-panel" data-scan-group="Recent activity">
+            <section class="panel executions-panel" data-scan-group="Recent activity" aria-labelledby="advanced-dashboard-heading-4">
               <div class="panel-heading">
-                <h2>Recent Activity</h2>
+                <h2 id="advanced-dashboard-heading-4">Recent Activity</h2>
               </div>
               <app-activity-feed [compact]="true" [limit]="5" (viewAll)="navigate('Activity')" />
-            </section>
-            <section class="panel exposure-panel" data-scan-group="Exposure">
-              <div class="panel-heading">
-                <h2>Portfolio Summary</h2>
-                <button type="button" class="text-link" (click)="openModal('exposure')">
-                  View details <app-dashboard-icon name="chevron" />
-                </button>
-              </div>
-              <div class="summary-card">
-                <strong class="summary-total">{{ privateBalance() ? '••••••••' : (portfolio() | currency) }}</strong>
-                <div class="summary-grid">
-                  <div>
-                    <span>Buying Power</span><b>{{ privateBalance() ? '••••••' : (buyingPower() | currency) }}</b
-                    ><small>Cash {{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</small>
-                  </div>
-                  <div>
-                    <span>Invested</span><b>{{ privateBalance() ? '••••••' : (exposure().equities | currency) }}</b
-                    ><small>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} of total</small>
-                  </div>
-                  <div>
-                    <span>Day P&amp;L</span
-                    ><b [class.gain]="dayGain() > 0" [class.loss]="dayGain() < 0"><app-financial-change [value]="dayGain()" unit="currency" /></b
-                    ><small [class.gain]="dayGainPercent() > 0" [class.loss]="dayGainPercent() < 0"><app-financial-change [value]="dayGainPercent()" unit="percent" /></small>
-                  </div>
-                  <div>
-                    <span>Total Return</span
-                    ><b [class.gain]="totalReturn() > 0" [class.loss]="totalReturn() < 0"><app-financial-change [value]="totalReturn()" unit="currency" /></b
-                    ><small [class.gain]="totalReturnPercent() > 0" [class.loss]="totalReturnPercent() < 0"><app-financial-change [value]="totalReturnPercent()" unit="percent" /></small>
-                  </div>
-                </div>
-                <div class="split-bar" tabindex="0" [appChartFocus]="exposureAccess" role="img" aria-label="Portfolio exposure">
-                  <i class="equities" [style.width.%]="allocationReady() ? exposure().equitiesPercent : 0"></i><i class="cash" [style.width.%]="allocationReady() ? exposure().cashPercent : 0"></i>
-                </div>
-                <app-chart-access #exposureAccess id="advanced-exposure" label="Portfolio exposure" [summary]="exposureDescription()" [table]="exposureTable()" [context]="selectedAccount()?.account_id ?? ''" />
-                <div class="split-legend">
-                  <span>Equities {{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }}</span><span>Cash {{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }}</span>
-                </div>
-              </div>
             </section>
           </div>
         }
         @if (page() === 'Settings') {
-          <section class="panel settings-panel" data-scan-group="Workspace settings">
-            <h2>Workspace settings</h2>
+          <!-- Same structure and look as the novice Settings page: a profile header, then one card per section. -->
+          <section class="settings-page" aria-label="Account settings" data-scan-group="Workspace settings">
             @if (profileLoading()) { <p class="profile-status">Loading your profile...</p> }
             @if (profileError()) { <p class="profile-status">{{ profileError() }}</p> }
             @if (profile(); as userProfile) {
-              <div data-a11y-sensitive>
-                <span>Full name</span><strong>{{ userProfile.firstName }} {{ userProfile.lastName }}</strong>
-              </div>
+              <header class="settings-profile" data-a11y-sensitive>
+                <span class="settings-avatar" aria-hidden="true">{{ (userProfile.firstName || 'A').slice(0, 1).toUpperCase() }}{{ (userProfile.lastName || '').slice(0, 1).toUpperCase() }}</span>
+                <div class="settings-identity">
+                  <span class="settings-eyebrow">Full name</span>
+                  <h2>{{ userProfile.firstName }} {{ userProfile.lastName }}</h2>
+                  <p>{{ userProfile.email }}</p>
+                </div>
+              </header>
             }
-            <section class="account-settings-block" aria-labelledby="account-settings-heading">
-              <h3 id="account-settings-heading">Personal details and sign-in</h3>
-              <p>Changing your email or password needs your current password.</p>
+            <div class="settings-section">
+              <div class="settings-intro"><h2 id="account-settings-heading">Personal details and sign-in</h2><p>Changing your email or password needs your current password.</p></div>
               <app-account-settings />
-            </section>
-            <div>
-              <span>Account</span><strong>{{ name() || 'Your account' }}</strong>
             </div>
-            <div>
-              <span>Trader tier</span><strong title="Assigned from the net worth and income you declared">Advanced · Pro</strong>
+            <div class="settings-section">
+              <div class="settings-intro"><h2>Account</h2><p>Your trading account and the experience it uses.</p></div>
+              <dl class="settings-list account-details">
+                <div><dt>Account</dt><dd>{{ name() || 'Your account' }}</dd></div>
+                <div><dt>Trader tier</dt><dd><span class="tier-tag" title="Assigned from the net worth and income you declared">Advanced · Pro</span></dd></div>
+              </dl>
             </div>
-            <app-price-protection-settings [symbols]="listedSymbols()" />
+            <div class="settings-section">
+              <div class="settings-intro"><h2>Trading safeguards</h2><p>Limits that protect you when prices move quickly.</p></div>
+              <div class="safeguards-group">
+                <app-price-protection-settings [symbols]="listedSymbols()" />
+              </div>
+            </div>
             <app-accessibility-settings (openShortcuts)="openModal('shortcuts')" />
-            <button type="button" class="secondary-button" (click)="signOut.emit()">
-              Sign out ↗
-            </button>
+            <footer class="settings-session">
+              <div>
+                <h2>Session</h2>
+                <p class="signed-in">Signed in as <b>{{ name() || 'your account' }}</b></p>
+              </div>
+              <button type="button" class="secondary-button" (click)="signOut.emit()">Sign out ↗</button>
+            </footer>
           </section>
         }
       </div>
@@ -548,9 +538,9 @@
     </button>
   </div>
   @if (modal() === 'review') {
-    @if (orderType() === 'MARKET') { <p class="review-summary" role="status">{{ reviewSummary() }}</p> }
-    @else { <p class="review-summary">{{ side() }} {{ quantity() }} {{ selected().symbol }} at {{ entryPrice() | currency }} or better</p> }
-    <p>{{ orderType() === 'LIMIT' ? 'Limit order: remains open until filled or cancelled.' : 'Market order: final price and total may differ from this estimate.' }}</p>
+    <!-- Announced once by the live announcer; Confirm takes focus. -->
+    <p id="pro-review-summary" class="review-summary" [class.sell]="side() === 'Sell'">{{ reviewSummary() }}</p>
+    <p [attr.data-glossary]="orderType() === 'LIMIT' ? 'limit-price' : 'market-order'">{{ orderType() === 'LIMIT' ? 'Limit order: remains open until filled or cancelled.' : 'Market order: final price and total may differ from this estimate.' }}</p>
     @if (closedWarning()) {
       <p class="closed-warning" role="note">{{ closedWarning() }}</p>
     }
@@ -561,16 +551,16 @@
       <div>
         <span>Symbol</span><strong>{{ selected().symbol }} · {{ selected().name }}</strong>
       </div>
-      <div>
+      <div [attr.data-glossary]="orderType() === 'LIMIT' ? 'limit-price' : 'market-order'">
         <span>Side / Type</span><strong>{{ side() }} / {{ orderType() === 'LIMIT' ? 'Limit' : 'Market' }}</strong>
       </div>
       <div>
         <span>Quantity</span><strong>{{ quantity() }}</strong>
       </div>
-      @if (orderType() === 'MARKET') { <div><span>Price protection</span><strong>{{ tolerance() }}%</strong></div> }
-      @else { <div><span>Limit price</span><strong>{{ entryPrice() | currency }}</strong></div> }
-      @if (takeProfitEnabled()) { <div><span>Take profit</span><strong>{{ exitPrice('profit') | currency }}</strong></div> }
-      @if (stopLossEnabled()) { <div><span>Stop loss</span><strong>{{ exitPrice('loss') | currency }}</strong></div> }
+      @if (orderType() === 'MARKET') { <div data-glossary="price-protection"><span>Price protection</span><strong>{{ tolerance() }}%</strong></div> }
+      @else { <div data-glossary="limit-price"><span>Limit price</span><strong>{{ entryPrice() | currency }}</strong></div> }
+      @if (takeProfitEnabled()) { <div data-glossary="take-profit"><span>Take profit</span><strong>{{ exitPrice('profit') | currency }}</strong></div> }
+      @if (stopLossEnabled()) { <div data-glossary="stop-loss"><span>Stop loss</span><strong>{{ exitPrice('loss') | currency }}</strong></div> }
       @if (takeProfitEnabled() || stopLossEnabled()) { <p>After this order fills, one opposite-side order activates at either exit level. It closes once, stays open until filled or cancelled, and requires available cash or shares.</p> }
       <div>
         <span>Live price</span><strong>{{ selected().price | currency }}</strong>
@@ -582,13 +572,13 @@
     @if (message()) { <p role="alert">{{ message() }}</p> }
     <div class="review-actions">
       <button class="secondary-button" type="button" (click)="closeModal()">Edit</button>
-      <button class="primary-button" type="button" [disabled]="submitting()" (click)="confirmOrder()">Confirm {{ side() }}</button>
+      <button id="pro-confirm" class="primary-button" type="button" [disabled]="submitting()" (click)="confirmOrder()">Confirm {{ side() }}</button>
     </div>
   } @else if (modal() === 'exposure') {
     <div class="review-details">
-      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().equities | currency }}</strong></div>
-      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ exposure().cash | currency }}</strong></div>
-      <div><span>Total</span><strong>{{ exposure().total | currency }}</strong></div>
+      <div><span>Equities</span><strong>{{ allocationReady() ? ((exposure().equitiesPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : (exposure().equities | currency) }}</strong></div>
+      <div><span>Cash</span><strong>{{ allocationReady() ? ((exposure().cashPercent | number: '1.1-1') + '%') : '—' }} · {{ !allocationReady() ? 'Unavailable' : (exposure().cash | currency) }}</strong></div>
+      <div><span>Total</span><strong>{{ !allocationReady() ? 'Unavailable' : (exposure().total | currency) }}</strong></div>
     </div>
   } @else if (modal() === 'shortcuts') {
     <app-keyboard-shortcuts />

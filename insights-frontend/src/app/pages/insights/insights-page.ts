@@ -9,6 +9,8 @@ const COUNT = new Intl.NumberFormat('en-US');
 const HOUR_MS = 3_600_000;
 /** How often the page re-reads today's figures, in milliseconds. */
 const REFRESH_MS = 5_000;
+/** The shortest gap between two spoken "new activity" updates; refreshes in between stay quiet. */
+const ANNOUNCE_EVERY_MS = 60_000;
 const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 /** The hour it is now in Central time, as the trend labels it ("14:00"). */
 const CENTRAL_HOUR = new Intl.DateTimeFormat('en-US', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Chicago' });
@@ -147,6 +149,13 @@ export class InsightsPage implements OnDestroy {
     + this.bars().map(bar => `${bar.label}: ${COUNT.format(bar.count)} ${this.plural(bar.count, 'trade')}`).join('; ') + '.');
   readonly hourlyTable = computed(() => ({ columns: ['Hour (Central)', 'Trades'],
     rows: this.bars().map(bar => [bar.label, COUNT.format(bar.count)]) }));
+  /**
+   * Read out by a polite status region when today's figures have changed, at most once a minute
+   * (PS-29). The first load and refreshes that change nothing say nothing.
+   */
+  readonly refreshAnnouncement = signal('');
+  private announced = '';
+  private announcedAt = 0;
   private destroyed = false;
   private readonly poll: ReturnType<typeof setInterval>;
 
@@ -200,6 +209,28 @@ export class InsightsPage implements OnDestroy {
       this.error.set('Some reporting figures could not be loaded. Trying again in a few seconds.');
     }
     this.loading.set(false);
+    this.announceActivity();
+  }
+
+  /** "Updated 4:02 PM CT: 15 trades and 22 orders today." when the counts moved and a minute has passed. */
+  private announceActivity(now = Date.now()): void {
+    const s = this.summary();
+    if (!s) {
+      return;
+    }
+    const figures = `${this.count(this.tradesToday())} ${this.plural(this.tradesToday(), 'trade')} and ${this.count(s.orders)} ${this.plural(s.orders, 'order')} today`;
+    if (!this.announced) {
+      // The first figures are on screen as the page opens; only later changes are news.
+      this.announced = figures;
+      this.announcedAt = now;
+      return;
+    }
+    if (figures === this.announced || now - this.announcedAt < ANNOUNCE_EVERY_MS) {
+      return;
+    }
+    this.announced = figures;
+    this.announcedAt = now;
+    this.refreshAnnouncement.set(`Updated ${this.updatedAt()}: ${figures}.`);
   }
 
   /** "Buy 3 MSFT · $1,524.46" for a filled order; "Sell 5 AAPL · Cancelled" for one that never filled. */

@@ -7,14 +7,15 @@
     }
   </div>
   @if (!compact()) {
-    <label>
-      From
-      <input type="date" [value]="from()" (change)="setFrom($any($event.target).value)" />
-    </label>
-    <label>
-      To
-      <input type="date" [value]="to()" (change)="setTo($any($event.target).value)" />
-    </label>
+    <!-- The site's own calendar, in place of the browser's date picker. -->
+    <div class="date-filter">
+      <span class="date-filter-label" id="activity-from-label">From</span>
+      <app-date-field label="From" [value]="from()" (valueChange)="setFrom($event)" />
+    </div>
+    <div class="date-filter">
+      <span class="date-filter-label" id="activity-to-label">To</span>
+      <app-date-field label="To" [value]="to()" (valueChange)="setTo($event)" />
+    </div>
     @if (hasFilters()) {
       <button type="button" class="clear-filters" (click)="clearFilters()">Clear filters</button>
     }
@@ -41,7 +42,8 @@
       }
     </p>
   } @else {
-    <ol class="activity-list" [class.refreshing]="loading()" aria-live="off" aria-label="Activity, newest first">
+    <!-- Not a live region (PS-21): a refresh would read the whole list again. Order steps are announced once by the dashboards. -->
+    <ol class="activity-list" [class.refreshing]="loading()" [attr.aria-busy]="loading() ? 'true' : null" aria-live="off" aria-label="Activity, newest first">
       @for (item of items(); track item.id) {
         <li class="activity-item" [class.cash]="item.kind === 'cash'">
           <time [attr.datetime]="item.at">{{ when(item.at) }}</time>

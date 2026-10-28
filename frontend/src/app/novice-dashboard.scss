@@ -968,6 +968,16 @@ th {
   margin: 14px 0;
   line-height: 1.7;
 }
+/* The share count's error under its field (PS-21); the warning sign repeats what the words say. */
+.detail-dialog .field-error {
+  margin: 6px 0 0;
+  color: var(--loss);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.detail-dialog input[aria-invalid='true'] {
+  border-color: var(--loss);
+}
 .trade-quote {
   display: flex;
   justify-content: space-between;

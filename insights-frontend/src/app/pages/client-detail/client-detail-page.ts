@@ -1,3 +1,4 @@
+import { InsightsChartAccess } from '../../shared/insights-chart-access';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -32,7 +33,7 @@ type Tab = 'overview' | 'orders';
  */
 @Component({
   selector: 'app-client-detail-page',
-  imports: [RouterLink],
+  imports: [RouterLink, InsightsChartAccess],
   templateUrl: './client-detail-page.html',
   styleUrl: './client-detail-page.scss',
 })
@@ -82,6 +83,8 @@ export class ClientDetailPage {
     });
   });
   /** The largest single holding's share; slices are largest first, and "Other" groups several holdings, so it never counts. */
+  readonly allocationSummary = computed(() => this.allocation().length ? 'Allocation by cost basis. ' + this.allocation().map(slice => `${slice.symbol}: ${MONEY.format(slice.value)}, ${slice.share.toFixed(1)} percent.`).join(' ') : 'No holdings to allocate.');
+  readonly allocationTable = computed(() => ({ columns: ['Holding', 'Cost basis (USD)', 'Share'], rows: this.allocation().map(slice => [slice.symbol, MONEY.format(slice.value), slice.share.toFixed(1) + '%']) }));
   readonly largestShare = computed(() => this.allocation()[0]?.share ?? 0);
   /** Value bought and sold per stock from the loaded fills, busiest stocks first. */
   readonly flows = computed(() => {

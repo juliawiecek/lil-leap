@@ -8,6 +8,8 @@ import type { PricePoint } from './market-feed-api';
 import { centralTime, centralTimestamp } from './app-time';
 import { displayCandles, indicators, placeEndLabels, rsi } from './technical-chart-math';
 import { pricePath, priceRange, priceY, plotMarks, type ChartWindow, type TradeMark } from './trade-marks';
+import { chartSound, pointAnnouncement, stepIndex, type ChartSound } from './chart-keyboard';
+import { spokenCompany } from './briefing';
 
 let chartId = 0;
 const HEIGHT = 180;
@@ -69,6 +71,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly anchor = signal<number | null>(null);
   readonly inspected = signal<PricePoint | null>(null);
   readonly svg = viewChild.required<ElementRef<SVGSVGElement>>('plot');
+  private readonly access = viewChild.required<ChartAccess>('access');
   #resize?: ResizeObserver;
   #key = '';
 
@@ -107,7 +110,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
   readonly range = computed(() => priceRange([
     ...this.visible().flatMap(p => p.candle ? [p.candle.low, p.candle.high] : [p.price]),
     ...this.series().flatMap(s => s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price)),
-    ...this.trades().filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price), this.averageCost() ?? 0,
+    ...(this.privateValues() ? [] : this.trades()).filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).map(p => p.price), (this.privateValues() ? 0 : this.averageCost() ?? 0),
   ]) ?? { low: 0, high: 1 });
   readonly line = computed(() => pricePath(this.rawTail(), this.viewport(), this.range(), this.width() - 8, HEIGHT));
   readonly paths = computed(() => this.series().map(s => ({ ...s, path: pricePath(s.points, this.viewport(), this.range(), this.width() - 8, HEIGHT), unavailable: s.points.length ? 'No values in this view' : s.unavailable })));
@@ -115,7 +118,7 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const end = s.points.filter(p => p.at >= this.viewport().start && p.at <= this.viewport().end).at(-1);
     return end ? [{ name: s.name, token: s.token, dash: s.dash, x: this.x(end.at), y: this.y(end.price), price: end.price, at: end.at }] : [];
   }), HEIGHT, 28));
-  readonly marks = computed(() => plotMarks(this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
+  readonly marks = computed(() => plotMarks(this.privateValues() ? [] : this.trades(), this.viewport(), this.range(), this.width() - 8, HEIGHT).map(mark => ({ ...mark, x: mark.x + 4 })));
   readonly axes = computed(() => Array.from({ length: 5 }, (_, i) => this.range().high - i * (this.range().high - this.range().low) / 4));
   readonly times = computed(() => [this.viewport().start, (this.viewport().start + this.viewport().end) / 2, this.viewport().end].map(at => centralTime(at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })));
   readonly maxVolume = computed(() => Math.max(1, ...this.candles().map(p => p.candle!.volume ?? 0)));
@@ -152,17 +155,36 @@ export class TechnicalChart implements AfterViewInit, OnChanges, OnDestroy {
     const at = this.viewport().start + (event.clientX - rect.left) / Math.max(1, rect.width) * (this.viewport().end - this.viewport().start);
     this.inspected.set(this.inspectable().reduce<PricePoint | null>((best, p) => !best || Math.abs(p.at - at) < Math.abs(best.at - at) ? p : best, null));
   }
+  /**
+   * Arrows step through the bars, Home and End jump to the ends, PageUp and PageDown move a tenth.
+   * Each step says the date, close, change and any trade there in the live region (PS-26); the
+   * candle detail under the chart stays on screen without being read a second time.
+   */
   inspectKey(event: KeyboardEvent): void {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Escape'].includes(event.key)) {
+    if (event.key === 'Escape') { event.preventDefault(); this.inspected.set(null); return; }
+    const points = this.inspectable();
+    const next = stepIndex(event.key, points.findIndex(p => p.at === this.inspected()?.at), points.length);
+    if (next === null) {
       return;
     }
     event.preventDefault();
-    if (event.key === 'Escape') { this.inspected.set(null); return; }
-    const points = this.inspectable();
-    const index = points.findIndex(p => p.at === this.inspected()?.at);
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? points.length - 1 : Math.max(0, Math.min(points.length - 1, (index < 0 ? points.length - 1 : index) + (event.key === 'ArrowRight' ? 1 : -1)));
-    this.inspected.set(points[next] ?? null);
+    this.inspected.set(points[next]);
+    this.access().announce(this.pointText(points, next));
   }
+  pointText(points: readonly PricePoint[], index: number): string {
+    const c = points[index].candle;
+    const usd = (value: number) => chartValue(value, { currency: 'USD', precision: 2 });
+    const direction = ['Down', 'Unchanged', 'Up'][Math.sign((c?.close ?? 0) - (c?.open ?? 0)) + 1];
+    const detail = c ? `${direction} bar: open ${usd(c.open)}, high ${usd(c.high)}, low ${usd(c.low)}.` : '';
+    return pointAnnouncement(points.map(p => ({ at: p.at, value: p.candle?.close ?? p.price })), index, {
+      currency: 'USD', tradesHidden: this.privateValues(), company: spokenCompany('', this.symbol()), trades: this.viewTrades(), detail,
+    });
+  }
+  /** What Space plays: the prices shown, with the person's trades and average cost unless private. */
+  readonly sound = (): ChartSound => {
+    const points = this.visible().map(p => ({ at: p.at, value: p.price }));
+    return this.privateValues() ? chartSound(points) : chartSound(points, this.viewTrades(), this.averageCost());
+  };
   readonly inspectable = computed(() => this.visible().some(p => !p.candle) ? this.visible() : this.candles());
   ngOnChanges(): void {
     if (this.#key !== this.chartKey()) { this.#key = this.chartKey(); this.zoom.set(1); this.anchor.set(null); this.inspected.set(null); }

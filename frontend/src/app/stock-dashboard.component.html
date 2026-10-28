@@ -15,14 +15,15 @@
           'text-slate-400': state().connection === 'connecting',
         }"
       >
-        <span class="status-dot" aria-hidden="true"></span>
-        {{
+        <span class="status-dot" [class.live]="state().connection === 'live'" aria-hidden="true" [attr.title]="state().connection === 'live' ? 'Updating every ' + sampleMs() / 1000 + 's' : null"></span>
+        <!-- While live only the dot shows (the wording stays for screen readers); delays and reconnects stay written out. -->
+        <span [class.sr-only]="state().connection === 'live'">{{
           state().connection === 'live'
             ? 'Updating every ' + sampleMs() / 1000 + 's'
             : state().connection === 'connecting'
               ? 'Connecting'
               : 'Prices delayed'
-        }}
+        }}</span>
       </span>
     </div>
 
@@ -102,7 +103,7 @@
     </div>
   </div>
   <app-stock-svg-chart
-    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()"
+    class="chart-canvas" [trades]="trades()" [averageCost]="averageCost()" [privateValues]="privateValues()" [asset]="asset() ?? selectedAsset()"
     [windowSeconds]="windowSeconds()"
     [chartType]="chartType()" [overview]="true"
     [label]="(asset()?.symbol || selectedAsset()?.symbol || 'Stock') + (windowSeconds() === 86400 ? ' one-day stock price' : ' stock price over the last ' + windowSeconds() + ' seconds')"

@@ -323,7 +323,7 @@ _As a novice trader, I want to ask what a control or term means, so that I under
 
 - A shortcut (e.g. Alt+W) explains the focused item; in Detailed mode the explanation follows automatically.
 - Glossary entries for Limit price, Market order, Time in force (Day, GTC), Take profit, Stop loss, Price protection, Buying power, Bid/Ask, Order book, Volume, RSI, EMA, VWAP, Total return and Average cost.
-- Share the glossary with the novice Learn hub so the wording matches.
+- Share glossary wording with Detailed voice mode. The former novice Learn route was intentionally removed.
 
 Acceptance criteria:
 

@@ -1,6 +1,8 @@
-<section class="panel order-ticket" aria-label="Trade ticket">
+<section class="panel order-ticket" aria-labelledby="advanced-ticket-title">
+  <h2 class="sr-only" id="advanced-ticket-title">Trade ticket</h2>
   <div class="ticket-body">
-    <form aria-describedby="pro-ticket-message" method="post" (submit)="$event.preventDefault(); desk().reviewOrder()">
+    <!-- novalidate + data-a11y-app-validation (PS-21): the ticket's own message is what is shown and read, not the browser's. -->
+    <form aria-describedby="pro-ticket-message" method="post" novalidate data-a11y-app-validation (submit)="$event.preventDefault(); desk().reviewOrder()">
       <div class="side-switch">
         @for (action of ['Buy', 'Sell']; track action) {
           <button
@@ -13,56 +15,73 @@
           </button>
         }
       </div>
-      <label for="pro-symbol">Symbol</label>
-      <div class="symbol-select">
-        <select
-          id="pro-symbol"
-          [value]="desk().selected()?.symbol"
-          (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
-        >
-          @for (q of desk().quotes(); track q.symbol) {
-            <option [value]="q.symbol" [selected]="q.symbol === desk().selected()?.symbol">{{ q.symbol }}</option>
-          }</select
-        ><span>{{ desk().selected()?.name }}</span
-        ><app-dashboard-icon name="search" />
-      </div>
-      <div class="quote-strip" aria-label="Bid, ask and spread">
+      <label id="pro-symbol-label" for="pro-symbol-menu">Symbol</label>
+      <!-- The same downward menu as the novice Buy/Sell window: symbol, company and price per row.
+           The hidden select beside it keeps the original control for keyboard tests and form handling. -->
+      <select
+        id="pro-symbol"
+        class="native-control"
+        tabindex="-1"
+        aria-hidden="true"
+        [value]="desk().selected()?.symbol"
+        (change)="desk().quote($any($event.target).value) && desk().choose(desk().quote($any($event.target).value))"
+      >
+        @for (q of desk().quotes(); track q.symbol) {
+          <option [value]="q.symbol" [selected]="q.symbol === desk().selected()?.symbol">{{ q.symbol }}</option>
+        }</select
+      >
+      <app-select-menu
+        class="symbol-menu"
+        triggerId="pro-symbol-menu"
+        labelledBy="pro-symbol-label"
+        placeholder="Choose a stock"
+        [options]="symbolOptions()"
+        [value]="desk().selected()?.symbol ?? ''"
+        (picked)="desk().quote($event) && desk().choose(desk().quote($event))"
+      />
+      <div data-glossary="bid-ask" role="group" class="quote-strip" aria-label="Bid, ask and spread">
         <div><span>Bid</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.bid | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>
         <div><span>Ask</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.ask | currency:'USD':'symbol':'1.2-4') : '--' }}</strong></div>
         <div><span>Spread</span><strong>{{ desk().ticketQuote() ? (desk().ticketQuote()!.spread | currency:'USD':'symbol':'1.2-4') : '--' }}</strong>
           @if (desk().ticketQuote(); as quote) { <small>{{ quote.spreadPercent | number:'1.2-2' }}%</small> }
         </div>
       </div>
-      <label>Order type</label>
-      <div class="option-switch" aria-label="Order type">
+      <span id="pro-order-type-title">Order type</span>
+      <div role="group" class="option-switch" aria-label="Order type">
         <button type="button" [class.active]="desk().orderType() === 'MARKET'" [attr.aria-pressed]="desk().orderType() === 'MARKET'" (click)="desk().setOrderType('MARKET')">Market</button>
         <button type="button" [class.active]="desk().orderType() === 'LIMIT'" [attr.aria-pressed]="desk().orderType() === 'LIMIT'" (click)="desk().setOrderType('LIMIT')">Limit</button>
       </div>
       @if (desk().orderType() === 'LIMIT') {
         <label for="pro-limit">Limit price (USD)</label>
-        <input id="pro-limit" type="number" min="0.01" step="0.01" required [value]="desk().limitPrice()" (input)="desk().limitPrice.set($any($event.target).value)" />
+        <input data-glossary="limit-price" id="pro-limit" type="number" min="0.01" step="0.01" required [value]="desk().limitPrice()" (input)="desk().message.set(''); desk().limitPrice.set($any($event.target).value)"  [attr.aria-invalid]="desk().fieldError('pro-limit') ? 'true' : null" [attr.aria-describedby]="desk().fieldError('pro-limit') ? 'pro-limit-error' : 'pro-ticket-message'" />
+        @if (desk().fieldError('pro-limit')) { <p id="pro-limit-error" class="field-error">{{ desk().fieldError('pro-limit') }}</p> }
         <p class="ticket-note">{{ desk().side() === 'Buy' ? 'Maximum buy' : 'Minimum sell' }} price per share. Execution is not guaranteed.</p>
       } @else {
-        <p class="ticket-note">Executes at the next available market price. Final price may differ.</p>
+        <p class="ticket-note" data-glossary="market-order">Executes at the next available market price. Final price may differ.</p>
       }
       <label for="pro-quantity">Quantity</label
       ><input
-        id="pro-quantity" aria-describedby="pro-ticket-message"
+        id="pro-quantity"
         type="number"
         required
         min="1"
         step="1"
         [value]="desk().quantity()"
+        [attr.aria-invalid]="desk().quantityError() ? 'true' : null"
+        [attr.aria-describedby]="desk().quantityError() ? 'pro-quantity-error' : 'pro-ticket-message'"
         (input)="desk().quantity.set($any($event.target).value); desk().message.set('')"
       />
-      <div class="size-presets" aria-label="Position sizing">
+      @if (desk().quantityError()) {
+        <p id="pro-quantity-error" class="field-error"><span aria-hidden="true">⚠ </span>{{ desk().quantityError() }}</p>
+      }
+      <div class="size-presets" role="group" aria-label="Position sizing">
         @for (percent of [25, 50, 75, 100]; track percent) {
           <button type="button" (click)="desk().sizeOrder(percent)">{{ percent }}%</button>
         }
       </div>
       <p class="ticket-note">{{ desk().side() === 'Buy' ? 'Percentage of buying power' : 'Percentage of shares held' }}</p>
-      <label>Take profit / Stop loss</label>
-      <div class="option-switch exit-toggles">
+      <span>Take profit / Stop loss</span>
+      <div class="option-switch exit-toggles" role="group" aria-label="Exit orders">
         <button type="button" [class.active]="desk().takeProfitEnabled()" [attr.aria-pressed]="desk().takeProfitEnabled()" (click)="desk().takeProfitEnabled.set(!desk().takeProfitEnabled())">Take profit <span>{{ desk().takeProfitEnabled() ? 'On' : 'Off' }}</span></button>
         <button type="button" [class.active]="desk().stopLossEnabled()" [attr.aria-pressed]="desk().stopLossEnabled()" (click)="desk().stopLossEnabled.set(!desk().stopLossEnabled())">Stop loss <span>{{ desk().stopLossEnabled() ? 'On' : 'Off' }}</span></button>
       </div>
@@ -71,11 +90,13 @@
         <select id="pro-exit-unit" [value]="desk().exitUnit()" (change)="desk().setExitUnit($any($event.target).value)"><option value="price">Price (USD)</option><option value="percent">Distance from entry (%)</option></select>
         @if (desk().takeProfitEnabled()) {
           <label for="pro-profit">Take-profit {{ desk().exitUnit() === 'price' ? 'price (USD)' : 'distance (%)' }}</label>
-          <input id="pro-profit" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().takeProfit()" (input)="desk().takeProfit.set($any($event.target).value)" />
+          <input id="pro-profit" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().takeProfit()" (input)="desk().message.set(''); desk().takeProfit.set($any($event.target).value)"  [attr.aria-invalid]="desk().fieldError('pro-profit') ? 'true' : null" [attr.aria-describedby]="desk().fieldError('pro-profit') ? 'pro-profit-error' : 'pro-ticket-message'" />
+        @if (desk().fieldError('pro-profit')) { <p id="pro-profit-error" class="field-error">{{ desk().fieldError('pro-profit') }}</p> }
         }
         @if (desk().stopLossEnabled()) {
           <label for="pro-stop">Stop-loss {{ desk().exitUnit() === 'price' ? 'price (USD)' : 'distance (%)' }}</label>
-          <input id="pro-stop" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().stopLoss()" (input)="desk().stopLoss.set($any($event.target).value)" />
+          <input id="pro-stop" type="number" [min]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" [step]="desk().exitUnit() === 'percent' ? 0.0001 : 0.01" required [value]="desk().stopLoss()" (input)="desk().message.set(''); desk().stopLoss.set($any($event.target).value)"  [attr.aria-invalid]="desk().fieldError('pro-stop') ? 'true' : null" [attr.aria-describedby]="desk().fieldError('pro-stop') ? 'pro-stop-error' : 'pro-ticket-message'" />
+        @if (desk().fieldError('pro-stop')) { <p id="pro-stop-error" class="field-error">{{ desk().fieldError('pro-stop') }}</p> }
           <p class="ticket-note">Stop price is a trigger; the final execution price may differ.</p>
         }
         <p class="ticket-note">After the entry fills, one {{ desk().side() === 'Buy' ? 'sell exit' : 'buy-back order' }} activates at either level. Orders stay open until filled or cancelled. Exit levels are relative to this {{ desk().side() === 'Buy' ? 'buy' : 'sell' }} entry. Estimates exclude slippage.</p>
@@ -135,7 +156,7 @@
         <p class="ticket-warning" role="note">{{ desk().closedWarning() }}</p>
       }
       @if (desk().orderType() === 'MARKET' && desk().protectionNote()) {
-        <div class="protection-row">
+        <div class="protection-row" data-glossary="price-protection">
           <div class="protection-copy">
             <span>Price protection <b>{{ desk().tolerance() }}%</b></span>
             <small>{{ desk().protectionNote() }}</small>
@@ -158,8 +179,9 @@
           }
         </div>
       }
-      <button class="primary-button review-button" type="submit">Review Order</button>
+      <button class="primary-button review-button" type="submit" [attr.data-glossary]="desk().orderType() === 'LIMIT' ? 'limit-price' : 'market-order'">Review Order</button>
     </form>
-    <output class="ticket-message" id="pro-ticket-message">{{ desk().message() }}</output>
+    <!-- Read through the live announcer (PS-21), once per message, so this copy stays quiet. -->
+    <output class="ticket-message" id="pro-ticket-message" aria-live="off">{{ desk().ticketStatus() }}</output>
   </div>
 </section>

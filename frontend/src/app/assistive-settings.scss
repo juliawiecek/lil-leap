@@ -20,7 +20,8 @@
   legend + * { clear: both; }
   p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; }
   fieldset > :last-child { margin-bottom: 0; }
-  .reading-actions + p { margin-top: 12px; }
+  details.more > summary { font-size: 13px; }
+  .toggle-row p { margin-bottom: 4px; }
 
   label { gap: 4px; margin-block: 0 4px; color: var(--text-muted); font-size: 12px; }
   label.check { gap: 8px; margin-block: 4px; color: var(--text); font-size: 13px; }

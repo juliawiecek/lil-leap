@@ -1,6 +1,6 @@
-import { ApiHttpClient, SESSION_AUTH } from '@lilleap/session-core/angular';
+import { ApiHttpClient, SESSION_AUTH, SESSION_WARNING_ANNOUNCE } from '@lilleap/session-core/angular';
 import { AuthService } from './auth.service';
-import { inject, provideAppInitializer } from '@angular/core';
+import { DestroyRef, inject, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -19,8 +19,16 @@ import { AppSessionService } from './app-session.service';
 import { authInterceptor } from './auth-routing';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 
+import { speechCoordinator } from '../../../shared/speech-coordinator';
+
+import { BrowserScanStore, SWITCH_SCAN_STORE } from '../../../shared/switch-scan-options';
+import { SwitchScanService } from '../../../shared/switch-scan';
+
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: SESSION_WARNING_ANNOUNCE, useFactory: () => { const voice = inject(SiteAccessibility); const scan = inject(SwitchScanService); return (text: string) => { speechCoordinator.stop(); if (speechCoordinator.supported && (voice.settings().enabled || scan.settings().enabled)) { const utterance = new SpeechSynthesisUtterance(text); speechCoordinator.submit('session-warning', utterance, { interrupt: true, defaultVoice: true }); } }; } },
+    { provide: SWITCH_SCAN_STORE, useFactory: () => new BrowserScanStore('nexttrade-insights.accessibility') },
+    provideAppInitializer(() => { const stop = inject(SwitchScanService).listenForShortcut(); inject(DestroyRef).onDestroy(stop); }),
     { provide: LIVE_REPORTS, useFactory: (): LiveReports => {
       const http = inject(ApiHttpClient);
       return {

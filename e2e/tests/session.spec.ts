@@ -5,11 +5,10 @@ for (const [name, url] of [['NextTrade', tradingUrl], ['Insights', insightsUrl]]
     await page.goto(`${url}/dashboard`);
     await expect(page).toHaveURL(url => url.pathname === '/login');
     await expect(page.locator('app-trading-workspace, app-insights-workspace')).toHaveCount(0);
-    const insights = name === 'Insights';
     await page.locator('#email').fill('unknown-e2e@example.com');
     await page.locator('#password').fill('Incorrect-password-9!');
     await page.getByRole('button', { name: 'Continue securely', exact: true }).click();
-    await expect(page.locator(insights ? '[role="alert"]' : '.form-status'))
+    await expect(page.locator('form .form-status'))
       .toContainText('Invalid email or password, or sign-in is locked.');
     await expect(page).toHaveURL(url => url.pathname === '/login');
   });

@@ -1,13 +1,13 @@
 import { ChartAccess, ChartFocus } from './chart-access';
 import { allocation, type ChartSeries } from './chart-data';
-import { centralClock, centralTime } from './app-time';
+import { centralClock, centralDay, centralHour, centralTime } from './app-time';
 import { SidebarResize } from './sidebar-resize';
 import { categoryDescription, categoryTable, comparisonDescription, comparisonTable } from '../../../shared/chart-description';
 import { PriceFlash } from './price-flash';
 import { FinancialChange } from './financial-change';
 import { ApiHttpClient } from '@lilleap/session-core/angular';
 import { PageState, PAGE_PATHS, PageBinding } from './page-state';
-import { Component, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
+import { Component, afterNextRender, inject, computed, ElementRef, input, output, signal, viewChild, OnDestroy, OnInit } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { DashboardIcon } from './dashboard-icon';
 import { AdvancedTicket } from './advanced-ticket';
@@ -25,11 +25,22 @@ import {
   OrderHistoryRow,
   newlyFilled,
 } from './order-history-api';
-import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, dayGainOf, hasMarketValuation, valuePortfolio } from './portfolio-api';
+import { Portfolio, PortfolioClient, QUOTE_REFRESH_MS, hasMarketValuation, valuePortfolio } from './portfolio-api';
 import { AuthService } from './auth.service';
 import { MarketFeed } from './market-feed.service';
-import { PricePoint, isDelayed } from './market-feed-api';
-import { closedMarketWarning, localOpeningTime, marketBadgeText } from './market-status-api';
+import { isDelayed } from './market-feed-api';
+import { closedMarketWarning, localOpeningTime, marketBadgeText, marketStatusText } from './market-status-api';
+import { MarketTicker } from './market-ticker';
+import { PortfolioChart } from './portfolio-chart';
+// The same chart helpers novice uses, so both dashboards draw the portfolio line identically.
+import { CHART_REFRESH_MS, fundedAt, lastPerBar } from './novice-dashboard';
+/** Most live values kept on the portfolio line (as in novice). */
+const LIVE_POINTS = 28800;
+import { CashActivityClient } from './activity-api';
+import { chartPoints } from './chart-data';
+import {
+  ChartPeriod, ChartRange, PricePoint as HistoryPricePoint, ValuePoint, barStep, chartRange, portfolioSeries, portfolioEvents, ledgerMatches, startValue, portfolioPeriodLabel,
+} from './portfolio-history';
 import { OrderStatusClient, orderReviewSummary, rejectionMessage, rejectionReason } from './order-feedback';
 import { PriceProtectionStore, protectionText, validProtection } from './price-protection';
 import { PriceProtectionSettings } from './price-protection-settings';
@@ -39,10 +50,17 @@ import { tradingClients } from './trading-clients';
 import type { UserProfile } from './auth-api';
 import { AccessibilitySettings } from './accessibility-settings';
 import { KeyboardShortcuts, isShortcutsKey } from './keyboard-shortcuts';
+import { briefingOrders } from './briefing';
 import { BriefingButton, BriefingSource } from './briefing-button';
 import { orderReadBack } from './order-read-back';
-import { SwitchScanService } from './switch-scan';
-import { periodWindow, plotMarks, priceLabels, pricePath, priceRange, priceY, timeLabels, tradeMarks } from './trade-marks';
+import { SwitchScanService } from '../../../shared/switch-scan';
+import { liveAnnouncer } from './live-announcer';
+import { speakable } from './speech-text';
+import { OrderAnnouncements } from './order-announcements';
+import { PriceWatch } from './price-watch';
+import { spokenCompany } from './briefing';
+import { spokenQuote } from './speech-text';
+import { tradeMarks } from './trade-marks';
 
 interface Quote {
   instrumentId: string;
@@ -53,26 +71,7 @@ interface Quote {
   sector: string;
   quotedAt: string;
 }
-/** Size of the price chart's drawing area, in SVG units. */
-const CHART_WIDTH = 824;
-const CHART_HEIGHT = 160;
-/**
- * Bar sizes tried for each chart period, coarsest first, with how many bars cover the period
- * (the quote service returns at most 500). A finer size is tried while history is too short.
- */
-const CHART_BARS: Record<string, readonly (readonly [string, number])[]> = {
-  '1D': [['5m', 288], ['1m', 500]],
-  '1W': [['1h', 168], ['15m', 500], ['1m', 500]],
-  '1M': [['1d', 31], ['1h', 500], ['15m', 500], ['1m', 500]],
-  '3M': [['1d', 92], ['1h', 500], ['15m', 500], ['1m', 500]],
-  '1Y': [['1d', 366], ['1h', 500], ['15m', 500], ['1m', 500]],
-  All: [['1d', 500], ['1h', 500], ['15m', 500], ['1m', 500]],
-};
-const HOUR_MS = 3600000;
-const DAY_MS = 24 * HOUR_MS;
-/** Fewest bars that still draw a readable line. */
-const MIN_CHART_BARS = 24;
-const BAR_WIDTH_MS: Record<string, number> = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
+const NO_PRICE_ERROR = 'There is no live price for this stock yet. Try again in a moment.';
 /** Shown until the first stock list arrives. */
 const NO_QUOTE: Quote = { instrumentId: '', symbol: '', name: '', price: 0, change: 0, sector: '', quotedAt: '' };
 interface Position {
@@ -109,12 +108,12 @@ interface Order {
 
 @Component({
   selector: 'app-advanced-dashboard',
-  imports: [FinancialChange, PriceFlash, 
+  imports: [FinancialChange, PriceFlash, MarketTicker, PortfolioChart, 
     CurrencyPipe, DecimalPipe, DashboardIcon, AdvancedTicket, AdvancedChart, ActivityFeed, AccountSwitcher, Toasts, PriceProtectionSettings,
-    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings,
+    AccessibilitySettings, KeyboardShortcuts, BriefingButton, ChartAccess, ChartFocus, AccountSettings, PriceWatch,
   ],
   templateUrl: './advanced-dashboard.html',
-  styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.flat.scss'],
+  styleUrls: ['./advanced-dashboard.scss', './advanced-dashboard.refresh.scss', './advanced-dashboard.novice.scss', './advanced-settings.scss'],
   host: { '(document:keydown)': 'onShortcutKey($event)' },
 })
 export class AdvancedDashboard implements OnInit, OnDestroy {
@@ -122,6 +121,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   declare readonly orderSubmissionClient: OrderSubmissionClient;
   declare readonly orderHistoryClient: OrderHistoryClient;
   declare readonly portfolioClient: PortfolioClient;
+  declare readonly cashActivityClient: CashActivityClient;
+  #chartTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Account and period the drawn history belongs to; a refresh of the same keeps the line on screen. */
+  #chartDrawnFor = '';
+  #chartRequest = 0;
+  /** Live values are added to the portfolio chart only once the account's balances have loaded. */
+  #liveRecording = false;
   #trackTimer: ReturnType<typeof setTimeout> | undefined;
   #clockTimer: ReturnType<typeof setInterval> | undefined;
   #ordersPollTimer: ReturnType<typeof setTimeout> | undefined;
@@ -133,13 +139,6 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly #dayChanges = new Map<string, number>();
   /** The previous order read, so a fill seen by polling reloads balances (PS-10). */
   #lastOrderRows: OrderHistoryRow[] | null = null;
-  /** Which stock's price history is loaded or loading, so a switch drops a stale response. */
-  #historySymbol = '';
-  /** The stock and period of the loaded bars, so neither reloads needlessly. */
-  #historyKey = '';
-  #historyRequest = 0;
-  /** Width of the loaded bars in ms; 0 when the line is raw quotes. */
-  #barMs = 0;
   readonly name = input('');
   readonly profile = input<UserProfile | null>(null);
   readonly profileLoading = input(false);
@@ -176,11 +175,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly collapsed = this.sidebar.collapsed;
   readonly query = signal('');
   readonly notifications = signal(false);
-  readonly privateBalance = signal(false);
-  readonly period = signal('1D');
-  readonly periods = ['1D', '1W', '1M', '3M', '1Y', 'All'];
-  readonly bottomTab = signal('Positions');
-  readonly bottomTabs = ['Positions', 'Balances', 'Performance'];
+  readonly bottomTab = signal('Holdings');
+  readonly bottomTabs = ['Holdings', 'Asset classes'];
   /** Balances could not be read: the service is down or unreachable (PS-11). */
   readonly serviceDown = signal(false);
   readonly marketTab = signal('Sectors');
@@ -205,16 +201,115 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   readonly overviewList = signal<'Watchlist' | 'Movers' | 'Sectors'>('Watchlist');
   readonly marketBadge = computed(() => marketBadgeText(this.feed.status(), this.currentTime()));
   readonly marketOpen = computed(() => this.feed.status()?.open ?? false);
+  /** Countdown line for the Overview heading, e.g. "Market closes in 5h 49m" (same wording as novice). */
+  readonly marketText = computed(() => marketStatusText(this.feed.status(), this.currentTime()));
+  /** The portfolio-value chart, the same one novice shows: its period, span and value at each moment. */
+  readonly chartPeriod = signal<ChartPeriod>('1D');
+  readonly chartSpan = signal<ChartRange | null>(null);
+  readonly chartHistory = signal<ValuePoint[]>([]);
+  readonly chartLoading = signal(false);
+  readonly chartError = signal('');
+  readonly chartNotice = signal('');
+  /** The chart point under the cursor; the big value follows it while it is set. */
+  readonly chartScrub = signal<ValuePoint | null>(null);
+  /** The value at every live update since the page opened, so each rise and dip stays on the line. */
+  readonly chartLive = signal<ValuePoint[]>([]);
+  /** The big number: the scrubbed point's value, otherwise the live total. */
+  readonly headerValue = computed(() => this.chartScrub()?.value ?? this.portfolio());
+  readonly chartChangeAvailable = computed(() => !this.chartLoading() && !this.chartError() && this.chartPoints().length >= 2);
+  /** How much the value moved over the chosen period (or up to the scrubbed point). */
+  readonly headerChange = computed(() => {
+    const points = this.chartPoints();
+    if (points.length < 2) {
+      return { amount: 0, percent: 0 as number | null, label: 'Change unavailable' };
+    }
+    const start = startValue(points);
+    const scrub = this.chartScrub();
+    const amount = Math.round(((scrub ?? points.at(-1)!).value - start) * 100) / 100;
+    const span = this.chartSpan();
+    let label = portfolioPeriodLabel(this.chartPeriod(), span, points);
+    if (span?.session && centralDay(span.session.open) !== centralDay(this.currentTime())) {
+      label = centralTime(span.session.open, { weekday: 'long' });
+    }
+    if (scrub) {
+      label = `${centralTime(scrub.at, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} CT`;
+    }
+    return { amount, percent: start > 0 ? (amount / start) * 100 : null, label };
+  });
+  /** Live prices have stopped reaching the chart: the service is down or a held stock's quote is stale. */
+  readonly chartDelayed = computed(() => {
+    if (this.serviceDown()) { return true; }
+    const held = new Set(this.positions().map((p) => p.symbol));
+    const now = this.feed.now();
+    return this.feed.quotes().some((q) => held.has(q.symbol) && isDelayed(q.quotedAt, now));
+  });
+  /** The recorded history up to the first live value, then every live value after it. */
+  readonly chartPoints = computed(() => {
+    const history = this.chartHistory();
+    if (!this.portfolioLoaded()) { return history; }
+    const range = this.chartSpan();
+    let live = this.chartLive().filter((p) => p.at >= (history[0]?.at ?? range?.start ?? 0));
+    if (range && this.chartPeriod() !== '1D') {
+      live = lastPerBar(live, barStep(range).ms);
+    }
+    if (!live.length) { return history; }
+    return [...history.filter((p) => p.at < live[0].at), ...live];
+  });
+  /** "Good Morning" / "Good Afternoon" / "Good Evening" by the Central clock. */
+  readonly greeting = computed(() => {
+    const hour = centralHour(this.currentTime());
+    return hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+  });
+  /** First name from the investor profile, for the greeting; empty when it is not known. */
+  readonly firstName = computed(() => this.profile()?.firstName?.trim() ?? '');
+  /** The sentence under the Overview greeting: today's move and the held stock that moved most. */
+  readonly daySummary = computed(() => {
+    const held = this.positions();
+    if (!this.portfolioLoaded() || !held.length) return null;
+    const amount = this.dayGain();
+    const moves = held.map((p) => ({ symbol: p.symbol, change: this.quotes().find((q) => q.symbol === p.symbol)?.change ?? 0 }));
+    const best = moves.reduce((a, b) => (Math.abs(b.change) > Math.abs(a.change) ? b : a));
+    const money = Math.abs(amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return {
+      amount,
+      moveText: amount === 0 ? 'flat' : `${amount > 0 ? 'up' : 'down'} ${money}`,
+      moveArrow: amount > 0 ? '▲ ' : amount < 0 ? '▼ ' : '',
+      symbol: best.change !== 0 ? best.symbol : '',
+      change: best.change,
+    };
+  });
   /** Open or closed for the briefing's market-open repeat; null until the status first loads (PS-18). */
   readonly marketKnownOpen = computed(() => this.feed.status()?.open ?? null);
   readonly #switchScan = inject(SwitchScanService, { optional: true });
+  /** Screen reader announcements (PS-21). */
+  readonly announcer = liveAnnouncer();
+  readonly #orderNews = new OrderAnnouncements(this.announcer);
+  /** The last check's complaint about the quantity, shown under the field while it is the message (PS-21). */
+  readonly #validationError = signal('');
+  /** The quantity's error, linked to the field with aria-describedby; empty once anything changes. */
+  readonly validationField = computed(() => {
+    const error = this.#validationError();
+    return /limit price/i.test(error) ? 'pro-limit' : /^Take profit/.test(error) ? 'pro-profit' : /^Stop loss/.test(error) ? 'pro-stop' : 'pro-quantity';
+  });
+  fieldError(id: string): string {
+    const error = this.#validationError();
+    return id === this.validationField() && this.message() === error && this.validate() === error ? error : '';
+  }
+  readonly quantityError = computed(() => this.fieldError('pro-quantity'));
+  readonly ticketStatus = computed(() => (this.fieldError(this.validationField()) ? '' : this.message()));
   /** Last move of a symbol's price, so its number can flash green or red as it changes (look only). */
   tickOf(symbol: string): { key: string; dir: 'up' | 'down' | null } {
     const live = this.feed.quotes().find((q) => q.symbol === symbol);
     return { key: symbol + '-' + (live?.version ?? 0), dir: live?.direction ?? null };
   }
   /** Shown on the ticket before submitting while the market is closed (PS-02). */
-  readonly closedWarning = computed(() => closedMarketWarning(this.feed.status(), this.currentTime()));
+  readonly closedWarning = computed(() => {
+    const status = this.feed.status();
+    if (this.orderType() === 'LIMIT' && status && !status.open) {
+      return `The market is closed. It opens at ${localOpeningTime(status.nextOpen, this.currentTime())}. Your limit order waits for the limit price or better.`;
+    }
+    return closedMarketWarning(status, this.currentTime());
+  });
   /** Corner messages when an order fills or is rejected (PS-15). */
   readonly toasts = inject(ToastService, { optional: true }) ?? new ToastService();
   declare readonly orderStatusClient: OrderStatusClient;
@@ -231,6 +326,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       quantity: Number(this.quantity()) || 0,
       symbol: this.selected().symbol,
       price: this.marketEntryPrice(),
+      ...(this.orderType() === 'LIMIT' ? { limitPrice: this.entryPrice() } : {}),
       tolerancePercent: this.tolerance(),
       opensAt: status && !status.open ? localOpeningTime(status.nextOpen, this.currentTime()) : '',
     });
@@ -240,6 +336,14 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       `${q.symbol} ${q.name}`.toLowerCase().includes(this.query().trim().toLowerCase()),
     ),
   );
+  /** Use the latest computed matches even if Angular has not painted the result list yet. */
+  submitSearch(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    if (event.repeat || !this.query().trim()) return;
+    const quote = this.results()[0];
+    if (quote) this.choose(quote);
+  }
   readonly screened = computed(() =>
     this.quotes().filter((q) => {
       const filter = this.filter();
@@ -273,8 +377,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const a = this.exposure();
     return [{ label: 'Equities', value: a.equities, percent: a.equitiesPercent }, { label: 'Cash', value: a.cash, percent: a.cashPercent }];
   });
-  readonly exposureDescription = computed(() => !this.portfolioLoaded() ? 'Portfolio exposure. Balances have not loaded yet.' : !this.allocationReady() ? 'Portfolio exposure unavailable until all holdings have market quotes.' : categoryDescription('Portfolio exposure', this.exposureCategories(), this.privateBalance()));
-  readonly exposureTable = computed(() => this.portfolioLoaded() && this.allocationReady() ? categoryTable(this.exposureCategories(), this.privateBalance()) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
+  readonly exposureDescription = computed(() => !this.portfolioLoaded() ? 'Portfolio exposure. Balances have not loaded yet.' : !this.allocationReady() ? 'Portfolio exposure unavailable until all holdings have market quotes.' : categoryDescription('Portfolio exposure', this.exposureCategories(), false));
+  readonly exposureTable = computed(() => this.portfolioLoaded() && this.allocationReady() ? categoryTable(this.exposureCategories(), false) : { columns: ['Asset', 'Value (USD)', 'Share'], rows: [], note: 'Balances have not loaded yet.' });
   readonly exposure = computed(() => {
     const a = allocation(this.positions().reduce((sum, p) => sum + p.value, 0), this.buyingPower());
     return { total: a.total, equities: a.stocksValue, cash: a.cashValue,
@@ -381,14 +485,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   /** Estimated cost at the live price; the orders service charges no fees. */
   readonly total = computed(() => Number(this.quantity()) * this.entryPrice());
-  /** The charted stock's recorded prices, oldest first: its recent history plus each live tick (PS-06). */
-  readonly priceHistory = signal<PricePoint[]>([]);
-  readonly historyLoading = signal(false);
-  readonly historyError = signal('');
   #portfolioRequest = 0;
   #orderRequest = 0;
-  /** Today's move of the charted stock in dollars, from its percent change since the day's first quote. */
-  readonly selectedDayMove = computed(() => dayGainOf(this.selected().price, this.selected().change));
   /** Order history rows, kept for the chart's trade markers (PS-13). */
   readonly historyRows = signal<OrderHistoryRow[]>([]);
   /** The client's fills of the charted stock, oldest first. */
@@ -398,62 +496,113 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const held = this.positions().find((p) => p.symbol === this.selected().symbol && p.quantity > 0);
     return held ? held.cost : null;
   });
-  /**
-   * The chosen period's full span, like a trading app: 1W always shows a week even when prices
-   * only exist from today. All runs from the first recorded price or trade (at least an hour).
-   */
-  readonly chartWindow = computed(() => {
-    const now = this.currentTime().getTime();
-    if (this.period() !== 'All') {
-      return periodWindow(this.period(), now, this.tradeMarks());
-    }
-    const firsts = [this.priceHistory()[0]?.at, this.tradeMarks()[0]?.at].filter((at): at is number => Number.isFinite(at));
-    const start = firsts.length ? Math.min(...firsts) : now - DAY_MS;
-    return { start: Math.min(start, now - HOUR_MS), end: now };
-  });
-  /**
-   * The recorded prices inside the period. Before the first one the line runs flat from the
-   * window's start at the earliest known price, so a short history reads as "no change yet".
-   */
-  readonly visibleHistory = computed(() => {
-    const { start, end } = this.chartWindow();
-    const all = this.priceHistory();
-    const inside = all.filter((p) => p.at >= start && p.at <= end);
-    return inside;
-  });
-  /** Price range covering the recorded prices, the live price, every fill and the average cost. */
-  readonly chartRange = computed(() =>
-    priceRange([
-      this.selected().price, ...this.visibleHistory().map((p) => p.price),
-      ...this.tradeMarks().map((m) => m.price), this.averageCost() ?? 0,
-    ]),
-  );
-  /** The charted stock's price as one line across the period. */
-  readonly priceLine = computed(() => {
-    const range = this.chartRange();
-    return range ? pricePath(this.visibleHistory(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : '';
-  });
-  /** When the recorded prices start, so a short history is explained rather than looking like a flat market. */
-  readonly historyStart = computed(() => this.priceHistory()[0]?.at ?? null);
-  readonly plottedTrades = computed(() => {
-    const range = this.chartRange();
-    return range ? plotMarks(this.tradeMarks(), this.chartWindow(), range, CHART_WIDTH, CHART_HEIGHT) : [];
-  });
-  /** Fills earlier than the chosen period, which are not drawn. */
-  readonly tradesOutsidePeriod = computed(() => this.tradeMarks().length - this.plottedTrades().length);
-  readonly averageCostY = computed(() => {
-    const range = this.chartRange();
-    const cost = this.averageCost();
-    return range && cost ? priceY(cost, range, CHART_HEIGHT) : null;
-  });
-  readonly priceAxis = computed(() => {
-    const range = this.chartRange();
-    return range ? priceLabels(range) : [];
-  });
-  readonly chartTimes = computed(() => timeLabels(this.period(), this.chartWindow()));
 
   quote(symbol: string): Quote {
     return this.quotes().find((q) => q.symbol === symbol) ?? this.quotes()[0] ?? NO_QUOTE;
+  }
+  /** Shows another period of the portfolio-value chart. */
+  setChartPeriod(period: ChartPeriod): void {
+    this.chartPeriod.set(period);
+    this.chartScrub.set(null);
+    void this.loadChart();
+  }
+  /**
+   * Rebuilds the portfolio-value chart for the chosen period from the account's real history
+   * (deposits, fills and recorded prices), exactly as novice does. Re-reads every minute and after fills.
+   */
+  async loadChart(): Promise<void> {
+    const request = ++this.#chartRequest;
+    clearTimeout(this.#chartTimer);
+    const account = this.selectedAccount();
+    const period = this.chartPeriod();
+    const filters = account ? { accountId: account.account_id } : {};
+    const drawing = `${account?.account_id ?? ''}|${period}`;
+    // "Loading" only for a first load, another period or another account; the minute refresh keeps the line.
+    if (drawing !== this.#chartDrawnFor || !this.chartHistory().length) {
+      this.chartLoading.set(true);
+    }
+    try {
+      const [movements, orders] = await Promise.all([this.cashActivityClient.list(filters), this.orderHistoryClient.list(filters)]);
+      if (request !== this.#chartRequest || this.destroyed) { return; }
+      const now = Date.now();
+      const { cash, shares: fills } = portfolioEvents(movements, orders);
+      const range = chartRange(period, now, fundedAt(account?.created_at, cash));
+      const prices = await this.#closes([...new Set(fills.map((f) => f.symbol))], range, now);
+      if (request !== this.#chartRequest || this.destroyed) { return; }
+      this.chartSpan.set(range);
+      const complete = ledgerMatches(this.#portfolio, cash, fills);
+      const points = complete ? portfolioSeries(range, cash, fills, prices) : [];
+      this.chartHistory.set(points);
+      this.#chartDrawnFor = drawing;
+      this.chartNotice.set(!complete
+        ? 'Historical transactions do not reconcile with current balances. Only values observed since this page opened are shown.'
+        : !points.length || points[0].at > range.start
+          ? 'Earlier valuations are unavailable because historical prices are missing. Only the supported portion is shown.'
+          : 'Account value includes deposits and transfers.');
+      this.chartError.set('');
+    } catch {
+      if (request === this.#chartRequest) {
+        this.chartError.set('Your portfolio history could not be loaded right now. It will try again shortly.');
+      }
+    } finally {
+      if (request === this.#chartRequest) {
+        this.chartLoading.set(false);
+        if (!this.destroyed) {
+          this.#chartTimer = setTimeout(() => void this.loadChart(), CHART_REFRESH_MS);
+        }
+      }
+    }
+  }
+  /** Historical bids for each held symbol over the chart's range, plus recent raw quotes. */
+  async #closes(symbols: string[], range: ChartRange, now: number): Promise<Map<string, HistoryPricePoint[]>> {
+    const { interval, limit } = barStep(range);
+    const ids = new Map([
+      ...this.instruments().map(i => [i.symbol, i.instrumentId] as const),
+      ...this.feed.quotes().map(q => [q.symbol, q.instrumentId] as const),
+    ]);
+    const entries = await Promise.all(symbols.map(async symbol => {
+      const id = ids.get(symbol);
+      if (!id) { return [symbol, [] as HistoryPricePoint[]] as const; }
+      const [bars, recent] = await Promise.allSettled([
+        this.feed.client.closes(id, interval, limit, now, 'bid'),
+        Promise.resolve().then(() => this.feed.client.history(id, 1000, 'bid')),
+      ]);
+      const points = [...(bars.status === 'fulfilled' ? bars.value : []), ...(recent.status === 'fulfilled' ? recent.value : [])];
+      return [symbol, chartPoints(points, p => p.at, p => p.price).map(p => ({ at: p.time, price: p.value }))] as const;
+    }));
+    return new Map(entries);
+  }
+  /**
+   * A holding's Trade button: load the stock on the chart and ticket, then bring the Buy/Sell
+   * ticket into view and put focus on it, so the next step is right there.
+   */
+  tradeHolding(symbol: string): void {
+    if (this.page() !== 'Overview') {
+      // Another page: the Overview route builds a fresh dashboard. Leave this page as it is until
+      // then (no flash of the Overview at the wrong scroll) and let the new one open at the ticket.
+      pendingTicket = symbol;
+      this.symbol.set(symbol);
+      this.routing?.go('Overview');
+      return;
+    }
+    this.choose(this.quote(symbol));
+    setTimeout(() => this.#showTicket(true));
+  }
+  /** Brings the trade ticket under the sticky bars (gliding or instant) and puts focus on Buy/Sell. */
+  #showTicket(glide: boolean): void {
+    const ticket = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('app-advanced-dashboard .order-ticket');
+    if (!ticket) { return; }
+    scrollToTicket(ticket, glide);
+    ticket.querySelector<HTMLElement>('.side-switch button.active, .side-switch button')?.focus({ preventScroll: true });
+  }
+  /** A ticker symbol was clicked: load it on the chart and ticket. */
+  pickTicker(symbol: string): void {
+    const quote = this.quotes().find((q) => q.symbol === symbol);
+    if (quote) this.choose(quote);
+  }
+  /** A watchlist, mover or position row as voice mode says it: "Apple, 185 dollars, up 1.2 percent. Select to trade." (PS-22). */
+  spokenRow(q: Pick<Quote, 'name' | 'symbol' | 'price' | 'change'>): string {
+    return spokenQuote(spokenCompany(q.name, q.symbol), q.price, q.change);
   }
   choose(quote: Quote): void {
     if (quote.symbol !== this.selected().symbol) {
@@ -469,14 +618,8 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.page.set('Overview');
     this.routing?.go('Overview');
   }
-  /** Picks the chart period and loads its bars. */
-  setPeriod(period: string): void {
-    this.period.set(period);
-    void this.#loadHistory(this.selected(), period);
-  }
   private setTicketQuote(quote: Quote): void {
     this.selected.set(quote);
-    void this.#loadHistory(quote);
   }
   /**
    * Shows the feed's latest prices, re-values positions at the latest bids (PS-10: no separate
@@ -484,6 +627,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
    */
   #applyFeed(): void {
     const live = this.feed.quotes();
+    if (live.length && !live.some((q) => q.price > 0)) {
+      return;
+    }
     this.quotes.set(
       live.map((q) => ({
         instrumentId: q.instrumentId, symbol: q.symbol, name: q.name, price: q.price,
@@ -506,109 +652,17 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     }
     if (current.price) {
       this.selected.set(quote);
-      this.#addTick(quote);
-      void this.#loadHistory(quote);
     } else {
       this.setTicketQuote(quote);
     }
   }
-  /**
-   * Loads the charted stock's prices for the period as closing prices per bar (/quotes/candles):
-   * the coarsest bar size that still draws a readable line, finer ones while history is short,
-   * and the raw recent quotes when even one-minute bars are too few. A failure keeps what loaded;
-   * the line still grows from live prices.
-   */
-  async #loadHistory(quote: Quote, period = this.period()): Promise<void> {
-    const key = quote.symbol + '|' + period + '|' + Math.floor(Date.now() / 60000);
-    if (!quote.instrumentId) {
-      ++this.#historyRequest;
-      this.#historyKey = '';
-      this.#historySymbol = quote.symbol;
-      this.#barMs = 0;
-      this.priceHistory.set([]);
-      this.historyLoading.set(false);
-      this.historyError.set('Recorded prices are unavailable for this security.');
-      return;
-    }
-    if (key === this.#historyKey) {
-      return;
-    }
-    const selectionChanged = !this.#historyKey.startsWith(quote.symbol + '|' + period + '|');
-    const request = ++this.#historyRequest;
-    this.#historyKey = key;
-    this.historyLoading.set(true);
-    this.historyError.set('');
-    if (selectionChanged) { this.priceHistory.set([]); this.#barMs = 0; }
-    if (quote.symbol !== this.#historySymbol) {
-      this.#historySymbol = quote.symbol;
-      this.#barMs = 0;
-      this.priceHistory.set([]);
-    }
-    const current = () => request === this.#historyRequest && this.#historyKey === key && !this.#destroyed;
-    let points: PricePoint[] = [];
-    let barMs = 0;
-    try {
-      for (const [interval, bars] of CHART_BARS[period] ?? CHART_BARS['1D']) {
-        // A finer size reaches less far back; stop before it would cut off older prices.
-        if (points.length && points[0].at < Date.now() - (BAR_WIDTH_MS[interval] ?? 0) * bars) {
-          break;
-        }
-        // Indicators are initialized from earlier bars, then clipped to the selected view.
-        // This avoids pretending the visible window's first bar is an established EMA.
-        points = await this.feed.client.closes(quote.instrumentId, interval, Math.min(500, bars + 200));
-        barMs = BAR_WIDTH_MS[interval] ?? 0;
-        if (!current() || points.length >= MIN_CHART_BARS) {
-          break;
-        }
-      }
-      if (current() && points.length < MIN_CHART_BARS) {
-        const recent = await this.feed.client.history(quote.instrumentId);
-        if (recent.length > points.length && recent[0].at <= (points[0]?.at ?? Infinity)) {
-          points = recent;
-          barMs = 0;
-        }
-      }
-    } catch {
-      if (current()) { this.historyError.set('Historical prices could not be loaded. Live observations remain available.'); }
-    }
-    // Keep the identity check valid even if a failed read is made retryable.
-    if (current() && points.length) {
-      this.#barMs = barMs;
-      this.priceHistory.set(points);
-      this.#addTick(this.selected());
-    }
-    if (current() && !points.length && !this.historyError()) { this.priceHistory.set([]); }
-    if (current()) {
-      this.historyLoading.set(false);
-      if (this.historyError()) { this.#historyKey = ''; }
-    }
-  }
-  /** Adds the latest price to the line: it moves the open bar, or starts the next bar once that one has closed. */
-  #addTick(quote: Quote): void {
-    const at = Date.parse(quote.quotedAt);
-    if (quote.symbol !== this.#historySymbol || !Number.isFinite(at) || !quote.price) {
-      return;
-    }
-    const barMs = this.#barMs;
-    this.priceHistory.update((points) => {
-      const last = points[points.length - 1];
-      if (last && last.at >= at) {
-        return points;
-      }
-      // Bars sit on fixed boundaries; the last point is the open bar while it is dated after this bar's start.
-      if (last && barMs && last.candle?.time === Math.floor(at / barMs) * barMs) {
-        const candle = last.candle ? { ...last.candle, close: quote.price, high: Math.max(last.candle.high, quote.price), low: Math.min(last.candle.low, quote.price), volume: null } : undefined;
-        return [...points.slice(0, -1), { at, price: quote.price, ...(candle ? { candle } : {}) }];
-      }
-      // A latest quote is not a complete OHLC interval. Keep it as a price observation
-      // until the candle endpoint supplies the interval's actual open and extremes.
-      return [...points, { at, price: quote.price }];
-    });
-  }
   /** A corner toast when a tracked order fills or is rejected, with the reason in plain words (PS-15). */
   async #announce(order: Order): Promise<void> {
     if (order.status === 'Filled') {
-      this.toasts.show('filled', `Order filled: ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)}`);
+      const action = order.side === 'Sell' ? 'Sold' : 'Bought';
+      this.message.set(`${action} ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)}. You can see it under Activity.`);
+      this.toasts.show('filled', `Order filled: ${order.quantity} ${order.symbol} at $${order.price?.toFixed(2)}`, '', order.side === 'Sell' ? 'sell' : 'buy');
+      this.#orderNews.say(order.id, 'filled', { ...order, fillPrice: order.price });
       return;
     }
     let reason = rejectionReason(null);
@@ -617,7 +671,9 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     } catch {
       // The generic reason still tells the client where to look.
     }
+    this.message.set(`Your order was not filled. ${reason}`);
     this.toasts.show('rejected', `Order rejected: ${order.quantity} ${order.symbol}`, reason);
+    this.#orderNews.say(order.id, 'rejected', { ...order, reason });
   }
   /** Opens the orders list from a toast. */
   viewOrders(): void {
@@ -631,7 +687,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     const accountId = this.selectedAccount()?.account_id;
     let orders: OrderHistoryRow[] = [];
     try {
-      orders = await this.orderHistoryClient.list({ accountId });
+      orders = await briefingOrders(this.orderHistoryClient.list({ accountId }));
     } catch {
       // The rest of the briefing is still worth hearing.
     }
@@ -642,7 +698,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       accountId,
       now,
       market: this.feed.status(),
-      balanceHidden: this.privateBalance(),
+      balanceHidden: false,
       total: this.portfolio(),
       gain: this.totalReturn(),
       gainPercent: this.totalReturnPercent(),
@@ -663,7 +719,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.page.set(page);
     this.routing?.go(page);
     if (page === 'Portfolio') {
-      this.bottomTab.set('Positions');
+      this.bottomTab.set('Holdings');
     }
   }
   openModal(kind: string): void {
@@ -697,7 +753,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       return 'Enter a whole number of shares greater than zero.';
     }
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(this.total())) {
-      return 'There is no live price for this stock yet. Try again in a moment.';
+      return NO_PRICE_ERROR;
     }
     if (this.orderType() === 'LIMIT' && (!Number.isFinite(this.entryPrice()) || this.entryPrice() <= 0)) {
       return 'Enter a limit price greater than zero.';
@@ -723,8 +779,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   reviewOrder(): void {
     this.message.set(this.validate());
+    this.#showInvalid(this.message());
     if (!this.message()) {
       this.openModal('review');
+      // Screen readers hear the order once, then land on Confirm (PS-21).
+      this.announcer.announce(speakable(this.reviewSummary()));
+      this.#focusSoon('pro-confirm');
       // Says the order aloud before it can be confirmed (PS-23), cutting in on switch control.
       const quote = this.selected();
       this.#switchScan?.announce(orderReadBack({
@@ -735,25 +795,69 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         total: this.total(),
         closedWarning: this.closedWarning(),
         priceDelayed: this.priceDelayed(),
+        ...(this.orderType() === 'LIMIT' ? { limitPrice: this.entryPrice() } : {}),
+        ...(this.takeProfitEnabled() ? { takeProfit: this.exitPrice('profit') } : {}),
+        ...(this.stopLossEnabled() ? { stopLoss: this.exitPrice('loss') } : {}),
       }), true);
     }
   }
+  /**
+   * A failed check (PS-21): a quantity problem is shown by the field, marked invalid, and focus
+   * goes there, which reads the error as the field's description. Already on the field (Enter
+   * pressed in it), or with no field to fix (no live price), the error is announced instead.
+   */
+  #showInvalid(error: string): void {
+    const quantity = error && error !== NO_PRICE_ERROR ? error : '';
+    this.#validationError.set(quantity);
+    if (!error) {
+      return;
+    }
+    const fieldId = this.validationField();
+    const field = globalThis.document?.getElementById(fieldId);
+    if (quantity && field && field !== globalThis.document.activeElement) {
+      this.#focusSoon(fieldId);
+    } else {
+      this.announcer.announce(error, 'assertive');
+    }
+  }
+
+  /**
+   * Shows a ticket message and reads it to screen readers (PS-21): once when it changes, or every
+   * time with `repeat` for the answer to a button press. Order steps are said by #orderNews instead,
+   * so the ticket's own copy of them stays quiet.
+   */
+  #tell(text: string, repeat = false): void {
+    if (repeat || text !== this.message()) {
+      this.announcer.announce(text);
+    }
+    this.message.set(text);
+  }
+
+  /** Focuses an element by id once the page has drawn the change, unless switch control is steering focus. */
+  #focusSoon(id: string): void {
+    if (this.#switchScan?.settings().enabled) {
+      return;
+    }
+    setTimeout(() => globalThis.document?.getElementById(id)?.focus(), 0);
+  }
+
   async confirmOrder(): Promise<void> {
     const error = this.validate();
     const quote = this.selected();
     if (error) {
       this.message.set(error);
       this.closeModal();
+      this.#showInvalid(error);
       return;
     }
     // Check data is loaded before submitting
     if (!this.dataReady()) {
-      this.message.set('Loading accounts and instruments. Please wait.');
+      this.#tell('Loading accounts and instruments. Please wait.', true);
       return;
     }
     const instrument = this.instruments().find((item) => item.symbol === quote.symbol);
     if (!instrument) {
-      this.message.set(`${quote.symbol} is not available to trade yet.`);
+      this.#tell(`${quote.symbol} is not available to trade yet.`, true);
       return;
     }
     // Prevent double-click while submission is in flight
@@ -765,12 +869,12 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       const count = Number(this.quantity());
       const account = this.selectedAccount();
       if (!account || !canTrade(account)) {
-        this.message.set('No active account selected.');
+        this.#tell('No active account selected.', true);
         return;
       }
       // Some listed quotes have no backend instrument yet; the server would reject them.
       if (!this.instruments().some((i) => i.instrumentId === quote.instrumentId)) {
-        this.message.set(`${quote.symbol} is not available to trade yet.`);
+        this.#tell(`${quote.symbol} is not available to trade yet.`, true);
         return;
       }
       const response = await this.orderSubmissionClient.submit({
@@ -789,16 +893,16 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.editingTolerance.set(false);
       // Store orderId for display
       this.submittedOrderId.set(response.orderId);
-      this.message.set(
-        `Order ${response.orderId} submitted. Status: ${response.status}. Awaiting execution.`
-      );
+      this.#orderNews.say(response.orderId, 'sent', { side: this.side(), quantity: count, symbol: quote.symbol });
+      // Plain words, as in novice: the order reference stays in Activity, not in the message.
+      this.message.set('Order sent. Waiting for it to fill…');
       // Do NOT update local positions, buyingPower, or cash - let the backend and scheduler handle it
       // Close the modal after a brief delay so user sees the message
       setTimeout(() => this.closeModal(), 1500);
       void this.trackOrder(response.orderId);
     } catch (error) {
       const msg = error instanceof OrderSubmissionError ? error.userMessage : 'Submission failed. Please try again.';
-      this.message.set(msg);
+      this.#tell(msg, true);
     } finally {
       this.submitting.set(false);
     }
@@ -816,7 +920,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       rows = await this.orderHistoryClient.list({ accountId: this.selectedAccount()?.account_id });
     } catch (error) {
       if (request !== this.#orderRequest || this.#destroyed) { return false; }
-      this.message.set(error instanceof Error ? error.message : 'Could not load your orders.');
+      this.#tell(error instanceof Error ? error.message : 'Could not load your orders.');
       return false;
     }
     if (request !== this.#orderRequest || this.#destroyed) { return false; }
@@ -826,6 +930,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.historyRows.set(rows);
     if (fills.length && this.#started && !this.#destroyed) {
       await this.refreshPortfolio();
+      void this.loadChart();
     }
     return true;
   }
@@ -845,12 +950,13 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     } catch (error) {
       if (this.destroyed || request !== this.#portfolioRequest || accountId !== this.selectedAccount()?.account_id) { return; }
       this.serviceDown.set(true);
-      this.message.set(error instanceof Error ? error.message : 'Could not load your balances.');
+      this.#tell(error instanceof Error ? error.message : 'Could not load your balances.');
     }
   }
   /** Shows a loaded portfolio, valued at the latest bids already known. */
   applyPortfolio(portfolio: Portfolio): void {
     this.#portfolio = portfolio;
+    this.#liveRecording = true;
     this.portfolioLoaded.set(true);
     this.#render();
   }
@@ -875,6 +981,10 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
         weight: valuation.total ? Math.round((h.value / valuation.total) * 1000) / 10 : 0,
       })),
     );
+    if (this.#liveRecording && this.allocationReady()) {
+      const at = Math.max(Date.now(), (this.chartLive().at(-1)?.at ?? 0) + 1);
+      this.chartLive.update((points) => [...points.slice(-(LIVE_POINTS - 1)), { at, value: valuation.total }]);
+    }
   }
   /**
    * Re-reads orders every few seconds until the submitted one is filled or rejected,
@@ -891,13 +1001,15 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       if (order.status === 'Filled') {
         await this.refreshPortfolio();
       }
-      this.message.set(`Order ${orderId} ${order.status.toLowerCase()}.`);
       await this.#announce(order);
       return;
     }
     if (Date.now() - startedAt >= ORDER_TRACK_LIMIT_MS) {
-      this.message.set('Order is still processing. Status updates continue in Activity.');
+      this.#tell('Your order is still being processed. Check Activity for its status.');
       return;
+    }
+    if (order?.status === 'Accepted') {
+      this.#orderNews.say(order.id, 'accepted', order);
     }
     if (this.destroyed) { return; }
     this.#trackTimer = setTimeout(() => void this.trackOrder(orderId, startedAt), ORDER_TRACK_INTERVAL_MS);
@@ -916,17 +1028,38 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
   }
   constructor(private readonly auth: AuthService) {
     this.routing = inject(PageState, { optional: true })?.connect(this.page, PAGE_PATHS, [
-      { key: 'q', value: this.query }, { key: 'period', value: this.period, allowed: this.periods },
-      { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers'] }
+      { key: 'q', value: this.query }, { key: 'symbol', value: this.symbol }, { key: 'panel', value: this.bottomTab, allowed: this.bottomTabs }, { key: 'filter', value: this.filter, allowed: ['All stocks','Gainers','Decliners'] }, { key: 'marketTab', value: this.marketTab, allowed: ['Sectors','Top Movers'] }
     ], () => {
       // Until prices load there is nothing to check the linked symbol against; the feed selects it.
       if (!this.quotes().length) { return; }
       const quote = this.quote(this.symbol());
       if (this.selected() !== quote) { this.setTicketQuote(quote); }
-      void this.#loadHistory(this.selected(), this.period());
-      if (quote.symbol !== this.symbol()) { this.message.set('That symbol is unavailable.'); }
+      if (quote.symbol !== this.symbol()) { this.#tell('That symbol is unavailable.'); }
     });
     Object.assign(this, tradingClients(this.auth, inject(ApiHttpClient)));
+    // Opened from a holding's Trade button on another page: start at the ticket, with no jump.
+    if (pendingTicket) {
+      afterNextRender(() => {
+        if (!pendingTicket) { return; }
+        pendingTicket = null;
+        // The route's accessibility step focuses the page heading just after render, and the
+        // summary above the ticket fills in as data arrives: place the ticket after the first,
+        // then hold it in place while the page settles (unless the user scrolls meanwhile).
+        // Hold it while the page fills in: re-place whenever the layout above it changes, for
+        // a short while, and stop as soon as the user scrolls, clicks or types.
+        const grid = document.querySelector<HTMLElement>('app-advanced-dashboard .pro-grid');
+        let done = false;
+        const stop = () => {
+          done = true; observer?.disconnect();
+          for (const type of ['wheel', 'touchstart', 'keydown', 'pointerdown']) { document.removeEventListener(type, stop, true); }
+        };
+        const observer = typeof ResizeObserver === 'function' && grid ? new ResizeObserver(() => { if (!done && !this.destroyed) { this.#showTicket(false); } }) : null;
+        observer?.observe(grid!);
+        for (const type of ['wheel', 'touchstart', 'keydown', 'pointerdown']) { document.addEventListener(type, stop, { capture: true, passive: true }); }
+        for (const ms of [40, 200, 400, 700, 1100, 1600]) { setTimeout(() => { if (!done && !this.destroyed) { this.#showTicket(false); } }, ms); }
+        setTimeout(stop, 2000);
+      });
+    }
     this.#stopAccountWatch = this.accountState.onChange(() => this.#accountChanged());
     this.#stopFeedUpdates = this.feed.onUpdate(() => this.#applyFeed());
     this.#stopFeed = this.feed.start();
@@ -942,6 +1075,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.routing?.destroy();
     clearTimeout(this.#trackTimer);
     clearTimeout(this.#ordersPollTimer);
+    clearTimeout(this.#chartTimer);
     if (this.#clockTimer) { clearInterval(this.#clockTimer); }
   }
 
@@ -956,6 +1090,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.#started = true;
     void this.pollOrdersUntilDestroyed();
     await this.refreshPortfolio();
+    void this.loadChart();
   }
 
   /** Another account was picked, or cash moved between accounts: show its balances, positions and orders. */
@@ -968,7 +1103,16 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
     this.historyRows.set([]);
     this.orders.set([]);
     this.positions.set([]);
-    void this.refreshPortfolio();
+    this.#liveRecording = false;
+    this.chartLive.set([]);
+    this.chartHistory.set([]);
+    this.chartScrub.set(null);
+    const request = ++this.#chartRequest;
+    clearTimeout(this.#chartTimer);
+    this.chartLoading.set(true);
+    void this.refreshPortfolio().then(() => {
+      if (!this.destroyed && request === this.#chartRequest) { void this.loadChart(); }
+    });
     void this.refreshOrders();
   }
 
@@ -978,7 +1122,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.accountState.use(await this.orderSubmissionClient.getAccounts());
     } catch (error) {
       console.error('Failed to load accounts:', error);
-      this.message.set('Failed to load accounts.');
+      this.#tell('Failed to load accounts.');
     } finally {
       this.loadingAccounts.set(false);
     }
@@ -989,7 +1133,7 @@ export class AdvancedDashboard implements OnInit, OnDestroy {
       this.instruments.set(instrumentsData);
     } catch (error) {
       console.error('Failed to load instruments:', error);
-      this.message.set('Failed to load instruments.');
+      this.#tell('Failed to load instruments.');
     } finally {
       this.loadingInstruments.set(false);
     }
@@ -1012,4 +1156,30 @@ function toOrder(row: OrderHistoryRow): Order {
 
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+/** A holding's symbol whose Trade button was pressed on another page; the next Overview opens at the ticket. */
+let pendingTicket: string | null = null;
+/** Clearance for the sticky top bar and price strip above the ticket. */
+const TICKET_OFFSET = 128;
+/** Scrolls the page so the trade ticket sits just under the sticky bars: a short ease-out glide, or an instant move. */
+function scrollToTicket(ticket: HTMLElement, glide: boolean): void {
+  let box: HTMLElement | null = ticket.parentElement;
+  while (box && !(box.scrollHeight > box.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(box).overflowY))) { box = box.parentElement; }
+  const scroller = box ?? (document.scrollingElement as HTMLElement);
+  const top = scroller === document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+  const from = scroller.scrollTop;
+  const to = Math.max(0, from + ticket.getBoundingClientRect().top - top - TICKET_OFFSET);
+  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!glide || reduce || Math.abs(to - from) < 2) { scroller.scrollTop = to; return; }
+  const start = performance.now();
+  const duration = 320;
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / duration);
+    scroller.scrollTop = from + (to - from) * (1 - Math.pow(1 - t, 3));
+    if (t < 1) { requestAnimationFrame(step); }
+  };
+  requestAnimationFrame(step);
+  // If animation frames are held back (a background or throttled tab), still finish the move.
+  setTimeout(() => { if (Math.abs(scroller.scrollTop - to) > 2) { scroller.scrollTop = to; } }, duration + 120);
 }
