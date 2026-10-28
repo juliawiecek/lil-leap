@@ -58,14 +58,18 @@ export class SiteAccessibility {
   toggleArrowNavigation(): void {
     const enabled = !this.settings().arrowNavigation;
     this.update({ arrowNavigation: enabled });
-    if (enabled) this.controller.beginArrowNavigation();
+    if (enabled) {
+      this.controller.beginArrowNavigation();
+    }
   }
   update(patch: Partial<AssistivePreferences>): void {
-    if (patch.arrowNavigation === true && this.scan.settings().enabled) this.scan.update({ enabled: false });
+    if (patch.arrowNavigation === true && this.scan.settings().enabled) {
+      this.scan.update({ enabled: false });
+    }
     const wasOn = this.settings().enabled;
     const next = mergeAssistivePreferences(this.store.read('voice', v => v), this.store.read('visual', v => v), patch);
     this.store.write('voice', next.voice); this.store.write('visual', next.visual);
     if (patch.enabled === false) { for (const owner of ['assist:focus', 'assist:hover', 'assist:request', 'assist:announce', 'assist:alert']) { speechCoordinator.stop(owner); } }
-    else if (patch.enabled === true && !wasOn) { this.controller.announce('Voice mode on.'); }
+    if (patch.enabled === true && !wasOn) { this.controller.announce('Voice mode on.'); }
   }
 }

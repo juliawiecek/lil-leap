@@ -1,4 +1,4 @@
-import { Component, ElementRef, Injectable, inject, output, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Injectable, OnDestroy, inject, output, signal } from '@angular/core';
 import { StatusBadge } from './status-badge';
 import { soundCuePlayer } from './sound-cue-player';
 
@@ -20,7 +20,7 @@ const MAX_TOASTS = 3;
 
 /** Small corner messages that dismiss themselves. */
 @Injectable({ providedIn: 'root' })
-export class ToastService {
+export class ToastService implements OnDestroy {
   readonly toasts = signal<Toast[]>([]);
   #nextId = 1;
   readonly #timers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -31,9 +31,13 @@ export class ToastService {
   #modal = false;
   #watch(): void {
     const doc = globalThis.document;
-    if (!doc || this.#observer) return;
+    if (!doc || this.#observer) {
+      return;
+    }
     const Observer = doc.defaultView?.MutationObserver;
-    if (!Observer) return;
+    if (!Observer) {
+      return;
+    }
     this.#observer = new Observer(() => this.modalChanged());
     this.#observer.observe(doc, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] });
     doc.addEventListener('close', this.#closed, true);
@@ -42,11 +46,16 @@ export class ToastService {
   readonly #closed = () => this.modalChanged();
   modalChanged(): void {
     const open = !!globalThis.document?.querySelector('dialog[open]');
-    if (open === this.#modal) return;
+    if (open === this.#modal) {
+      return;
+    }
     this.#modal = open;
     for (const toast of this.toasts()) {
-      if (open) clearTimeout(this.#timers.get(toast.id));
-      else this.#start(toast);
+      if (open) {
+        clearTimeout(this.#timers.get(toast.id));
+      } else {
+        this.#start(toast);
+      }
     }
   }
   hold(id: number, reason: string): void {
@@ -56,11 +65,15 @@ export class ToastService {
   release(id: number, reason: string): void {
     this.#held.get(id)?.delete(reason);
     const toast = this.toasts().find(item => item.id === id);
-    if (toast) this.#start(toast);
+    if (toast) {
+      this.#start(toast);
+    }
   }
   #start(toast: Toast): void {
     clearTimeout(this.#timers.get(toast.id));
-    if (this.#held.get(toast.id)?.size || globalThis.document?.querySelector('dialog[open]')) return;
+    if (this.#held.get(toast.id)?.size || globalThis.document?.querySelector('dialog[open]')) {
+      return;
+    }
     this.#timers.set(toast.id, setTimeout(() => {
       if (globalThis.document?.querySelector('dialog[open]')) { this.#modal = true; return; }
       this.dismiss(toast.id);
@@ -74,7 +87,9 @@ export class ToastService {
   show(kind: ToastKind, title: string, detail = '', side?: 'buy' | 'sell'): number {
     this.#watch();
     const id = this.#nextId++;
-    for (const old of this.toasts().slice(0, Math.max(0, this.toasts().length - MAX_TOASTS + 1))) this.dismiss(old.id);
+    for (const old of this.toasts().slice(0, Math.max(0, this.toasts().length - MAX_TOASTS + 1))) {
+      this.dismiss(old.id);
+    }
     const toast = { id, kind, title, detail, ...(side ? { side } : {}) };
     this.toasts.update(list => [...list, toast]);
     this.#start(toast);
@@ -136,23 +151,31 @@ export class ToastService {
     `,
   ],
 })
-export class Toasts {
+export class Toasts implements AfterViewInit, OnDestroy {
   readonly service = inject(ToastService);
   readonly view = output<void>();
   readonly #host: ElementRef<HTMLElement> | null = inject(ElementRef, { optional: true });
   #anchor?: Comment;
   #observer?: MutationObserver;
   leaveFocus(event: FocusEvent, id: number): void {
-    if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) this.service.release(id, 'focus');
+    if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) {
+      this.service.release(id, 'focus');
+    }
   }
   ngAfterViewInit(): void {
     const host = this.#host?.nativeElement;
-    if (!host?.parentNode) return;
+    if (!host?.parentNode) {
+      return;
+    }
     this.#anchor = host.ownerDocument.createComment('toast location'); host.before(this.#anchor);
     const move = () => {
       const modal = [...host.ownerDocument.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
-      if (modal && host.parentNode !== modal) modal.append(host);
-      else if (!modal && this.#anchor?.parentNode && host.previousSibling !== this.#anchor) this.#anchor.after(host);
+      if (modal && host.parentNode !== modal) {
+        modal.append(host);
+      }
+      if (!modal && this.#anchor?.parentNode && host.previousSibling !== this.#anchor) {
+        this.#anchor.after(host);
+      }
       this.service.modalChanged();
     };
     const Observer = host.ownerDocument.defaultView!.MutationObserver;

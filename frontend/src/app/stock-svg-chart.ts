@@ -338,9 +338,16 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
   }
   ngOnChanges(changes: import('@angular/core').SimpleChanges = {}): void {
     this.#zone.runOutsideAngular(() => {
-      if (!this.#viewport) return;
-      if (changes['windowSeconds'] || changes['chartType']) this.#clearSelection();
-      else if (this.#selection) return;
+      if (!this.#viewport) {
+        return;
+      }
+      const reframed = !!(changes['windowSeconds'] || changes['chartType']);
+      if (!reframed && this.#selection) {
+        return;
+      }
+      if (reframed) {
+        this.#clearSelection();
+      }
       this.#viewport?.setWindowSeconds(this.windowSeconds());
       this.#viewport?.refresh();
     });
@@ -425,7 +432,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     const box = (this.#box = chartBox(width, height));
     const visible = visiblePoints(points, range.from, range.to);
     const interval = displayInterval(range.to - range.from, box.right - box.left);
-    if (interval !== this.intervalSeconds()) this.#zone.run(() => this.intervalSeconds.set(interval));
+    if (interval !== this.intervalSeconds()) {
+      this.#zone.run(() => this.intervalSeconds.set(interval));
+    }
     const display = this.overview() ? overviewPoints(visible, interval) : reducePoints(visible, range, (box.right - box.left) / 2);
     // Connect recorded prices across sparse intervals, matching the novice line chart.
     // Inspection and candles still use only the observations that actually exist.
@@ -482,11 +491,15 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     });
     if (this.#selection) {
       const point = candles ? nearestPoint(this.#inspectable(), this.#selection.time) : this.#selection;
-      if (point) this.#showSelection(point);
+      if (point) {
+        this.#showSelection(point);
+      }
     }
   }
   #inspectable(): readonly StockPriceTick[] {
-    if (this.chartType() === 'candlestick') return this.#candles.map(c => ({ time: (c.time + c.endTime) / 2, price: c.close }));
+    if (this.chartType() === 'candlestick') {
+      return this.#candles.map(c => ({ time: (c.time + c.endTime) / 2, price: c.close }));
+    }
     const range = this.#range;
     return range
       ? this.#points.slice(
@@ -538,7 +551,9 @@ export class StockSvgChart implements AfterViewInit, OnChanges, OnDestroy {
     tooltip.textContent = `${this.#format.format(point.price)} · ${TIME.format(point.time * 1000)}`;
     if (this.chartType() === 'candlestick') {
       const candle = this.#candles.find(c => (c.time + c.endTime) / 2 === point.time);
-      if (candle) tooltip.textContent = `${TIME.format(candle.time * 1000)} · ${candle.close > candle.open ? 'Up' : candle.close < candle.open ? 'Down' : 'Unchanged'} · O ${this.#format.format(candle.open)}  H ${this.#format.format(candle.high)}  L ${this.#format.format(candle.low)}  C ${this.#format.format(candle.close)}`;
+      if (candle) {
+        tooltip.textContent = `${TIME.format(candle.time * 1000)} · ${candle.close > candle.open ? 'Up' : candle.close < candle.open ? 'Down' : 'Unchanged'} · O ${this.#format.format(candle.open)}  H ${this.#format.format(candle.high)}  L ${this.#format.format(candle.low)}  C ${this.#format.format(candle.close)}`;
+      }
     }
   }
   #clearSelection(): void {
